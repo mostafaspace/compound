@@ -5,6 +5,10 @@ use App\Http\Controllers\Api\V1\BuildingController;
 use App\Http\Controllers\Api\V1\CompoundController;
 use App\Http\Controllers\Api\V1\DocumentTypeController;
 use App\Http\Controllers\Api\V1\FloorController;
+use App\Http\Controllers\Api\V1\NotificationController;
+use App\Http\Controllers\Api\V1\NotificationPreferenceController;
+use App\Http\Controllers\Api\V1\OrgChartController;
+use App\Http\Controllers\Api\V1\RepresentativeAssignmentController;
 use App\Http\Controllers\Api\V1\ResidentInvitationController;
 use App\Http\Controllers\Api\V1\SystemStatusController;
 use App\Http\Controllers\Api\V1\UnitController;
@@ -39,6 +43,12 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::middleware('role:resident_owner,resident_tenant')
             ->get('/my/verification-requests', [VerificationRequestController::class, 'mine'])
             ->name('my.verification-requests.index');
+
+        // Org chart and responsible-party lookup — visible to all authenticated users
+        Route::get('/compounds/{compound}/org-chart', [OrgChartController::class, 'show'])
+            ->name('compounds.org-chart');
+        Route::get('/units/{unit}/responsible-party', [OrgChartController::class, 'responsibleParty'])
+            ->name('units.responsible-party');
     });
 
     Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,board_member,finance_reviewer,support_agent'])
@@ -72,5 +82,17 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             Route::patch('/verification-requests/{verificationRequest}/request-more-info', [VerificationRequestController::class, 'requestMoreInfo'])
                 ->name('verification-requests.request-more-info');
             Route::patch('/documents/{userDocument}/review', [UserDocumentController::class, 'review'])->name('documents.review');
+
+            // Representative assignments (admin-only mutations)
+            Route::get('/compounds/{compound}/representatives', [RepresentativeAssignmentController::class, 'index'])
+                ->name('compounds.representatives.index');
+            Route::post('/compounds/{compound}/representatives', [RepresentativeAssignmentController::class, 'store'])
+                ->name('compounds.representatives.store');
+            Route::get('/representative-assignments/{representativeAssignment}', [RepresentativeAssignmentController::class, 'show'])
+                ->name('representative-assignments.show');
+            Route::patch('/representative-assignments/{representativeAssignment}', [RepresentativeAssignmentController::class, 'update'])
+                ->name('representative-assignments.update');
+            Route::post('/representative-assignments/{representativeAssignment}/expire', [RepresentativeAssignmentController::class, 'expire'])
+                ->name('representative-assignments.expire');
         });
 });

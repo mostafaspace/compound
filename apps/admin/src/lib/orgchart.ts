@@ -1,40 +1,14 @@
-export const issueStatusValues = [
-  "new",
-  "triaged",
-  "assigned",
-  "in_progress",
-  "waiting_for_resident",
-  "resolved",
-  "closed",
-  "reopened"
-] as const;
+// Type definitions (will be moved to @compound/contracts later)
+export type RepresentativeRole =
+  | "floor_representative"
+  | "building_representative"
+  | "association_member"
+  | "president"
+  | "treasurer"
+  | "security_contact"
+  | "admin_contact";
 
-export type IssueStatus = (typeof issueStatusValues)[number];
-
-export const visitorPassStatusValues = ["active", "used", "expired", "revoked"] as const;
-
-export type VisitorPassStatus = (typeof visitorPassStatusValues)[number];
-
-export const representativeRoleValues = [
-  "floor_representative",
-  "building_representative",
-  "association_member",
-  "president",
-  "treasurer",
-  "security_contact",
-  "admin_contact"
-] as const;
-
-export type RepresentativeRole = (typeof representativeRoleValues)[number];
-
-export const contactVisibilityValues = [
-  "all_residents",
-  "building_residents",
-  "floor_residents",
-  "admins_only"
-] as const;
-
-export type ContactVisibility = (typeof contactVisibilityValues)[number];
+export type ContactVisibility = "all_residents" | "building_residents" | "floor_residents" | "admins_only";
 
 export interface RepresentativeAssignment {
   id: string;
@@ -107,3 +81,21 @@ export interface ResponsiblePartyResponse {
   buildingRepresentative: OrgChartRepresentative | null;
   associationContacts: OrgChartRepresentative[];
 }
+
+export interface ListRepresentativesFilters {
+  role?: RepresentativeRole;
+  active?: boolean;
+  buildingId?: string;
+  floorId?: string;
+}
+
+// Re-export server actions
+export {
+  getCompoundOrgChart,
+  getResponsibleParty,
+  listRepresentativeAssignments,
+  createRepresentativeAssignment,
+  getRepresentativeAssignment,
+  updateRepresentativeAssignment,
+  expireRepresentativeAssignment,
+} from "./orgchart-actions";
