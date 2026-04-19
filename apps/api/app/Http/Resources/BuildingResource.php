@@ -26,6 +26,8 @@ class BuildingResource extends JsonResource
             'unitsCount' => $this->whenCounted('units'),
             'floors' => FloorResource::collection($this->whenLoaded('floors')),
             'units' => UnitResource::collection($this->whenLoaded('units')),
+            'archivedAt' => $this->archived_at?->toJSON(),
+            'archiveReason' => $this->archive_reason,
             'createdAt' => $this->created_at?->toJSON(),
             'updatedAt' => $this->updated_at?->toJSON(),
         ];

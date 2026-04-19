@@ -15,6 +15,14 @@ export const unitRelationValues = ["owner", "tenant", "resident", "representativ
 
 export type UnitRelation = (typeof unitRelationValues)[number];
 
+export const verificationStatusValues = ["pending", "verified", "rejected", "expired"] as const;
+
+export type VerificationStatus = (typeof verificationStatusValues)[number];
+
+export const invitationStatusValues = ["pending", "accepted", "revoked", "expired"] as const;
+
+export type InvitationStatus = (typeof invitationStatusValues)[number];
+
 export interface ApiEnvelope<T> {
   data: T;
   meta?: Record<string, unknown>;
@@ -46,6 +54,40 @@ export interface AuthenticatedUser {
   status: "invited" | "active" | "suspended" | "archived";
   emailVerifiedAt: string | null;
   lastLoginAt: string | null;
+}
+
+export interface ResidentInvitation {
+  id: number;
+  email: string;
+  role: UserRole;
+  relationType: UnitRelation | null;
+  status: InvitationStatus;
+  expiresAt: string | null;
+  acceptedAt: string | null;
+  revokedAt: string | null;
+  user?: AuthenticatedUser;
+  unit?: unknown;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+export interface CreateResidentInvitationInput {
+  name: string;
+  email: string;
+  phone?: string;
+  role: UserRole;
+  unitId?: string;
+  relationType?: UnitRelation;
+  startsAt?: string;
+  isPrimary?: boolean;
+  expiresAt?: string;
+}
+
+export interface AcceptResidentInvitationInput {
+  name: string;
+  phone?: string;
+  password: string;
+  password_confirmation: string;
 }
 
 export interface LoginInput {

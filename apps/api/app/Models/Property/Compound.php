@@ -22,11 +22,15 @@ class Compound extends Model
         'currency',
         'status',
         'metadata',
+        'archived_at',
+        'archived_by',
+        'archive_reason',
     ];
 
     protected function casts(): array
     {
         return [
+            'archived_at' => 'datetime',
             'metadata' => 'array',
             'status' => CompoundStatus::class,
         ];

@@ -26,6 +26,9 @@ class UnitResource extends JsonResource
             'areaSqm' => $this->area_sqm,
             'bedrooms' => $this->bedrooms,
             'status' => $this->status->value,
+            'memberships' => UnitMembershipResource::collection($this->whenLoaded('memberships')),
+            'archivedAt' => $this->archived_at?->toJSON(),
+            'archiveReason' => $this->archive_reason,
             'createdAt' => $this->created_at?->toJSON(),
             'updatedAt' => $this->updated_at?->toJSON(),
         ];

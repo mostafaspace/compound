@@ -43,7 +43,7 @@ export default async function Home() {
             <p className="text-sm font-semibold uppercase text-brand">Compound operations</p>
             <h1 className="mt-2 text-3xl font-semibold md:text-4xl">Production control center</h1>
             <p className="mt-2 text-sm text-muted">
-              Signed in as {user.name} · {user.role.replaceAll("_", " ")}
+              Signed in as {user.name} / {user.role.replaceAll("_", " ")}
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
@@ -65,6 +65,12 @@ export default async function Home() {
               href="/compounds"
             >
               Property registry
+            </Link>
+            <Link
+              className="inline-flex h-11 items-center rounded-lg border border-line bg-panel px-4 text-sm font-semibold text-foreground transition hover:border-brand"
+              href="/documents"
+            >
+              Documents
             </Link>
             <LogoutButton />
           </div>

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\AccountStatus;
 use App\Enums\UserRole;
+use App\Models\Documents\UserDocument;
 use App\Models\Property\Unit;
 use App\Models\Property\UnitMembership;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -56,5 +57,21 @@ class User extends Authenticatable
         return $this->belongsToMany(Unit::class, 'unit_memberships')
             ->withPivot(['relation_type', 'starts_at', 'ends_at', 'is_primary', 'verification_status'])
             ->withTimestamps();
+    }
+
+    /**
+     * @return HasMany<ResidentInvitation, $this>
+     */
+    public function residentInvitations(): HasMany
+    {
+        return $this->hasMany(ResidentInvitation::class);
+    }
+
+    /**
+     * @return HasMany<UserDocument, $this>
+     */
+    public function documents(): HasMany
+    {
+        return $this->hasMany(UserDocument::class);
     }
 }

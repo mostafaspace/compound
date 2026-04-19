@@ -38,6 +38,12 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
           </div>
           <div className="flex flex-wrap gap-3">
             <Link
+              className="inline-flex h-11 items-center justify-center rounded-lg border border-line bg-panel px-4 text-sm font-semibold hover:border-brand"
+              href={`/buildings/${building.id}/edit`}
+            >
+              Edit building
+            </Link>
+            <Link
               className="inline-flex h-11 items-center justify-center rounded-lg bg-brand px-4 text-sm font-semibold text-white transition hover:bg-brand-strong"
               href={`/buildings/${building.id}/floors/new`}
             >
@@ -65,12 +71,14 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
                 <th className="px-4 py-3 font-semibold">Label</th>
                 <th className="px-4 py-3 font-semibold">Level</th>
                 <th className="px-4 py-3 font-semibold">Units</th>
+                <th className="px-4 py-3 font-semibold">Status</th>
+                <th className="px-4 py-3 font-semibold">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
               {floors.length === 0 ? (
                 <tr>
-                  <td className="px-4 py-6 text-muted" colSpan={3}>
+                  <td className="px-4 py-6 text-muted" colSpan={5}>
                     No floors yet.
                   </td>
                 </tr>
@@ -80,6 +88,19 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
                     <td className="px-4 py-4 font-semibold">{floor.label}</td>
                     <td className="px-4 py-4">{floor.levelNumber}</td>
                     <td className="px-4 py-4">{floor.unitsCount ?? 0}</td>
+                    <td className="px-4 py-4">
+                      <span className="rounded-lg bg-[#e6f3ef] px-2.5 py-1 text-xs font-semibold capitalize text-brand">
+                        {floor.archivedAt ? "archived" : "active"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4">
+                      <Link
+                        className="inline-flex h-10 items-center justify-center rounded-lg border border-line px-3 text-sm font-semibold hover:border-brand"
+                        href={`/buildings/${building.id}/floors/${floor.id}/edit`}
+                      >
+                        Edit
+                      </Link>
+                    </td>
                   </tr>
                 ))
               )}
@@ -98,25 +119,38 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
                 <th className="px-4 py-3 font-semibold">Type</th>
                 <th className="px-4 py-3 font-semibold">Area</th>
                 <th className="px-4 py-3 font-semibold">Status</th>
+                <th className="px-4 py-3 font-semibold">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
               {units.length === 0 ? (
                 <tr>
-                  <td className="px-4 py-6 text-muted" colSpan={4}>
+                  <td className="px-4 py-6 text-muted" colSpan={5}>
                     No units yet.
                   </td>
                 </tr>
               ) : (
                 units.map((unit) => (
                   <tr key={unit.id}>
-                    <td className="px-4 py-4 font-semibold">{unit.unitNumber}</td>
+                    <td className="px-4 py-4">
+                      <Link className="font-semibold text-brand hover:text-brand-strong" href={`/units/${unit.id}`}>
+                        {unit.unitNumber}
+                      </Link>
+                    </td>
                     <td className="px-4 py-4 capitalize">{unit.type}</td>
                     <td className="px-4 py-4">{unit.areaSqm ? `${unit.areaSqm} sqm` : "Not set"}</td>
                     <td className="px-4 py-4">
                       <span className="rounded-lg bg-[#e6f3ef] px-2.5 py-1 text-xs font-semibold capitalize text-brand">
                         {unit.status}
                       </span>
+                    </td>
+                    <td className="px-4 py-4">
+                      <Link
+                        className="inline-flex h-10 items-center justify-center rounded-lg border border-line px-3 text-sm font-semibold hover:border-brand"
+                        href={`/buildings/${building.id}/units/${unit.id}/edit`}
+                      >
+                        Edit
+                      </Link>
                     </td>
                   </tr>
                 ))

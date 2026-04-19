@@ -85,5 +85,7 @@ class DatabaseSeeder extends Seeder
                 'created_by' => $admin->id,
             ]);
         }
+
+        $this->call(DocumentTypeSeeder::class);
     }
 }

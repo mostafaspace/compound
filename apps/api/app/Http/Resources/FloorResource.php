@@ -23,6 +23,8 @@ class FloorResource extends JsonResource
             'levelNumber' => $this->level_number,
             'sortOrder' => $this->sort_order,
             'unitsCount' => $this->whenCounted('units'),
+            'archivedAt' => $this->archived_at?->toJSON(),
+            'archiveReason' => $this->archive_reason,
             'createdAt' => $this->created_at?->toJSON(),
             'updatedAt' => $this->updated_at?->toJSON(),
         ];

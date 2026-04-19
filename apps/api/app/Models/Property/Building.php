@@ -20,11 +20,15 @@ class Building extends Model
         'code',
         'sort_order',
         'metadata',
+        'archived_at',
+        'archived_by',
+        'archive_reason',
     ];
 
     protected function casts(): array
     {
         return [
+            'archived_at' => 'datetime',
             'metadata' => 'array',
             'sort_order' => 'integer',
         ];

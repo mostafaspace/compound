@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { createBuilding, createCompound } from "@/lib/api";
+import { archiveCompound, createBuilding, createCompound, updateCompound } from "@/lib/api";
 
 export async function createCompoundAction(formData: FormData) {
   await createCompound({
@@ -16,6 +16,29 @@ export async function createCompoundAction(formData: FormData) {
 
   revalidatePath("/compounds");
   redirect("/compounds");
+}
+
+export async function updateCompoundAction(compoundId: string, formData: FormData) {
+  await updateCompound(compoundId, {
+    code: String(formData.get("code") ?? ""),
+    currency: String(formData.get("currency") ?? "EGP"),
+    legalName: String(formData.get("legalName") ?? ""),
+    name: String(formData.get("name") ?? ""),
+    status: String(formData.get("status") ?? "draft") as "draft" | "active" | "suspended" | "archived",
+    timezone: String(formData.get("timezone") ?? "Africa/Cairo"),
+  });
+
+  revalidatePath("/compounds");
+  revalidatePath(`/compounds/${compoundId}`);
+  redirect(`/compounds/${compoundId}`);
+}
+
+export async function archiveCompoundAction(compoundId: string, formData: FormData) {
+  await archiveCompound(compoundId, String(formData.get("reason") ?? ""));
+
+  revalidatePath("/compounds");
+  revalidatePath(`/compounds/${compoundId}`);
+  redirect(`/compounds/${compoundId}`);
 }
 
 export async function createBuildingAction(compoundId: string, formData: FormData) {

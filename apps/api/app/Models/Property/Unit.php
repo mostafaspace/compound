@@ -28,11 +28,15 @@ class Unit extends Model
         'bedrooms',
         'status',
         'metadata',
+        'archived_at',
+        'archived_by',
+        'archive_reason',
     ];
 
     protected function casts(): array
     {
         return [
+            'archived_at' => 'datetime',
             'area_sqm' => 'decimal:2',
             'bedrooms' => 'integer',
             'metadata' => 'array',

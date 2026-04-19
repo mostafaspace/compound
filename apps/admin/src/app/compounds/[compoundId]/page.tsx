@@ -37,6 +37,12 @@ export default async function CompoundDetailPage({ params }: CompoundDetailPageP
           </div>
           <div className="flex flex-wrap gap-3">
             <Link
+              className="inline-flex h-11 items-center justify-center rounded-lg border border-line bg-panel px-4 text-sm font-semibold hover:border-brand"
+              href={`/compounds/${compound.id}/edit`}
+            >
+              Edit compound
+            </Link>
+            <Link
               className="inline-flex h-11 items-center justify-center rounded-lg bg-brand px-4 text-sm font-semibold text-white transition hover:bg-brand-strong"
               href={`/compounds/${compound.id}/buildings/new`}
             >
@@ -72,12 +78,14 @@ export default async function CompoundDetailPage({ params }: CompoundDetailPageP
                 <th className="px-4 py-3 font-semibold">Floors</th>
                 <th className="px-4 py-3 font-semibold">Units</th>
                 <th className="px-4 py-3 font-semibold">Order</th>
+                <th className="px-4 py-3 font-semibold">Status</th>
+                <th className="px-4 py-3 font-semibold">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
               {buildings.length === 0 ? (
                 <tr>
-                  <td className="px-4 py-6 text-muted" colSpan={5}>
+                  <td className="px-4 py-6 text-muted" colSpan={7}>
                     No buildings yet.
                   </td>
                 </tr>
@@ -93,6 +101,19 @@ export default async function CompoundDetailPage({ params }: CompoundDetailPageP
                     <td className="px-4 py-4">{building.floorsCount ?? 0}</td>
                     <td className="px-4 py-4">{building.unitsCount ?? 0}</td>
                     <td className="px-4 py-4">{building.sortOrder}</td>
+                    <td className="px-4 py-4">
+                      <span className="rounded-lg bg-[#e6f3ef] px-2.5 py-1 text-xs font-semibold capitalize text-brand">
+                        {building.archivedAt ? "archived" : "active"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4">
+                      <Link
+                        className="inline-flex h-10 items-center justify-center rounded-lg border border-line px-3 text-sm font-semibold hover:border-brand"
+                        href={`/buildings/${building.id}/edit`}
+                      >
+                        Edit
+                      </Link>
+                    </td>
                   </tr>
                 ))
               )}

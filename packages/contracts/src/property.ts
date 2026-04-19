@@ -1,3 +1,5 @@
+import type { AuthenticatedUser, UnitRelation, VerificationStatus } from "./platform";
+
 export const compoundStatusValues = ["draft", "active", "suspended", "archived"] as const;
 
 export type CompoundStatus = (typeof compoundStatusValues)[number];
@@ -22,6 +24,8 @@ export interface CompoundSummary {
   unitsCount?: number;
   createdAt: string | null;
   updatedAt: string | null;
+  archivedAt?: string | null;
+  archiveReason?: string | null;
 }
 
 export interface CompoundDetail extends CompoundSummary {
@@ -38,6 +42,8 @@ export interface BuildingSummary {
   unitsCount?: number;
   createdAt: string | null;
   updatedAt: string | null;
+  archivedAt?: string | null;
+  archiveReason?: string | null;
 }
 
 export interface BuildingDetail extends BuildingSummary {
@@ -54,6 +60,8 @@ export interface FloorSummary {
   unitsCount?: number;
   createdAt: string | null;
   updatedAt: string | null;
+  archivedAt?: string | null;
+  archiveReason?: string | null;
 }
 
 export interface UnitSummary {
@@ -66,6 +74,27 @@ export interface UnitSummary {
   areaSqm: string | null;
   bedrooms: number | null;
   status: UnitStatus;
+  createdAt: string | null;
+  updatedAt: string | null;
+  memberships?: UnitMembership[];
+  archivedAt?: string | null;
+  archiveReason?: string | null;
+}
+
+export interface UnitDetail extends UnitSummary {
+  memberships?: UnitMembership[];
+}
+
+export interface UnitMembership {
+  id: number;
+  unitId: string;
+  userId: number;
+  user?: AuthenticatedUser;
+  relationType: UnitRelation;
+  startsAt: string | null;
+  endsAt: string | null;
+  isPrimary: boolean;
+  verificationStatus: VerificationStatus;
   createdAt: string | null;
   updatedAt: string | null;
 }
@@ -97,4 +126,23 @@ export interface CreateUnitInput {
   areaSqm?: number;
   bedrooms?: number;
   status?: UnitStatus;
+}
+
+export type UpdateCompoundInput = Partial<CreateCompoundInput> & {
+  status?: CompoundStatus;
+};
+
+export type UpdateBuildingInput = Partial<CreateBuildingInput>;
+
+export type UpdateFloorInput = Partial<CreateFloorInput>;
+
+export type UpdateUnitInput = Partial<CreateUnitInput>;
+
+export interface CreateUnitMembershipInput {
+  userId: number;
+  relationType: UnitRelation;
+  startsAt?: string;
+  endsAt?: string;
+  isPrimary?: boolean;
+  verificationStatus?: VerificationStatus;
 }

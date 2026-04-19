@@ -27,6 +27,8 @@ class CompoundResource extends JsonResource
             'buildingsCount' => $this->whenCounted('buildings'),
             'unitsCount' => $this->whenCounted('units'),
             'buildings' => BuildingResource::collection($this->whenLoaded('buildings')),
+            'archivedAt' => $this->archived_at?->toJSON(),
+            'archiveReason' => $this->archive_reason,
             'createdAt' => $this->created_at?->toJSON(),
             'updatedAt' => $this->updated_at?->toJSON(),
         ];

@@ -3,16 +3,20 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Property\ArchivePropertyRequest;
 use App\Http\Requests\Property\StoreCompoundRequest;
 use App\Http\Requests\Property\UpdateCompoundRequest;
 use App\Http\Resources\CompoundResource;
 use App\Models\Property\Compound;
+use App\Support\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Symfony\Component\HttpFoundation\Response;
 
 class CompoundController extends Controller
 {
+    public function __construct(private readonly AuditLogger $auditLogger) {}
+
     public function index(): AnonymousResourceCollection
     {
         $compounds = Compound::query()
@@ -62,6 +66,25 @@ class CompoundController extends Controller
             'currency' => isset($validated['currency']) ? strtoupper($validated['currency']) : $compound->currency,
             'status' => $validated['status'] ?? $compound->status,
         ])->save();
+
+        return CompoundResource::make($compound->refresh()->loadCount(['buildings', 'units']));
+    }
+
+    public function archive(ArchivePropertyRequest $request, Compound $compound): CompoundResource
+    {
+        $validated = $request->validated();
+
+        $compound->forceFill([
+            'status' => 'archived',
+            'archived_at' => now(),
+            'archived_by' => $request->user()?->id,
+            'archive_reason' => $validated['reason'] ?? null,
+        ])->save();
+
+        $this->auditLogger->record('property.compound_archived', actor: $request->user(), request: $request, metadata: [
+            'compound_id' => $compound->id,
+            'reason' => $validated['reason'] ?? null,
+        ]);
 
         return CompoundResource::make($compound->refresh()->loadCount(['buildings', 'units']));
     }

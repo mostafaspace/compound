@@ -61,6 +61,7 @@ export default async function CompoundsPage() {
                   <th className="px-4 py-3 font-semibold">Units</th>
                   <th className="px-4 py-3 font-semibold">Buildings</th>
                   <th className="px-4 py-3 font-semibold">Status</th>
+                  <th className="px-4 py-3 font-semibold">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
@@ -79,6 +80,14 @@ export default async function CompoundsPage() {
                       <span className="rounded-lg bg-[#e6f3ef] px-2.5 py-1 text-xs font-semibold capitalize text-brand">
                         {compound.status}
                       </span>
+                    </td>
+                    <td className="px-4 py-4">
+                      <Link
+                        className="inline-flex h-10 items-center justify-center rounded-lg border border-line px-3 text-sm font-semibold hover:border-brand"
+                        href={`/compounds/${compound.id}/edit`}
+                      >
+                        Edit
+                      </Link>
                     </td>
                   </tr>
                 ))}

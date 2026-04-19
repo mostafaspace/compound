@@ -19,11 +19,15 @@ class Floor extends Model
         'label',
         'level_number',
         'sort_order',
+        'archived_at',
+        'archived_by',
+        'archive_reason',
     ];
 
     protected function casts(): array
     {
         return [
+            'archived_at' => 'datetime',
             'level_number' => 'integer',
             'sort_order' => 'integer',
         ];
