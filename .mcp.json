@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "atlassian": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["mcp-atlassian"],
+      "envFile": "${workspaceFolder}/.vscode/mcp.env"
+    }
+  }
+}
