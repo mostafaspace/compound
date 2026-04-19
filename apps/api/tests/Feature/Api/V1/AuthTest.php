@@ -52,4 +52,31 @@ class AuthTest extends TestCase
             'deviceName' => 'Feature test',
         ])->assertForbidden();
     }
+
+    public function test_pending_review_resident_can_login_with_restricted_access(): void
+    {
+        User::factory()->create([
+            'email' => 'pending@example.com',
+            'password' => Hash::make('password'),
+            'role' => UserRole::ResidentOwner->value,
+            'status' => AccountStatus::PendingReview->value,
+        ]);
+
+        $token = $this->postJson('/api/v1/auth/login', [
+            'email' => 'pending@example.com',
+            'password' => 'password',
+            'deviceName' => 'Feature test',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.user.status', AccountStatus::PendingReview->value)
+            ->json('data.token');
+
+        $this->withHeader('Authorization', "Bearer {$token}")
+            ->getJson('/api/v1/document-types')
+            ->assertOk();
+
+        $this->withHeader('Authorization', "Bearer {$token}")
+            ->getJson('/api/v1/compounds')
+            ->assertForbidden();
+    }
 }

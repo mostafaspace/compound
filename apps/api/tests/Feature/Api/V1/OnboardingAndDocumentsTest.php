@@ -7,6 +7,7 @@ use App\Enums\DocumentStatus;
 use App\Enums\InvitationStatus;
 use App\Enums\UnitRelationType;
 use App\Enums\UserRole;
+use App\Enums\VerificationRequestStatus;
 use App\Enums\VerificationStatus;
 use App\Models\Documents\DocumentType;
 use App\Models\Documents\UserDocument;
@@ -15,6 +16,7 @@ use App\Models\Property\Compound;
 use App\Models\Property\Unit;
 use App\Models\ResidentInvitation;
 use App\Models\User;
+use App\Models\VerificationRequest;
 use App\Notifications\ResidentInvitationNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -90,11 +92,19 @@ class OnboardingAndDocumentsTest extends TestCase
         $this->assertDatabaseHas('users', [
             'id' => $resident->id,
             'name' => 'Nora Accepted',
-            'status' => AccountStatus::Active->value,
+            'status' => AccountStatus::PendingReview->value,
         ]);
         $this->assertDatabaseHas('resident_invitations', [
             'email' => 'nora.owner@example.com',
             'status' => InvitationStatus::Accepted->value,
+        ]);
+        $this->assertDatabaseHas('verification_requests', [
+            'user_id' => $resident->id,
+            'resident_invitation_id' => ResidentInvitation::query()->where('email', 'nora.owner@example.com')->firstOrFail()->id,
+            'unit_id' => $unit->id,
+            'requested_role' => UserRole::ResidentOwner->value,
+            'relation_type' => UnitRelationType::Owner->value,
+            'status' => VerificationRequestStatus::PendingReview->value,
         ]);
     }
 
@@ -187,6 +197,102 @@ class OnboardingAndDocumentsTest extends TestCase
             'id' => $document->id,
             'status' => DocumentStatus::Approved->value,
             'reviewed_by' => $admin->id,
+        ]);
+    }
+
+    public function test_admin_can_approve_accepted_resident_verification_request(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
+        $resident = User::factory()->create([
+            'role' => UserRole::ResidentOwner->value,
+            'status' => AccountStatus::PendingReview->value,
+        ]);
+        $compound = Compound::factory()->create();
+        $building = Building::factory()->for($compound)->create();
+        $unit = Unit::factory()
+            ->for($compound)
+            ->for($building)
+            ->create(['floor_id' => null, 'unit_number' => 'B-202']);
+
+        $unit->memberships()->create([
+            'user_id' => $resident->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'is_primary' => true,
+            'verification_status' => VerificationStatus::Pending->value,
+            'created_by' => $admin->id,
+        ]);
+
+        $verificationRequest = VerificationRequest::query()->create([
+            'user_id' => $resident->id,
+            'unit_id' => $unit->id,
+            'requested_role' => UserRole::ResidentOwner->value,
+            'relation_type' => UnitRelationType::Owner->value,
+            'status' => VerificationRequestStatus::PendingReview->value,
+            'submitted_at' => now(),
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $this->patchJson("/api/v1/verification-requests/{$verificationRequest->id}/approve", [
+            'note' => 'Ownership verified against submitted documents.',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.status', VerificationRequestStatus::Approved->value)
+            ->assertJsonPath('data.reviewedBy', $admin->id)
+            ->assertJsonPath('data.decisionNote', 'Ownership verified against submitted documents.');
+
+        $this->assertDatabaseHas('users', [
+            'id' => $resident->id,
+            'status' => AccountStatus::Active->value,
+        ]);
+        $this->assertDatabaseHas('unit_memberships', [
+            'unit_id' => $unit->id,
+            'user_id' => $resident->id,
+            'verification_status' => VerificationStatus::Verified->value,
+        ]);
+    }
+
+    public function test_admin_can_request_more_info_and_reject_verification_request(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
+        $resident = User::factory()->create([
+            'role' => UserRole::ResidentTenant->value,
+            'status' => AccountStatus::PendingReview->value,
+        ]);
+
+        $verificationRequest = VerificationRequest::query()->create([
+            'user_id' => $resident->id,
+            'requested_role' => UserRole::ResidentTenant->value,
+            'relation_type' => UnitRelationType::Tenant->value,
+            'status' => VerificationRequestStatus::PendingReview->value,
+            'submitted_at' => now(),
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $this->patchJson("/api/v1/verification-requests/{$verificationRequest->id}/request-more-info")
+            ->assertUnprocessable();
+
+        $this->patchJson("/api/v1/verification-requests/{$verificationRequest->id}/request-more-info", [
+            'note' => 'Please upload the signed lease page.',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.status', VerificationRequestStatus::MoreInfoRequested->value)
+            ->assertJsonPath('data.moreInfoNote', 'Please upload the signed lease page.');
+
+        $this->patchJson("/api/v1/verification-requests/{$verificationRequest->id}/reject")
+            ->assertUnprocessable();
+
+        $this->patchJson("/api/v1/verification-requests/{$verificationRequest->id}/reject", [
+            'note' => 'Lease is not valid for this unit.',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.status', VerificationRequestStatus::Rejected->value)
+            ->assertJsonPath('data.decisionNote', 'Lease is not valid for this unit.');
+
+        $this->assertDatabaseHas('users', [
+            'id' => $resident->id,
+            'status' => AccountStatus::Suspended->value,
         ]);
     }
 }

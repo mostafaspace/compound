@@ -28,6 +28,8 @@ import type {
   UpdateFloorInput,
   UpdateUnitInput,
   UserDocument,
+  VerificationRequest,
+  VerificationRequestStatus,
 } from "@compound/contracts";
 
 import { config } from "./config";
@@ -550,6 +552,71 @@ export async function resendResidentInvitation(invitationId: number): Promise<Re
   const payload = (await response.json()) as ApiEnvelope<ResidentInvitation>;
 
   return payload.data;
+}
+
+export async function getVerificationRequests(input: { status?: VerificationRequestStatus | "all"; q?: string } = {}): Promise<VerificationRequest[]> {
+  try {
+    const params = new URLSearchParams();
+
+    if (input.status && input.status !== "all") {
+      params.set("status", input.status);
+    }
+
+    if (input.q?.trim()) {
+      params.set("q", input.q.trim());
+    }
+
+    const query = params.toString();
+    const response = await fetch(`${config.apiBaseUrl}/verification-requests${query ? `?${query}` : ""}`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const payload = (await response.json()) as PaginatedEnvelope<VerificationRequest>;
+
+    return payload.data;
+  } catch {
+    return [];
+  }
+}
+
+async function updateVerificationRequest(
+  verificationRequestId: number,
+  action: "approve" | "reject" | "request-more-info",
+  input: { note?: string },
+): Promise<VerificationRequest> {
+  const response = await fetch(`${config.apiBaseUrl}/verification-requests/${verificationRequestId}/${action}`, {
+    body: JSON.stringify(input),
+    headers: {
+      ...(await apiHeaders(true)),
+      "Content-Type": "application/json",
+    },
+    method: "PATCH",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to update verification request: ${response.status}`);
+  }
+
+  const payload = (await response.json()) as ApiEnvelope<VerificationRequest>;
+
+  return payload.data;
+}
+
+export async function approveVerificationRequest(verificationRequestId: number, input: { note?: string } = {}): Promise<VerificationRequest> {
+  return updateVerificationRequest(verificationRequestId, "approve", input);
+}
+
+export async function rejectVerificationRequest(verificationRequestId: number, input: { note?: string }): Promise<VerificationRequest> {
+  return updateVerificationRequest(verificationRequestId, "reject", input);
+}
+
+export async function requestMoreInfoForVerificationRequest(verificationRequestId: number, input: { note?: string }): Promise<VerificationRequest> {
+  return updateVerificationRequest(verificationRequestId, "request-more-info", input);
 }
 
 export async function getResidentInvitation(token: string): Promise<ResidentInvitation | null> {

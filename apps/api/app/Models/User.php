@@ -74,4 +74,20 @@ class User extends Authenticatable
     {
         return $this->hasMany(UserDocument::class);
     }
+
+    /**
+     * @return HasMany<VerificationRequest, $this>
+     */
+    public function verificationRequests(): HasMany
+    {
+        return $this->hasMany(VerificationRequest::class);
+    }
+
+    /**
+     * @return HasMany<VerificationRequest, $this>
+     */
+    public function reviewedVerificationRequests(): HasMany
+    {
+        return $this->hasMany(VerificationRequest::class, 'reviewed_by');
+    }
 }

@@ -17,7 +17,7 @@ class EnsureUserHasRole
     {
         $user = $request->user();
 
-        if (! $user || $user->status !== AccountStatus::Active) {
+        if (! $user || (! $this->hasActiveAccess($user, $roles))) {
             abort(Response::HTTP_FORBIDDEN, 'Account is not active.');
         }
 
@@ -30,5 +30,23 @@ class EnsureUserHasRole
         }
 
         return $next($request);
+    }
+
+    /**
+     * @param  array<int, string>  $roles
+     */
+    private function hasActiveAccess(mixed $user, array $roles): bool
+    {
+        if ($user->status === AccountStatus::Active) {
+            return true;
+        }
+
+        $allowedRoles = collect($roles)->map(
+            fn (string $role): string => UserRole::tryFrom($role)?->value ?? $role
+        );
+
+        return $user->status === AccountStatus::PendingReview
+            && in_array($user->role, [UserRole::ResidentOwner, UserRole::ResidentTenant], strict: true)
+            && $allowedRoles->contains($user->role->value);
     }
 }

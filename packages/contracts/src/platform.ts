@@ -19,6 +19,10 @@ export const verificationStatusValues = ["pending", "verified", "rejected", "exp
 
 export type VerificationStatus = (typeof verificationStatusValues)[number];
 
+export const verificationRequestStatusValues = ["pending_review", "more_info_requested", "approved", "rejected"] as const;
+
+export type VerificationRequestStatus = (typeof verificationRequestStatusValues)[number];
+
 export const invitationStatusValues = ["pending", "accepted", "revoked", "expired"] as const;
 
 export type InvitationStatus = (typeof invitationStatusValues)[number];
@@ -51,7 +55,7 @@ export interface AuthenticatedUser {
   email: string;
   phone: string | null;
   role: UserRole;
-  status: "invited" | "active" | "suspended" | "archived";
+  status: "invited" | "pending_review" | "active" | "suspended" | "archived";
   emailVerifiedAt: string | null;
   lastLoginAt: string | null;
 }
@@ -98,6 +102,31 @@ export interface AcceptResidentInvitationInput {
   phone?: string;
   password: string;
   password_confirmation: string;
+}
+
+export interface VerificationRequest {
+  id: number;
+  userId: number;
+  user?: AuthenticatedUser;
+  residentInvitationId: number | null;
+  residentInvitation?: ResidentInvitation | null;
+  unitId: string | null;
+  unit?: InvitationUnitSummary | null;
+  requestedRole: UserRole;
+  relationType: UnitRelation | null;
+  status: VerificationRequestStatus;
+  submittedAt: string | null;
+  reviewedBy: number | null;
+  reviewer?: AuthenticatedUser | null;
+  reviewedAt: string | null;
+  decisionNote: string | null;
+  moreInfoNote: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+export interface ReviewVerificationRequestInput {
+  note?: string;
 }
 
 export interface LoginInput {

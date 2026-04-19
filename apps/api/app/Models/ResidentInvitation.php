@@ -6,6 +6,7 @@ use App\Enums\InvitationStatus;
 use App\Models\Property\Unit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class ResidentInvitation extends Model
 {
@@ -68,5 +69,13 @@ class ResidentInvitation extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * @return HasOne<VerificationRequest, $this>
+     */
+    public function verificationRequest(): HasOne
+    {
+        return $this->hasOne(VerificationRequest::class);
     }
 }

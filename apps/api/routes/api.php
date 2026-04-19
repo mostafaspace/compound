@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\SystemStatusController;
 use App\Http\Controllers\Api\V1\UnitController;
 use App\Http\Controllers\Api\V1\UnitMembershipController;
 use App\Http\Controllers\Api\V1\UserDocumentController;
+use App\Http\Controllers\Api\V1\VerificationRequestController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->name('api.v1.')->group(function (): void {
@@ -58,6 +59,14 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
                 ->name('resident-invitations.revoke');
             Route::post('/resident-invitations/{residentInvitation}/resend', [ResidentInvitationController::class, 'resend'])
                 ->name('resident-invitations.resend');
+            Route::get('/verification-requests', [VerificationRequestController::class, 'index'])
+                ->name('verification-requests.index');
+            Route::patch('/verification-requests/{verificationRequest}/approve', [VerificationRequestController::class, 'approve'])
+                ->name('verification-requests.approve');
+            Route::patch('/verification-requests/{verificationRequest}/reject', [VerificationRequestController::class, 'reject'])
+                ->name('verification-requests.reject');
+            Route::patch('/verification-requests/{verificationRequest}/request-more-info', [VerificationRequestController::class, 'requestMoreInfo'])
+                ->name('verification-requests.request-more-info');
             Route::patch('/documents/{userDocument}/review', [UserDocumentController::class, 'review'])->name('documents.review');
         });
 });

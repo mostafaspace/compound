@@ -38,7 +38,7 @@ class AuthController extends Controller
             ]);
         }
 
-        if ($user->status !== AccountStatus::Active) {
+        if (! in_array($user->status, [AccountStatus::Active, AccountStatus::PendingReview], strict: true)) {
             $this->auditLogger->record('auth.login_blocked', actor: $user, request: $request, statusCode: 403);
 
             abort(403, 'Account is not active.');
@@ -48,7 +48,7 @@ class AuthController extends Controller
 
         $token = $user->createToken(
             name: $validated['deviceName'],
-            abilities: $this->abilitiesForRole($user->role),
+            abilities: $this->abilitiesForUser($user),
         )->plainTextToken;
 
         $this->auditLogger->record('auth.login_succeeded', actor: $user, request: $request, statusCode: 200);
@@ -78,6 +78,18 @@ class AuthController extends Controller
                 'status' => 'ok',
             ],
         ]);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function abilitiesForUser(User $user): array
+    {
+        if ($user->status === AccountStatus::PendingReview) {
+            return ['verification:self'];
+        }
+
+        return $this->abilitiesForRole($user->role);
     }
 
     /**

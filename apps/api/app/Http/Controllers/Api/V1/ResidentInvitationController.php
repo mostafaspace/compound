@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\AccountStatus;
 use App\Enums\InvitationStatus;
+use App\Enums\VerificationRequestStatus;
 use App\Enums\VerificationStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Onboarding\AcceptResidentInvitationRequest;
@@ -12,6 +13,7 @@ use App\Http\Resources\ResidentInvitationResource;
 use App\Models\Property\Unit;
 use App\Models\ResidentInvitation;
 use App\Models\User;
+use App\Models\VerificationRequest;
 use App\Notifications\ResidentInvitationNotification;
 use App\Support\AuditLogger;
 use Illuminate\Http\JsonResponse;
@@ -126,7 +128,7 @@ class ResidentInvitationController extends Controller
                 'name' => $validated['name'],
                 'phone' => $validated['phone'] ?? $invitation->user->phone,
                 'password' => Hash::make($validated['password']),
-                'status' => AccountStatus::Active->value,
+                'status' => AccountStatus::PendingReview->value,
                 'email_verified_at' => now(),
             ])->save();
 
@@ -134,6 +136,22 @@ class ResidentInvitationController extends Controller
                 'status' => InvitationStatus::Accepted->value,
                 'accepted_at' => now(),
             ])->save();
+
+            VerificationRequest::query()->updateOrCreate(
+                ['resident_invitation_id' => $invitation->id],
+                [
+                    'user_id' => $invitation->user_id,
+                    'unit_id' => $invitation->unit_id,
+                    'requested_role' => $invitation->role,
+                    'relation_type' => $invitation->relation_type,
+                    'status' => VerificationRequestStatus::PendingReview->value,
+                    'submitted_at' => now(),
+                    'reviewed_by' => null,
+                    'reviewed_at' => null,
+                    'decision_note' => null,
+                    'more_info_note' => null,
+                ],
+            );
         });
 
         $this->auditLogger->record('onboarding.resident_invitation_accepted', actor: $invitation->user, request: $request, metadata: [
