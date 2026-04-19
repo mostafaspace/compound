@@ -18,6 +18,7 @@ use App\Models\ResidentInvitation;
 use App\Models\User;
 use App\Models\VerificationRequest;
 use App\Notifications\ResidentInvitationNotification;
+use App\Notifications\VerificationDecisionNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Notification;
@@ -202,6 +203,8 @@ class OnboardingAndDocumentsTest extends TestCase
 
     public function test_admin_can_approve_accepted_resident_verification_request(): void
     {
+        Notification::fake();
+
         $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
         $resident = User::factory()->create([
             'role' => UserRole::ResidentOwner->value,
@@ -250,10 +253,19 @@ class OnboardingAndDocumentsTest extends TestCase
             'user_id' => $resident->id,
             'verification_status' => VerificationStatus::Verified->value,
         ]);
+
+        Notification::assertSentTo(
+            $resident,
+            VerificationDecisionNotification::class,
+            fn (VerificationDecisionNotification $notification, array $channels): bool => $notification->toArray($resident)['status'] === VerificationRequestStatus::Approved->value
+                && $notification->toArray($resident)['note'] === 'Ownership verified against submitted documents.',
+        );
     }
 
     public function test_admin_can_request_more_info_and_reject_verification_request(): void
     {
+        Notification::fake();
+
         $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
         $resident = User::factory()->create([
             'role' => UserRole::ResidentTenant->value,
@@ -280,6 +292,13 @@ class OnboardingAndDocumentsTest extends TestCase
             ->assertJsonPath('data.status', VerificationRequestStatus::MoreInfoRequested->value)
             ->assertJsonPath('data.moreInfoNote', 'Please upload the signed lease page.');
 
+        Notification::assertSentTo(
+            $resident,
+            VerificationDecisionNotification::class,
+            fn (VerificationDecisionNotification $notification, array $channels): bool => $notification->toArray($resident)['status'] === VerificationRequestStatus::MoreInfoRequested->value
+                && $notification->toArray($resident)['note'] === 'Please upload the signed lease page.',
+        );
+
         $this->patchJson("/api/v1/verification-requests/{$verificationRequest->id}/reject")
             ->assertUnprocessable();
 
@@ -294,5 +313,12 @@ class OnboardingAndDocumentsTest extends TestCase
             'id' => $resident->id,
             'status' => AccountStatus::Suspended->value,
         ]);
+
+        Notification::assertSentTo(
+            $resident,
+            VerificationDecisionNotification::class,
+            fn (VerificationDecisionNotification $notification, array $channels): bool => $notification->toArray($resident)['status'] === VerificationRequestStatus::Rejected->value
+                && $notification->toArray($resident)['note'] === 'Lease is not valid for this unit.',
+        );
     }
 }

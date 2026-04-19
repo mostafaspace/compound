@@ -11,6 +11,7 @@ use App\Http\Resources\VerificationRequestResource;
 use App\Models\Property\UnitMembership;
 use App\Models\User;
 use App\Models\VerificationRequest;
+use App\Notifications\VerificationDecisionNotification;
 use App\Support\AuditLogger;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -74,6 +75,8 @@ class VerificationRequestController extends Controller
             'unit_id' => $verificationRequest->unit_id,
         ]);
 
+        $this->notifyResident($verificationRequest);
+
         return VerificationRequestResource::make($verificationRequest->refresh()->load(['residentInvitation', 'reviewer', 'unit', 'user']));
     }
 
@@ -105,6 +108,8 @@ class VerificationRequestController extends Controller
             'user_id' => $verificationRequest->user_id,
             'unit_id' => $verificationRequest->unit_id,
         ]);
+
+        $this->notifyResident($verificationRequest);
 
         return VerificationRequestResource::make($verificationRequest->refresh()->load(['residentInvitation', 'reviewer', 'unit', 'user']));
     }
@@ -138,6 +143,8 @@ class VerificationRequestController extends Controller
             'unit_id' => $verificationRequest->unit_id,
         ]);
 
+        $this->notifyResident($verificationRequest);
+
         return VerificationRequestResource::make($verificationRequest->refresh()->load(['residentInvitation', 'reviewer', 'unit', 'user']));
     }
 
@@ -164,5 +171,24 @@ class VerificationRequestController extends Controller
             ->where('unit_id', $verificationRequest->unit_id)
             ->whereNull('ends_at')
             ->update(['verification_status' => $status->value]);
+    }
+
+    private function notifyResident(VerificationRequest $verificationRequest): void
+    {
+        $verificationRequest->loadMissing(['unit.building.compound', 'user']);
+
+        $compoundName = $verificationRequest->unit?->building?->compound?->name ?? config('app.name', 'Compound Management');
+        $residentAppUrl = config('app.resident_app_url');
+        $actionUrl = is_string($residentAppUrl) && $residentAppUrl !== ''
+            ? rtrim($residentAppUrl, '/').'/verification'
+            : null;
+
+        $verificationRequest->user->notify(new VerificationDecisionNotification(
+            status: $verificationRequest->status,
+            compoundName: $compoundName,
+            unitNumber: $verificationRequest->unit?->unit_number,
+            note: $verificationRequest->decision_note ?? $verificationRequest->more_info_note,
+            actionUrl: $actionUrl,
+        ));
     }
 }

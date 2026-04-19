@@ -56,6 +56,8 @@ return [
 
     'admin_url' => env('ADMIN_APP_URL', 'http://localhost:3000'),
 
+    'resident_app_url' => env('RESIDENT_APP_URL'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone
