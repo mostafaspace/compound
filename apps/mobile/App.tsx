@@ -1,4 +1,6 @@
-import type { ApiEnvelope, AuthenticatedUser, LoginResult, VerificationRequest } from "@compound/contracts";
+import type { ApiEnvelope, AuthenticatedUser, DocumentType, LoginResult, VerificationRequest } from "@compound/contracts";
+import { errorCodes, isErrorWithCode, pick, types } from "@react-native-documents/picker";
+import * as Keychain from "react-native-keychain";
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -25,6 +27,8 @@ const defaultApiBaseUrl = Platform.select({
   ios: "http://localhost:8000/api/v1",
   default: "http://localhost:8000/api/v1",
 });
+
+const authTokenService = "compound.mobile.authToken";
 
 const actionItems = [
   { label: "Visitor QR", detail: "Create or revoke guest passes" },
@@ -60,9 +64,14 @@ export default function App() {
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [user, setUser] = useState<AuthenticatedUser | null>(null);
   const [verificationRequests, setVerificationRequests] = useState<VerificationRequest[]>([]);
+  const [documentTypes, setDocumentTypes] = useState<DocumentType[]>([]);
+  const [selectedDocumentTypeId, setSelectedDocumentTypeId] = useState<number | null>(null);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [isRefreshingRequests, setIsRefreshingRequests] = useState(false);
+  const [isRestoringSession, setIsRestoringSession] = useState(true);
+  const [isUploadingDocument, setIsUploadingDocument] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [uploadMessage, setUploadMessage] = useState<string | null>(null);
 
   const apiBaseUrl = useMemo(
     () => defaultApiBaseUrl,
@@ -101,6 +110,66 @@ export default function App() {
     };
   }, [apiBaseUrl]);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    async function restoreSession() {
+      try {
+        const credentials = await Keychain.getGenericPassword({ service: authTokenService });
+
+        if (!credentials) {
+          return;
+        }
+
+        const restoredUser = await loadCurrentUser(credentials.password);
+
+        if (!restoredUser) {
+          await Keychain.resetGenericPassword({ service: authTokenService });
+          return;
+        }
+
+        if (isMounted) {
+          setAuthToken(credentials.password);
+          setUser(restoredUser);
+        }
+
+        await Promise.all([
+          loadVerificationRequests(credentials.password),
+          loadDocumentTypes(credentials.password),
+        ]);
+      } catch {
+        await Keychain.resetGenericPassword({ service: authTokenService });
+      } finally {
+        if (isMounted) {
+          setIsRestoringSession(false);
+        }
+      }
+    }
+
+    void restoreSession();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [apiBaseUrl]);
+
+  async function loadCurrentUser(token: string): Promise<AuthenticatedUser | null> {
+    const response = await fetch(`${apiBaseUrl}/auth/me`, {
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const payload = (await response.json()) as ApiEnvelope<AuthenticatedUser>;
+
+    return payload.data;
+  }
+
   async function loadVerificationRequests(token = authToken) {
     if (!token) {
       return;
@@ -126,6 +195,29 @@ export default function App() {
     } finally {
       setIsRefreshingRequests(false);
     }
+  }
+
+  async function loadDocumentTypes(token = authToken) {
+    if (!token) {
+      return;
+    }
+
+    const response = await fetch(`${apiBaseUrl}/document-types`, {
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      setDocumentTypes([]);
+      setSelectedDocumentTypeId(null);
+      return;
+    }
+
+    const payload = (await response.json()) as ApiEnvelope<DocumentType[]>;
+    setDocumentTypes(payload.data);
+    setSelectedDocumentTypeId((current) => current ?? payload.data[0]?.id ?? null);
   }
 
   async function handleLogin() {
@@ -155,8 +247,15 @@ export default function App() {
       setAuthToken(payload.data.token);
       setUser(payload.data.user);
       setPassword("");
+      await Keychain.setGenericPassword(payload.data.user.email, payload.data.token, {
+        accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+        service: authTokenService,
+      });
 
-      await loadVerificationRequests(payload.data.token);
+      await Promise.all([
+        loadVerificationRequests(payload.data.token),
+        loadDocumentTypes(payload.data.token),
+      ]);
     } catch {
       setAuthError("Could not reach the compound API.");
     } finally {
@@ -164,12 +263,77 @@ export default function App() {
     }
   }
 
-  function handleSignOut() {
+  async function handleSignOut() {
+    await Keychain.resetGenericPassword({ service: authTokenService });
     setAuthToken(null);
     setUser(null);
     setVerificationRequests([]);
+    setDocumentTypes([]);
+    setSelectedDocumentTypeId(null);
     setPassword("");
     setAuthError(null);
+    setUploadMessage(null);
+  }
+
+  async function handlePickAndUploadDocument() {
+    if (!authToken || !selectedDocumentTypeId) {
+      return;
+    }
+
+    setUploadMessage(null);
+    setIsUploadingDocument(true);
+
+    try {
+      const [document] = await pick({
+        allowMultiSelection: false,
+        type: [types.pdf, types.images],
+      });
+
+      if (!document.hasRequestedType) {
+        setUploadMessage("Select a PDF or image file.");
+        return;
+      }
+
+      const formData = new FormData();
+      const uploadFile = {
+        name: document.name ?? "verification-document",
+        type: document.type ?? "application/octet-stream",
+        uri: document.uri,
+      };
+
+      formData.append("documentTypeId", String(selectedDocumentTypeId));
+
+      if (latestRequest?.unitId) {
+        formData.append("unitId", latestRequest.unitId);
+      }
+
+      formData.append("file", uploadFile as unknown as Blob);
+
+      const response = await fetch(`${apiBaseUrl}/documents`, {
+        body: formData,
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        setUploadMessage("Upload failed. Check the file size and document type.");
+        return;
+      }
+
+      setUploadMessage("Document uploaded for admin review.");
+      await loadVerificationRequests(authToken);
+    } catch (error) {
+      if (isErrorWithCode(error) && error.code === errorCodes.OPERATION_CANCELED) {
+        return;
+      }
+
+      setUploadMessage("Document upload could not be completed.");
+    } finally {
+      setIsUploadingDocument(false);
+    }
   }
 
   const latestRequest = verificationRequests[0] ?? null;
@@ -196,7 +360,14 @@ export default function App() {
           <View style={[styles.statusDot, status?.status === "ok" && styles.statusDotOnline]} />
         </View>
 
-        {!user ? (
+        {!user && isRestoringSession ? (
+          <View style={styles.panel}>
+            <ActivityIndicator color="#116a57" />
+            <Text style={styles.sectionText}>Restoring resident session.</Text>
+          </View>
+        ) : null}
+
+        {!user && !isRestoringSession ? (
           <View style={styles.panel}>
             <Text style={styles.sectionTitle}>Sign in</Text>
             <Text style={styles.sectionText}>Use the email and password from your accepted invitation.</Text>
@@ -241,7 +412,7 @@ export default function App() {
           <View style={styles.panel}>
             <Text style={styles.sectionTitle}>Resident account required</Text>
             <Text style={styles.sectionText}>This mobile workspace is only available to resident owner and tenant accounts.</Text>
-            <Pressable accessibilityRole="button" onPress={handleSignOut} style={styles.secondaryButton}>
+            <Pressable accessibilityRole="button" onPress={() => void handleSignOut()} style={styles.secondaryButton}>
               <Text style={styles.secondaryButtonText}>Sign out</Text>
             </Pressable>
           </View>
@@ -277,12 +448,59 @@ export default function App() {
                     <Text style={styles.infoText}>{latestRequest.decisionNote}</Text>
                   </View>
                 ) : null}
+                {latestRequest.status === "more_info_requested" ? (
+                  <View style={styles.uploadPanel}>
+                    <Text style={styles.infoTitle}>Upload follow-up document</Text>
+                    {documentTypes.length > 0 ? (
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.documentTypeRow}>
+                        {documentTypes.map((documentType) => (
+                          <Pressable
+                            accessibilityRole="button"
+                            key={documentType.id}
+                            onPress={() => setSelectedDocumentTypeId(documentType.id)}
+                            style={[
+                              styles.documentTypeChip,
+                              selectedDocumentTypeId === documentType.id && styles.documentTypeChipSelected,
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.documentTypeText,
+                                selectedDocumentTypeId === documentType.id && styles.documentTypeTextSelected,
+                              ]}
+                            >
+                              {documentType.name}
+                            </Text>
+                          </Pressable>
+                        ))}
+                      </ScrollView>
+                    ) : (
+                      <Text style={styles.infoText}>No active document types are available yet.</Text>
+                    )}
+                    {uploadMessage ? <Text style={styles.infoText}>{uploadMessage}</Text> : null}
+                    <Pressable
+                      accessibilityRole="button"
+                      disabled={isUploadingDocument || !selectedDocumentTypeId}
+                      onPress={() => void handlePickAndUploadDocument()}
+                      style={[
+                        styles.primaryButton,
+                        (isUploadingDocument || !selectedDocumentTypeId) && styles.disabledButton,
+                      ]}
+                    >
+                      {isUploadingDocument ? (
+                        <ActivityIndicator color="#ffffff" />
+                      ) : (
+                        <Text style={styles.primaryButtonText}>Choose and upload</Text>
+                      )}
+                    </Pressable>
+                  </View>
+                ) : null}
               </View>
             ) : (
               <Text style={styles.sectionText}>No verification request is linked to this account yet.</Text>
             )}
 
-            <Pressable accessibilityRole="button" onPress={handleSignOut} style={styles.linkButton}>
+            <Pressable accessibilityRole="button" onPress={() => void handleSignOut()} style={styles.linkButton}>
               <Text style={styles.linkButtonText}>Sign out</Text>
             </Pressable>
           </View>
@@ -309,7 +527,7 @@ export default function App() {
               ))}
             </View>
 
-            <Pressable accessibilityRole="button" onPress={handleSignOut} style={styles.secondaryButton}>
+            <Pressable accessibilityRole="button" onPress={() => void handleSignOut()} style={styles.secondaryButton}>
               <Text style={styles.secondaryButtonText}>Sign out</Text>
             </Pressable>
           </>
@@ -516,6 +734,37 @@ const styles = StyleSheet.create({
     color: "#263b5e",
     fontSize: 14,
     lineHeight: 20,
+  },
+  uploadPanel: {
+    backgroundColor: "#ffffff",
+    borderColor: "#b9c9ef",
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 12,
+    padding: 14,
+  },
+  documentTypeRow: {
+    gap: 8,
+    paddingRight: 8,
+  },
+  documentTypeChip: {
+    borderColor: "#c8ced7",
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+  },
+  documentTypeChipSelected: {
+    backgroundColor: "#116a57",
+    borderColor: "#116a57",
+  },
+  documentTypeText: {
+    color: "#384252",
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  documentTypeTextSelected: {
+    color: "#ffffff",
   },
   grid: {
     gap: 12,
