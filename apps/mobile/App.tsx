@@ -1,5 +1,4 @@
 import type { ApiEnvelope, AuthenticatedUser, LoginResult, VerificationRequest } from "@compound/contracts";
-import { StatusBar } from "expo-status-bar";
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -8,6 +7,7 @@ import {
   SafeAreaView,
   ScrollView,
   StyleSheet,
+  StatusBar,
   Text,
   TextInput,
   View,
@@ -22,6 +22,7 @@ interface SystemStatus {
 
 const defaultApiBaseUrl = Platform.select({
   android: "http://10.0.2.2:8000/api/v1",
+  ios: "http://localhost:8000/api/v1",
   default: "http://localhost:8000/api/v1",
 });
 
@@ -64,7 +65,7 @@ export default function App() {
   const [authError, setAuthError] = useState<string | null>(null);
 
   const apiBaseUrl = useMemo(
-    () => process.env.EXPO_PUBLIC_API_BASE_URL ?? defaultApiBaseUrl,
+    () => defaultApiBaseUrl,
     [],
   );
 
@@ -177,7 +178,7 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar style="dark" />
+      <StatusBar barStyle="dark-content" />
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.header}>
           <Text style={styles.kicker}>Compound</Text>
