@@ -1,0 +1,29 @@
+{
+  "name": "compound-management",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Owners association and compound management platform monorepo.",
+  "packageManager": "npm@10.9.3",
+  "workspaces": [
+    "apps/admin",
+    "apps/mobile",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
+  },
+  "scripts": {
+    "dev": "npm run dev --workspaces --if-present",
+    "dev:admin": "npm run dev -w apps/admin",
+    "dev:mobile": "npm run start -w apps/mobile",
+    "dev:api": "cd apps/api && php artisan serve",
+    "build": "npm run build --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "format": "npm run format --workspaces --if-present",
+    "infra:up": "docker compose -f infra/docker-compose.yml up -d",
+    "infra:down": "docker compose -f infra/docker-compose.yml down"
+  }
+}

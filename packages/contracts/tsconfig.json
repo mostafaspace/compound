@@ -1,0 +1,8 @@
+{
+  "extends": "@compound/typescript-config/base.json",
+  "compilerOptions": {
+    "module": "esnext",
+    "target": "es2022"
+  },
+  "include": ["src"]
+}
