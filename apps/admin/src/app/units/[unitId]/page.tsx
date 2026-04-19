@@ -44,6 +44,9 @@ export default async function UnitDetailPage({ params, searchParams }: UnitDetai
             <Link className="inline-flex h-11 items-center justify-center rounded-lg bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong" href="/documents">
               Documents
             </Link>
+            <Link className="inline-flex h-11 items-center justify-center rounded-lg border border-line bg-panel px-4 text-sm font-semibold hover:border-brand" href="/onboarding">
+              Onboarding
+            </Link>
             <LogoutButton />
           </div>
         </div>

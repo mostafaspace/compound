@@ -12,6 +12,7 @@ use App\Http\Resources\ResidentInvitationResource;
 use App\Models\Property\Unit;
 use App\Models\ResidentInvitation;
 use App\Models\User;
+use App\Notifications\ResidentInvitationNotification;
 use App\Support\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -27,8 +28,22 @@ class ResidentInvitationController extends Controller
 
     public function index(): AnonymousResourceCollection
     {
+        $request = request();
+        $status = $request->string('status')->toString();
+        $search = $request->string('q')->toString();
+
         $invitations = ResidentInvitation::query()
             ->with(['user', 'unit'])
+            ->when($status !== '' && $status !== InvitationStatus::Expired->value, fn ($query) => $query->where('status', $status))
+            ->when($status === InvitationStatus::Expired->value, fn ($query) => $query
+                ->where('status', InvitationStatus::Pending->value)
+                ->where('expires_at', '<', now()))
+            ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search): void {
+                $query->where('email', 'like', "%{$search}%")
+                    ->orWhereHas('user', fn ($userQuery) => $userQuery
+                        ->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%"));
+            }))
             ->latest()
             ->paginate();
 
@@ -78,13 +93,15 @@ class ResidentInvitationController extends Controller
             return $invitation;
         });
 
+        $this->deliverInvitation($invitation, $plainToken);
+
         $this->auditLogger->record('onboarding.resident_invited', actor: $request->user(), request: $request, metadata: [
             'invitation_id' => $invitation->id,
             'email' => $invitation->email,
             'unit_id' => $invitation->unit_id,
         ]);
 
-        return ResidentInvitationResource::make($invitation->load(['user', 'unit']))
+        return ResidentInvitationResource::make($invitation->refresh()->load(['user', 'unit']))
             ->additional(['meta' => ['acceptUrl' => $this->acceptUrl($plainToken), 'token' => $plainToken]])
             ->response()
             ->setStatusCode(Response::HTTP_CREATED);
@@ -128,6 +145,8 @@ class ResidentInvitationController extends Controller
 
     public function revoke(Request $request, ResidentInvitation $residentInvitation): ResidentInvitationResource
     {
+        abort_if($residentInvitation->status === InvitationStatus::Accepted, Response::HTTP_UNPROCESSABLE_ENTITY, 'Accepted invitations cannot be revoked.');
+
         $residentInvitation->forceFill([
             'status' => InvitationStatus::Revoked->value,
             'revoked_at' => now(),
@@ -140,6 +159,30 @@ class ResidentInvitationController extends Controller
         return ResidentInvitationResource::make($residentInvitation->refresh()->load(['user', 'unit']));
     }
 
+    public function resend(Request $request, ResidentInvitation $residentInvitation): JsonResponse
+    {
+        abort_if($residentInvitation->status === InvitationStatus::Accepted, Response::HTTP_UNPROCESSABLE_ENTITY, 'Accepted invitations cannot be resent.');
+
+        $plainToken = Str::random(48);
+        $residentInvitation->forceFill([
+            'token_hash' => hash('sha256', $plainToken),
+            'status' => InvitationStatus::Pending->value,
+            'expires_at' => now()->addDays(7),
+            'revoked_at' => null,
+        ])->save();
+
+        $this->deliverInvitation($residentInvitation, $plainToken);
+
+        $this->auditLogger->record('onboarding.resident_invitation_resent', actor: $request->user(), request: $request, metadata: [
+            'invitation_id' => $residentInvitation->id,
+            'email' => $residentInvitation->email,
+        ]);
+
+        return ResidentInvitationResource::make($residentInvitation->refresh()->load(['user', 'unit']))
+            ->additional(['meta' => ['acceptUrl' => $this->acceptUrl($plainToken), 'token' => $plainToken]])
+            ->response();
+    }
+
     private function findByPlainToken(string $token): ResidentInvitation
     {
         return ResidentInvitation::query()
@@ -150,5 +193,21 @@ class ResidentInvitationController extends Controller
     private function acceptUrl(string $token): string
     {
         return rtrim(config('app.admin_url', 'http://localhost:3000'), '/').'/invitations/'.$token;
+    }
+
+    private function deliverInvitation(ResidentInvitation $invitation, string $plainToken): void
+    {
+        $invitation->loadMissing(['user', 'unit.building.compound']);
+
+        $compoundName = $invitation->unit?->building?->compound?->name ?? config('app.name', 'Compound Management');
+        $invitation->user->notify(new ResidentInvitationNotification(
+            acceptUrl: $this->acceptUrl($plainToken),
+            compoundName: $compoundName,
+            unitNumber: $invitation->unit?->unit_number,
+            expiresAt: $invitation->expires_at,
+        ));
+
+        $invitation->forceFill(['last_sent_at' => now()])->save();
+        $invitation->increment('delivery_count');
     }
 }

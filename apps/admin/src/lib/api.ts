@@ -16,6 +16,7 @@ import type {
   DocumentStatus,
   DocumentType,
   FloorSummary,
+  InvitationStatus,
   ResidentInvitation,
   LoginInput,
   LoginResult,
@@ -484,6 +485,66 @@ export async function createResidentInvitation(input: CreateResidentInvitationIn
 
   if (!response.ok) {
     throw new Error(`Failed to create resident invitation: ${response.status}`);
+  }
+
+  const payload = (await response.json()) as ApiEnvelope<ResidentInvitation>;
+
+  return payload.data;
+}
+
+export async function getResidentInvitations(input: { status?: InvitationStatus | "all"; q?: string } = {}): Promise<ResidentInvitation[]> {
+  try {
+    const params = new URLSearchParams();
+
+    if (input.status && input.status !== "all") {
+      params.set("status", input.status);
+    }
+
+    if (input.q?.trim()) {
+      params.set("q", input.q.trim());
+    }
+
+    const query = params.toString();
+    const response = await fetch(`${config.apiBaseUrl}/resident-invitations${query ? `?${query}` : ""}`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const payload = (await response.json()) as PaginatedEnvelope<ResidentInvitation>;
+
+    return payload.data;
+  } catch {
+    return [];
+  }
+}
+
+export async function revokeResidentInvitation(invitationId: number): Promise<ResidentInvitation> {
+  const response = await fetch(`${config.apiBaseUrl}/resident-invitations/${invitationId}/revoke`, {
+    headers: await apiHeaders(true),
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to revoke resident invitation: ${response.status}`);
+  }
+
+  const payload = (await response.json()) as ApiEnvelope<ResidentInvitation>;
+
+  return payload.data;
+}
+
+export async function resendResidentInvitation(invitationId: number): Promise<ResidentInvitation> {
+  const response = await fetch(`${config.apiBaseUrl}/resident-invitations/${invitationId}/resend`, {
+    headers: await apiHeaders(true),
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to resend resident invitation: ${response.status}`);
   }
 
   const payload = (await response.json()) as ApiEnvelope<ResidentInvitation>;

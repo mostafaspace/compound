@@ -20,6 +20,8 @@ class ResidentInvitation extends Model
         'expires_at',
         'accepted_at',
         'revoked_at',
+        'last_sent_at',
+        'delivery_count',
         'created_by',
     ];
 
@@ -27,10 +29,21 @@ class ResidentInvitation extends Model
     {
         return [
             'accepted_at' => 'datetime',
+            'delivery_count' => 'integer',
             'expires_at' => 'datetime',
+            'last_sent_at' => 'datetime',
             'revoked_at' => 'datetime',
             'status' => InvitationStatus::class,
         ];
+    }
+
+    public function effectiveStatus(): InvitationStatus
+    {
+        if ($this->status === InvitationStatus::Pending && $this->expires_at?->isPast()) {
+            return InvitationStatus::Expired;
+        }
+
+        return $this->status;
     }
 
     /**

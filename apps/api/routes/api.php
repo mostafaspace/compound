@@ -56,6 +56,8 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             Route::post('/resident-invitations', [ResidentInvitationController::class, 'store'])->name('resident-invitations.store');
             Route::post('/resident-invitations/{residentInvitation}/revoke', [ResidentInvitationController::class, 'revoke'])
                 ->name('resident-invitations.revoke');
+            Route::post('/resident-invitations/{residentInvitation}/resend', [ResidentInvitationController::class, 'resend'])
+                ->name('resident-invitations.resend');
             Route::patch('/documents/{userDocument}/review', [UserDocumentController::class, 'review'])->name('documents.review');
         });
 });

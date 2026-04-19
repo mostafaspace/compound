@@ -13,9 +13,12 @@ use App\Models\Documents\UserDocument;
 use App\Models\Property\Building;
 use App\Models\Property\Compound;
 use App\Models\Property\Unit;
+use App\Models\ResidentInvitation;
 use App\Models\User;
+use App\Notifications\ResidentInvitationNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -26,6 +29,8 @@ class OnboardingAndDocumentsTest extends TestCase
 
     public function test_admin_can_invite_and_resident_can_accept(): void
     {
+        Notification::fake();
+
         $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
         Sanctum::actingAs($admin);
 
@@ -55,7 +60,12 @@ class OnboardingAndDocumentsTest extends TestCase
         $this->assertIsString($token);
 
         $resident = User::query()->where('email', 'nora.owner@example.com')->firstOrFail();
+        Notification::assertSentTo($resident, ResidentInvitationNotification::class);
         $this->assertSame(AccountStatus::Invited, $resident->status);
+        $this->assertDatabaseHas('resident_invitations', [
+            'email' => 'nora.owner@example.com',
+            'delivery_count' => 1,
+        ]);
         $this->assertDatabaseHas('unit_memberships', [
             'unit_id' => $unit->id,
             'user_id' => $resident->id,
@@ -86,6 +96,52 @@ class OnboardingAndDocumentsTest extends TestCase
             'email' => 'nora.owner@example.com',
             'status' => InvitationStatus::Accepted->value,
         ]);
+    }
+
+    public function test_admin_can_resend_and_revoke_invitation(): void
+    {
+        Notification::fake();
+
+        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
+        Sanctum::actingAs($admin);
+
+        $createResponse = $this->postJson('/api/v1/resident-invitations', [
+            'name' => 'Tarek Tenant',
+            'email' => 'tarek.tenant@example.com',
+            'role' => UserRole::ResidentTenant->value,
+        ])->assertCreated();
+
+        $oldToken = $createResponse->json('meta.token');
+        $invitation = ResidentInvitation::query()->where('email', 'tarek.tenant@example.com')->firstOrFail();
+        $oldTokenHash = $invitation->token_hash;
+
+        $resendResponse = $this->postJson("/api/v1/resident-invitations/{$invitation->id}/resend")
+            ->assertOk()
+            ->assertJsonPath('data.status', InvitationStatus::Pending->value)
+            ->assertJsonPath('data.deliveryCount', 2);
+
+        $newToken = $resendResponse->json('meta.token');
+        $this->assertIsString($newToken);
+        $this->assertNotSame($oldToken, $newToken);
+        $this->assertNotSame($oldTokenHash, $invitation->refresh()->token_hash);
+
+        $resident = User::query()->where('email', 'tarek.tenant@example.com')->firstOrFail();
+        Notification::assertSentTo($resident, ResidentInvitationNotification::class);
+
+        $this->getJson("/api/v1/resident-invitations/{$oldToken}")->assertNotFound();
+        $this->getJson("/api/v1/resident-invitations/{$newToken}")
+            ->assertOk()
+            ->assertJsonPath('data.email', 'tarek.tenant@example.com');
+
+        $this->postJson("/api/v1/resident-invitations/{$invitation->id}/revoke")
+            ->assertOk()
+            ->assertJsonPath('data.status', InvitationStatus::Revoked->value);
+
+        $this->postJson("/api/v1/resident-invitations/{$newToken}/accept", [
+            'name' => 'Tarek Tenant',
+            'password' => 'Password123!',
+            'password_confirmation' => 'Password123!',
+        ])->assertGone();
     }
 
     public function test_admin_can_upload_and_review_verification_document(): void

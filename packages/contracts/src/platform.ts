@@ -56,6 +56,14 @@ export interface AuthenticatedUser {
   lastLoginAt: string | null;
 }
 
+export interface InvitationUnitSummary {
+  id: string;
+  compoundId: string;
+  buildingId: string;
+  floorId: string | null;
+  unitNumber: string;
+}
+
 export interface ResidentInvitation {
   id: number;
   email: string;
@@ -65,8 +73,10 @@ export interface ResidentInvitation {
   expiresAt: string | null;
   acceptedAt: string | null;
   revokedAt: string | null;
+  lastSentAt: string | null;
+  deliveryCount: number;
   user?: AuthenticatedUser;
-  unit?: unknown;
+  unit?: InvitationUnitSummary | null;
   createdAt: string | null;
   updatedAt: string | null;
 }

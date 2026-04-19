@@ -2,6 +2,7 @@ import { loginAction } from "./actions";
 
 interface LoginPageProps {
   searchParams?: Promise<{
+    accepted?: string;
     error?: string;
   }>;
 }
@@ -9,6 +10,7 @@ interface LoginPageProps {
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = searchParams ? await searchParams : {};
   const hasError = params.error === "invalid";
+  const acceptedInvite = params.accepted === "1";
 
   return (
     <main className="grid min-h-screen bg-background text-foreground lg:grid-cols-[1.1fr_0.9fr]">
@@ -33,6 +35,11 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           {hasError ? (
             <div className="mt-5 rounded-lg border border-[#f2b8b5] bg-[#fff3f2] px-4 py-3 text-sm font-medium text-danger">
               Credentials are invalid, the account is inactive, or the API is unavailable.
+            </div>
+          ) : null}
+          {acceptedInvite ? (
+            <div className="mt-5 rounded-lg border border-[#b7d9cc] bg-[#e6f3ef] px-4 py-3 text-sm font-medium text-brand">
+              Account completed. Sign in with the password you just created.
             </div>
           ) : null}
 
