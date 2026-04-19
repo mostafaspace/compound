@@ -35,6 +35,10 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
                 Route::get('/documents/{userDocument}/download', [UserDocumentController::class, 'download'])
                     ->name('documents.download');
             });
+
+        Route::middleware('role:resident_owner,resident_tenant')
+            ->get('/my/verification-requests', [VerificationRequestController::class, 'mine'])
+            ->name('my.verification-requests.index');
     });
 
     Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,board_member,finance_reviewer,support_agent'])

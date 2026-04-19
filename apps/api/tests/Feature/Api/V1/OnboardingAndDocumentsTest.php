@@ -321,4 +321,42 @@ class OnboardingAndDocumentsTest extends TestCase
                 && $notification->toArray($resident)['note'] === 'Lease is not valid for this unit.',
         );
     }
+
+    public function test_pending_resident_can_list_only_own_verification_requests(): void
+    {
+        $resident = User::factory()->create([
+            'role' => UserRole::ResidentOwner->value,
+            'status' => AccountStatus::PendingReview->value,
+        ]);
+        $otherResident = User::factory()->create([
+            'role' => UserRole::ResidentTenant->value,
+            'status' => AccountStatus::PendingReview->value,
+        ]);
+
+        $ownRequest = VerificationRequest::query()->create([
+            'user_id' => $resident->id,
+            'requested_role' => UserRole::ResidentOwner->value,
+            'relation_type' => UnitRelationType::Owner->value,
+            'status' => VerificationRequestStatus::MoreInfoRequested->value,
+            'submitted_at' => now(),
+            'more_info_note' => 'Upload your national ID.',
+        ]);
+
+        VerificationRequest::query()->create([
+            'user_id' => $otherResident->id,
+            'requested_role' => UserRole::ResidentTenant->value,
+            'relation_type' => UnitRelationType::Tenant->value,
+            'status' => VerificationRequestStatus::PendingReview->value,
+            'submitted_at' => now(),
+        ]);
+
+        Sanctum::actingAs($resident);
+
+        $this->getJson('/api/v1/my/verification-requests')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $ownRequest->id)
+            ->assertJsonPath('data.0.status', VerificationRequestStatus::MoreInfoRequested->value)
+            ->assertJsonPath('data.0.moreInfoNote', 'Upload your national ID.');
+    }
 }

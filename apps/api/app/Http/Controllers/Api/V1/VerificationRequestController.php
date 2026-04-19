@@ -46,6 +46,21 @@ class VerificationRequestController extends Controller
         return VerificationRequestResource::collection($verificationRequests);
     }
 
+    public function mine(Request $request): AnonymousResourceCollection
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $verificationRequests = VerificationRequest::query()
+            ->with(['residentInvitation', 'reviewer', 'unit', 'user'])
+            ->where('user_id', $user->id)
+            ->latest('submitted_at')
+            ->latest()
+            ->paginate();
+
+        return VerificationRequestResource::collection($verificationRequests);
+    }
+
     public function approve(VerificationDecisionRequest $request, VerificationRequest $verificationRequest): VerificationRequestResource
     {
         $this->abortIfClosed($verificationRequest);
