@@ -13,6 +13,7 @@ import type {
   CreateFloorInput,
   CreateUnitMembershipInput,
   CreateUnitInput,
+  CreateVisitorRequestInput,
   DocumentStatus,
   DocumentType,
   FloorSummary,
@@ -34,6 +35,10 @@ import type {
   UserDocument,
   VerificationRequest,
   VerificationRequestStatus,
+  VisitorDecisionInput,
+  VisitorPassValidationResult,
+  VisitorRequest,
+  VisitorRequestStatus,
 } from "@compound/contracts";
 
 import { config } from "./config";
@@ -890,4 +895,113 @@ export async function reviewDocument(documentId: number, input: { status: Docume
   if (!response.ok) {
     throw new Error(`Failed to review document: ${response.status}`);
   }
+}
+
+export async function getVisitorRequests(input: {
+  status?: VisitorRequestStatus | "all";
+} = {}): Promise<VisitorRequest[]> {
+  try {
+    const params = new URLSearchParams();
+
+    if (input.status && input.status !== "all") {
+      params.set("status", input.status);
+    }
+
+    const query = params.toString();
+    const response = await fetch(`${config.apiBaseUrl}/visitor-requests${query ? `?${query}` : ""}`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const payload = (await response.json()) as PaginatedEnvelope<VisitorRequest>;
+
+    return payload.data;
+  } catch {
+    return [];
+  }
+}
+
+export async function createVisitorRequest(input: CreateVisitorRequestInput): Promise<VisitorRequest> {
+  const response = await fetch(`${config.apiBaseUrl}/visitor-requests`, {
+    body: JSON.stringify(input),
+    headers: {
+      ...(await apiHeaders(true)),
+      "Content-Type": "application/json",
+    },
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to create visitor request: ${response.status}`);
+  }
+
+  const payload = (await response.json()) as ApiEnvelope<VisitorRequest>;
+
+  return payload.data;
+}
+
+export async function validateVisitorPass(token: string): Promise<VisitorPassValidationResult> {
+  const response = await fetch(`${config.apiBaseUrl}/visitor-requests/validate-pass`, {
+    body: JSON.stringify({ token }),
+    headers: {
+      ...(await apiHeaders(true)),
+      "Content-Type": "application/json",
+    },
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to validate visitor pass: ${response.status}`);
+  }
+
+  const payload = (await response.json()) as ApiEnvelope<VisitorPassValidationResult>;
+
+  return payload.data;
+}
+
+export async function arriveVisitorRequest(visitorRequestId: string): Promise<VisitorRequest> {
+  return visitorDecision(visitorRequestId, "arrive");
+}
+
+export async function allowVisitorRequest(visitorRequestId: string): Promise<VisitorRequest> {
+  return visitorDecision(visitorRequestId, "allow");
+}
+
+export async function denyVisitorRequest(visitorRequestId: string, input: VisitorDecisionInput = {}): Promise<VisitorRequest> {
+  return visitorDecision(visitorRequestId, "deny", input);
+}
+
+export async function completeVisitorRequest(visitorRequestId: string): Promise<VisitorRequest> {
+  return visitorDecision(visitorRequestId, "complete");
+}
+
+export async function cancelVisitorRequest(visitorRequestId: string, input: VisitorDecisionInput = {}): Promise<VisitorRequest> {
+  return visitorDecision(visitorRequestId, "cancel", input);
+}
+
+async function visitorDecision(
+  visitorRequestId: string,
+  action: "arrive" | "allow" | "deny" | "complete" | "cancel",
+  input: VisitorDecisionInput = {},
+): Promise<VisitorRequest> {
+  const response = await fetch(`${config.apiBaseUrl}/visitor-requests/${visitorRequestId}/${action}`, {
+    body: JSON.stringify(input),
+    headers: {
+      ...(await apiHeaders(true)),
+      "Content-Type": "application/json",
+    },
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to ${action} visitor request: ${response.status}`);
+  }
+
+  const payload = (await response.json()) as ApiEnvelope<VisitorRequest>;
+
+  return payload.data;
 }

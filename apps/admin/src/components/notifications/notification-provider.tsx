@@ -5,7 +5,17 @@ import { canAccessAdmin } from "@/lib/session";
 export async function NotificationProvider({ children }: Readonly<{ children: React.ReactNode }>) {
   const user = await getCurrentUser();
 
-  if (!user || !canAccessAdmin(user, ["super_admin", "compound_admin", "board_member", "finance_reviewer", "support_agent"])) {
+  if (
+    !user ||
+    !canAccessAdmin(user, [
+      "super_admin",
+      "compound_admin",
+      "board_member",
+      "finance_reviewer",
+      "security_guard",
+      "support_agent",
+    ])
+  ) {
     return children;
   }
 

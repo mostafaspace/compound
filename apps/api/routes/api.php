@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\V1\UnitController;
 use App\Http\Controllers\Api\V1\UnitMembershipController;
 use App\Http\Controllers\Api\V1\UserDocumentController;
 use App\Http\Controllers\Api\V1\VerificationRequestController;
+use App\Http\Controllers\Api\V1\VisitorRequestController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->name('api.v1.')->group(function (): void {
@@ -60,6 +61,28 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::middleware('role:resident_owner,resident_tenant')
             ->get('/my/verification-requests', [VerificationRequestController::class, 'mine'])
             ->name('my.verification-requests.index');
+
+        Route::middleware('role:super_admin,compound_admin,security_guard,support_agent,resident_owner,resident_tenant')
+            ->group(function (): void {
+                Route::get('/visitor-requests', [VisitorRequestController::class, 'index'])->name('visitor-requests.index');
+                Route::post('/visitor-requests', [VisitorRequestController::class, 'store'])->name('visitor-requests.store');
+                Route::post('/visitor-requests/{visitorRequest}/cancel', [VisitorRequestController::class, 'cancel'])
+                    ->name('visitor-requests.cancel');
+            });
+
+        Route::middleware('role:super_admin,compound_admin,security_guard,support_agent')
+            ->group(function (): void {
+                Route::post('/visitor-requests/validate-pass', [VisitorRequestController::class, 'validatePass'])
+                    ->name('visitor-requests.validate-pass');
+                Route::post('/visitor-requests/{visitorRequest}/arrive', [VisitorRequestController::class, 'arrive'])
+                    ->name('visitor-requests.arrive');
+                Route::post('/visitor-requests/{visitorRequest}/allow', [VisitorRequestController::class, 'allow'])
+                    ->name('visitor-requests.allow');
+                Route::post('/visitor-requests/{visitorRequest}/deny', [VisitorRequestController::class, 'deny'])
+                    ->name('visitor-requests.deny');
+                Route::post('/visitor-requests/{visitorRequest}/complete', [VisitorRequestController::class, 'complete'])
+                    ->name('visitor-requests.complete');
+            });
 
         // Org chart and responsible-party lookup — visible to all authenticated users
         Route::get('/compounds/{compound}/org-chart', [OrgChartController::class, 'show'])

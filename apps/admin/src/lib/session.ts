@@ -38,7 +38,14 @@ export function canAccessAdmin(user: AuthenticatedUser, allowedRoles: UserRole[]
 
 export async function requireAdminUser(
   loader: () => Promise<AuthenticatedUser | null>,
-  allowedRoles: UserRole[] = ["super_admin", "compound_admin", "board_member", "finance_reviewer", "support_agent"],
+  allowedRoles: UserRole[] = [
+    "super_admin",
+    "compound_admin",
+    "board_member",
+    "finance_reviewer",
+    "security_guard",
+    "support_agent",
+  ],
 ): Promise<AuthenticatedUser> {
   const token = await getAuthToken();
 

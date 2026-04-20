@@ -1,3 +1,5 @@
+import type { AuthenticatedUser } from "./platform";
+
 export const issueStatusValues = [
   "new",
   "triaged",
@@ -14,6 +16,97 @@ export type IssueStatus = (typeof issueStatusValues)[number];
 export const visitorPassStatusValues = ["active", "used", "expired", "revoked"] as const;
 
 export type VisitorPassStatus = (typeof visitorPassStatusValues)[number];
+
+export const visitorRequestStatusValues = [
+  "pending",
+  "qr_issued",
+  "arrived",
+  "allowed",
+  "denied",
+  "completed",
+  "cancelled"
+] as const;
+
+export type VisitorRequestStatus = (typeof visitorRequestStatusValues)[number];
+
+export const visitorScanResultValues = [
+  "valid",
+  "expired",
+  "already_used",
+  "denied",
+  "cancelled",
+  "not_found",
+  "out_of_window"
+] as const;
+
+export type VisitorScanResult = (typeof visitorScanResultValues)[number];
+
+export interface VisitorPass {
+  id: string;
+  visitorRequestId: string;
+  status: VisitorPassStatus;
+  expiresAt: string | null;
+  maxUses: number;
+  usesCount: number;
+  lastUsedAt: string | null;
+  revokedAt: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+export interface VisitorUnitSummary {
+  id: string;
+  compoundId: string;
+  buildingId: string;
+  floorId: string | null;
+  unitNumber: string;
+  buildingName?: string | null;
+  compoundName?: string | null;
+}
+
+export interface VisitorRequest {
+  id: string;
+  hostUserId: number;
+  host?: AuthenticatedUser;
+  unitId: string;
+  unit?: VisitorUnitSummary | null;
+  visitorName: string;
+  visitorPhone: string | null;
+  vehiclePlate: string | null;
+  visitStartsAt: string | null;
+  visitEndsAt: string | null;
+  notes: string | null;
+  status: VisitorRequestStatus;
+  pass?: VisitorPass | null;
+  qrToken?: string;
+  arrivedAt: string | null;
+  allowedAt: string | null;
+  deniedAt: string | null;
+  completedAt: string | null;
+  cancelledAt: string | null;
+  decisionReason: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+export interface CreateVisitorRequestInput {
+  unitId: string;
+  visitorName: string;
+  visitorPhone?: string;
+  vehiclePlate?: string;
+  visitStartsAt: string;
+  visitEndsAt: string;
+  notes?: string;
+}
+
+export interface VisitorDecisionInput {
+  reason?: string;
+}
+
+export interface VisitorPassValidationResult {
+  result: VisitorScanResult;
+  visitorRequest: VisitorRequest | null;
+}
 
 export const representativeRoleValues = [
   "floor_representative",
