@@ -17,7 +17,7 @@ return new class extends Migration
             $table->time('quiet_hours_start')->nullable();
             $table->time('quiet_hours_end')->nullable();
             $table->string('quiet_hours_timezone')->nullable();
-            $table->json('muted_categories')->default('[]');
+            $table->json('muted_categories')->nullable();
             $table->timestamps();
 
             $table->index(['user_id']);

@@ -43,7 +43,7 @@ class VisitorRequestsTest extends TestCase
             'visitEndsAt' => now()->addHours(2)->toIso8601String(),
             'notes' => 'Expected at the main gate.',
         ])
-            ->assertOk()
+            ->assertCreated()
             ->assertJsonPath('data.hostUserId', $resident->id)
             ->assertJsonPath('data.unitId', $unit->id)
             ->assertJsonPath('data.visitorName', 'Omar Guest')
@@ -172,8 +172,7 @@ class VisitorRequestsTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.result', VisitorScanResult::Expired->value);
 
-        $cancelledToken = $this->createVisitorPassFor($resident, $unit);
-        $cancelledRequest = VisitorRequest::query()->latest('created_at')->firstOrFail();
+        [$cancelledToken, $cancelledRequest] = $this->createVisitorPassPayloadFor($resident, $unit);
         Sanctum::actingAs($security);
         $this->postJson("/api/v1/visitor-requests/{$cancelledRequest->id}/cancel", [
             'reason' => 'Resident cancelled before arrival.',
@@ -182,8 +181,7 @@ class VisitorRequestsTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.result', VisitorScanResult::Cancelled->value);
 
-        $deniedToken = $this->createVisitorPassFor($resident, $unit);
-        $deniedRequest = VisitorRequest::query()->latest('created_at')->firstOrFail();
+        [$deniedToken, $deniedRequest] = $this->createVisitorPassPayloadFor($resident, $unit);
         Sanctum::actingAs($security);
         $this->postJson("/api/v1/visitor-requests/{$deniedRequest->id}/deny", [
             'reason' => 'Visitor identity did not match the pass.',
@@ -269,6 +267,18 @@ class VisitorRequestsTest extends TestCase
         ?CarbonInterface $startsAt = null,
         ?CarbonInterface $endsAt = null,
     ): string {
+        return $this->createVisitorPassPayloadFor($resident, $unit, $startsAt, $endsAt)[0];
+    }
+
+    /**
+     * @return array{0: string, 1: VisitorRequest}
+     */
+    private function createVisitorPassPayloadFor(
+        User $resident,
+        Unit $unit,
+        ?CarbonInterface $startsAt = null,
+        ?CarbonInterface $endsAt = null,
+    ): array {
         Sanctum::actingAs($resident);
 
         $response = $this->postJson('/api/v1/visitor-requests', [
@@ -277,11 +287,13 @@ class VisitorRequestsTest extends TestCase
             'visitorPhone' => '+201000000222',
             'visitStartsAt' => ($startsAt ?? now()->subMinutes(10))->toIso8601String(),
             'visitEndsAt' => ($endsAt ?? now()->addHours(2))->toIso8601String(),
-        ])->assertOk();
+        ])->assertCreated();
 
         $token = $response->json('data.qrToken');
         $this->assertIsString($token);
 
-        return $token;
+        $visitorRequest = VisitorRequest::query()->findOrFail($response->json('data.id'));
+
+        return [$token, $visitorRequest];
     }
 }
