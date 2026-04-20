@@ -189,3 +189,30 @@ export interface UpdateNotificationPreferenceInput {
   quietHoursTimezone?: string | null;
   mutedCategories?: NotificationCategory[];
 }
+
+export interface AuditLogEntry {
+  id: number;
+  actorId: number | null;
+  actor?: AuthenticatedUser | null;
+  action: string;
+  auditableType: string | null;
+  auditableId: string | null;
+  ipAddress: string | null;
+  userAgent: string | null;
+  method: string | null;
+  path: string | null;
+  statusCode: number | null;
+  metadata: Record<string, unknown>;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+export interface AuditLogFilters {
+  action?: string;
+  actorId?: number;
+  from?: string;
+  method?: string;
+  perPage?: number;
+  q?: string;
+  to?: string;
+}

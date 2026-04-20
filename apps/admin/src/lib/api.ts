@@ -2,6 +2,8 @@ import "server-only";
 
 import type {
   ApiEnvelope,
+  AuditLogEntry,
+  AuditLogFilters,
   BuildingDetail,
   BuildingSummary,
   CompoundDetail,
@@ -83,6 +85,56 @@ export async function getSystemStatus(): Promise<SystemStatus | null> {
     return payload.data;
   } catch {
     return null;
+  }
+}
+
+export async function getAuditLogs(input: AuditLogFilters = {}): Promise<AuditLogEntry[]> {
+  try {
+    const params = new URLSearchParams();
+
+    if (input.action) {
+      params.set("action", input.action);
+    }
+
+    if (input.actorId) {
+      params.set("actorId", String(input.actorId));
+    }
+
+    if (input.from) {
+      params.set("from", input.from);
+    }
+
+    if (input.method) {
+      params.set("method", input.method);
+    }
+
+    if (input.perPage) {
+      params.set("perPage", String(input.perPage));
+    }
+
+    if (input.q) {
+      params.set("q", input.q);
+    }
+
+    if (input.to) {
+      params.set("to", input.to);
+    }
+
+    const query = params.toString();
+    const response = await fetch(`${config.apiBaseUrl}/audit-logs${query ? `?${query}` : ""}`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const payload = (await response.json()) as PaginatedEnvelope<AuditLogEntry>;
+
+    return payload.data;
+  } catch {
+    return [];
   }
 }
 

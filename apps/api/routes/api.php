@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\BuildingController;
 use App\Http\Controllers\Api\V1\CompoundController;
 use App\Http\Controllers\Api\V1\DocumentTypeController;
@@ -122,6 +123,10 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             Route::patch('/verification-requests/{verificationRequest}/request-more-info', [VerificationRequestController::class, 'requestMoreInfo'])
                 ->name('verification-requests.request-more-info');
             Route::patch('/documents/{userDocument}/review', [UserDocumentController::class, 'review'])->name('documents.review');
+
+            Route::middleware('role:super_admin,compound_admin,support_agent')
+                ->get('/audit-logs', [AuditLogController::class, 'index'])
+                ->name('audit-logs.index');
 
             // Representative assignments (admin-only mutations)
             Route::get('/compounds/{compound}/representatives', [RepresentativeAssignmentController::class, 'index'])
