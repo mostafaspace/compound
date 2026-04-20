@@ -1,6 +1,7 @@
 "use client";
 
 import type { VisitorPassValidationResult, VisitorRequest, VisitorRequestStatus } from "@compound/contracts";
+import { BrowserQRCodeReader, type IScannerControls } from "@zxing/browser";
 import { useRouter } from "next/navigation";
 import type { FormEvent, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
@@ -395,6 +396,7 @@ function VisitorQrScanner({
 }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const scannerControlsRef = useRef<IScannerControls | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const lastTokenRef = useRef<string | null>(null);
   const [message, setMessage] = useState("Point the camera at the resident QR pass.");
@@ -408,14 +410,73 @@ function VisitorQrScanner({
     let isCancelled = false;
 
     async function startScanner() {
-      if (!navigator.mediaDevices?.getUserMedia || !window.BarcodeDetector) {
-        setMessage("Camera QR scanning is not supported in this browser. Use manual token entry.");
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setMessage("Camera access is not supported in this browser. Use manual token entry.");
         return;
       }
 
       setIsStarting(true);
       setMessage("Starting camera.");
 
+      const BarcodeDetector = window.BarcodeDetector;
+
+      if (!BarcodeDetector) {
+        await startFallbackScanner();
+        return;
+      }
+
+      await startNativeScanner(BarcodeDetector);
+    }
+
+    async function startFallbackScanner() {
+      if (!videoRef.current) {
+        setIsStarting(false);
+        return;
+      }
+
+      try {
+        const reader = new BrowserQRCodeReader(undefined, {
+          delayBetweenScanAttempts: 250,
+        });
+
+        scannerControlsRef.current = await reader.decodeFromConstraints(
+          {
+            audio: false,
+            video: {
+              facingMode: { ideal: "environment" },
+              height: { ideal: 720 },
+              width: { ideal: 1280 },
+            },
+          },
+          videoRef.current,
+          (result, _error, controls) => {
+            if (isCancelled) {
+              controls.stop();
+              return;
+            }
+
+            const token = result?.getText()?.trim();
+
+            if (token && token !== lastTokenRef.current) {
+              lastTokenRef.current = token;
+              setMessage("QR detected.");
+              controls.stop();
+              onScan(token);
+            }
+          },
+        );
+
+        setMessage("Camera ready. Scanning with fallback QR reader.");
+      } catch {
+        setMessage("Camera permission was blocked or the fallback scanner is unavailable. Use manual token entry.");
+      } finally {
+        if (!isCancelled) {
+          setIsStarting(false);
+        }
+      }
+    }
+
+    async function startNativeScanner(BarcodeDetector: BarcodeDetectorConstructor) {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: false,
@@ -440,7 +501,7 @@ function VisitorQrScanner({
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
 
-        const detector = new window.BarcodeDetector({ formats: ["qr_code"] });
+        const detector = new BarcodeDetector({ formats: ["qr_code"] });
         setMessage("Camera ready. Hold the QR inside the frame.");
 
         const scanFrame = async () => {
@@ -488,6 +549,8 @@ function VisitorQrScanner({
         animationFrameRef.current = null;
       }
 
+      scannerControlsRef.current?.stop();
+      scannerControlsRef.current = null;
       streamRef.current?.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
       lastTokenRef.current = null;

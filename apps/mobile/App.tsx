@@ -8,6 +8,7 @@ import type {
   VerificationRequest,
   VisitorRequest,
 } from "@compound/contracts";
+import DateTimePicker, { type DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { errorCodes, isErrorWithCode, pick, types } from "@react-native-documents/picker";
 import * as Keychain from "react-native-keychain";
 import { useEffect, useMemo, useState } from "react";
@@ -41,6 +42,9 @@ const defaultApiBaseUrl = Platform.select({
 const authTokenService = "compound.mobile.authToken";
 const visitorTokenService = "compound.mobile.visitorPassTokens";
 
+type VisitPickerTarget = "starts" | "ends";
+type VisitPickerMode = "date" | "time" | "datetime";
+
 const actionItems = [
   { label: "Visitor QR", detail: "Create or revoke guest passes" },
   { label: "Payments", detail: "Submit receipts and view balance" },
@@ -63,22 +67,12 @@ function formatDate(value: string | null): string {
   }).format(new Date(value));
 }
 
-function formatDateInput(value: Date): string {
-  const year = value.getFullYear();
-  const month = String(value.getMonth() + 1).padStart(2, "0");
-  const day = String(value.getDate()).padStart(2, "0");
-  const hours = String(value.getHours()).padStart(2, "0");
-  const minutes = String(value.getMinutes()).padStart(2, "0");
-
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
+function defaultVisitStartsAt(): Date {
+  return new Date(Date.now() + 15 * 60 * 1000);
 }
 
-function defaultVisitStartsAt(): string {
-  return formatDateInput(new Date(Date.now() + 15 * 60 * 1000));
-}
-
-function defaultVisitEndsAt(): string {
-  return formatDateInput(new Date(Date.now() + 2 * 60 * 60 * 1000));
+function defaultVisitEndsAt(): Date {
+  return new Date(Date.now() + 2 * 60 * 60 * 1000);
 }
 
 function isResident(user: AuthenticatedUser | null): boolean {
@@ -117,6 +111,8 @@ export default function App() {
   const [visitorNotes, setVisitorNotes] = useState("");
   const [visitStartsAt, setVisitStartsAt] = useState(defaultVisitStartsAt);
   const [visitEndsAt, setVisitEndsAt] = useState(defaultVisitEndsAt);
+  const [visitPickerTarget, setVisitPickerTarget] = useState<VisitPickerTarget | null>(null);
+  const [visitPickerMode, setVisitPickerMode] = useState<VisitPickerMode>("date");
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [isRefreshingRequests, setIsRefreshingRequests] = useState(false);
   const [isRefreshingVisitors, setIsRefreshingVisitors] = useState(false);
@@ -335,10 +331,63 @@ export default function App() {
     setVisitorNotes("");
     setVisitStartsAt(defaultVisitStartsAt());
     setVisitEndsAt(defaultVisitEndsAt());
+    setVisitPickerTarget(null);
+    setVisitPickerMode("date");
+  }
+
+  function openVisitPicker(target: VisitPickerTarget) {
+    setVisitPickerTarget(target);
+    setVisitPickerMode(Platform.OS === "ios" ? "datetime" : "date");
+  }
+
+  function updateVisitWindow(target: VisitPickerTarget, value: Date) {
+    if (target === "starts") {
+      setVisitStartsAt(value);
+      return;
+    }
+
+    setVisitEndsAt(value);
+  }
+
+  function handleVisitPickerChange(event: DateTimePickerEvent, selectedDate?: Date) {
+    if (!visitPickerTarget) {
+      return;
+    }
+
+    if (event.type === "dismissed" || !selectedDate) {
+      setVisitPickerTarget(null);
+      setVisitPickerMode("date");
+      return;
+    }
+
+    const currentValue = visitPickerTarget === "starts" ? visitStartsAt : visitEndsAt;
+    const nextValue = new Date(currentValue);
+
+    if (Platform.OS === "android" && visitPickerMode === "date") {
+      nextValue.setFullYear(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+      updateVisitWindow(visitPickerTarget, nextValue);
+      setVisitPickerMode("time");
+      return;
+    }
+
+    if (Platform.OS === "android" && visitPickerMode === "time") {
+      nextValue.setHours(selectedDate.getHours(), selectedDate.getMinutes(), 0, 0);
+      updateVisitWindow(visitPickerTarget, nextValue);
+      setVisitPickerTarget(null);
+      setVisitPickerMode("date");
+      return;
+    }
+
+    updateVisitWindow(visitPickerTarget, selectedDate);
   }
 
   async function handleCreateVisitor(unitId: string) {
     if (!authToken || !visitorName.trim()) {
+      return;
+    }
+
+    if (visitEndsAt <= visitStartsAt) {
+      setVisitorMessage("Visit end time must be after the start time.");
       return;
     }
 
@@ -350,8 +399,8 @@ export default function App() {
         notes: visitorNotes.trim() || undefined,
         unitId,
         vehiclePlate: visitorVehiclePlate.trim() || undefined,
-        visitEndsAt,
-        visitStartsAt,
+        visitEndsAt: visitEndsAt.toISOString(),
+        visitStartsAt: visitStartsAt.toISOString(),
         visitorName: visitorName.trim(),
         visitorPhone: visitorPhone.trim() || undefined,
       };
@@ -561,6 +610,7 @@ export default function App() {
     verificationRequests.find((request) => request.unitId) ??
     null;
   const activeVisitorRequests = visitorRequests.filter((visitorRequest) => !isVisitorClosed(visitorRequest));
+  const hasInvalidVisitWindow = visitEndsAt <= visitStartsAt;
   const isPending = user?.status === "pending_review";
   const isActiveResident = user?.status === "active" && isResident(user);
 
@@ -785,21 +835,44 @@ export default function App() {
                     </View>
                   </View>
                   <Text style={styles.inputLabel}>Visit starts</Text>
-                  <TextInput
-                    autoCapitalize="none"
-                    onChangeText={setVisitStartsAt}
-                    placeholder="YYYY-MM-DDTHH:mm"
-                    style={styles.input}
-                    value={visitStartsAt}
-                  />
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => openVisitPicker("starts")}
+                    style={({ pressed }) => [styles.dateButton, pressed && styles.dateButtonPressed]}
+                  >
+                    <Text style={styles.dateButtonText}>{formatDate(visitStartsAt.toISOString())}</Text>
+                  </Pressable>
                   <Text style={styles.inputLabel}>Visit ends</Text>
-                  <TextInput
-                    autoCapitalize="none"
-                    onChangeText={setVisitEndsAt}
-                    placeholder="YYYY-MM-DDTHH:mm"
-                    style={styles.input}
-                    value={visitEndsAt}
-                  />
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => openVisitPicker("ends")}
+                    style={({ pressed }) => [
+                      styles.dateButton,
+                      pressed && styles.dateButtonPressed,
+                      hasInvalidVisitWindow && styles.dateButtonError,
+                    ]}
+                  >
+                    <Text style={styles.dateButtonText}>{formatDate(visitEndsAt.toISOString())}</Text>
+                  </Pressable>
+                  {visitPickerTarget ? (
+                    <View style={styles.pickerPanel}>
+                      <DateTimePicker
+                        display={Platform.OS === "ios" ? "inline" : "default"}
+                        mode={visitPickerMode}
+                        onChange={handleVisitPickerChange}
+                        value={visitPickerTarget === "starts" ? visitStartsAt : visitEndsAt}
+                      />
+                      {Platform.OS === "ios" ? (
+                        <Pressable
+                          accessibilityRole="button"
+                          onPress={() => setVisitPickerTarget(null)}
+                          style={styles.secondaryButton}
+                        >
+                          <Text style={styles.secondaryButtonText}>Done</Text>
+                        </Pressable>
+                      ) : null}
+                    </View>
+                  ) : null}
                   <Text style={styles.inputLabel}>Notes</Text>
                   <TextInput
                     multiline
@@ -811,11 +884,11 @@ export default function App() {
                   {visitorMessage ? <Text style={styles.infoText}>{visitorMessage}</Text> : null}
                   <Pressable
                     accessibilityRole="button"
-                    disabled={isCreatingVisitor || !visitorName.trim()}
+                    disabled={isCreatingVisitor || !visitorName.trim() || hasInvalidVisitWindow}
                     onPress={() => void handleCreateVisitor(residentUnitRequest.unitId!)}
                     style={[
                       styles.primaryButton,
-                      (isCreatingVisitor || !visitorName.trim()) && styles.disabledButton,
+                      (isCreatingVisitor || !visitorName.trim() || hasInvalidVisitWindow) && styles.disabledButton,
                     ]}
                   >
                     {isCreatingVisitor ? (
@@ -1030,6 +1103,35 @@ const styles = StyleSheet.create({
     fontSize: 16,
     minHeight: 48,
     paddingHorizontal: 14,
+  },
+  dateButton: {
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+    borderColor: "#c8ced7",
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: "row",
+    minHeight: 48,
+    paddingHorizontal: 14,
+  },
+  dateButtonPressed: {
+    borderColor: "#116a57",
+  },
+  dateButtonError: {
+    borderColor: "#b42318",
+  },
+  dateButtonText: {
+    color: "#111827",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  pickerPanel: {
+    backgroundColor: "#ffffff",
+    borderColor: "#d7dce3",
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 10,
+    padding: 12,
   },
   errorText: {
     color: "#b42318",
