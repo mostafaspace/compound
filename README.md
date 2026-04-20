@@ -15,11 +15,11 @@ Production-grade monorepo for the Owners Association / Compound Management platf
 
 ## Local Runtime
 
-This repository is under `E:\xampp\htdocs\compound`, but the bundled XAMPP PHP currently reports `7.4.29`. The backend targets modern Laravel on PHP `8.3+`. Use one of these before installing backend dependencies:
+This repository is under `D:\apps\compound`. It does not need to live inside XAMPP `htdocs`; the backend is served through Docker or a PHP `8.3+` CLI runtime. Use one of these before installing backend dependencies:
 
-1. Upgrade XAMPP PHP to `8.3+`.
+1. Use Docker for the API runtime.
 2. Install a separate PHP `8.3+` CLI and put it on `PATH`.
-3. Use Docker for the API runtime.
+3. Upgrade XAMPP PHP to `8.3+` only if you still prefer using XAMPP's PHP binary directly.
 
 The local infrastructure stack is defined in `infra/docker-compose.yml` for the PHP API runtime, Horizon, Reverb, MySQL, Redis, MinIO, and Mailpit.
 
@@ -34,7 +34,7 @@ npm run dev:mobile
 
 When Docker Desktop is running, the API is available at `http://localhost:8000` and Reverb at `http://localhost:8080`.
 
-If you prefer running the backend directly from XAMPP/Windows instead of Docker, install PHP `8.3+` and Composer, then run:
+If you prefer running the backend directly from Windows instead of Docker, install PHP `8.3+` and Composer, then run:
 
 ```powershell
 cd apps/api

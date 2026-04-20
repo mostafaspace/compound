@@ -14,4 +14,4 @@ Use Expo on React Native unless the project later needs custom native modules th
 
 ## 2026-04-19: Local Backing Services
 
-Use Docker Compose for the PHP 8.3 API runtime, Horizon, Reverb, MySQL, Redis, MinIO, and Mailpit. The app can still live under XAMPP/localhost, but backend execution and backing services should be reproducible and isolated from older local PHP versions.
+Use Docker Compose for the PHP 8.3 API runtime, Horizon, Reverb, MySQL, Redis, MinIO, and Mailpit. The app does not need to live under XAMPP `htdocs`; backend execution and backing services should be reproducible and isolated from older local PHP versions.

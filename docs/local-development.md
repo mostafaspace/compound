@@ -10,7 +10,9 @@
 
 ## Current Machine Notes
 
-This workspace is inside XAMPP at `E:\xampp\htdocs\compound`. The detected XAMPP PHP executable is `E:\xampp\php\php.exe`, and it reports PHP `7.4.29`. That is too old for the target Laravel runtime. Do not install production backend dependencies against PHP `7.4`.
+This workspace is at `D:\apps\compound`. It does not need to live inside XAMPP `htdocs` because the local API is served through Docker or `php artisan serve`.
+
+The previously detected XAMPP PHP executable was `E:\xampp\php\php.exe`, and it reported PHP `7.4.29`. That is too old for the target Laravel runtime. Do not install production backend dependencies against PHP `7.4`.
 
 ## Services
 
@@ -52,7 +54,7 @@ npm run infra:up
 docker compose -f infra/docker-compose.yml exec api php artisan migrate --seed
 ```
 
-Direct Windows/XAMPP path:
+Direct Windows PHP path:
 
 ```powershell
 cd apps/api
@@ -62,4 +64,4 @@ php artisan migrate --seed
 php artisan serve
 ```
 
-The direct path requires PHP `8.3+`; the current bundled XAMPP PHP is too old.
+The direct path requires PHP `8.3+`; the bundled XAMPP PHP noted above is too old.
