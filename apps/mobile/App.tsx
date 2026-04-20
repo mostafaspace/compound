@@ -1,7 +1,17 @@
-import type { ApiEnvelope, AuthenticatedUser, DocumentType, LoginResult, VerificationRequest } from "@compound/contracts";
+import type {
+  ApiEnvelope,
+  AuthenticatedUser,
+  CreateVisitorRequestInput,
+  DocumentType,
+  LoginResult,
+  PaginatedEnvelope,
+  VerificationRequest,
+  VisitorRequest,
+} from "@compound/contracts";
 import { errorCodes, isErrorWithCode, pick, types } from "@react-native-documents/picker";
 import * as Keychain from "react-native-keychain";
 import { useEffect, useMemo, useState } from "react";
+import QRCode from "react-native-qrcode-svg";
 import {
   ActivityIndicator,
   Platform,
@@ -29,6 +39,7 @@ const defaultApiBaseUrl = Platform.select({
 });
 
 const authTokenService = "compound.mobile.authToken";
+const visitorTokenService = "compound.mobile.visitorPassTokens";
 
 const actionItems = [
   { label: "Visitor QR", detail: "Create or revoke guest passes" },
@@ -52,8 +63,40 @@ function formatDate(value: string | null): string {
   }).format(new Date(value));
 }
 
+function formatDateInput(value: Date): string {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  const hours = String(value.getHours()).padStart(2, "0");
+  const minutes = String(value.getMinutes()).padStart(2, "0");
+
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+function defaultVisitStartsAt(): string {
+  return formatDateInput(new Date(Date.now() + 15 * 60 * 1000));
+}
+
+function defaultVisitEndsAt(): string {
+  return formatDateInput(new Date(Date.now() + 2 * 60 * 60 * 1000));
+}
+
 function isResident(user: AuthenticatedUser | null): boolean {
   return user?.role === "resident_owner" || user?.role === "resident_tenant";
+}
+
+function isVisitorClosed(visitorRequest: VisitorRequest): boolean {
+  return ["cancelled", "completed", "denied"].includes(visitorRequest.status);
+}
+
+function visitorLocation(visitorRequest: VisitorRequest): string {
+  const unit = visitorRequest.unit;
+
+  if (!unit) {
+    return visitorRequest.unitId;
+  }
+
+  return [unit.compoundName, unit.buildingName, `Unit ${unit.unitNumber}`].filter(Boolean).join(" / ");
 }
 
 export default function App() {
@@ -64,14 +107,26 @@ export default function App() {
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [user, setUser] = useState<AuthenticatedUser | null>(null);
   const [verificationRequests, setVerificationRequests] = useState<VerificationRequest[]>([]);
+  const [visitorRequests, setVisitorRequests] = useState<VisitorRequest[]>([]);
+  const [visitorPassTokens, setVisitorPassTokens] = useState<Record<string, string>>({});
   const [documentTypes, setDocumentTypes] = useState<DocumentType[]>([]);
   const [selectedDocumentTypeId, setSelectedDocumentTypeId] = useState<number | null>(null);
+  const [visitorName, setVisitorName] = useState("");
+  const [visitorPhone, setVisitorPhone] = useState("");
+  const [visitorVehiclePlate, setVisitorVehiclePlate] = useState("");
+  const [visitorNotes, setVisitorNotes] = useState("");
+  const [visitStartsAt, setVisitStartsAt] = useState(defaultVisitStartsAt);
+  const [visitEndsAt, setVisitEndsAt] = useState(defaultVisitEndsAt);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [isRefreshingRequests, setIsRefreshingRequests] = useState(false);
+  const [isRefreshingVisitors, setIsRefreshingVisitors] = useState(false);
   const [isRestoringSession, setIsRestoringSession] = useState(true);
   const [isUploadingDocument, setIsUploadingDocument] = useState(false);
+  const [isCreatingVisitor, setIsCreatingVisitor] = useState(false);
+  const [isCancellingVisitorId, setIsCancellingVisitorId] = useState<string | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
   const [uploadMessage, setUploadMessage] = useState<string | null>(null);
+  const [visitorMessage, setVisitorMessage] = useState<string | null>(null);
 
   const apiBaseUrl = useMemo(
     () => defaultApiBaseUrl,
@@ -131,11 +186,13 @@ export default function App() {
         if (isMounted) {
           setAuthToken(credentials.password);
           setUser(restoredUser);
+          setVisitorPassTokens(await loadVisitorPassTokens());
         }
 
         await Promise.all([
           loadVerificationRequests(credentials.password),
           loadDocumentTypes(credentials.password),
+          loadVisitorRequests(credentials.password),
         ]);
       } catch {
         await Keychain.resetGenericPassword({ service: authTokenService });
@@ -170,6 +227,30 @@ export default function App() {
     return payload.data;
   }
 
+  async function loadVisitorPassTokens(): Promise<Record<string, string>> {
+    const credentials = await Keychain.getGenericPassword({ service: visitorTokenService });
+
+    if (!credentials) {
+      return {};
+    }
+
+    try {
+      return JSON.parse(credentials.password) as Record<string, string>;
+    } catch {
+      await Keychain.resetGenericPassword({ service: visitorTokenService });
+
+      return {};
+    }
+  }
+
+  async function saveVisitorPassTokens(nextTokens: Record<string, string>) {
+    setVisitorPassTokens(nextTokens);
+    await Keychain.setGenericPassword("visitor-pass-tokens", JSON.stringify(nextTokens), {
+      accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+      service: visitorTokenService,
+    });
+  }
+
   async function loadVerificationRequests(token = authToken) {
     if (!token) {
       return;
@@ -197,6 +278,33 @@ export default function App() {
     }
   }
 
+  async function loadVisitorRequests(token = authToken) {
+    if (!token) {
+      return;
+    }
+
+    setIsRefreshingVisitors(true);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/visitor-requests`, {
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        setVisitorRequests([]);
+        return;
+      }
+
+      const payload = (await response.json()) as PaginatedEnvelope<VisitorRequest>;
+      setVisitorRequests(payload.data);
+    } finally {
+      setIsRefreshingVisitors(false);
+    }
+  }
+
   async function loadDocumentTypes(token = authToken) {
     if (!token) {
       return;
@@ -218,6 +326,109 @@ export default function App() {
     const payload = (await response.json()) as ApiEnvelope<DocumentType[]>;
     setDocumentTypes(payload.data);
     setSelectedDocumentTypeId((current) => current ?? payload.data[0]?.id ?? null);
+  }
+
+  function resetVisitorForm() {
+    setVisitorName("");
+    setVisitorPhone("");
+    setVisitorVehiclePlate("");
+    setVisitorNotes("");
+    setVisitStartsAt(defaultVisitStartsAt());
+    setVisitEndsAt(defaultVisitEndsAt());
+  }
+
+  async function handleCreateVisitor(unitId: string) {
+    if (!authToken || !visitorName.trim()) {
+      return;
+    }
+
+    setVisitorMessage(null);
+    setIsCreatingVisitor(true);
+
+    try {
+      const input: CreateVisitorRequestInput = {
+        notes: visitorNotes.trim() || undefined,
+        unitId,
+        vehiclePlate: visitorVehiclePlate.trim() || undefined,
+        visitEndsAt,
+        visitStartsAt,
+        visitorName: visitorName.trim(),
+        visitorPhone: visitorPhone.trim() || undefined,
+      };
+
+      const response = await fetch(`${apiBaseUrl}/visitor-requests`, {
+        body: JSON.stringify(input),
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${authToken}`,
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        setVisitorMessage("Visitor pass could not be created. Check the visit window and unit access.");
+        return;
+      }
+
+      const payload = (await response.json()) as ApiEnvelope<VisitorRequest>;
+      const nextVisitorRequests = [payload.data, ...visitorRequests.filter((visitor) => visitor.id !== payload.data.id)];
+      setVisitorRequests(nextVisitorRequests);
+
+      if (payload.data.qrToken) {
+        await saveVisitorPassTokens({
+          ...visitorPassTokens,
+          [payload.data.id]: payload.data.qrToken,
+        });
+      }
+
+      setVisitorMessage("Visitor pass created. Show the QR code at the gate.");
+      resetVisitorForm();
+    } catch {
+      setVisitorMessage("Could not reach the visitor service.");
+    } finally {
+      setIsCreatingVisitor(false);
+    }
+  }
+
+  async function handleCancelVisitor(visitorRequestId: string) {
+    if (!authToken) {
+      return;
+    }
+
+    setVisitorMessage(null);
+    setIsCancellingVisitorId(visitorRequestId);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/visitor-requests/${visitorRequestId}/cancel`, {
+        body: JSON.stringify({ reason: "Cancelled by resident from mobile app." }),
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${authToken}`,
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        setVisitorMessage("Visitor pass could not be cancelled.");
+        return;
+      }
+
+      const payload = (await response.json()) as ApiEnvelope<VisitorRequest>;
+      setVisitorRequests((current) =>
+        current.map((visitor) => (visitor.id === payload.data.id ? payload.data : visitor)),
+      );
+
+      const nextTokens = { ...visitorPassTokens };
+      delete nextTokens[visitorRequestId];
+      await saveVisitorPassTokens(nextTokens);
+      setVisitorMessage("Visitor pass cancelled.");
+    } catch {
+      setVisitorMessage("Could not reach the visitor service.");
+    } finally {
+      setIsCancellingVisitorId(null);
+    }
   }
 
   async function handleLogin() {
@@ -244,8 +455,10 @@ export default function App() {
       }
 
       const payload = (await response.json()) as ApiEnvelope<LoginResult>;
+      const savedVisitorPassTokens = await loadVisitorPassTokens();
       setAuthToken(payload.data.token);
       setUser(payload.data.user);
+      setVisitorPassTokens(savedVisitorPassTokens);
       setPassword("");
       await Keychain.setGenericPassword(payload.data.user.email, payload.data.token, {
         accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
@@ -255,6 +468,7 @@ export default function App() {
       await Promise.all([
         loadVerificationRequests(payload.data.token),
         loadDocumentTypes(payload.data.token),
+        loadVisitorRequests(payload.data.token),
       ]);
     } catch {
       setAuthError("Could not reach the compound API.");
@@ -265,14 +479,19 @@ export default function App() {
 
   async function handleSignOut() {
     await Keychain.resetGenericPassword({ service: authTokenService });
+    await Keychain.resetGenericPassword({ service: visitorTokenService });
     setAuthToken(null);
     setUser(null);
     setVerificationRequests([]);
+    setVisitorRequests([]);
+    setVisitorPassTokens({});
     setDocumentTypes([]);
     setSelectedDocumentTypeId(null);
+    resetVisitorForm();
     setPassword("");
     setAuthError(null);
     setUploadMessage(null);
+    setVisitorMessage(null);
   }
 
   async function handlePickAndUploadDocument() {
@@ -337,6 +556,11 @@ export default function App() {
   }
 
   const latestRequest = verificationRequests[0] ?? null;
+  const residentUnitRequest =
+    verificationRequests.find((request) => request.unitId && request.status === "approved") ??
+    verificationRequests.find((request) => request.unitId) ??
+    null;
+  const activeVisitorRequests = visitorRequests.filter((visitorRequest) => !isVisitorClosed(visitorRequest));
   const isPending = user?.status === "pending_review";
   const isActiveResident = user?.status === "active" && isResident(user);
 
@@ -512,6 +736,164 @@ export default function App() {
               <Text style={styles.panelLabel}>Signed in</Text>
               <Text style={styles.sectionTitle}>{user.name}</Text>
               <Text style={styles.sectionText}>{formatStatus(user.role)} account is active.</Text>
+            </View>
+
+            <View style={styles.panel}>
+              <View style={styles.rowBetween}>
+                <View style={styles.flexFill}>
+                  <Text style={styles.panelLabel}>Visitor QR</Text>
+                  <Text style={styles.sectionTitle}>Guest passes</Text>
+                  <Text style={styles.sectionText}>{activeVisitorRequests.length} active or pending</Text>
+                </View>
+                <Pressable accessibilityRole="button" onPress={() => void loadVisitorRequests()} style={styles.secondaryButton}>
+                  <Text style={styles.secondaryButtonText}>{isRefreshingVisitors ? "Refreshing" : "Refresh"}</Text>
+                </Pressable>
+              </View>
+
+              {residentUnitRequest?.unitId ? (
+                <View style={styles.visitorForm}>
+                  <Text style={styles.sectionText}>
+                    Unit: {residentUnitRequest.unit?.unitNumber ?? residentUnitRequest.unitId}
+                  </Text>
+                  <Text style={styles.inputLabel}>Visitor name</Text>
+                  <TextInput
+                    onChangeText={setVisitorName}
+                    placeholder="Full name"
+                    style={styles.input}
+                    value={visitorName}
+                  />
+                  <View style={styles.twoColumn}>
+                    <View style={styles.flexFill}>
+                      <Text style={styles.inputLabel}>Phone</Text>
+                      <TextInput
+                        inputMode="tel"
+                        onChangeText={setVisitorPhone}
+                        placeholder="Optional"
+                        style={styles.input}
+                        value={visitorPhone}
+                      />
+                    </View>
+                    <View style={styles.flexFill}>
+                      <Text style={styles.inputLabel}>Vehicle plate</Text>
+                      <TextInput
+                        autoCapitalize="characters"
+                        onChangeText={setVisitorVehiclePlate}
+                        placeholder="Optional"
+                        style={styles.input}
+                        value={visitorVehiclePlate}
+                      />
+                    </View>
+                  </View>
+                  <Text style={styles.inputLabel}>Visit starts</Text>
+                  <TextInput
+                    autoCapitalize="none"
+                    onChangeText={setVisitStartsAt}
+                    placeholder="YYYY-MM-DDTHH:mm"
+                    style={styles.input}
+                    value={visitStartsAt}
+                  />
+                  <Text style={styles.inputLabel}>Visit ends</Text>
+                  <TextInput
+                    autoCapitalize="none"
+                    onChangeText={setVisitEndsAt}
+                    placeholder="YYYY-MM-DDTHH:mm"
+                    style={styles.input}
+                    value={visitEndsAt}
+                  />
+                  <Text style={styles.inputLabel}>Notes</Text>
+                  <TextInput
+                    multiline
+                    onChangeText={setVisitorNotes}
+                    placeholder="Gate note, delivery details, or expected companion"
+                    style={[styles.input, styles.multilineInput]}
+                    value={visitorNotes}
+                  />
+                  {visitorMessage ? <Text style={styles.infoText}>{visitorMessage}</Text> : null}
+                  <Pressable
+                    accessibilityRole="button"
+                    disabled={isCreatingVisitor || !visitorName.trim()}
+                    onPress={() => void handleCreateVisitor(residentUnitRequest.unitId!)}
+                    style={[
+                      styles.primaryButton,
+                      (isCreatingVisitor || !visitorName.trim()) && styles.disabledButton,
+                    ]}
+                  >
+                    {isCreatingVisitor ? (
+                      <ActivityIndicator color="#ffffff" />
+                    ) : (
+                      <Text style={styles.primaryButtonText}>Create visitor pass</Text>
+                    )}
+                  </Pressable>
+                </View>
+              ) : (
+                <Text style={styles.sectionText}>A verified unit is required before visitor passes can be created.</Text>
+              )}
+
+              <View style={styles.visitorList}>
+                <Text style={styles.infoTitle}>Active and recent passes</Text>
+                {visitorRequests.length > 0 ? (
+                  visitorRequests.map((visitorRequest) => {
+                    const token = visitorPassTokens[visitorRequest.id] ?? visitorRequest.qrToken;
+                    const canCancel = !isVisitorClosed(visitorRequest);
+
+                    return (
+                      <View style={styles.visitorCard} key={visitorRequest.id}>
+                        <View style={styles.rowBetween}>
+                          <View style={styles.flexFill}>
+                            <Text style={styles.actionLabel}>{visitorRequest.visitorName}</Text>
+                            <Text style={styles.actionDetail}>{visitorLocation(visitorRequest)}</Text>
+                          </View>
+                          <Text
+                            style={[
+                              styles.statusBadge,
+                              visitorRequest.status === "denied" || visitorRequest.status === "cancelled"
+                                ? styles.statusBadgeDanger
+                                : null,
+                            ]}
+                          >
+                            {formatStatus(visitorRequest.status)}
+                          </Text>
+                        </View>
+                        <Text style={styles.sectionText}>Window: {formatDate(visitorRequest.visitStartsAt)} - {formatDate(visitorRequest.visitEndsAt)}</Text>
+                        {visitorRequest.vehiclePlate ? (
+                          <Text style={styles.sectionText}>Vehicle: {visitorRequest.vehiclePlate}</Text>
+                        ) : null}
+                        {token && canCancel ? (
+                          <View style={styles.qrPanel}>
+                            <QRCode value={token} size={180} backgroundColor="#ffffff" color="#111827" />
+                            <Text selectable style={styles.tokenText}>
+                              {token}
+                            </Text>
+                          </View>
+                        ) : (
+                          <Text style={styles.infoText}>
+                            {canCancel
+                              ? "This device does not have the QR token for this pass. Create a new pass if the QR was lost."
+                              : "This pass is closed."}
+                          </Text>
+                        )}
+                        {canCancel ? (
+                          <Pressable
+                            accessibilityRole="button"
+                            disabled={isCancellingVisitorId === visitorRequest.id}
+                            onPress={() => void handleCancelVisitor(visitorRequest.id)}
+                            style={[
+                              styles.secondaryButton,
+                              isCancellingVisitorId === visitorRequest.id && styles.disabledButton,
+                            ]}
+                          >
+                            <Text style={styles.secondaryButtonText}>
+                              {isCancellingVisitorId === visitorRequest.id ? "Cancelling" : "Cancel pass"}
+                            </Text>
+                          </Pressable>
+                        ) : null}
+                      </View>
+                    );
+                  })
+                ) : (
+                  <Text style={styles.sectionText}>No visitor passes yet.</Text>
+                )}
+              </View>
             </View>
 
             <View style={styles.grid}>
@@ -702,6 +1084,9 @@ const styles = StyleSheet.create({
     gap: 12,
     justifyContent: "space-between",
   },
+  flexFill: {
+    flex: 1,
+  },
   reviewBlock: {
     gap: 10,
   },
@@ -716,6 +1101,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     textTransform: "capitalize",
+  },
+  statusBadgeDanger: {
+    backgroundColor: "#fde8e5",
+    color: "#b42318",
   },
   infoPanel: {
     backgroundColor: "#eaf0ff",
@@ -742,6 +1131,45 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: 12,
     padding: 14,
+  },
+  visitorForm: {
+    gap: 10,
+  },
+  visitorList: {
+    gap: 12,
+  },
+  visitorCard: {
+    backgroundColor: "#ffffff",
+    borderColor: "#d7dce3",
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 12,
+    padding: 14,
+  },
+  twoColumn: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  multilineInput: {
+    minHeight: 84,
+    paddingTop: 12,
+    textAlignVertical: "top",
+  },
+  qrPanel: {
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+    borderColor: "#d7dce3",
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 12,
+    padding: 16,
+  },
+  tokenText: {
+    color: "#384252",
+    fontFamily: Platform.select({ android: "monospace", ios: "Courier", default: undefined }),
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: "center",
   },
   documentTypeRow: {
     gap: 8,
