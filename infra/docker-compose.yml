@@ -24,6 +24,12 @@ services:
       QUEUE_CONNECTION: redis
       SESSION_DRIVER: database
       BROADCAST_CONNECTION: reverb
+      REVERB_APP_ID: compound-local
+      REVERB_APP_KEY: compound-local-key
+      REVERB_APP_SECRET: compound-local-secret
+      REVERB_HOST: reverb
+      REVERB_PORT: 8080
+      REVERB_SCHEME: http
       FILESYSTEM_DISK: s3
       AWS_ACCESS_KEY_ID: compound_minio
       AWS_SECRET_ACCESS_KEY: compound_minio_secret
@@ -64,11 +70,40 @@ services:
       REDIS_PORT: 6379
       CACHE_STORE: redis
       QUEUE_CONNECTION: redis
+      BROADCAST_CONNECTION: reverb
+      REVERB_APP_ID: compound-local
+      REVERB_APP_KEY: compound-local-key
+      REVERB_APP_SECRET: compound-local-secret
+      REVERB_HOST: reverb
+      REVERB_PORT: 8080
+      REVERB_SCHEME: http
     volumes:
       - ../apps/api:/var/www/html
       - api_vendor:/var/www/html/vendor
     depends_on:
       api:
+        condition: service_started
+
+  admin:
+    image: node:22-alpine
+    working_dir: /workspace
+    command: ["sh", "-c", "npm install && npm run dev -w apps/admin -- --hostname 0.0.0.0 --port 3000"]
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000/api/v1
+      NEXT_PUBLIC_REVERB_APP_KEY: compound-local-key
+      NEXT_PUBLIC_REVERB_HOST: 127.0.0.1
+      NEXT_PUBLIC_REVERB_PORT: 8080
+      NEXT_PUBLIC_REVERB_SCHEME: http
+    ports:
+      - "3001:3000"
+    volumes:
+      - ..:/workspace
+      - admin_node_modules:/workspace/node_modules
+      - admin_next:/workspace/apps/admin/.next
+    depends_on:
+      api:
+        condition: service_started
+      reverb:
         condition: service_started
 
   reverb:
@@ -158,3 +193,5 @@ services:
 
 volumes:
   api_vendor:
+  admin_node_modules:
+  admin_next:
