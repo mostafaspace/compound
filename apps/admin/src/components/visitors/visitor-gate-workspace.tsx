@@ -3,12 +3,30 @@
 import type { VisitorPassValidationResult, VisitorRequest, VisitorRequestStatus } from "@compound/contracts";
 import { useRouter } from "next/navigation";
 import type { FormEvent, ReactNode } from "react";
-import { useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 
 import { validateVisitorPassAction, visitorDecisionAction } from "@/app/visitors/actions";
 
 interface VisitorGateWorkspaceProps {
   initialVisitors: VisitorRequest[];
+}
+
+interface DetectedBarcode {
+  rawValue: string;
+}
+
+interface BarcodeDetectorInstance {
+  detect(source: CanvasImageSource): Promise<DetectedBarcode[]>;
+}
+
+interface BarcodeDetectorConstructor {
+  new (options: { formats: string[] }): BarcodeDetectorInstance;
+}
+
+declare global {
+  interface Window {
+    BarcodeDetector?: BarcodeDetectorConstructor;
+  }
 }
 
 const statusLabels: Record<VisitorRequestStatus, string> = {
@@ -67,6 +85,14 @@ function ShieldIcon() {
   );
 }
 
+function CameraIcon() {
+  return (
+    <svg aria-hidden="true" className="size-4" viewBox="0 0 20 20" fill="currentColor">
+      <path d="M6.5 4.25 7.6 3h4.8l1.1 1.25h2A2.5 2.5 0 0 1 18 6.75v7A2.5 2.5 0 0 1 15.5 16h-11A2.5 2.5 0 0 1 2 13.75v-7a2.5 2.5 0 0 1 2.5-2.5h2Zm3.5 9.25a3.25 3.25 0 1 0 0-6.5 3.25 3.25 0 0 0 0 6.5Zm0-1.5a1.75 1.75 0 1 1 0-3.5 1.75 1.75 0 0 1 0 3.5Z" />
+    </svg>
+  );
+}
+
 function formatDateTime(value: string | null): string {
   if (!value) {
     return "Not set";
@@ -98,6 +124,8 @@ export function VisitorGateWorkspace({ initialVisitors }: VisitorGateWorkspacePr
   const [token, setToken] = useState("");
   const [validation, setValidation] = useState<VisitorPassValidationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [scannerMessage, setScannerMessage] = useState<string | null>(null);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -122,19 +150,45 @@ export function VisitorGateWorkspace({ initialVisitors }: VisitorGateWorkspacePr
     );
   }
 
-  function handleValidate(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  const runValidation = useCallback((rawToken: string, source: "manual" | "camera" = "manual") => {
+    const normalizedToken = rawToken.trim();
+
+    if (normalizedToken.length < 32) {
+      setError("Pass token is too short. Scan again or paste the full token.");
+      return;
+    }
+
     setError(null);
     setValidation(null);
+    setToken(normalizedToken);
+
+    if (source === "camera") {
+      setScannerMessage("QR detected. Validating pass.");
+    }
 
     startTransition(async () => {
       try {
-        const result = await validateVisitorPassAction(token);
+        const result = await validateVisitorPassAction(normalizedToken);
         setValidation(result);
+        setScannerMessage(
+          result.result === "valid"
+            ? "Pass found. Security actions are available below."
+            : `Pass scanned with result: ${result.result.replaceAll("_", " ")}.`,
+        );
+
+        if (source === "camera" && result.visitorRequest) {
+          setIsScannerOpen(false);
+        }
       } catch {
         setError("Pass validation failed. Check the token and try again.");
+        setScannerMessage("Scan could not be validated. Use manual token entry if the QR is damaged.");
       }
     });
+  }, []);
+
+  function handleValidate(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    runValidation(token);
   }
 
   function handleDecision(visitorRequestId: string, action: "arrive" | "allow" | "deny" | "complete" | "cancel") {
@@ -173,8 +227,29 @@ export function VisitorGateWorkspace({ initialVisitors }: VisitorGateWorkspacePr
       </section>
 
       <section className="rounded-lg border border-line bg-panel p-5">
-        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <form className="grid flex-1 gap-3 md:grid-cols-[1fr_auto]" onSubmit={handleValidate}>
+        <div className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
+          <div className="rounded-lg border border-line bg-background p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-lg font-semibold">Camera scan</h2>
+                <p className="mt-1 text-sm text-muted">Scan the resident QR pass at the gate.</p>
+              </div>
+              <button
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-brand px-4 text-sm font-semibold text-white transition hover:bg-brand-strong"
+                onClick={() => {
+                  setScannerMessage(null);
+                  setIsScannerOpen(true);
+                }}
+                type="button"
+              >
+                <CameraIcon />
+                Open camera
+              </button>
+            </div>
+            {scannerMessage ? <p className="mt-3 text-sm font-medium text-muted">{scannerMessage}</p> : null}
+          </div>
+
+          <form className="grid gap-3 md:grid-cols-[1fr_auto]" onSubmit={handleValidate}>
             <label className="block">
               <span className="text-sm font-semibold text-foreground">Manual pass token</span>
               <input
@@ -195,6 +270,12 @@ export function VisitorGateWorkspace({ initialVisitors }: VisitorGateWorkspacePr
             </button>
           </form>
         </div>
+
+        <VisitorQrScanner
+          isOpen={isScannerOpen}
+          onClose={() => setIsScannerOpen(false)}
+          onScan={(scannedToken) => runValidation(scannedToken, "camera")}
+        />
 
         {error ? (
           <p className="mt-4 rounded-lg border border-[#f2b8b5] bg-[#fde8e5] px-3 py-2 text-sm font-medium text-danger">
@@ -299,6 +380,173 @@ function InfoRow({ label, value }: { label: string; value: string }) {
     <div className="flex items-center justify-between gap-4 border-b border-line pb-2 last:border-b-0 last:pb-0">
       <span className="text-muted">{label}</span>
       <span className="text-right font-medium">{value}</span>
+    </div>
+  );
+}
+
+function VisitorQrScanner({
+  isOpen,
+  onClose,
+  onScan,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onScan: (token: string) => void;
+}) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const lastTokenRef = useRef<string | null>(null);
+  const [message, setMessage] = useState("Point the camera at the resident QR pass.");
+  const [isStarting, setIsStarting] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    let isCancelled = false;
+
+    async function startScanner() {
+      if (!navigator.mediaDevices?.getUserMedia || !window.BarcodeDetector) {
+        setMessage("Camera QR scanning is not supported in this browser. Use manual token entry.");
+        return;
+      }
+
+      setIsStarting(true);
+      setMessage("Starting camera.");
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: {
+            facingMode: { ideal: "environment" },
+            height: { ideal: 720 },
+            width: { ideal: 1280 },
+          },
+        });
+
+        if (isCancelled) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+
+        streamRef.current = stream;
+
+        if (!videoRef.current) {
+          return;
+        }
+
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+
+        const detector = new window.BarcodeDetector({ formats: ["qr_code"] });
+        setMessage("Camera ready. Hold the QR inside the frame.");
+
+        const scanFrame = async () => {
+          if (isCancelled || !videoRef.current) {
+            return;
+          }
+
+          try {
+            if (videoRef.current.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+              const codes = await detector.detect(videoRef.current);
+              const token = codes[0]?.rawValue?.trim();
+
+              if (token && token !== lastTokenRef.current) {
+                lastTokenRef.current = token;
+                setMessage("QR detected.");
+                onScan(token);
+                return;
+              }
+            }
+          } catch {
+            setMessage("Camera scan failed. Reopen the scanner or use manual token entry.");
+            return;
+          }
+
+          animationFrameRef.current = window.requestAnimationFrame(scanFrame);
+        };
+
+        animationFrameRef.current = window.requestAnimationFrame(scanFrame);
+      } catch {
+        setMessage("Camera permission was blocked or the camera is unavailable. Use manual token entry.");
+      } finally {
+        if (!isCancelled) {
+          setIsStarting(false);
+        }
+      }
+    }
+
+    void startScanner();
+
+    return () => {
+      isCancelled = true;
+
+      if (animationFrameRef.current) {
+        window.cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+      lastTokenRef.current = null;
+    };
+  }, [isOpen, onScan]);
+
+  if (!isOpen) {
+    return null;
+  }
+
+  return (
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 px-4 py-6">
+      <div className="w-full max-w-2xl rounded-lg bg-panel shadow-xl">
+        <div className="flex items-start justify-between gap-4 border-b border-line p-4">
+          <div>
+            <h2 className="text-xl font-semibold">Scan visitor QR</h2>
+            <p className="mt-1 text-sm text-muted">{message}</p>
+          </div>
+          <button
+            aria-label="Close scanner"
+            className="inline-flex size-11 items-center justify-center rounded-lg border border-line bg-panel text-foreground transition hover:border-brand"
+            onClick={onClose}
+            type="button"
+          >
+            <CloseIcon />
+          </button>
+        </div>
+
+        <div className="p-4">
+          <div className="relative overflow-hidden rounded-lg border border-line bg-black">
+            <video
+              ref={videoRef}
+              autoPlay
+              className="aspect-video w-full object-cover"
+              muted
+              playsInline
+            />
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <div className="h-52 w-52 rounded-lg border-4 border-white/90 shadow-[0_0_0_999px_rgba(0,0,0,0.32)]" />
+            </div>
+            {isStarting ? (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/55 text-sm font-semibold text-white">
+                Starting camera
+              </div>
+            ) : null}
+          </div>
+
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-muted">Use manual token entry if the camera is unavailable or the QR is damaged.</p>
+            <button
+              className="inline-flex h-11 items-center justify-center rounded-lg border border-line bg-panel px-4 text-sm font-semibold text-foreground transition hover:border-brand"
+              onClick={onClose}
+              type="button"
+            >
+              Use manual entry
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
