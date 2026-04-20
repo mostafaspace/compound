@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Http\Controllers\Controller;
 use App\Http\Requests\Notifications\UpdateNotificationPreferenceRequest;
 use App\Http\Resources\NotificationPreferenceResource;
 use App\Models\NotificationPreference;
@@ -74,8 +75,11 @@ class NotificationPreferenceController extends Controller
 
         $this->auditLogger->record(
             action: 'notification_preferences.updated',
-            model: $preference,
-            changes: $updates
+            actor: $request->user(),
+            request: $request,
+            auditableType: $preference::class,
+            auditableId: $preference->id,
+            metadata: $updates
         );
 
         return new NotificationPreferenceResource($preference->refresh());

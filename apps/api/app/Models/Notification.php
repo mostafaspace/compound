@@ -3,21 +3,28 @@
 namespace App\Models;
 
 use App\Enums\NotificationCategory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Notification extends Model
 {
-    use HasUlids;
+    use HasFactory, HasUlids;
 
     protected $fillable = [
         'user_id',
         'category',
+        'channel',
+        'priority',
         'title',
         'body',
         'metadata',
         'read_at',
+        'archived_at',
+        'delivered_at',
+        'delivery_attempts',
+        'last_delivery_error',
     ];
 
     protected $casts = [
@@ -25,6 +32,8 @@ class Notification extends Model
         'metadata' => 'array',
         'read_at' => 'datetime',
         'archived_at' => 'datetime',
+        'delivered_at' => 'datetime',
+        'delivery_attempts' => 'integer',
     ];
 
     public function user(): BelongsTo

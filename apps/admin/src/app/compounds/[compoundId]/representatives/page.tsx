@@ -15,7 +15,6 @@ interface RepresentativesPageProps {
 
 export default async function RepresentativesPage({ params }: RepresentativesPageProps) {
   const { compoundId } = await params;
-  const currentUser = await getCurrentUser();
   await requireAdminUser(getCurrentUser);
 
   const [compound, assignments] = await Promise.all([getCompound(compoundId), listRepresentativeAssignments(compoundId)]);

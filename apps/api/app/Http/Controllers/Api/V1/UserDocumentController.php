@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\DocumentStatus;
+use App\Enums\NotificationCategory;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Documents\ReviewUserDocumentRequest;
@@ -10,6 +11,7 @@ use App\Http\Requests\Documents\StoreUserDocumentRequest;
 use App\Http\Resources\Documents\UserDocumentResource;
 use App\Models\Documents\UserDocument;
 use App\Models\User;
+use App\Services\NotificationService;
 use App\Support\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,7 +22,10 @@ use Symfony\Component\HttpFoundation\Response;
 
 class UserDocumentController extends Controller
 {
-    public function __construct(private readonly AuditLogger $auditLogger) {}
+    public function __construct(
+        private readonly AuditLogger $auditLogger,
+        private readonly NotificationService $notificationService,
+    ) {}
 
     public function index(Request $request): AnonymousResourceCollection
     {
@@ -98,7 +103,33 @@ class UserDocumentController extends Controller
             'status' => $validated['status'],
         ]);
 
-        return UserDocumentResource::make($userDocument->refresh()->load(['documentType', 'user', 'unit']));
+        $userDocument->refresh()->load(['documentType', 'user', 'unit']);
+
+        $this->notificationService->create(
+            userId: $userDocument->user_id,
+            category: NotificationCategory::Documents,
+            title: match ($userDocument->status) {
+                DocumentStatus::Approved => 'Document approved',
+                DocumentStatus::Rejected => 'Document rejected',
+                default => 'Document review updated',
+            },
+            body: match ($userDocument->status) {
+                DocumentStatus::Approved => "Your {$userDocument->documentType->name} document was approved.",
+                DocumentStatus::Rejected => "Your {$userDocument->documentType->name} document was rejected. Review the note for details.",
+                default => "Your {$userDocument->documentType->name} document review status changed.",
+            },
+            metadata: [
+                'documentId' => $userDocument->id,
+                'documentTypeId' => $userDocument->document_type_id,
+                'documentTypeName' => $userDocument->documentType->name,
+                'status' => $userDocument->status->value,
+                'unitId' => $userDocument->unit_id,
+                'reviewNote' => $userDocument->review_note,
+            ],
+            priority: $userDocument->status === DocumentStatus::Rejected ? 'high' : 'normal',
+        );
+
+        return UserDocumentResource::make($userDocument);
     }
 
     public function download(Request $request, UserDocument $userDocument): mixed

@@ -1,6 +1,6 @@
 "use client";
 
-import type { RepresentativeAssignment } from "@/lib/orgchart";
+import type { ContactVisibility, RepresentativeAssignment } from "@/lib/orgchart";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -104,7 +104,7 @@ export function EditAssignmentForm({ assignment }: EditAssignmentFormProps) {
               <select
                 id="contactVisibility"
                 value={contactVisibility}
-                onChange={(e) => setContactVisibility(e.target.value as any)}
+                onChange={(e) => setContactVisibility(e.target.value as ContactVisibility)}
                 className="mt-2 w-full rounded-lg border border-line bg-background px-3 py-2.5 text-sm focus:border-brand focus:outline-none"
               >
                 {CONTACT_VISIBILITY.map((v) => (

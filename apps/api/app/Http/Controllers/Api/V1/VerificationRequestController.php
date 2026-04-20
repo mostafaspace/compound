@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\AccountStatus;
+use App\Enums\NotificationCategory;
 use App\Enums\VerificationRequestStatus;
 use App\Enums\VerificationStatus;
 use App\Http\Controllers\Controller;
@@ -12,6 +13,7 @@ use App\Models\Property\UnitMembership;
 use App\Models\User;
 use App\Models\VerificationRequest;
 use App\Notifications\VerificationDecisionNotification;
+use App\Services\NotificationService;
 use App\Support\AuditLogger;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -20,7 +22,10 @@ use Symfony\Component\HttpFoundation\Response;
 
 class VerificationRequestController extends Controller
 {
-    public function __construct(private readonly AuditLogger $auditLogger) {}
+    public function __construct(
+        private readonly AuditLogger $auditLogger,
+        private readonly NotificationService $notificationService,
+    ) {}
 
     public function index(Request $request): AnonymousResourceCollection
     {
@@ -205,5 +210,30 @@ class VerificationRequestController extends Controller
             note: $verificationRequest->decision_note ?? $verificationRequest->more_info_note,
             actionUrl: $actionUrl,
         ));
+
+        $this->notificationService->create(
+            userId: $verificationRequest->user_id,
+            category: NotificationCategory::Documents,
+            title: match ($verificationRequest->status) {
+                VerificationRequestStatus::Approved => 'Verification approved',
+                VerificationRequestStatus::Rejected => 'Verification rejected',
+                VerificationRequestStatus::MoreInfoRequested => 'More information requested',
+                VerificationRequestStatus::PendingReview => 'Verification pending review',
+            },
+            body: match ($verificationRequest->status) {
+                VerificationRequestStatus::Approved => "Your {$compoundName} access has been approved.",
+                VerificationRequestStatus::Rejected => "Your {$compoundName} verification was rejected. Review the note for details.",
+                VerificationRequestStatus::MoreInfoRequested => "The administration team needs more information before approving your {$compoundName} access.",
+                VerificationRequestStatus::PendingReview => "Your {$compoundName} verification is pending review.",
+            },
+            metadata: [
+                'verificationRequestId' => $verificationRequest->id,
+                'status' => $verificationRequest->status->value,
+                'unitId' => $verificationRequest->unit_id,
+                'unitNumber' => $verificationRequest->unit?->unit_number,
+                'actionUrl' => $actionUrl,
+            ],
+            priority: $verificationRequest->status === VerificationRequestStatus::MoreInfoRequested ? 'high' : 'normal',
+        );
     }
 }

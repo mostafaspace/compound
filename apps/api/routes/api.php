@@ -30,6 +30,23 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
     Route::middleware('auth:sanctum')->group(function (): void {
         Route::get('/auth/me', [AuthController::class, 'me'])->name('auth.me');
         Route::post('/auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
+        Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+        Route::get('/notifications/unread-count', [NotificationController::class, 'getUnreadCount'])
+            ->name('notifications.unread-count');
+        Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])
+            ->name('notifications.read-all');
+        Route::post('/notifications/archive-all', [NotificationController::class, 'archiveAll'])
+            ->name('notifications.archive-all');
+        Route::get('/notifications/{notification}', [NotificationController::class, 'show'])
+            ->name('notifications.show');
+        Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])
+            ->name('notifications.read');
+        Route::post('/notifications/{notification}/archive', [NotificationController::class, 'archive'])
+            ->name('notifications.archive');
+        Route::get('/notification-preferences', [NotificationPreferenceController::class, 'show'])
+            ->name('notification-preferences.show');
+        Route::put('/notification-preferences', [NotificationPreferenceController::class, 'update'])
+            ->name('notification-preferences.update');
 
         Route::middleware('role:super_admin,compound_admin,board_member,finance_reviewer,support_agent,resident_owner,resident_tenant')
             ->group(function (): void {

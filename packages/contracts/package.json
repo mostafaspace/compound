@@ -9,6 +9,7 @@
     "typecheck": "tsc --project tsconfig.json --noEmit"
   },
   "devDependencies": {
+    "@compound/typescript-config": "0.1.0",
     "typescript": "^5.9.3"
   }
 }

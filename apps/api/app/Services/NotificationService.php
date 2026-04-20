@@ -7,7 +7,6 @@ use App\Events\NotificationCreatedEvent;
 use App\Models\Notification;
 use App\Models\NotificationPreference;
 use App\Models\User;
-use Carbon\Carbon;
 
 class NotificationService
 {
@@ -16,14 +15,25 @@ class NotificationService
         NotificationCategory $category,
         string $title,
         string $body,
-        array $metadata = []
-    ): Notification {
+        array $metadata = [],
+        string $priority = 'normal',
+    ): ?Notification {
+        $user = User::query()->with('notificationPreference')->find($userId);
+
+        if (! $user || ! $this->shouldCreateInAppNotification($user, $category)) {
+            return null;
+        }
+
         $notification = Notification::create([
             'user_id' => $userId,
             'category' => $category,
+            'channel' => 'in_app',
+            'priority' => $priority,
             'title' => $title,
             'body' => $body,
             'metadata' => $metadata,
+            'delivery_attempts' => 1,
+            'delivered_at' => now(),
         ]);
 
         event(new NotificationCreatedEvent($notification));
@@ -35,7 +45,7 @@ class NotificationService
     {
         $notification = Notification::find($notificationId);
 
-        if (!$notification) {
+        if (! $notification) {
             return false;
         }
 
@@ -46,7 +56,7 @@ class NotificationService
     {
         $notification = Notification::find($notificationId);
 
-        if (!$notification) {
+        if (! $notification) {
             return false;
         }
 
@@ -96,5 +106,20 @@ class NotificationService
         return Notification::where('user_id', $userId)
             ->notArchived()
             ->update(['archived_at' => now()]);
+    }
+
+    private function shouldCreateInAppNotification(User $user, NotificationCategory $category): bool
+    {
+        $preference = $user->notificationPreference;
+
+        if (! $preference) {
+            return true;
+        }
+
+        if (! $preference->in_app_enabled) {
+            return false;
+        }
+
+        return ! in_array($category->value, $preference->muted_categories ?? [], true);
     }
 }

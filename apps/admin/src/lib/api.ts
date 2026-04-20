@@ -20,13 +20,17 @@ import type {
   ResidentInvitation,
   LoginInput,
   LoginResult,
+  NotificationCategory,
+  NotificationPreference,
   PaginatedEnvelope,
   UnitDetail,
   UnitSummary,
   UpdateBuildingInput,
   UpdateCompoundInput,
   UpdateFloorInput,
+  UpdateNotificationPreferenceInput,
   UpdateUnitInput,
+  UserNotification,
   UserDocument,
   VerificationRequest,
   VerificationRequestStatus,
@@ -122,6 +126,163 @@ export async function logout(): Promise<void> {
     headers: await apiHeaders(true),
     method: "POST",
   });
+}
+
+export async function getNotifications(input: {
+  category?: NotificationCategory | "all";
+  read?: "all" | "read" | "unread";
+  perPage?: number;
+} = {}): Promise<UserNotification[]> {
+  try {
+    const params = new URLSearchParams();
+
+    if (input.category && input.category !== "all") {
+      params.set("category", input.category);
+    }
+
+    if (input.read && input.read !== "all") {
+      params.set("read", input.read);
+    }
+
+    if (input.perPage) {
+      params.set("per_page", String(input.perPage));
+    }
+
+    const query = params.toString();
+    const response = await fetch(`${config.apiBaseUrl}/notifications${query ? `?${query}` : ""}`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const payload = (await response.json()) as PaginatedEnvelope<UserNotification>;
+
+    return payload.data;
+  } catch {
+    return [];
+  }
+}
+
+export async function getUnreadNotificationCount(): Promise<number> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/notifications/unread-count`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+
+    if (!response.ok) {
+      return 0;
+    }
+
+    const payload = (await response.json()) as { unreadCount: number };
+
+    return payload.unreadCount;
+  } catch {
+    return 0;
+  }
+}
+
+export async function markNotificationRead(notificationId: string): Promise<UserNotification> {
+  const response = await fetch(`${config.apiBaseUrl}/notifications/${notificationId}/read`, {
+    headers: await apiHeaders(true),
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to mark notification read: ${response.status}`);
+  }
+
+  const payload = (await response.json()) as ApiEnvelope<UserNotification>;
+
+  return payload.data;
+}
+
+export async function archiveNotification(notificationId: string): Promise<UserNotification> {
+  const response = await fetch(`${config.apiBaseUrl}/notifications/${notificationId}/archive`, {
+    headers: await apiHeaders(true),
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to archive notification: ${response.status}`);
+  }
+
+  const payload = (await response.json()) as ApiEnvelope<UserNotification>;
+
+  return payload.data;
+}
+
+export async function markAllNotificationsRead(): Promise<number> {
+  const response = await fetch(`${config.apiBaseUrl}/notifications/read-all`, {
+    headers: await apiHeaders(true),
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to mark notifications read: ${response.status}`);
+  }
+
+  const payload = (await response.json()) as { count: number };
+
+  return payload.count;
+}
+
+export async function archiveAllNotifications(): Promise<number> {
+  const response = await fetch(`${config.apiBaseUrl}/notifications/archive-all`, {
+    headers: await apiHeaders(true),
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to archive notifications: ${response.status}`);
+  }
+
+  const payload = (await response.json()) as { count: number };
+
+  return payload.count;
+}
+
+export async function getNotificationPreferences(): Promise<NotificationPreference | null> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/notification-preferences`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const payload = (await response.json()) as ApiEnvelope<NotificationPreference>;
+
+    return payload.data;
+  } catch {
+    return null;
+  }
+}
+
+export async function updateNotificationPreferences(
+  input: UpdateNotificationPreferenceInput,
+): Promise<NotificationPreference> {
+  const response = await fetch(`${config.apiBaseUrl}/notification-preferences`, {
+    body: JSON.stringify(input),
+    headers: {
+      ...(await apiHeaders(true)),
+      "Content-Type": "application/json",
+    },
+    method: "PUT",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to update notification preferences: ${response.status}`);
+  }
+
+  const payload = (await response.json()) as ApiEnvelope<NotificationPreference>;
+
+  return payload.data;
 }
 
 export async function getCompounds(): Promise<CompoundSummary[]> {

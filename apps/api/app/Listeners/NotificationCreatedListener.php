@@ -15,10 +15,14 @@ class NotificationCreatedListener
     {
         $this->auditLogger->record(
             action: 'notifications.created',
-            model: $event->notification,
-            changes: [
+            auditableType: $event->notification::class,
+            auditableId: $event->notification->id,
+            metadata: [
                 'id' => $event->notification->id,
+                'user_id' => $event->notification->user_id,
                 'category' => $event->notification->category->value,
+                'channel' => $event->notification->channel,
+                'priority' => $event->notification->priority,
                 'title' => $event->notification->title,
             ]
         );

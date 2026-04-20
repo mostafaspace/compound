@@ -27,6 +27,14 @@ export const invitationStatusValues = ["pending", "accepted", "revoked", "expire
 
 export type InvitationStatus = (typeof invitationStatusValues)[number];
 
+export const notificationCategoryValues = ["documents", "visitors", "issues", "announcements", "finance", "system"] as const;
+
+export type NotificationCategory = (typeof notificationCategoryValues)[number];
+
+export const notificationPriorityValues = ["low", "normal", "high"] as const;
+
+export type NotificationPriority = (typeof notificationPriorityValues)[number];
+
 export interface ApiEnvelope<T> {
   data: T;
   meta?: Record<string, unknown>;
@@ -139,4 +147,45 @@ export interface LoginResult {
   token: string;
   tokenType: "Bearer";
   user: AuthenticatedUser;
+}
+
+export interface UserNotification {
+  id: string;
+  userId: number;
+  category: NotificationCategory;
+  channel: "in_app";
+  priority: NotificationPriority;
+  title: string;
+  body: string;
+  metadata: Record<string, unknown>;
+  readAt: string | null;
+  archivedAt: string | null;
+  deliveredAt: string | null;
+  deliveryAttempts: number;
+  lastDeliveryError: string | null;
+  createdAt: string;
+}
+
+export interface NotificationPreference {
+  id: string;
+  userId: number;
+  emailEnabled: boolean;
+  inAppEnabled: boolean;
+  pushEnabled: boolean;
+  quietHoursStart: string | null;
+  quietHoursEnd: string | null;
+  quietHoursTimezone: string | null;
+  mutedCategories: NotificationCategory[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UpdateNotificationPreferenceInput {
+  emailEnabled?: boolean;
+  inAppEnabled?: boolean;
+  pushEnabled?: boolean;
+  quietHoursStart?: string | null;
+  quietHoursEnd?: string | null;
+  quietHoursTimezone?: string | null;
+  mutedCategories?: NotificationCategory[];
 }
