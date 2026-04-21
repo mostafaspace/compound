@@ -37,6 +37,62 @@ interface SystemStatus {
   timezone: string;
 }
 
+type AnnouncementCategory =
+  | "general"
+  | "building"
+  | "association_decision"
+  | "security_alert"
+  | "maintenance_notice"
+  | "meeting_reminder";
+type AnnouncementPriority = "low" | "normal" | "high" | "critical";
+type AnnouncementId = number | string;
+
+interface LocalizedText {
+  en: string;
+  ar: string;
+}
+
+interface AnnouncementSummary {
+  required: boolean;
+  targetedCount: number;
+  acknowledgedCount: number;
+  pendingCount: number;
+}
+
+interface Announcement {
+  id: AnnouncementId;
+  category: AnnouncementCategory;
+  priority: AnnouncementPriority;
+  status: "published" | "scheduled" | "draft" | "expired" | "archived";
+  targetType: string;
+  targetIds: AnnouncementId[];
+  targetRole: string | null;
+  requiresVerifiedMembership: boolean;
+  requiresAcknowledgement: boolean;
+  title: LocalizedText;
+  body: LocalizedText;
+  attachments: unknown[];
+  revision: number;
+  scheduledAt: string | null;
+  publishedAt: string | null;
+  expiresAt: string | null;
+  archivedAt: string | null;
+  acknowledgedAt?: string | null;
+  acknowledgementSummary?: AnnouncementSummary;
+  author?: {
+    id: number;
+    name: string;
+    email: string;
+  };
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+interface AnnouncementAcknowledgementResponse {
+  announcementId: AnnouncementId;
+  acknowledgedAt: string;
+}
+
 const defaultApiBaseUrl = Platform.select({
   android: "http://10.0.2.2:8000/api/v1",
   ios: "http://localhost:8000/api/v1",
@@ -71,6 +127,25 @@ function formatDate(value: string | null): string {
   }).format(new Date(value));
 }
 
+function formatDateForLocale(value: string | null, locale: string, emptyLabel: string): string {
+  if (!value) {
+    return emptyLabel;
+  }
+
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
+}
+
+function localizedText(value: LocalizedText, language: string): string {
+  if (language.startsWith("ar")) {
+    return value.ar || value.en;
+  }
+
+  return value.en || value.ar;
+}
+
 function defaultVisitStartsAt(): Date {
   return new Date(Date.now() + 15 * 60 * 1000);
 }
@@ -98,11 +173,13 @@ function visitorLocation(visitorRequest: VisitorRequest): string {
 }
 
 export default function App() {
-  const { t } = useTranslation();
+  const { i18n, t } = useTranslation();
   const systemScheme = useColorScheme();
   const [themeOverride, setThemeOverride] = useState<"light" | "dark" | "system">("system");
   const isDark = themeOverride === "system" ? systemScheme === "dark" : themeOverride === "dark";
-  const styles = getStyles(isDark);
+  const language = i18n.resolvedLanguage ?? i18n.language ?? "en";
+  const isRtl = language.startsWith("ar");
+  const styles = getStyles(isDark, isRtl);
   const [status, setStatus] = useState<SystemStatus | null>(null);
   const [isLoadingStatus, setIsLoadingStatus] = useState(true);
   const [email, setEmail] = useState("");
@@ -134,6 +211,11 @@ export default function App() {
   const [visitorMessage, setVisitorMessage] = useState<string | null>(null);
   const [issues, setIssues] = useState<Issue[]>([]);
   const [isRefreshingIssues, setIsRefreshingIssues] = useState(false);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [isRefreshingAnnouncements, setIsRefreshingAnnouncements] = useState(false);
+  const [announcementsError, setAnnouncementsError] = useState<string | null>(null);
+  const [announcementMessage, setAnnouncementMessage] = useState<string | null>(null);
+  const [acknowledgingAnnouncementId, setAcknowledgingAnnouncementId] = useState<AnnouncementId | null>(null);
   const [isCreatingIssue, setIsCreatingIssue] = useState(false);
   const [issueTitle, setIssueTitle] = useState("");
   const [issueDescription, setIssueDescription] = useState("");
@@ -207,6 +289,7 @@ export default function App() {
           loadDocumentTypes(credentials.password),
           loadVisitorRequests(credentials.password),
           loadIssues(credentials.password),
+          loadAnnouncements(credentials.password),
         ]);
       } catch {
         await Keychain.resetGenericPassword({ service: authTokenService });
@@ -537,6 +620,7 @@ export default function App() {
         loadDocumentTypes(payload.data.token),
         loadVisitorRequests(payload.data.token),
         loadIssues(payload.data.token),
+        loadAnnouncements(payload.data.token),
       ]);
     } catch {
       setAuthError("Could not reach the compound API.");
@@ -563,6 +647,94 @@ export default function App() {
       setIssues(payload.data);
     } finally {
       setIsRefreshingIssues(false);
+    }
+  }
+
+  async function loadAnnouncements(token = authToken) {
+    if (!token) {
+      return;
+    }
+
+    setAnnouncementsError(null);
+    setIsRefreshingAnnouncements(true);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/my/announcements?perPage=20`, {
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        setAnnouncements([]);
+        setAnnouncementsError(t("Announcements.loadError"));
+        return;
+      }
+
+      const payload = (await response.json()) as PaginatedEnvelope<Announcement>;
+      setAnnouncements(payload.data);
+    } catch {
+      setAnnouncementsError(t("Announcements.networkError"));
+    } finally {
+      setIsRefreshingAnnouncements(false);
+    }
+  }
+
+  async function handleAcknowledgeAnnouncement(announcement: Announcement) {
+    if (!authToken || announcement.acknowledgedAt) {
+      return;
+    }
+
+    setAnnouncementMessage(null);
+    setAnnouncementsError(null);
+    setAcknowledgingAnnouncementId(announcement.id);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/announcements/${announcement.id}/acknowledge`, {
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        setAnnouncementMessage(t("Announcements.acknowledgeError"));
+        return;
+      }
+
+      const payload = (await response.json()) as ApiEnvelope<AnnouncementAcknowledgementResponse>;
+      setAnnouncements((current) =>
+        current.map((item) => {
+          if (String(item.id) !== String(payload.data.announcementId)) {
+            return item;
+          }
+
+          const wasAcknowledged = Boolean(item.acknowledgedAt);
+
+          return {
+            ...item,
+            acknowledgedAt: payload.data.acknowledgedAt,
+            acknowledgementSummary: item.acknowledgementSummary
+              ? {
+                  ...item.acknowledgementSummary,
+                  acknowledgedCount: wasAcknowledged
+                    ? item.acknowledgementSummary.acknowledgedCount
+                    : item.acknowledgementSummary.acknowledgedCount + 1,
+                  pendingCount: wasAcknowledged
+                    ? item.acknowledgementSummary.pendingCount
+                    : Math.max(0, item.acknowledgementSummary.pendingCount - 1),
+                }
+              : item.acknowledgementSummary,
+          };
+        }),
+      );
+      setAnnouncementMessage(t("Announcements.acknowledgeSuccess"));
+    } catch {
+      setAnnouncementMessage(t("Announcements.networkError"));
+    } finally {
+      setAcknowledgingAnnouncementId(null);
     }
   }
 
@@ -611,6 +783,7 @@ export default function App() {
     setVerificationRequests([]);
     setVisitorRequests([]);
     setVisitorPassTokens({});
+    setAnnouncements([]);
     setDocumentTypes([]);
     setSelectedDocumentTypeId(null);
     resetVisitorForm();
@@ -618,6 +791,9 @@ export default function App() {
     setAuthError(null);
     setUploadMessage(null);
     setVisitorMessage(null);
+    setAnnouncementsError(null);
+    setAnnouncementMessage(null);
+    setAcknowledgingAnnouncementId(null);
   }
 
   async function handlePickAndUploadDocument() {
@@ -690,6 +866,10 @@ export default function App() {
   const hasInvalidVisitWindow = visitEndsAt <= visitStartsAt;
   const isPending = user?.status === "pending_review";
   const isActiveResident = user?.status === "active" && isResident(user);
+  const announcementLocale = isRtl ? "ar" : "en";
+  const pendingAnnouncementAcknowledgements = announcements.filter(
+    (announcement) => announcement.requiresAcknowledgement && !announcement.acknowledgedAt,
+  ).length;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -879,6 +1059,133 @@ export default function App() {
               <Text style={styles.panelLabel}>Signed in</Text>
               <Text style={styles.sectionTitle}>{user.name}</Text>
               <Text style={styles.sectionText}>{formatStatus(user.role)} account is active.</Text>
+            </View>
+
+            <View style={styles.panel}>
+              <View style={styles.announcementHeaderRow}>
+                <View style={styles.flexFill}>
+                  <Text style={[styles.panelLabel, styles.localizedText]}>{t("Announcements.label")}</Text>
+                  <Text style={[styles.sectionTitle, styles.localizedText]}>{t("Announcements.title")}</Text>
+                  <Text style={[styles.sectionText, styles.localizedText]}>
+                    {pendingAnnouncementAcknowledgements > 0
+                      ? t("Announcements.requiresAck")
+                      : t("Announcements.count", { count: announcements.length })}
+                  </Text>
+                </View>
+                <Pressable accessibilityRole="button" onPress={() => void loadAnnouncements()} style={styles.secondaryButton}>
+                  <Text style={styles.secondaryButtonText}>
+                    {isRefreshingAnnouncements ? t("Announcements.refreshing") : t("Announcements.refresh")}
+                  </Text>
+                </Pressable>
+              </View>
+
+              <Text style={[styles.sectionText, styles.localizedText]}>{t("Announcements.subtitle")}</Text>
+
+              {isRefreshingAnnouncements && announcements.length === 0 ? (
+                <View style={styles.loadingRow}>
+                  <ActivityIndicator color={isDark ? "#14b8a6" : "#116a57"} />
+                  <Text style={[styles.sectionText, styles.localizedText]}>{t("Announcements.loading")}</Text>
+                </View>
+              ) : null}
+
+              {announcementsError ? <Text style={[styles.errorText, styles.localizedText]}>{announcementsError}</Text> : null}
+              {announcementMessage ? <Text style={[styles.infoText, styles.localizedText]}>{announcementMessage}</Text> : null}
+
+              {!isRefreshingAnnouncements && !announcementsError && announcements.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <Text style={[styles.infoTitle, styles.localizedText]}>{t("Announcements.empty")}</Text>
+                </View>
+              ) : null}
+
+              {announcements.length > 0 ? (
+                <View style={styles.visitorList}>
+                  {announcements.map((announcement) => {
+                    const title = localizedText(announcement.title, language);
+                    const body = localizedText(announcement.body, language);
+                    const isAcknowledging = String(acknowledgingAnnouncementId) === String(announcement.id);
+                    const hasAcknowledged = Boolean(announcement.acknowledgedAt);
+                    const requiresOpenAcknowledgement = announcement.requiresAcknowledgement && !hasAcknowledged;
+
+                    return (
+                      <View style={styles.announcementCard} key={String(announcement.id)}>
+                        <View style={styles.announcementBadgeRow}>
+                          <Text style={styles.categoryBadge}>
+                            {t(`Announcements.categories.${announcement.category}`, {
+                              defaultValue: formatStatus(announcement.category),
+                            })}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.priorityBadge,
+                              announcement.priority === "high" && styles.priorityBadgeHigh,
+                              announcement.priority === "critical" && styles.priorityBadgeCritical,
+                            ]}
+                          >
+                            {t(`Announcements.priorities.${announcement.priority}`, {
+                              defaultValue: formatStatus(announcement.priority),
+                            })}
+                          </Text>
+                        </View>
+
+                        <Text style={[styles.actionLabel, styles.localizedText]}>{title}</Text>
+                        <Text style={[styles.sectionText, styles.localizedText]}>{body}</Text>
+
+                        <View style={styles.announcementMetaBlock}>
+                          {announcement.publishedAt ? (
+                            <Text style={[styles.actionDetail, styles.localizedText]}>
+                              {t("Announcements.published", {
+                                date: formatDateForLocale(announcement.publishedAt, announcementLocale, ""),
+                              })}
+                            </Text>
+                          ) : null}
+                          {announcement.expiresAt ? (
+                            <Text style={[styles.actionDetail, styles.localizedText]}>
+                              {t("Announcements.expires", {
+                                date: formatDateForLocale(announcement.expiresAt, announcementLocale, ""),
+                              })}
+                            </Text>
+                          ) : null}
+                          {announcement.attachments.length > 0 ? (
+                            <Text style={[styles.actionDetail, styles.localizedText]}>
+                              {t("Announcements.attachments", { count: announcement.attachments.length })}
+                            </Text>
+                          ) : null}
+                          {announcement.revision > 1 ? (
+                            <Text style={[styles.actionDetail, styles.localizedText]}>
+                              {t("Announcements.revision", { revision: announcement.revision })}
+                            </Text>
+                          ) : null}
+                        </View>
+
+                        {announcement.requiresAcknowledgement ? (
+                          <View style={styles.acknowledgementPanel}>
+                            <Text style={[styles.infoTitle, styles.localizedText]}>
+                              {hasAcknowledged ? t("Announcements.acknowledged") : t("Announcements.requiresAck")}
+                            </Text>
+                            <Pressable
+                              accessibilityRole="button"
+                              disabled={!requiresOpenAcknowledgement || isAcknowledging}
+                              onPress={() => void handleAcknowledgeAnnouncement(announcement)}
+                              style={[
+                                styles.primaryButton,
+                                (!requiresOpenAcknowledgement || isAcknowledging) && styles.disabledButton,
+                              ]}
+                            >
+                              {isAcknowledging ? (
+                                <ActivityIndicator color={isDark ? "#1f2937" : "#ffffff"} />
+                              ) : (
+                                <Text style={styles.primaryButtonText}>
+                                  {hasAcknowledged ? t("Announcements.acknowledged") : t("Announcements.acknowledge")}
+                                </Text>
+                              )}
+                            </Pressable>
+                          </View>
+                        ) : null}
+                      </View>
+                    );
+                  })}
+                </View>
+              ) : null}
             </View>
 
             <View style={styles.panel}>
@@ -1194,7 +1501,7 @@ export default function App() {
   );
 }
 
-const getStyles = (isDark: boolean) => StyleSheet.create({
+const getStyles = (isDark: boolean, isRtl: boolean) => StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: isDark ? "#111827" : "#f6f7f9",
@@ -1411,6 +1718,83 @@ const getStyles = (isDark: boolean) => StyleSheet.create({
     flexDirection: "row",
     gap: 12,
     justifyContent: "space-between",
+  },
+  announcementHeaderRow: {
+    alignItems: "center",
+    flexDirection: isRtl ? "row-reverse" : "row",
+    gap: 12,
+    justifyContent: "space-between",
+  },
+  localizedText: {
+    textAlign: isRtl ? "right" : "left",
+    writingDirection: isRtl ? "rtl" : "ltr",
+  },
+  loadingRow: {
+    alignItems: "center",
+    flexDirection: isRtl ? "row-reverse" : "row",
+    gap: 10,
+  },
+  emptyState: {
+    backgroundColor: isDark ? "#172554" : "#eef4ff",
+    borderColor: isDark ? "#1d4ed8" : "#c7d7fe",
+    borderRadius: 8,
+    borderWidth: 1,
+    padding: 14,
+  },
+  announcementCard: {
+    backgroundColor: isDark ? "#111827" : "#fbfcfd",
+    borderColor: isDark ? "#374151" : "#d7dce3",
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 12,
+    padding: 14,
+  },
+  announcementBadgeRow: {
+    alignItems: "center",
+    flexDirection: isRtl ? "row-reverse" : "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  categoryBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: isDark ? "#134e4a" : "#e6f3ef",
+    borderRadius: 8,
+    color: isDark ? "#5eead4" : "#116a57",
+    fontSize: 12,
+    fontWeight: "800",
+    overflow: "hidden",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  priorityBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: isDark ? "#1e3a8a" : "#eaf0ff",
+    borderRadius: 8,
+    color: isDark ? "#93c5fd" : "#244a8f",
+    fontSize: 12,
+    fontWeight: "800",
+    overflow: "hidden",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  priorityBadgeHigh: {
+    backgroundColor: isDark ? "#78350f" : "#fff4db",
+    color: isDark ? "#fbbf24" : "#7a4f10",
+  },
+  priorityBadgeCritical: {
+    backgroundColor: isDark ? "#7f1d1d" : "#fde8e5",
+    color: isDark ? "#f87171" : "#b42318",
+  },
+  announcementMetaBlock: {
+    gap: 2,
+  },
+  acknowledgementPanel: {
+    backgroundColor: isDark ? "#172554" : "#eef4ff",
+    borderColor: isDark ? "#1d4ed8" : "#c7d7fe",
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 10,
+    padding: 12,
   },
   flexFill: {
     flex: 1,
