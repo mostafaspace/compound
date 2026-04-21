@@ -11,5 +11,40 @@
     "light": "Light Mode",
     "dark": "Dark Mode",
     "system": "System Auto"
+  },
+  "Notifications": {
+    "ariaLabel": "{count, plural, =0 {Notifications} one {Notifications, # unread} other {Notifications, # unread}}",
+    "title": "Notifications",
+    "liveConnected": "Live updates connected",
+    "polling": "Polling every 30 seconds",
+    "refresh": "Refresh notifications",
+    "preferences": "Notification preferences",
+    "markAllRead": "Mark all read",
+    "archiveAll": "Archive all",
+    "read": "Read",
+    "archive": "Archive",
+    "empty": "No notifications match the selected filters.",
+    "filters": {
+      "all": "All",
+      "unread": "Unread"
+    },
+    "categories": {
+      "announcements": "Announcements",
+      "documents": "Documents",
+      "finance": "Finance",
+      "issues": "Issues",
+      "system": "System",
+      "visitors": "Visitors"
+    },
+    "preferencesForm": {
+      "inApp": "In-app",
+      "email": "Email",
+      "push": "Push",
+      "quietStart": "Quiet start",
+      "quietEnd": "Quiet end",
+      "timezone": "Timezone",
+      "timezonePlaceholder": "Africa/Cairo",
+      "mutedCategories": "Muted categories"
+    }
   }
 }

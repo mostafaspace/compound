@@ -5,10 +5,9 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Notifications\UpdateNotificationPreferenceRequest;
 use App\Http\Resources\NotificationPreferenceResource;
-use App\Models\NotificationPreference;
 use App\Support\AuditLogger;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\JsonResource;
 
 class NotificationPreferenceController extends Controller
 {
@@ -16,28 +15,24 @@ class NotificationPreferenceController extends Controller
     {
     }
 
-    public function show(Request $request): JsonResource
+    public function show(Request $request): JsonResponse
     {
-        $preference = $request->user()->notificationPreference;
+        $preference = $request->user()
+            ->notificationPreference()
+            ->firstOrCreate([])
+            ->refresh();
 
-        if (!$preference) {
-            $preference = NotificationPreference::create([
-                'user_id' => $request->user()->id,
-            ]);
-        }
-
-        return new NotificationPreferenceResource($preference);
+        return (new NotificationPreferenceResource($preference))
+            ->response()
+            ->setStatusCode(200);
     }
 
-    public function update(UpdateNotificationPreferenceRequest $request): JsonResource
+    public function update(UpdateNotificationPreferenceRequest $request): JsonResponse
     {
-        $preference = $request->user()->notificationPreference;
-
-        if (!$preference) {
-            $preference = NotificationPreference::create([
-                'user_id' => $request->user()->id,
-            ]);
-        }
+        $preference = $request->user()
+            ->notificationPreference()
+            ->firstOrCreate([])
+            ->refresh();
 
         $updates = [];
 
@@ -82,6 +77,8 @@ class NotificationPreferenceController extends Controller
             metadata: $updates
         );
 
-        return new NotificationPreferenceResource($preference->refresh());
+        return (new NotificationPreferenceResource($preference->refresh()))
+            ->response()
+            ->setStatusCode(200);
     }
 }

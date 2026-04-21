@@ -33,6 +33,8 @@ class StoreUnitRequest extends FormRequest
                 'max:40',
                 Rule::unique('units', 'unit_number')->where('building_id', $building?->id),
             ],
+            'type' => ['nullable', Rule::enum(UnitType::class)],
+            'areaSqm' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
             'bedrooms' => ['nullable', 'integer', 'min:0', 'max:50'],
             'status' => ['nullable', Rule::enum(UnitStatus::class)],
         ];

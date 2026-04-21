@@ -15,13 +15,10 @@ interface IssuesPageProps {
 const statusFilters: Array<{ label: string; value: IssueStatus | "all" }> = [
   { label: "All", value: "all" },
   { label: "New", value: "new" },
-  { label: "Triaged", value: "triaged" },
-  { label: "Assigned", value: "assigned" },
   { label: "In progress", value: "in_progress" },
-  { label: "Waiting", value: "waiting_for_resident" },
+  { label: "Escalated", value: "escalated" },
   { label: "Resolved", value: "resolved" },
   { label: "Closed", value: "closed" },
-  { label: "Reopened", value: "reopened" },
 ];
 
 const categoryFilters: Array<{ label: string; value: IssueCategory | "all" }> = [
@@ -43,9 +40,8 @@ function parseCategory(value?: string): IssueCategory | "all" {
 
 function statusTone(status: string): string {
   if (status === "resolved" || status === "closed") return "bg-[#e6f3ef] text-brand";
-  if (status === "waiting_for_resident") return "bg-[#fff3f2] text-danger";
-  if (status === "in_progress" || status === "assigned") return "bg-[#eaf0ff] text-[#244a8f]";
-  if (status === "reopened") return "bg-[#f3ead7] text-accent";
+  if (status === "escalated") return "bg-[#fff3f2] text-danger";
+  if (status === "in_progress") return "bg-[#eaf0ff] text-[#244a8f]";
   return "bg-[#f3ead7] text-accent";
 }
 

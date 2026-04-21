@@ -2,13 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import type { IssueStatus } from "@compound/contracts";
 
 import { createIssueComment, updateIssue } from "@/lib/api";
 
 export async function updateIssueStatusAction(issueId: string, formData: FormData) {
   const status = formData.get("status") as string;
 
-  await updateIssue(issueId, { status: status as "new" | "in_progress" | "escalated" | "resolved" | "closed" });
+  await updateIssue(issueId, { status: status as IssueStatus });
 
   revalidatePath(`/issues/${issueId}`);
   redirect(`/issues/${issueId}?updated=1`);

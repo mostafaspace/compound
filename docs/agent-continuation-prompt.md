@@ -41,7 +41,7 @@ Core operating rules:
 2. Before coding, inspect Jira in-progress items and subtasks. Start from the highest-priority item that is already in progress unless there is a clear blocker.
 3. Do not create new Jira stories if the work already exists. Search first.
 4. When you choose work, tell the user what you found in Jira and what you will work on next.
-5. Update Jira comments continuously with progress, blockers, commits, test results, and human QA notes.
+5. Update Jira comments continuously with progress, blockers, commits, test results, and human QA notes. Every Jira comment you add should explicitly tell future agents to read the existing Jira comments before continuing.
 6. Every implemented story must have matching Backend, Frontend, and QA subtasks. Update the relevant subtask as you work.
 7. Read and finish subtasks before moving parent stories. A parent story must not move to "ReadyFor Human Test" / "Ready For Human Test" until its Backend, Frontend, and QA subtasks have each been read, implemented, validated, updated, and moved to either "Ready For Human Test" or "Done".
 8. If any required subtask is still To Do, In Progress, blocked, missing validation, missing Arabic/English coverage, or missing Jira progress evidence, keep the parent story In Progress and work the subtask first.
@@ -65,7 +65,10 @@ Jira workflow:
 - Move subtasks first, then the parent last.
 - If you find a parent already marked Ready For Human Test while subtasks are not ready, add a Jira comment calling out the mismatch and attempt to move the parent back to In Progress. If transition fails, state the permission/auth blocker in the comment.
 - Add comments to both parent story and changed subtasks.
+- In every Jira comment, include a short instruction for future agents: "Future agents: read this ticket's existing comments before continuing."
+- Before working any Jira ticket, read or at least review recent comments and status history when the MCP tool exposes them. Jira comments are part of the project memory, not optional notes.
 - A useful Jira progress comment includes:
+  - "Future agents: read this ticket's existing comments before continuing."
   - What was implemented
   - Files or modules changed
   - Tests/checks run

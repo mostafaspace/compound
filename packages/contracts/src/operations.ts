@@ -2,13 +2,10 @@ import type { AuthenticatedUser } from "./platform";
 
 export const issueStatusValues = [
   "new",
-  "triaged",
-  "assigned",
   "in_progress",
-  "waiting_for_resident",
+  "escalated",
   "resolved",
-  "closed",
-  "reopened"
+  "closed"
 ] as const;
 
 export type IssueStatus = (typeof issueStatusValues)[number];

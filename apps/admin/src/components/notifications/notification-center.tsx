@@ -7,6 +7,7 @@ import type {
   UserNotification,
 } from "@compound/contracts";
 import { notificationCategoryValues } from "@compound/contracts";
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useMemo, useState, useTransition } from "react";
 
 import {
@@ -25,15 +26,6 @@ interface NotificationCenterProps {
   initialUnreadCount: number;
   userId: number;
 }
-
-const categoryLabels: Record<NotificationCategory, string> = {
-  announcements: "Announcements",
-  documents: "Documents",
-  finance: "Finance",
-  issues: "Issues",
-  system: "System",
-  visitors: "Visitors",
-};
 
 const categoryIcons: Record<NotificationCategory, string> = {
   announcements: "M4 5.75A2.75 2.75 0 0 1 6.75 3h6.5A2.75 2.75 0 0 1 16 5.75v4.5A2.75 2.75 0 0 1 13.25 13H9l-4 3v-3.25A2.75 2.75 0 0 1 2 10.25v-4.5Z",
@@ -76,8 +68,8 @@ function IconPath({ category }: { category: NotificationCategory }) {
   );
 }
 
-function formatTime(value: string): string {
-  return new Intl.DateTimeFormat("en", {
+function formatTime(value: string, locale: string): string {
+  return new Intl.DateTimeFormat(locale, {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
@@ -89,6 +81,8 @@ export function NotificationCenter({
   initialUnreadCount,
   userId,
 }: NotificationCenterProps) {
+  const locale = useLocale();
+  const t = useTranslations("Notifications");
   const [isOpen, setIsOpen] = useState(false);
   const [showPreferences, setShowPreferences] = useState(false);
   const [notifications, setNotifications] = useState(initialNotifications);
@@ -184,16 +178,16 @@ export function NotificationCenter({
   }
 
   return (
-    <div className="fixed right-4 top-4 z-50 md:right-6">
+    <div className="fixed start-4 top-4 z-50 md:start-6">
       <button
-        aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ""}`}
+        aria-label={t("ariaLabel", { count: unreadCount })}
         className="relative inline-flex size-11 items-center justify-center rounded-lg border border-line bg-panel text-foreground shadow-sm transition hover:border-brand focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2"
         onClick={() => setIsOpen((value) => !value)}
         type="button"
       >
         <BellIcon />
         {unreadCount > 0 ? (
-          <span className="absolute -right-2 -top-2 min-w-6 rounded-full bg-danger px-1.5 py-0.5 text-center text-xs font-semibold text-white">
+          <span className="absolute -end-2 -top-2 min-w-6 rounded-full bg-danger px-1.5 py-0.5 text-center text-xs font-semibold text-white">
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         ) : null}
@@ -203,14 +197,14 @@ export function NotificationCenter({
         <section className="mt-3 w-[min(calc(100vw-2rem),28rem)] overflow-hidden rounded-lg border border-line bg-panel shadow-xl">
           <div className="flex items-start justify-between gap-4 border-b border-line p-4">
             <div>
-              <h2 className="text-base font-semibold">Notifications</h2>
+              <h2 className="text-base font-semibold">{t("title")}</h2>
               <p className="mt-1 text-xs text-muted">
-                {connectionState === "live" ? "Live updates connected" : "Polling every 30 seconds"}
+                {connectionState === "live" ? t("liveConnected") : t("polling")}
               </p>
             </div>
             <div className="flex gap-2">
               <button
-                aria-label="Refresh notifications"
+                aria-label={t("refresh")}
                 className="inline-flex size-9 items-center justify-center rounded-lg border border-line text-sm font-semibold transition hover:border-brand disabled:opacity-50"
                 disabled={isPending}
                 onClick={refreshNow}
@@ -219,7 +213,7 @@ export function NotificationCenter({
                 <RefreshIcon />
               </button>
               <button
-                aria-label="Notification preferences"
+                aria-label={t("preferences")}
                 className="inline-flex size-9 items-center justify-center rounded-lg border border-line text-sm font-semibold transition hover:border-brand"
                 onClick={() => setShowPreferences((value) => !value)}
                 type="button"
@@ -237,27 +231,27 @@ export function NotificationCenter({
 
           <div className="border-b border-line p-3">
             <div className="flex gap-2 overflow-x-auto pb-1">
-              <FilterButton active={category === "all"} label="All" onClick={() => setCategory("all")} />
+              <FilterButton active={category === "all"} label={t("filters.all")} onClick={() => setCategory("all")} />
               {notificationCategoryValues.map((item) => (
                 <FilterButton
                   active={category === item}
                   key={item}
-                  label={categoryLabels[item]}
+                  label={t(`categories.${item}`)}
                   onClick={() => setCategory(item)}
                 />
               ))}
             </div>
             <div className="mt-3 flex items-center justify-between gap-3">
               <div className="flex gap-2">
-                <FilterButton active={readFilter === "all"} label="All" onClick={() => setReadFilter("all")} />
-                <FilterButton active={readFilter === "unread"} label="Unread" onClick={() => setReadFilter("unread")} />
+                <FilterButton active={readFilter === "all"} label={t("filters.all")} onClick={() => setReadFilter("all")} />
+                <FilterButton active={readFilter === "unread"} label={t("filters.unread")} onClick={() => setReadFilter("unread")} />
               </div>
               <div className="flex gap-2">
                 <button className="text-xs font-semibold text-brand disabled:opacity-50" disabled={isPending} onClick={markAllRead} type="button">
-                  Mark all read
+                  {t("markAllRead")}
                 </button>
                 <button className="text-xs font-semibold text-danger disabled:opacity-50" disabled={isPending} onClick={archiveAll} type="button">
-                  Archive all
+                  {t("archiveAll")}
                 </button>
               </div>
             </div>
@@ -281,15 +275,15 @@ export function NotificationCenter({
                           {!notification.readAt ? <span className="mt-1 size-2 shrink-0 rounded-full bg-brand" /> : null}
                         </div>
                         <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-                          <span className="text-xs text-muted">{formatTime(notification.createdAt)}</span>
+                          <span className="text-xs text-muted">{formatTime(notification.createdAt, locale)}</span>
                           <div className="flex gap-3">
                             {!notification.readAt ? (
                               <button className="text-xs font-semibold text-brand" onClick={() => markRead(notification.id)} type="button">
-                                Read
+                                {t("read")}
                               </button>
                             ) : null}
                             <button className="text-xs font-semibold text-danger" onClick={() => archive(notification.id)} type="button">
-                              Archive
+                              {t("archive")}
                             </button>
                           </div>
                         </div>
@@ -299,7 +293,7 @@ export function NotificationCenter({
                 ))}
               </ul>
             ) : (
-              <div className="p-6 text-center text-sm text-muted">No notifications match the selected filters.</div>
+              <div className="p-6 text-center text-sm text-muted">{t("empty")}</div>
             )}
           </div>
         </section>
@@ -329,6 +323,7 @@ function NotificationPreferences({
   onUpdate: (input: UpdateNotificationPreferenceInput) => void;
   preferences: NotificationPreference | null;
 }) {
+  const t = useTranslations("Notifications");
   const mutedCategories = preferences?.mutedCategories ?? [];
 
   function toggleMuted(category: NotificationCategory) {
@@ -342,14 +337,14 @@ function NotificationPreferences({
   return (
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-3">
-        <Toggle label="In-app" checked={preferences?.inAppEnabled ?? true} onChange={(checked) => onUpdate({ inAppEnabled: checked })} />
-        <Toggle label="Email" checked={preferences?.emailEnabled ?? true} onChange={(checked) => onUpdate({ emailEnabled: checked })} />
-        <Toggle label="Push" checked={preferences?.pushEnabled ?? false} onChange={(checked) => onUpdate({ pushEnabled: checked })} />
+        <Toggle label={t("preferencesForm.inApp")} checked={preferences?.inAppEnabled ?? true} onChange={(checked) => onUpdate({ inAppEnabled: checked })} />
+        <Toggle label={t("preferencesForm.email")} checked={preferences?.emailEnabled ?? true} onChange={(checked) => onUpdate({ emailEnabled: checked })} />
+        <Toggle label={t("preferencesForm.push")} checked={preferences?.pushEnabled ?? false} onChange={(checked) => onUpdate({ pushEnabled: checked })} />
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
         <label className="text-xs font-semibold text-muted">
-          Quiet start
+          {t("preferencesForm.quietStart")}
           <input
             className="mt-1 h-10 w-full rounded-lg border border-line px-3 text-sm text-foreground"
             defaultValue={preferences?.quietHoursStart ?? ""}
@@ -358,7 +353,7 @@ function NotificationPreferences({
           />
         </label>
         <label className="text-xs font-semibold text-muted">
-          Quiet end
+          {t("preferencesForm.quietEnd")}
           <input
             className="mt-1 h-10 w-full rounded-lg border border-line px-3 text-sm text-foreground"
             defaultValue={preferences?.quietHoursEnd ?? ""}
@@ -367,19 +362,19 @@ function NotificationPreferences({
           />
         </label>
         <label className="text-xs font-semibold text-muted">
-          Timezone
+          {t("preferencesForm.timezone")}
           <input
             className="mt-1 h-10 w-full rounded-lg border border-line px-3 text-sm text-foreground"
             defaultValue={preferences?.quietHoursTimezone ?? ""}
             onBlur={(event) => onUpdate({ quietHoursTimezone: event.currentTarget.value || null })}
-            placeholder="Africa/Cairo"
+            placeholder={t("preferencesForm.timezonePlaceholder")}
             type="text"
           />
         </label>
       </div>
 
       <div>
-        <p className="text-xs font-semibold text-muted">Muted categories</p>
+        <p className="text-xs font-semibold text-muted">{t("preferencesForm.mutedCategories")}</p>
         <div className="mt-2 flex flex-wrap gap-2">
           {notificationCategoryValues.map((category) => (
             <button
@@ -392,7 +387,7 @@ function NotificationPreferences({
               onClick={() => toggleMuted(category)}
               type="button"
             >
-              {categoryLabels[category]}
+              {t(`categories.${category}`)}
             </button>
           ))}
         </div>
