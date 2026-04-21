@@ -46,8 +46,9 @@ Core operating rules:
 7. If implementation and validation are complete from your side, transition the story/subtask to "ReadyFor Human Test" or "Ready for human test" using the available Jira transition.
 8. If Jira transition fails due to MCP permissions/auth, add a Jira comment saying it is ready, include validation evidence, and explicitly ask for manual transition.
 9. Once any feature/slice is complete and validated, commit and push it before handing back to the user.
-10. Keep the user informed before major edits and after meaningful validation.
-11. Never treat Jira as optional. If Jira MCP is unavailable, say so and keep a local summary until Jira access returns.
+10. Always follow the Arabic/English bilingual requirement. No user-facing project area should ship in English only.
+11. Keep the user informed before major edits and after meaningful validation.
+12. Never treat Jira as optional. If Jira MCP is unavailable, say so and keep a local summary until Jira access returns.
 
 Jira workflow:
 - Board/project key: CM
@@ -116,6 +117,18 @@ Coding standards:
 - Use Sanctum auth and role checks consistently.
 - Keep UI production-quality, role-aware, and responsive.
 
+Arabic/English bilingual requirement:
+- All user-facing product areas must support both Arabic and English.
+- Do not build new pages, screens, emails, notifications, validation messages, empty states, labels, buttons, table headers, filters, status labels, PDFs, exports, or mobile copy in English only.
+- When adding a feature, include the localization keys/content for both English and Arabic in the same slice.
+- Arabic support must include right-to-left layout behavior where applicable, not only translated strings.
+- Admin web and mobile screens must be reviewed in both languages before being considered ready.
+- Backend enums/statuses may remain stable machine-readable values, but API resources should expose display labels through localization or frontend translation maps where needed.
+- Notifications, audit/action labels shown to users, emails, and document/compliance messaging must be bilingual.
+- QA subtasks must include Arabic and English test cases, including layout checks for RTL Arabic and text overflow checks for longer translations.
+- If the project does not yet have an i18n utility in the touched app, add the smallest reusable foundation needed for that app instead of hard-coding one language.
+- If a legacy page is English-only and the current task touches it, either localize it in the same change or add a Jira comment calling out the bilingual gap explicitly.
+
 Validation expectations:
 - Backend:
   - docker compose -f infra/docker-compose.yml exec -T api php artisan migrate:fresh --force
@@ -124,9 +137,11 @@ Validation expectations:
   - npm run typecheck -w apps/admin
   - npm run lint -w apps/admin
   - npm run build -w apps/admin
+  - Confirm touched pages support English and Arabic, including RTL layout for Arabic.
 - Mobile:
   - npm run typecheck -w apps/mobile
   - Do not require Android/iOS device builds unless the user asks or the machine is configured for it.
+  - Confirm touched screens support English and Arabic, including RTL layout for Arabic.
 - Docker:
   - docker compose -f infra/docker-compose.yml ps
   - Confirm API status returns 200.
@@ -158,9 +173,10 @@ How to continue:
 5. Tell the user what you will work on next.
 6. Implement the missing slice.
 7. Run validation.
-8. Update Jira parent and subtasks.
-9. Commit and push every completed feature/slice.
-10. Mark ready for human test when complete, or comment with exact blocker if not.
+8. Check Arabic and English coverage for the touched product area.
+9. Update Jira parent and subtasks.
+10. Commit and push every completed feature/slice.
+11. Mark ready for human test when complete, or comment with exact blocker if not.
 
 Final response format:
 - Summarize what changed.
