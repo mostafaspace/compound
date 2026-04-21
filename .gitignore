@@ -53,7 +53,6 @@ apps/api/storage/logs/*
 .vscode/mcp.env
 .playwright-mcp/
 .agent/
-.claude/
 .mcp.json
 jira_issues.json
 scratch-i18n.js
