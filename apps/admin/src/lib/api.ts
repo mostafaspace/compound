@@ -16,6 +16,8 @@ import type {
   CreateUnitMembershipInput,
   CreateUnitInput,
   CreateVisitorRequestInput,
+  CreateLedgerEntryInput,
+  CreateUnitAccountInput,
   DocumentStatus,
   DocumentType,
   FloorSummary,
@@ -29,7 +31,10 @@ import type {
   NotificationCategory,
   NotificationPreference,
   PaginatedEnvelope,
+  PaymentStatus,
+  PaymentSubmission,
   UnitDetail,
+  UnitAccount,
   UnitSummary,
   UpdateBuildingInput,
   UpdateCompoundInput,
@@ -344,6 +349,122 @@ export async function updateNotificationPreferences(
   const payload = (await response.json()) as ApiEnvelope<NotificationPreference>;
 
   return payload.data;
+}
+
+export async function getFinanceUnitAccounts(input: { unitId?: string } = {}): Promise<UnitAccount[]> {
+  try {
+    const params = new URLSearchParams();
+
+    if (input.unitId) {
+      params.set("unitId", input.unitId);
+    }
+
+    const query = params.toString();
+    const response = await fetch(`${config.apiBaseUrl}/finance/unit-accounts${query ? `?${query}` : ""}`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const payload = (await response.json()) as PaginatedEnvelope<UnitAccount>;
+
+    return payload.data;
+  } catch {
+    return [];
+  }
+}
+
+export async function createFinanceUnitAccount(input: CreateUnitAccountInput): Promise<UnitAccount> {
+  const response = await fetch(`${config.apiBaseUrl}/finance/unit-accounts`, {
+    body: JSON.stringify(input),
+    headers: {
+      ...(await apiHeaders(true)),
+      "Content-Type": "application/json",
+    },
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to create finance account: ${response.status}`);
+  }
+
+  const payload = (await response.json()) as ApiEnvelope<UnitAccount>;
+
+  return payload.data;
+}
+
+export async function createFinanceLedgerEntry(unitAccountId: string, input: CreateLedgerEntryInput) {
+  const response = await fetch(`${config.apiBaseUrl}/finance/unit-accounts/${unitAccountId}/ledger-entries`, {
+    body: JSON.stringify(input),
+    headers: {
+      ...(await apiHeaders(true)),
+      "Content-Type": "application/json",
+    },
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to create ledger entry: ${response.status}`);
+  }
+}
+
+export async function getFinancePaymentSubmissions(input: { status?: PaymentStatus | "all" } = {}): Promise<PaymentSubmission[]> {
+  try {
+    const params = new URLSearchParams();
+
+    if (input.status && input.status !== "all") {
+      params.set("status", input.status);
+    }
+
+    const query = params.toString();
+    const response = await fetch(`${config.apiBaseUrl}/finance/payment-submissions${query ? `?${query}` : ""}`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const payload = (await response.json()) as PaginatedEnvelope<PaymentSubmission>;
+
+    return payload.data;
+  } catch {
+    return [];
+  }
+}
+
+export async function approveFinancePayment(paymentSubmissionId: string, input: { description?: string }) {
+  const response = await fetch(`${config.apiBaseUrl}/finance/payment-submissions/${paymentSubmissionId}/approve`, {
+    body: JSON.stringify(input),
+    headers: {
+      ...(await apiHeaders(true)),
+      "Content-Type": "application/json",
+    },
+    method: "PATCH",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to approve payment: ${response.status}`);
+  }
+}
+
+export async function rejectFinancePayment(paymentSubmissionId: string, input: { reason: string }) {
+  const response = await fetch(`${config.apiBaseUrl}/finance/payment-submissions/${paymentSubmissionId}/reject`, {
+    body: JSON.stringify(input),
+    headers: {
+      ...(await apiHeaders(true)),
+      "Content-Type": "application/json",
+    },
+    method: "PATCH",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to reject payment: ${response.status}`);
+  }
 }
 
 export async function getCompounds(): Promise<CompoundSummary[]> {

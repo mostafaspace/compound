@@ -46,5 +46,77 @@
       "timezonePlaceholder": "Africa/Cairo",
       "mutedCategories": "Muted categories"
     }
+  },
+  "Finance": {
+    "back": "Dashboard",
+    "title": "Finance",
+    "subtitle": "Review unit balances, post charges, and approve resident payment submissions.",
+    "messages": {
+      "accountCreated": "Unit account created.",
+      "ledgerCreated": "Ledger entry posted.",
+      "paymentApproved": "Payment approved.",
+      "paymentRejected": "Payment rejected."
+    },
+    "fields": {
+      "accountId": "Account ID",
+      "amount": "Amount",
+      "balance": "Balance",
+      "created": "Created",
+      "currency": "Currency",
+      "description": "Description",
+      "openingBalance": "Opening balance",
+      "reference": "Reference",
+      "type": "Type",
+      "unit": "Unit",
+      "unitId": "Unit ID"
+    },
+    "filters": {
+      "all": "All"
+    },
+    "createAccount": {
+      "title": "Create unit account",
+      "subtitle": "Open a finance ledger for a unit, optionally with an opening balance.",
+      "submit": "Create account"
+    },
+    "ledger": {
+      "title": "Post ledger entry",
+      "subtitle": "Add charges, penalties, adjustments, refunds, or write-offs.",
+      "submit": "Post entry"
+    },
+    "accounts": {
+      "title": "Unit accounts",
+      "subtitle": "Balances are positive when the unit owes money and negative when the unit has credit.",
+      "empty": "No finance accounts have been created yet."
+    },
+    "payments": {
+      "title": "Payment submissions",
+      "subtitle": "Review resident proof of payment and post approved payments to the ledger.",
+      "filters": "Payment status filters",
+      "hasProof": "Proof attached",
+      "approve": "Approve",
+      "reject": "Reject",
+      "approveNote": "Approval note",
+      "rejectReason": "Rejection reason",
+      "reviewed": "Reviewed {date}",
+      "empty": "No payments match the selected status."
+    },
+    "ledgerTypes": {
+      "opening_balance": "Opening balance",
+      "charge": "Charge",
+      "penalty": "Penalty",
+      "allocation": "Allocation",
+      "adjustment": "Adjustment",
+      "refund": "Refund",
+      "write_off": "Write-off"
+    },
+    "paymentStatuses": {
+      "draft": "Draft",
+      "submitted": "Submitted",
+      "under_review": "Under review",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "allocated": "Allocated",
+      "refunded": "Refunded"
+    }
   }
 }

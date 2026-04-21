@@ -46,5 +46,77 @@
       "timezonePlaceholder": "Africa/Cairo",
       "mutedCategories": "الفئات المكتومة"
     }
+  },
+  "Finance": {
+    "back": "لوحة القيادة",
+    "title": "المالية",
+    "subtitle": "راجع أرصدة الوحدات وسجل الرسوم واعتمد مدفوعات السكان.",
+    "messages": {
+      "accountCreated": "تم إنشاء حساب الوحدة.",
+      "ledgerCreated": "تم تسجيل قيد الدفتر.",
+      "paymentApproved": "تمت الموافقة على الدفعة.",
+      "paymentRejected": "تم رفض الدفعة."
+    },
+    "fields": {
+      "accountId": "معرف الحساب",
+      "amount": "المبلغ",
+      "balance": "الرصيد",
+      "created": "تاريخ الإنشاء",
+      "currency": "العملة",
+      "description": "الوصف",
+      "openingBalance": "الرصيد الافتتاحي",
+      "reference": "المرجع",
+      "type": "النوع",
+      "unit": "الوحدة",
+      "unitId": "معرف الوحدة"
+    },
+    "filters": {
+      "all": "الكل"
+    },
+    "createAccount": {
+      "title": "إنشاء حساب وحدة",
+      "subtitle": "افتح دفتر حسابات للوحدة مع رصيد افتتاحي اختياري.",
+      "submit": "إنشاء الحساب"
+    },
+    "ledger": {
+      "title": "تسجيل قيد",
+      "subtitle": "أضف الرسوم أو الغرامات أو التسويات أو المبالغ المستردة أو الشطب.",
+      "submit": "تسجيل القيد"
+    },
+    "accounts": {
+      "title": "حسابات الوحدات",
+      "subtitle": "الرصيد الموجب يعني أن الوحدة عليها مستحقات، والرصيد السالب يعني وجود رصيد دائن.",
+      "empty": "لم يتم إنشاء أي حسابات مالية بعد."
+    },
+    "payments": {
+      "title": "مدفوعات السكان",
+      "subtitle": "راجع إثباتات الدفع وسجل المدفوعات المعتمدة في الدفتر.",
+      "filters": "فلاتر حالة الدفع",
+      "hasProof": "يوجد إثبات",
+      "approve": "موافقة",
+      "reject": "رفض",
+      "approveNote": "ملاحظة الموافقة",
+      "rejectReason": "سبب الرفض",
+      "reviewed": "تمت المراجعة {date}",
+      "empty": "لا توجد مدفوعات تطابق الحالة المحددة."
+    },
+    "ledgerTypes": {
+      "opening_balance": "رصيد افتتاحي",
+      "charge": "رسم",
+      "penalty": "غرامة",
+      "allocation": "تخصيص",
+      "adjustment": "تسوية",
+      "refund": "استرداد",
+      "write_off": "شطب"
+    },
+    "paymentStatuses": {
+      "draft": "مسودة",
+      "submitted": "مقدم",
+      "under_review": "قيد المراجعة",
+      "approved": "معتمد",
+      "rejected": "مرفوض",
+      "allocated": "مخصص",
+      "refunded": "مسترد"
+    }
   }
 }
