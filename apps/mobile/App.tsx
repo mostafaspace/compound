@@ -99,7 +99,9 @@ function visitorLocation(visitorRequest: VisitorRequest): string {
 
 export default function App() {
   const { t } = useTranslation();
-  const isDark = useColorScheme() === "dark";
+  const systemScheme = useColorScheme();
+  const [themeOverride, setThemeOverride] = useState<"light" | "dark" | "system">("system");
+  const isDark = themeOverride === "system" ? systemScheme === "dark" : themeOverride === "dark";
   const styles = getStyles(isDark);
   const [status, setStatus] = useState<SystemStatus | null>(null);
   const [isLoadingStatus, setIsLoadingStatus] = useState(true);
@@ -691,10 +693,26 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.kicker}>Compound</Text>
+          <View style={styles.headerRow}>
+            <Text style={styles.kicker}>Compound</Text>
+            <View style={styles.themeToggle}>
+              {(["light", "system", "dark"] as const).map((mode) => (
+                <Pressable
+                  accessibilityRole="button"
+                  key={mode}
+                  onPress={() => setThemeOverride(mode)}
+                  style={[styles.themeBtn, themeOverride === mode && styles.themeBtnActive]}
+                >
+                  <Text style={[styles.themeBtnText, themeOverride === mode && styles.themeBtnTextActive]}>
+                    {t(`Theme.${mode}`)}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
           <Text style={styles.title}>Resident workspace</Text>
           <Text style={styles.subtitle}>Unit access, verification, visitors, finance, complaints, and official updates.</Text>
         </View>
@@ -1179,7 +1197,7 @@ export default function App() {
 const getStyles = (isDark: boolean) => StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: isDark ? isDark ? "#f9fafb" : "#111827" : "#f6f7f9",
+    backgroundColor: isDark ? "#111827" : "#f6f7f9",
   },
   container: {
     gap: 18,
@@ -1189,6 +1207,36 @@ const getStyles = (isDark: boolean) => StyleSheet.create({
   header: {
     gap: 8,
     paddingTop: 16,
+  },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  themeToggle: {
+    flexDirection: "row",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: isDark ? "#374151" : "#d7dce3",
+    backgroundColor: isDark ? "#1f2937" : "#ffffff",
+    padding: 3,
+    gap: 2,
+  },
+  themeBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 5,
+  },
+  themeBtnActive: {
+    backgroundColor: isDark ? "#111827" : "#f6f7f9",
+  },
+  themeBtnText: {
+    fontSize: 11,
+    color: isDark ? "#9ca3af" : "#5b6472",
+  },
+  themeBtnTextActive: {
+    color: isDark ? "#14b8a6" : "#116a57",
+    fontWeight: "700",
   },
   kicker: {
     color: isDark ? "#14b8a6" : "#116a57",
