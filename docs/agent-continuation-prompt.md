@@ -43,12 +43,14 @@ Core operating rules:
 4. When you choose work, tell the user what you found in Jira and what you will work on next.
 5. Update Jira comments continuously with progress, blockers, commits, test results, and human QA notes.
 6. Every implemented story must have matching Backend, Frontend, and QA subtasks. Update the relevant subtask as you work.
-7. If implementation and validation are complete from your side, transition the story/subtask to "ReadyFor Human Test" or "Ready for human test" using the available Jira transition.
-8. If Jira transition fails due to MCP permissions/auth, add a Jira comment saying it is ready, include validation evidence, and explicitly ask for manual transition.
-9. Once any feature/slice is complete and validated, commit and push it before handing back to the user.
-10. Always follow the Arabic/English bilingual requirement. No user-facing project area should ship in English only.
-11. Keep the user informed before major edits and after meaningful validation.
-12. Never treat Jira as optional. If Jira MCP is unavailable, say so and keep a local summary until Jira access returns.
+7. Read and finish subtasks before moving parent stories. A parent story must not move to "ReadyFor Human Test" / "Ready For Human Test" until its Backend, Frontend, and QA subtasks have each been read, implemented, validated, updated, and moved to either "Ready For Human Test" or "Done".
+8. If any required subtask is still To Do, In Progress, blocked, missing validation, missing Arabic/English coverage, or missing Jira progress evidence, keep the parent story In Progress and work the subtask first.
+9. If implementation and validation are complete from your side, transition subtasks first, then the parent story last, to "ReadyFor Human Test" or "Ready For Human Test" using the available Jira transition.
+10. If Jira transition fails due to MCP permissions/auth, add a Jira comment saying it is ready, include validation evidence, and explicitly ask for manual transition.
+11. Once any feature/slice is complete and validated, commit and push it before handing back to the user.
+12. Always follow the Arabic/English bilingual requirement. No user-facing project area should ship in English only.
+13. Keep the user informed before major edits and after meaningful validation.
+14. Never treat Jira as optional. If Jira MCP is unavailable, say so and keep a local summary until Jira access returns.
 
 Jira workflow:
 - Board/project key: CM
@@ -56,7 +58,12 @@ Jira workflow:
   - project = CM AND status = "In Progress" ORDER BY key ASC
   - For a selected story, search parent/subtasks:
     - project = CM AND (parent = CM-KEY OR key = CM-KEY) ORDER BY key ASC
-- Check transitions before marking ready.
+- Check the parent and all subtasks before marking anything ready.
+- Before moving a parent story to Ready For Human Test, run a subtask status check:
+  - project = CM AND issuetype = Sub-task AND parent = CM-KEY ORDER BY key ASC
+- Do not move the parent if any Backend, Frontend, or QA subtask is not Ready For Human Test or Done.
+- Move subtasks first, then the parent last.
+- If you find a parent already marked Ready For Human Test while subtasks are not ready, add a Jira comment calling out the mismatch and attempt to move the parent back to In Progress. If transition fails, state the permission/auth blocker in the comment.
 - Add comments to both parent story and changed subtasks.
 - A useful Jira progress comment includes:
   - What was implemented
@@ -171,12 +178,14 @@ How to continue:
 3. Re-run only the validation needed to trust the current baseline.
 4. Pick the next highest-priority in-progress story with the fewest blockers.
 5. Tell the user what you will work on next.
-6. Implement the missing slice.
-7. Run validation.
-8. Check Arabic and English coverage for the touched product area.
-9. Update Jira parent and subtasks.
-10. Commit and push every completed feature/slice.
-11. Mark ready for human test when complete, or comment with exact blocker if not.
+6. Read the parent story and all Backend, Frontend, and QA subtasks before coding.
+7. Implement the missing subtask slice first.
+8. Run validation.
+9. Check Arabic and English coverage for the touched product area.
+10. Update Jira parent and subtasks.
+11. Commit and push every completed feature/slice.
+12. Mark subtasks ready first when complete.
+13. Mark the parent story ready only after all required subtasks are Ready For Human Test or Done; otherwise comment with the exact blocker.
 
 Final response format:
 - Summarize what changed.
