@@ -7,7 +7,10 @@ use App\Http\Controllers\Api\V1\BuildingController;
 use App\Http\Controllers\Api\V1\CompoundController;
 use App\Http\Controllers\Api\V1\DocumentTypeController;
 use App\Http\Controllers\Api\V1\FloorController;
+use App\Http\Controllers\Api\V1\Finance\ChargeTypeController;
+use App\Http\Controllers\Api\V1\Finance\CollectionCampaignController;
 use App\Http\Controllers\Api\V1\Finance\PaymentSubmissionController;
+use App\Http\Controllers\Api\V1\Finance\RecurringChargeController;
 use App\Http\Controllers\Api\V1\Finance\UnitAccountController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\NotificationPreferenceController;
@@ -22,6 +25,7 @@ use App\Http\Controllers\Api\V1\VerificationRequestController;
 use App\Http\Controllers\Api\V1\VisitorRequestController;
 use App\Http\Controllers\Api\V1\IssueController;
 use App\Http\Controllers\Api\V1\IssueCommentController;
+use App\Http\Controllers\Api\V1\IssueAttachmentController;
 use Illuminate\Support\Facades\Route;
 Route::prefix('v1')->name('api.v1.')->group(function (): void {
     Route::get('/status', SystemStatusController::class)->name('status');
@@ -170,6 +174,9 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             Route::get('/issues/{issue}', [IssueController::class, 'show'])->name('issues.show');
             Route::patch('/issues/{issue}', [IssueController::class, 'update'])->name('issues.update');
             Route::put('/issues/{issue}', [IssueController::class, 'update'])->name('issues.update');
+            Route::post('/issues/{issue}/escalate', [IssueController::class, 'escalate'])->name('issues.escalate');
+            Route::get('/issues/{issue}/attachments', [IssueAttachmentController::class, 'index'])->name('issues.attachments.index');
+            Route::post('/issues/{issue}/attachments', [IssueAttachmentController::class, 'store'])->name('issues.attachments.store');
 
             // Official announcements and notices
             Route::get('/announcements', [AnnouncementController::class, 'index'])->name('announcements.index');
@@ -200,6 +207,27 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
                 ->name('payment-submissions.approve');
             Route::patch('/payment-submissions/{paymentSubmission}/reject', [PaymentSubmissionController::class, 'reject'])
                 ->name('payment-submissions.reject');
+
+            // Charge types
+            Route::get('/charge-types', [ChargeTypeController::class, 'index'])->name('charge-types.index');
+            Route::post('/charge-types', [ChargeTypeController::class, 'store'])->name('charge-types.store');
+            Route::get('/charge-types/{chargeType}', [ChargeTypeController::class, 'show'])->name('charge-types.show');
+            Route::patch('/charge-types/{chargeType}', [ChargeTypeController::class, 'update'])->name('charge-types.update');
+
+            // Recurring charges
+            Route::get('/recurring-charges', [RecurringChargeController::class, 'index'])->name('recurring-charges.index');
+            Route::post('/recurring-charges', [RecurringChargeController::class, 'store'])->name('recurring-charges.store');
+            Route::get('/recurring-charges/{recurringCharge}', [RecurringChargeController::class, 'show'])->name('recurring-charges.show');
+            Route::patch('/recurring-charges/{recurringCharge}/deactivate', [RecurringChargeController::class, 'deactivate'])->name('recurring-charges.deactivate');
+
+            // Collection campaigns
+            Route::get('/collection-campaigns', [CollectionCampaignController::class, 'index'])->name('collection-campaigns.index');
+            Route::post('/collection-campaigns', [CollectionCampaignController::class, 'store'])->name('collection-campaigns.store');
+            Route::get('/collection-campaigns/{campaign}', [CollectionCampaignController::class, 'show'])->name('collection-campaigns.show');
+            Route::patch('/collection-campaigns/{campaign}', [CollectionCampaignController::class, 'update'])->name('collection-campaigns.update');
+            Route::patch('/collection-campaigns/{campaign}/publish', [CollectionCampaignController::class, 'publish'])->name('collection-campaigns.publish');
+            Route::patch('/collection-campaigns/{campaign}/archive', [CollectionCampaignController::class, 'archive'])->name('collection-campaigns.archive');
+            Route::post('/collection-campaigns/{campaign}/charges', [CollectionCampaignController::class, 'applyCharges'])->name('collection-campaigns.charges.apply');
         });
 
     Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,board_member,finance_reviewer,support_agent,resident_owner,resident_tenant'])

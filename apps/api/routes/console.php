@@ -2,6 +2,7 @@
 
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
@@ -18,3 +19,5 @@ Artisan::command('announcements:expire-due', function () {
 
     $this->info("Expired {$count} announcements.");
 })->purpose('Mark due expired announcements as expired');
+
+Schedule::command('dues:process')->dailyAt('07:00');

@@ -2,15 +2,21 @@
 
 namespace App\Services;
 
+use App\Enums\CampaignStatus;
+use App\Enums\ChargeFrequency;
 use App\Enums\LedgerEntryType;
 use App\Enums\NotificationCategory;
 use App\Enums\PaymentStatus;
 use App\Enums\VerificationStatus;
+use App\Models\Finance\ChargeType;
+use App\Models\Finance\CollectionCampaign;
 use App\Models\Finance\LedgerEntry;
 use App\Models\Finance\PaymentSubmission;
+use App\Models\Finance\RecurringCharge;
 use App\Models\Finance\UnitAccount;
 use App\Models\Property\Unit;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -178,6 +184,251 @@ class FinanceService
                     });
             })
             ->exists();
+    }
+
+    // -------------------------------------------------------------------------
+    // Charge Types
+    // -------------------------------------------------------------------------
+
+    public function createChargeType(array $data, User $actor): ChargeType
+    {
+        $chargeType = ChargeType::query()->create($data);
+
+        app(\App\Support\AuditLogger::class)->record(
+            'dues.charge_type_created',
+            actor: $actor,
+            metadata: ['charge_type_id' => $chargeType->id, 'code' => $chargeType->code],
+        );
+
+        return $chargeType;
+    }
+
+    public function updateChargeType(ChargeType $chargeType, array $data, User $actor): ChargeType
+    {
+        $chargeType->fill($data)->save();
+
+        app(\App\Support\AuditLogger::class)->record(
+            'dues.charge_type_updated',
+            actor: $actor,
+            metadata: ['charge_type_id' => $chargeType->id, 'code' => $chargeType->code],
+        );
+
+        return $chargeType->refresh();
+    }
+
+    // -------------------------------------------------------------------------
+    // Recurring Charges
+    // -------------------------------------------------------------------------
+
+    public function createRecurringCharge(array $data, User $actor): RecurringCharge
+    {
+        $data['created_by'] = $actor->id;
+
+        $charge = RecurringCharge::query()->create($data);
+
+        app(\App\Support\AuditLogger::class)->record(
+            'dues.recurring_charge_created',
+            actor: $actor,
+            metadata: ['recurring_charge_id' => $charge->id, 'compound_id' => $charge->compound_id],
+        );
+
+        return $charge;
+    }
+
+    public function deactivateRecurringCharge(RecurringCharge $charge, User $actor): RecurringCharge
+    {
+        $charge->forceFill(['is_active' => false])->save();
+
+        app(\App\Support\AuditLogger::class)->record(
+            'dues.recurring_charge_deactivated',
+            actor: $actor,
+            metadata: ['recurring_charge_id' => $charge->id, 'compound_id' => $charge->compound_id],
+        );
+
+        return $charge->refresh();
+    }
+
+    public function processRecurringCharges(Carbon $date): int
+    {
+        $posted = 0;
+
+        $charges = RecurringCharge::query()
+            ->where('is_active', true)
+            ->where(function ($query) use ($date): void {
+                $query->whereNull('starts_at')->orWhere('starts_at', '<=', $date->toDateString());
+            })
+            ->where(function ($query) use ($date): void {
+                $query->whereNull('ends_at')->orWhere('ends_at', '>=', $date->toDateString());
+            })
+            ->get();
+
+        foreach ($charges as $charge) {
+            /** @var RecurringCharge $charge */
+            if (! $this->isDueOn($charge, $date)) {
+                continue;
+            }
+
+            DB::transaction(function () use ($charge, $date, &$posted): void {
+                $unitAccounts = $this->resolveTargetAccounts($charge);
+
+                foreach ($unitAccounts as $account) {
+                    $this->postLedgerEntry(
+                        account: $account,
+                        type: LedgerEntryType::Charge,
+                        amount: (float) $charge->amount,
+                        description: $charge->name,
+                        actor: null,
+                        referenceType: RecurringCharge::class,
+                        referenceId: $charge->id,
+                    );
+
+                    $posted++;
+                }
+
+                $charge->forceFill(['last_run_at' => $date])->save();
+            });
+        }
+
+        return $posted;
+    }
+
+    /**
+     * Determine whether a recurring charge is due on the given date.
+     */
+    private function isDueOn(RecurringCharge $charge, Carbon $date): bool
+    {
+        $billingDay = $charge->billing_day;
+
+        // If no billing_day set, only match the 1st of each applicable period.
+        $dayOfMonth = $billingDay ?? 1;
+
+        if ($date->day !== $dayOfMonth) {
+            return false;
+        }
+
+        return match ($charge->frequency) {
+            ChargeFrequency::Monthly => true,
+            ChargeFrequency::Quarterly => in_array($date->month, [1, 4, 7, 10], strict: true),
+            ChargeFrequency::Annual => $date->month === 1,
+            ChargeFrequency::OneTime => $charge->last_run_at === null,
+        };
+    }
+
+    /**
+     * Resolve the unit accounts that should be charged for a given recurring charge.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int, UnitAccount>
+     */
+    private function resolveTargetAccounts(RecurringCharge $charge): \Illuminate\Database\Eloquent\Collection
+    {
+        return match ($charge->target_type) {
+            'all' => UnitAccount::query()
+                ->whereHas('unit', fn ($q) => $q->where('compound_id', $charge->compound_id))
+                ->get(),
+            'floor' => UnitAccount::query()
+                ->whereHas('unit', fn ($q) => $q->whereIn('floor_id', $charge->target_ids ?? []))
+                ->get(),
+            'unit' => UnitAccount::query()
+                ->whereHas('unit', fn ($q) => $q->whereIn('id', $charge->target_ids ?? []))
+                ->get(),
+            default => collect(),
+        };
+    }
+
+    // -------------------------------------------------------------------------
+    // Collection Campaigns
+    // -------------------------------------------------------------------------
+
+    public function createCampaign(array $data, User $actor): CollectionCampaign
+    {
+        $data['status'] = CampaignStatus::Draft->value;
+
+        $campaign = CollectionCampaign::query()->create($data);
+
+        app(\App\Support\AuditLogger::class)->record(
+            'dues.campaign_created',
+            actor: $actor,
+            metadata: ['campaign_id' => $campaign->id, 'compound_id' => $campaign->compound_id],
+        );
+
+        return $campaign;
+    }
+
+    public function publishCampaign(CollectionCampaign $campaign, User $actor): CollectionCampaign
+    {
+        if ($campaign->status !== CampaignStatus::Draft) {
+            abort(422, 'Only draft campaigns can be published.');
+        }
+
+        $campaign->forceFill([
+            'status' => CampaignStatus::Active->value,
+            'started_at' => now(),
+        ])->save();
+
+        app(\App\Support\AuditLogger::class)->record(
+            'dues.campaign_published',
+            actor: $actor,
+            metadata: ['campaign_id' => $campaign->id],
+        );
+
+        return $campaign->refresh();
+    }
+
+    public function archiveCampaign(CollectionCampaign $campaign, User $actor): CollectionCampaign
+    {
+        $campaign->forceFill(['status' => CampaignStatus::Archived->value])->save();
+
+        app(\App\Support\AuditLogger::class)->record(
+            'dues.campaign_archived',
+            actor: $actor,
+            metadata: ['campaign_id' => $campaign->id],
+        );
+
+        return $campaign->refresh();
+    }
+
+    public function applyCampaignCharges(
+        CollectionCampaign $campaign,
+        array $unitAccountIds,
+        float $amount,
+        string $description,
+        User $actor,
+    ): int {
+        if ($campaign->status !== CampaignStatus::Active) {
+            abort(422, 'Charges can only be applied to active campaigns.');
+        }
+
+        $posted = 0;
+
+        DB::transaction(function () use ($campaign, $unitAccountIds, $amount, $description, $actor, &$posted): void {
+            $accounts = UnitAccount::query()->findMany($unitAccountIds);
+
+            foreach ($accounts as $account) {
+                $this->postLedgerEntry(
+                    account: $account,
+                    type: LedgerEntryType::Charge,
+                    amount: $amount,
+                    description: $description,
+                    actor: $actor,
+                    referenceType: CollectionCampaign::class,
+                    referenceId: $campaign->id,
+                );
+
+                $posted++;
+            }
+        });
+
+        app(\App\Support\AuditLogger::class)->record(
+            'dues.campaign_charges_applied',
+            actor: $actor,
+            metadata: [
+                'campaign_id' => $campaign->id,
+                'unit_account_count' => $posted,
+                'amount' => $amount,
+            ],
+        );
+
+        return $posted;
     }
 
     private function notifySubmitter(PaymentSubmission $payment, string $decision, ?string $reason = null): void

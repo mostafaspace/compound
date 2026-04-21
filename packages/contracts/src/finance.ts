@@ -91,3 +91,45 @@ export interface CreatePaymentSubmissionInput {
   reference?: string;
   notes?: string;
 }
+
+export type ChargeFrequency = 'monthly' | 'quarterly' | 'annual' | 'one_time';
+export type CampaignStatus = 'draft' | 'active' | 'closed' | 'archived';
+
+export interface ChargeType {
+  id: string;
+  name: string;
+  code: string;
+  defaultAmount: string | null;
+  isRecurring: boolean;
+  createdAt: string;
+}
+
+export interface RecurringCharge {
+  id: string;
+  compoundId: string;
+  chargeTypeId: string | null;
+  name: string;
+  amount: string;
+  currency: string;
+  frequency: ChargeFrequency;
+  billingDay: number | null;
+  targetType: 'all' | 'floor' | 'unit';
+  targetIds: string[] | null;
+  startsAt: string | null;
+  endsAt: string | null;
+  isActive: boolean;
+  lastRunAt: string | null;
+  createdAt: string;
+}
+
+export interface CollectionCampaign {
+  id: string;
+  compoundId: string;
+  name: string;
+  description: string | null;
+  status: CampaignStatus;
+  targetAmount: string | null;
+  startedAt: string | null;
+  closedAt: string | null;
+  createdAt: string;
+}

@@ -2,6 +2,7 @@
 
 namespace App\Models\Finance;
 
+use App\Enums\CampaignStatus;
 use App\Models\Property\Compound;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -15,9 +16,12 @@ class CollectionCampaign extends Model
     protected $fillable = [
         'compound_id',
         'name',
+        'description',
         'status',
         'target_amount',
         'metadata',
+        'started_at',
+        'closed_at',
     ];
 
     protected function casts(): array
@@ -25,6 +29,9 @@ class CollectionCampaign extends Model
         return [
             'metadata' => 'array',
             'target_amount' => 'decimal:2',
+            'status' => CampaignStatus::class,
+            'started_at' => 'datetime',
+            'closed_at' => 'datetime',
         ];
     }
 

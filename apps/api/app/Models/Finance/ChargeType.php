@@ -5,6 +5,7 @@ namespace App\Models\Finance;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ChargeType extends Model
 {
@@ -23,5 +24,13 @@ class ChargeType extends Model
             'default_amount' => 'decimal:2',
             'is_recurring' => 'boolean',
         ];
+    }
+
+    /**
+     * @return HasMany<RecurringCharge, $this>
+     */
+    public function recurringCharges(): HasMany
+    {
+        return $this->hasMany(RecurringCharge::class);
     }
 }
