@@ -66,6 +66,8 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             ->get('/my/verification-requests', [VerificationRequestController::class, 'mine'])
             ->name('my.verification-requests.index');
         Route::middleware('role:resident_owner,resident_tenant')->group(function (): void {
+            Route::get('/my/units', [UnitController::class, 'mine'])
+                ->name('my.units.index');
             Route::get('/my/finance/unit-accounts', [UnitAccountController::class, 'mine'])
                 ->name('my.finance.unit-accounts.index');
             Route::get('/my/finance/payment-submissions', [PaymentSubmissionController::class, 'mine'])
@@ -108,6 +110,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
 
         Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,board_member,finance_reviewer,support_agent'])
         ->group(function (): void {
+            Route::get('/units', [UnitController::class, 'lookup'])->name('units.lookup');
             Route::apiResource('compounds', CompoundController::class)->except(['destroy']);
             Route::apiResource('compounds.buildings', BuildingController::class)->shallow()->except(['destroy']);
             Route::apiResource('buildings.floors', FloorController::class)->shallow()->except(['destroy']);

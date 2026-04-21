@@ -3,8 +3,10 @@
 namespace App\Models\Property;
 
 use App\Enums\UnitRelationType;
+use App\Enums\UnitStatus;
 use App\Enums\VerificationStatus;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -46,6 +48,39 @@ class UnitMembership extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * @param  Builder<UnitMembership>  $query
+     * @return Builder<UnitMembership>
+     */
+    public function scopeActive(Builder $query): Builder
+    {
+        $today = now()->toDateString();
+
+        return $query
+            ->where(function (Builder $query) use ($today): void {
+                $query->whereNull('starts_at')->orWhereDate('starts_at', '<=', $today);
+            })
+            ->where(function (Builder $query) use ($today): void {
+                $query->whereNull('ends_at')->orWhereDate('ends_at', '>=', $today);
+            });
+    }
+
+    /**
+     * @param  Builder<UnitMembership>  $query
+     * @return Builder<UnitMembership>
+     */
+    public function scopeActiveForAccess(Builder $query): Builder
+    {
+        return $query
+            ->active()
+            ->where('verification_status', VerificationStatus::Verified->value)
+            ->whereHas('unit', function (Builder $query): void {
+                $query
+                    ->whereNull('archived_at')
+                    ->where('status', '!=', UnitStatus::Archived->value);
+            });
     }
 
     /**

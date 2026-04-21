@@ -11,6 +11,7 @@ use App\Models\Property\Building;
 use App\Models\Property\Compound;
 use App\Models\Property\Floor;
 use App\Models\Property\Unit;
+use App\Models\Property\UnitMembership;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -208,5 +209,188 @@ class PropertyRegistryTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.verificationStatus', VerificationStatus::Expired->value)
             ->assertJsonPath('data.endsAt', now()->toDateString());
+    }
+
+    public function test_admin_can_search_and_filter_unit_registry_lookup(): void
+    {
+        Sanctum::actingAs(User::factory()->create(['role' => UserRole::CompoundAdmin->value]));
+
+        $resident = User::factory()->create([
+            'email' => 'owner.lookup@example.test',
+            'role' => UserRole::ResidentOwner->value,
+        ]);
+        $otherResident = User::factory()->create(['role' => UserRole::ResidentTenant->value]);
+
+        $compound = Compound::factory()->create(['name' => 'Lookup Compound', 'code' => 'LOOK']);
+        $building = Building::factory()->for($compound)->create(['name' => 'Tower Search', 'code' => 'TS']);
+        $floor = Floor::factory()->for($building)->create(['label' => 'Fifth', 'level_number' => 5]);
+        $matchingUnit = Unit::factory()
+            ->for($compound)
+            ->for($building)
+            ->for($floor)
+            ->create([
+                'unit_number' => 'A-501',
+                'type' => 'apartment',
+                'status' => UnitStatus::Active->value,
+            ]);
+        $nonMatchingUnit = Unit::factory()
+            ->for($compound)
+            ->for($building)
+            ->for($floor)
+            ->create([
+                'unit_number' => 'A-502',
+                'type' => 'retail',
+                'status' => UnitStatus::Vacant->value,
+            ]);
+
+        UnitMembership::query()->create([
+            'unit_id' => $matchingUnit->id,
+            'user_id' => $resident->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'starts_at' => now()->subDay()->toDateString(),
+            'is_primary' => true,
+            'verification_status' => VerificationStatus::Verified->value,
+        ]);
+        UnitMembership::query()->create([
+            'unit_id' => $nonMatchingUnit->id,
+            'user_id' => $otherResident->id,
+            'relation_type' => UnitRelationType::Tenant->value,
+            'starts_at' => now()->subDay()->toDateString(),
+            'is_primary' => true,
+            'verification_status' => VerificationStatus::Verified->value,
+        ]);
+
+        $this->getJson('/api/v1/units?'.http_build_query([
+            'compoundId' => $compound->id,
+            'buildingId' => $building->id,
+            'floorId' => $floor->id,
+            'status' => UnitStatus::Active->value,
+            'type' => 'apartment',
+            'relationType' => UnitRelationType::Owner->value,
+            'verificationStatus' => VerificationStatus::Verified->value,
+            'activeMembershipOnly' => true,
+            'search' => 'owner.lookup@example.test',
+        ]))
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $matchingUnit->id)
+            ->assertJsonPath('data.0.compound.id', $compound->id)
+            ->assertJsonPath('data.0.building.id', $building->id)
+            ->assertJsonPath('data.0.floor.id', $floor->id)
+            ->assertJsonPath('data.0.memberships.0.user.email', 'owner.lookup@example.test');
+    }
+
+    public function test_resident_unit_scope_uses_only_active_verified_memberships(): void
+    {
+        $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+        $otherResident = User::factory()->create(['role' => UserRole::ResidentTenant->value]);
+
+        $compound = Compound::factory()->create();
+        $building = Building::factory()->for($compound)->create();
+        $activeUnit = Unit::factory()->for($compound)->for($building)->create(['unit_number' => '101']);
+        $expiredUnit = Unit::factory()->for($compound)->for($building)->create(['unit_number' => '102']);
+        $pendingUnit = Unit::factory()->for($compound)->for($building)->create(['unit_number' => '103']);
+        $otherUnit = Unit::factory()->for($compound)->for($building)->create(['unit_number' => '104']);
+        $archivedUnit = Unit::factory()
+            ->for($compound)
+            ->for($building)
+            ->create([
+                'unit_number' => '105',
+                'status' => UnitStatus::Archived->value,
+                'archived_at' => now(),
+            ]);
+
+        UnitMembership::query()->create([
+            'unit_id' => $activeUnit->id,
+            'user_id' => $resident->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'starts_at' => now()->subDay()->toDateString(),
+            'is_primary' => true,
+            'verification_status' => VerificationStatus::Verified->value,
+        ]);
+        UnitMembership::query()->create([
+            'unit_id' => $expiredUnit->id,
+            'user_id' => $resident->id,
+            'relation_type' => UnitRelationType::Tenant->value,
+            'starts_at' => now()->subMonth()->toDateString(),
+            'ends_at' => now()->subDay()->toDateString(),
+            'verification_status' => VerificationStatus::Verified->value,
+        ]);
+        UnitMembership::query()->create([
+            'unit_id' => $pendingUnit->id,
+            'user_id' => $resident->id,
+            'relation_type' => UnitRelationType::Resident->value,
+            'starts_at' => now()->subDay()->toDateString(),
+            'verification_status' => VerificationStatus::Pending->value,
+        ]);
+        UnitMembership::query()->create([
+            'unit_id' => $archivedUnit->id,
+            'user_id' => $resident->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'starts_at' => now()->subDay()->toDateString(),
+            'verification_status' => VerificationStatus::Verified->value,
+        ]);
+        UnitMembership::query()->create([
+            'unit_id' => $otherUnit->id,
+            'user_id' => $otherResident->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'starts_at' => now()->subDay()->toDateString(),
+            'verification_status' => VerificationStatus::Verified->value,
+        ]);
+
+        Sanctum::actingAs($resident);
+
+        $this->getJson('/api/v1/my/units')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.unitId', $activeUnit->id)
+            ->assertJsonPath('data.0.unit.unitNumber', '101')
+            ->assertJsonPath('data.0.unit.compoundId', $compound->id)
+            ->assertJsonPath('data.0.verificationStatus', VerificationStatus::Verified->value);
+
+        $this->assertDatabaseHas('unit_memberships', [
+            'unit_id' => $expiredUnit->id,
+            'user_id' => $resident->id,
+            'ends_at' => now()->subDay()->toDateString(),
+        ]);
+    }
+
+    public function test_archived_units_are_hidden_from_lookup_by_default_but_history_is_preserved(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
+        $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+        Sanctum::actingAs($admin);
+
+        $compound = Compound::factory()->create();
+        $building = Building::factory()->for($compound)->create();
+        $unit = Unit::factory()->for($compound)->for($building)->create(['unit_number' => '901']);
+
+        UnitMembership::query()->create([
+            'unit_id' => $unit->id,
+            'user_id' => $resident->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'starts_at' => now()->subDay()->toDateString(),
+            'verification_status' => VerificationStatus::Verified->value,
+        ]);
+
+        $this->postJson("/api/v1/units/{$unit->id}/archive", ['reason' => 'Merged suite'])
+            ->assertOk()
+            ->assertJsonPath('data.status', UnitStatus::Archived->value);
+
+        $this->getJson('/api/v1/units?search=901')
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
+
+        $this->getJson('/api/v1/units?includeArchived=1&search=901')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $unit->id)
+            ->assertJsonPath('data.0.memberships.0.userId', $resident->id);
+
+        $this->assertDatabaseHas('unit_memberships', [
+            'unit_id' => $unit->id,
+            'user_id' => $resident->id,
+            'verification_status' => VerificationStatus::Verified->value,
+        ]);
     }
 }

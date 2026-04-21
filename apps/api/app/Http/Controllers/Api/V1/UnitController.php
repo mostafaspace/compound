@@ -2,21 +2,78 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\UnitStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Property\ArchivePropertyRequest;
+use App\Http\Requests\Property\IndexUnitsRequest;
 use App\Http\Requests\Property\StoreUnitRequest;
 use App\Http\Requests\Property\UpdateUnitRequest;
+use App\Http\Resources\UnitMembershipResource;
 use App\Http\Resources\UnitResource;
 use App\Models\Property\Building;
 use App\Models\Property\Unit;
 use App\Support\AuditLogger;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Symfony\Component\HttpFoundation\Response;
 
 class UnitController extends Controller
 {
     public function __construct(private readonly AuditLogger $auditLogger) {}
+
+    public function lookup(IndexUnitsRequest $request): AnonymousResourceCollection
+    {
+        $validated = $request->validated();
+
+        $units = Unit::query()
+            ->with(['compound', 'building', 'floor', 'memberships.user'])
+            ->when(! $request->boolean('includeArchived'), function (Builder $query): void {
+                $query->whereNull('archived_at')->where('status', '!=', UnitStatus::Archived->value);
+            })
+            ->when($validated['compoundId'] ?? null, fn (Builder $query, string $compoundId) => $query->where('compound_id', $compoundId))
+            ->when($validated['buildingId'] ?? null, fn (Builder $query, string $buildingId) => $query->where('building_id', $buildingId))
+            ->when($validated['floorId'] ?? null, fn (Builder $query, string $floorId) => $query->where('floor_id', $floorId))
+            ->when($validated['status'] ?? null, fn (Builder $query, string $status) => $query->where('status', $status))
+            ->when($validated['type'] ?? null, fn (Builder $query, string $type) => $query->where('type', $type))
+            ->when($validated['search'] ?? null, function (Builder $query, string $search): void {
+                $like = "%{$search}%";
+
+                $query->where(function (Builder $query) use ($like): void {
+                    $query
+                        ->where('unit_number', 'like', $like)
+                        ->orWhereHas('compound', function (Builder $query) use ($like): void {
+                            $query->where('name', 'like', $like)->orWhere('code', 'like', $like);
+                        })
+                        ->orWhereHas('building', function (Builder $query) use ($like): void {
+                            $query->where('name', 'like', $like)->orWhere('code', 'like', $like);
+                        })
+                        ->orWhereHas('memberships.user', function (Builder $query) use ($like): void {
+                            $query->where('name', 'like', $like)->orWhere('email', 'like', $like);
+                        });
+                });
+            })
+            ->when(
+                ($validated['userId'] ?? null)
+                    || ($validated['relationType'] ?? null)
+                    || ($validated['verificationStatus'] ?? null)
+                    || $request->boolean('activeMembershipOnly'),
+                function (Builder $query) use ($request, $validated): void {
+                    $query->whereHas('memberships', function (Builder $query) use ($request, $validated): void {
+                        $query
+                            ->when($validated['userId'] ?? null, fn (Builder $query, int $userId) => $query->where('user_id', $userId))
+                            ->when($validated['relationType'] ?? null, fn (Builder $query, string $relationType) => $query->where('relation_type', $relationType))
+                            ->when($validated['verificationStatus'] ?? null, fn (Builder $query, string $status) => $query->where('verification_status', $status))
+                            ->when($request->boolean('activeMembershipOnly'), fn (Builder $query) => $query->active());
+                    });
+                }
+            )
+            ->orderBy('building_id')
+            ->orderBy('unit_number');
+
+        return UnitResource::collection($units->paginate($validated['perPage'] ?? 15)->withQueryString());
+    }
 
     public function index(Building $building): AnonymousResourceCollection
     {
@@ -48,7 +105,24 @@ class UnitController extends Controller
 
     public function show(Unit $unit): UnitResource
     {
-        return UnitResource::make($unit->load(['memberships.user']));
+        return UnitResource::make($unit->load(['compound', 'building', 'floor', 'memberships.user']));
+    }
+
+    public function mine(Request $request): AnonymousResourceCollection
+    {
+        $perPage = min(max($request->integer('perPage', 15), 1), 100);
+
+        $memberships = $request->user()
+            ->unitMemberships()
+            ->activeForAccess()
+            ->with(['unit.compound', 'unit.building', 'unit.floor'])
+            ->orderByDesc('is_primary')
+            ->latest('starts_at')
+            ->latest('created_at')
+            ->paginate($perPage)
+            ->withQueryString();
+
+        return UnitMembershipResource::collection($memberships);
     }
 
     public function update(UpdateUnitRequest $request, Unit $unit): UnitResource

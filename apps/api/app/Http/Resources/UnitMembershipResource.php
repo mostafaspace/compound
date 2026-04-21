@@ -19,6 +19,7 @@ class UnitMembershipResource extends JsonResource
         return [
             'id' => $this->id,
             'unitId' => $this->unit_id,
+            'unit' => UnitResource::make($this->whenLoaded('unit')),
             'userId' => $this->user_id,
             'user' => UserResource::make($this->whenLoaded('user')),
             'relationType' => $this->relation_type->value,

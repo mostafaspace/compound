@@ -19,8 +19,11 @@ class UnitResource extends JsonResource
         return [
             'id' => $this->id,
             'compoundId' => $this->compound_id,
+            'compound' => CompoundResource::make($this->whenLoaded('compound')),
             'buildingId' => $this->building_id,
+            'building' => BuildingResource::make($this->whenLoaded('building')),
             'floorId' => $this->floor_id,
+            'floor' => FloorResource::make($this->whenLoaded('floor')),
             'unitNumber' => $this->unit_number,
             'type' => $this->type->value,
             'areaSqm' => $this->area_sqm,
