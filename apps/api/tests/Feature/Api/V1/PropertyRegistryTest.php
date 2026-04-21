@@ -5,6 +5,7 @@ namespace Tests\Feature\Api\V1;
 use App\Enums\CompoundStatus;
 use App\Enums\UnitRelationType;
 use App\Enums\UnitStatus;
+use App\Enums\UnitType;
 use App\Enums\UserRole;
 use App\Enums\VerificationStatus;
 use App\Models\Property\Building;
@@ -14,6 +15,7 @@ use App\Models\Property\Unit;
 use App\Models\Property\UnitMembership;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -391,6 +393,107 @@ class PropertyRegistryTest extends TestCase
             'unit_id' => $unit->id,
             'user_id' => $resident->id,
             'verification_status' => VerificationStatus::Verified->value,
+        ]);
+    }
+
+    public function test_admin_can_import_and_export_units_csv(): void
+    {
+        Sanctum::actingAs(User::factory()->create(['role' => UserRole::CompoundAdmin->value]));
+
+        $compound = Compound::factory()->create();
+        $building = Building::factory()->for($compound)->create(['code' => 'CSV']);
+        $floor = Floor::factory()->for($building)->create(['label' => 'Third', 'level_number' => 3]);
+
+        $csv = UploadedFile::fake()->createWithContent(
+            'units.csv',
+            implode("\n", [
+                'unitNumber,type,status,floorId,areaSqm,bedrooms',
+                "301,apartment,active,{$floor->id},122.50,3",
+                "302,duplex,vacant,{$floor->id},160,4",
+            ])
+        );
+
+        $this->post("/api/v1/buildings/{$building->id}/units/import", [
+            'file' => $csv,
+            'dryRun' => '1',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.dryRun', true)
+            ->assertJsonPath('data.validated', 2)
+            ->assertJsonPath('data.created', 0);
+
+        $this->assertDatabaseMissing('units', [
+            'building_id' => $building->id,
+            'unit_number' => '301',
+        ]);
+
+        $csv = UploadedFile::fake()->createWithContent(
+            'units.csv',
+            implode("\n", [
+                'unitNumber,type,status,floorId,areaSqm,bedrooms',
+                "301,apartment,active,{$floor->id},122.50,3",
+                "302,duplex,vacant,{$floor->id},160,4",
+            ])
+        );
+
+        $this->post("/api/v1/buildings/{$building->id}/units/import", ['file' => $csv])
+            ->assertCreated()
+            ->assertJsonPath('data.validated', 2)
+            ->assertJsonPath('data.created', 2);
+
+        $this->assertDatabaseHas('units', [
+            'building_id' => $building->id,
+            'floor_id' => $floor->id,
+            'unit_number' => '301',
+            'type' => UnitType::Apartment->value,
+            'status' => UnitStatus::Active->value,
+        ]);
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'property.units_imported',
+        ]);
+
+        $response = $this->get("/api/v1/buildings/{$building->id}/units/export")
+            ->assertOk();
+
+        $export = $response->streamedContent();
+
+        $this->assertStringContainsString('unitNumber,type,status,floorId,floorLabel,areaSqm,bedrooms', $export);
+        $this->assertStringContainsString('301,apartment,active', $export);
+        $this->assertStringContainsString('302,duplex,vacant', $export);
+    }
+
+    public function test_unit_import_rejects_invalid_rows_without_partial_creates(): void
+    {
+        Sanctum::actingAs(User::factory()->create(['role' => UserRole::CompoundAdmin->value]));
+
+        $compound = Compound::factory()->create();
+        $building = Building::factory()->for($compound)->create();
+        $otherBuilding = Building::factory()->for($compound)->create();
+        $otherFloor = Floor::factory()->for($otherBuilding)->create(['label' => 'Other', 'level_number' => 7]);
+
+        Unit::factory()->for($compound)->for($building)->create(['unit_number' => '401']);
+
+        $csv = UploadedFile::fake()->createWithContent(
+            'units.csv',
+            implode("\n", [
+                'unitNumber,type,status,floorId,areaSqm,bedrooms',
+                '401,apartment,active,,90,2',
+                '402,unknown,active,,100,2',
+                "403,apartment,active,{$otherFloor->id},100,2",
+                '404,apartment,active,,100,2',
+                '404,apartment,active,,100,2',
+            ])
+        );
+
+        $this->post("/api/v1/buildings/{$building->id}/units/import", ['file' => $csv])
+            ->assertUnprocessable()
+            ->assertJsonPath('data.created', 0)
+            ->assertJsonPath('data.validated', 1)
+            ->assertJsonCount(4, 'data.errors');
+
+        $this->assertDatabaseMissing('units', [
+            'building_id' => $building->id,
+            'unit_number' => '404',
         ]);
     }
 }

@@ -111,6 +111,8 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,board_member,finance_reviewer,support_agent'])
         ->group(function (): void {
             Route::get('/units', [UnitController::class, 'lookup'])->name('units.lookup');
+            Route::post('/buildings/{building}/units/import', [UnitController::class, 'import'])->name('buildings.units.import');
+            Route::get('/buildings/{building}/units/export', [UnitController::class, 'export'])->name('buildings.units.export');
             Route::apiResource('compounds', CompoundController::class)->except(['destroy']);
             Route::apiResource('compounds.buildings', BuildingController::class)->shallow()->except(['destroy']);
             Route::apiResource('buildings.floors', FloorController::class)->shallow()->except(['destroy']);

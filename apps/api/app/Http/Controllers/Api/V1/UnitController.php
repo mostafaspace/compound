@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\UnitStatus;
+use App\Enums\UnitType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Property\ArchivePropertyRequest;
+use App\Http\Requests\Property\ImportUnitsRequest;
 use App\Http\Requests\Property\IndexUnitsRequest;
 use App\Http\Requests\Property\StoreUnitRequest;
 use App\Http\Requests\Property\UpdateUnitRequest;
@@ -17,7 +19,11 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class UnitController extends Controller
 {
@@ -82,6 +88,148 @@ class UnitController extends Controller
             ->paginate();
 
         return UnitResource::collection($units);
+    }
+
+    public function import(ImportUnitsRequest $request, Building $building): JsonResponse
+    {
+        $dryRun = $request->boolean('dryRun');
+        $parsed = $this->parseUnitCsv($request->file('file')->getRealPath());
+        $validRows = [];
+        $errors = $parsed['errors'];
+        $seenUnitNumbers = [];
+
+        foreach ($parsed['rows'] as $row) {
+            $rowNumber = $row['_row'];
+            $unitNumber = trim((string) ($row['unitNumber'] ?? ''));
+
+            if ($unitNumber !== '') {
+                $duplicateKey = mb_strtolower($unitNumber);
+
+                if (isset($seenUnitNumbers[$duplicateKey])) {
+                    $errors[] = [
+                        'row' => $rowNumber,
+                        'errors' => ['unitNumber' => ['Duplicate unit number in import file.']],
+                    ];
+                    continue;
+                }
+
+                $seenUnitNumbers[$duplicateKey] = true;
+            }
+
+            $validator = Validator::make($row, [
+                'unitNumber' => [
+                    'required',
+                    'string',
+                    'max:40',
+                    Rule::unique('units', 'unit_number')->where('building_id', $building->id),
+                ],
+                'floorId' => [
+                    'nullable',
+                    'string',
+                    Rule::exists('floors', 'id')->where('building_id', $building->id),
+                ],
+                'type' => ['nullable', Rule::enum(UnitType::class)],
+                'areaSqm' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
+                'bedrooms' => ['nullable', 'integer', 'min:0', 'max:50'],
+                'status' => ['nullable', Rule::enum(UnitStatus::class)],
+            ]);
+
+            if ($validator->fails()) {
+                $errors[] = [
+                    'row' => $rowNumber,
+                    'errors' => $validator->errors()->toArray(),
+                ];
+                continue;
+            }
+
+            $validRows[] = $validator->validated();
+        }
+
+        if ($errors !== []) {
+            return response()->json([
+                'message' => 'The imported unit CSV contains invalid rows.',
+                'data' => [
+                    'dryRun' => $dryRun,
+                    'validated' => count($validRows),
+                    'created' => 0,
+                    'errors' => $errors,
+                ],
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        if (! $dryRun) {
+            DB::transaction(function () use ($building, $validRows): void {
+                foreach ($validRows as $row) {
+                    $building->units()->create([
+                        'compound_id' => $building->compound_id,
+                        'floor_id' => $row['floorId'] ?? null,
+                        'unit_number' => $row['unitNumber'],
+                        'type' => $row['type'] ?? UnitType::Apartment->value,
+                        'area_sqm' => $row['areaSqm'] ?? null,
+                        'bedrooms' => $row['bedrooms'] ?? null,
+                        'status' => $row['status'] ?? UnitStatus::Active->value,
+                    ]);
+                }
+            });
+        }
+
+        $this->auditLogger->record(
+            $dryRun ? 'property.units_import_validated' : 'property.units_imported',
+            actor: $request->user(),
+            request: $request,
+            statusCode: $dryRun ? Response::HTTP_OK : Response::HTTP_CREATED,
+            metadata: [
+                'building_id' => $building->id,
+                'validated' => count($validRows),
+                'created' => $dryRun ? 0 : count($validRows),
+                'dry_run' => $dryRun,
+            ],
+        );
+
+        return response()->json([
+            'data' => [
+                'dryRun' => $dryRun,
+                'validated' => count($validRows),
+                'created' => $dryRun ? 0 : count($validRows),
+                'errors' => [],
+            ],
+        ], $dryRun ? Response::HTTP_OK : Response::HTTP_CREATED);
+    }
+
+    public function export(Request $request, Building $building): StreamedResponse
+    {
+        $this->auditLogger->record('property.units_exported', actor: $request->user(), request: $request, metadata: [
+            'building_id' => $building->id,
+        ]);
+
+        $filename = 'units-'.$building->code.'-'.now()->format('Ymd-His').'.csv';
+
+        return response()->streamDownload(function () use ($building): void {
+            $output = fopen('php://output', 'w');
+
+            fputcsv($output, ['unitNumber', 'type', 'status', 'floorId', 'floorLabel', 'areaSqm', 'bedrooms']);
+
+            $building->units()
+                ->with('floor')
+                ->orderBy('unit_number')
+                ->chunk(100, function ($units) use ($output): void {
+                    foreach ($units as $unit) {
+                        fputcsv($output, [
+                            $unit->unit_number,
+                            $unit->type->value,
+                            $unit->status->value,
+                            $unit->floor_id,
+                            $unit->floor?->label,
+                            $unit->area_sqm,
+                            $unit->bedrooms,
+                        ]);
+                    }
+                });
+
+            fclose($output);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
     }
 
     public function store(StoreUnitRequest $request, Building $building): JsonResponse
@@ -158,5 +306,72 @@ class UnitController extends Controller
         ]);
 
         return UnitResource::make($unit->refresh()->load(['memberships.user']));
+    }
+
+    /**
+     * @return array{rows: array<int, array<string, mixed>>, errors: array<int, array<string, mixed>>}
+     */
+    private function parseUnitCsv(string $path): array
+    {
+        $handle = fopen($path, 'r');
+
+        if ($handle === false) {
+            return [
+                'rows' => [],
+                'errors' => [
+                    ['row' => 0, 'errors' => ['file' => ['Unable to read uploaded CSV file.']]],
+                ],
+            ];
+        }
+
+        $headers = fgetcsv($handle);
+
+        if ($headers === false) {
+            fclose($handle);
+
+            return [
+                'rows' => [],
+                'errors' => [
+                    ['row' => 1, 'errors' => ['file' => ['CSV file must include a header row.']]],
+                ],
+            ];
+        }
+
+        $normalizedHeaders = array_map(fn (?string $header): string => trim((string) $header), $headers);
+        $rows = [];
+        $errors = [];
+        $rowNumber = 1;
+
+        if (! in_array('unitNumber', $normalizedHeaders, true)) {
+            $errors[] = [
+                'row' => 1,
+                'errors' => ['unitNumber' => ['CSV header must include unitNumber.']],
+            ];
+        }
+
+        while (($values = fgetcsv($handle)) !== false) {
+            $rowNumber++;
+
+            if ($values === [null] || $values === false) {
+                continue;
+            }
+
+            $row = ['_row' => $rowNumber];
+
+            foreach ($normalizedHeaders as $index => $header) {
+                if ($header === '') {
+                    continue;
+                }
+
+                $value = isset($values[$index]) ? trim((string) $values[$index]) : null;
+                $row[$header] = $value === '' ? null : $value;
+            }
+
+            $rows[] = $row;
+        }
+
+        fclose($handle);
+
+        return ['rows' => $rows, 'errors' => $errors];
     }
 }
