@@ -20,18 +20,9 @@ class UpdateBuildingRequest extends FormRequest
         $building = $this->route('building');
 
         return [
-            'name' => ['sometimes', 'required', 'string', 'max:160'],
-            'code' => [
-                'sometimes',
-                'required',
-                'string',
-                'max:32',
-                'alpha_dash:ascii',
-                Rule::unique('buildings', 'code')
-                    ->where('compound_id', $building?->compound_id)
-                    ->ignore($building?->id),
-            ],
-            'sortOrder' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:65535'],
+            'name' => ['sometimes', 'required', 'string', 'max:255'],
+            'code' => ['sometimes', 'required', 'string', 'max:50', Rule::unique('buildings')->where('compound_id', $building?->compound_id)->ignore($building?->id)],
+            'sortOrder' => ['sometimes', 'nullable', 'integer', 'min:0'],
         ];
     }
 }

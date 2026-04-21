@@ -1,8 +1,10 @@
 import type {
   ApiEnvelope,
   AuthenticatedUser,
+  CreateIssueInput,
   CreateVisitorRequestInput,
   DocumentType,
+  Issue,
   LoginResult,
   PaginatedEnvelope,
   VerificationRequest,
@@ -11,10 +13,12 @@ import type {
 import DateTimePicker, { type DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { errorCodes, isErrorWithCode, pick, types } from "@react-native-documents/picker";
 import * as Keychain from "react-native-keychain";
+import { useTranslation } from "react-i18next";
 import { useEffect, useMemo, useState } from "react";
 import QRCode from "react-native-qrcode-svg";
 import {
   ActivityIndicator,
+  useColorScheme,
   Platform,
   Pressable,
   SafeAreaView,
@@ -94,6 +98,9 @@ function visitorLocation(visitorRequest: VisitorRequest): string {
 }
 
 export default function App() {
+  const { t } = useTranslation();
+  const isDark = useColorScheme() === "dark";
+  const styles = getStyles(isDark);
   const [status, setStatus] = useState<SystemStatus | null>(null);
   const [isLoadingStatus, setIsLoadingStatus] = useState(true);
   const [email, setEmail] = useState("");
@@ -123,6 +130,14 @@ export default function App() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [uploadMessage, setUploadMessage] = useState<string | null>(null);
   const [visitorMessage, setVisitorMessage] = useState<string | null>(null);
+  const [issues, setIssues] = useState<Issue[]>([]);
+  const [isRefreshingIssues, setIsRefreshingIssues] = useState(false);
+  const [isCreatingIssue, setIsCreatingIssue] = useState(false);
+  const [issueTitle, setIssueTitle] = useState("");
+  const [issueDescription, setIssueDescription] = useState("");
+  const [issueCategory, setIssueCategory] = useState<string>("maintenance");
+  const [issueMessage, setIssueMessage] = useState<string | null>(null);
+  const [showIssueForm, setShowIssueForm] = useState(false);
 
   const apiBaseUrl = useMemo(
     () => defaultApiBaseUrl,
@@ -189,6 +204,7 @@ export default function App() {
           loadVerificationRequests(credentials.password),
           loadDocumentTypes(credentials.password),
           loadVisitorRequests(credentials.password),
+          loadIssues(credentials.password),
         ]);
       } catch {
         await Keychain.resetGenericPassword({ service: authTokenService });
@@ -518,11 +534,70 @@ export default function App() {
         loadVerificationRequests(payload.data.token),
         loadDocumentTypes(payload.data.token),
         loadVisitorRequests(payload.data.token),
+        loadIssues(payload.data.token),
       ]);
     } catch {
       setAuthError("Could not reach the compound API.");
     } finally {
       setIsSigningIn(false);
+    }
+  }
+
+  async function loadIssues(token = authToken) {
+    if (!token) return;
+    setIsRefreshingIssues(true);
+    try {
+      const response = await fetch(`${apiBaseUrl}/my/issues`, {
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!response.ok) {
+        setIssues([]);
+        return;
+      }
+      const payload = (await response.json()) as ApiEnvelope<Issue[]>;
+      setIssues(payload.data);
+    } finally {
+      setIsRefreshingIssues(false);
+    }
+  }
+
+  async function handleCreateIssue(unitId: string) {
+    if (!authToken || !issueTitle.trim() || !issueDescription.trim()) return;
+    setIssueMessage(null);
+    setIsCreatingIssue(true);
+    try {
+      const input: CreateIssueInput = {
+        unitId,
+        category: issueCategory as CreateIssueInput["category"],
+        title: issueTitle.trim(),
+        description: issueDescription.trim(),
+      };
+      const response = await fetch(`${apiBaseUrl}/issues`, {
+        body: JSON.stringify(input),
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${authToken}`,
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      });
+      if (!response.ok) {
+        setIssueMessage("Issue could not be submitted. Try again.");
+        return;
+      }
+      setIssueMessage("Issue submitted. An admin will review it shortly.");
+      setIssueTitle("");
+      setIssueDescription("");
+      setIssueCategory("maintenance");
+      setShowIssueForm(false);
+      await loadIssues(authToken);
+    } catch {
+      setIssueMessage("Could not reach the issue service.");
+    } finally {
+      setIsCreatingIssue(false);
     }
   }
 
@@ -636,7 +711,7 @@ export default function App() {
 
         {!user && isRestoringSession ? (
           <View style={styles.panel}>
-            <ActivityIndicator color="#116a57" />
+            <ActivityIndicator color={isDark ? "#14b8a6" : "#116a57"} />
             <Text style={styles.sectionText}>Restoring resident session.</Text>
           </View>
         ) : null}
@@ -676,7 +751,7 @@ export default function App() {
                   (!email.trim() || !password) && styles.disabledButton,
                 ]}
               >
-                {isSigningIn ? <ActivityIndicator color="#ffffff" /> : <Text style={styles.primaryButtonText}>Sign in</Text>}
+                {isSigningIn ? <ActivityIndicator color={isDark ? "#1f2937" : "#ffffff"} /> : <Text style={styles.primaryButtonText}>Sign in</Text>}
               </Pressable>
             </View>
           </View>
@@ -762,7 +837,7 @@ export default function App() {
                       ]}
                     >
                       {isUploadingDocument ? (
-                        <ActivityIndicator color="#ffffff" />
+                        <ActivityIndicator color={isDark ? "#1f2937" : "#ffffff"} />
                       ) : (
                         <Text style={styles.primaryButtonText}>Choose and upload</Text>
                       )}
@@ -892,7 +967,7 @@ export default function App() {
                     ]}
                   >
                     {isCreatingVisitor ? (
-                      <ActivityIndicator color="#ffffff" />
+                      <ActivityIndicator color={isDark ? "#1f2937" : "#ffffff"} />
                     ) : (
                       <Text style={styles.primaryButtonText}>Create visitor pass</Text>
                     )}
@@ -933,7 +1008,7 @@ export default function App() {
                         ) : null}
                         {token && canCancel ? (
                           <View style={styles.qrPanel}>
-                            <QRCode value={token} size={180} backgroundColor="#ffffff" color="#111827" />
+                            <QRCode value={token} size={180} backgroundColor={isDark ? "#1f2937" : "#ffffff"} color={isDark ? "#f9fafb" : "#111827"} />
                             <Text selectable style={styles.tokenText}>
                               {token}
                             </Text>
@@ -969,6 +1044,109 @@ export default function App() {
               </View>
             </View>
 
+            <View style={styles.panel}>
+              <View style={styles.rowBetween}>
+                <View style={styles.flexFill}>
+                  <Text style={styles.panelLabel}>Complaints</Text>
+                  <Text style={styles.sectionTitle}>My issues</Text>
+                  <Text style={styles.sectionText}>{issues.length} submitted</Text>
+                </View>
+                <View style={{flexDirection: 'row', gap: 8}}>
+                  <Pressable accessibilityRole="button" onPress={() => setShowIssueForm(!showIssueForm)} style={styles.secondaryButton}>
+                    <Text style={styles.secondaryButtonText}>{showIssueForm ? 'Cancel' : 'New issue'}</Text>
+                  </Pressable>
+                  <Pressable accessibilityRole="button" onPress={() => void loadIssues()} style={styles.secondaryButton}>
+                    <Text style={styles.secondaryButtonText}>{isRefreshingIssues ? 'Refreshing' : 'Refresh'}</Text>
+                  </Pressable>
+                </View>
+              </View>
+
+              {showIssueForm && residentUnitRequest?.unitId ? (
+                <View style={styles.visitorForm}>
+                  <Text style={styles.inputLabel}>Category</Text>
+                  <View style={{flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 8}}>
+                    {['maintenance', 'security', 'cleaning', 'noise', 'other'].map((cat) => (
+                      <Pressable
+                        key={cat}
+                        accessibilityRole="button"
+                        onPress={() => setIssueCategory(cat)}
+                        style={[
+                          styles.documentTypeChip,
+                          issueCategory === cat && styles.documentTypeChipSelected,
+                        ]}
+                      >
+                        <Text style={[
+                          styles.documentTypeText,
+                          issueCategory === cat && styles.documentTypeTextSelected,
+                        ]}>
+                          {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                  <Text style={styles.inputLabel}>Title</Text>
+                  <TextInput
+                    onChangeText={setIssueTitle}
+                    placeholder="Brief summary of the issue"
+                    style={styles.input}
+                    value={issueTitle}
+                  />
+                  <Text style={styles.inputLabel}>Description</Text>
+                  <TextInput
+                    multiline
+                    onChangeText={setIssueDescription}
+                    placeholder="Describe the issue in detail"
+                    style={[styles.input, styles.multilineInput]}
+                    value={issueDescription}
+                  />
+                  {issueMessage ? <Text style={styles.infoText}>{issueMessage}</Text> : null}
+                  <Pressable
+                    accessibilityRole="button"
+                    disabled={isCreatingIssue || !issueTitle.trim() || !issueDescription.trim()}
+                    onPress={() => void handleCreateIssue(residentUnitRequest.unitId!)}
+                    style={[
+                      styles.primaryButton,
+                      (isCreatingIssue || !issueTitle.trim() || !issueDescription.trim()) && styles.disabledButton,
+                    ]}
+                  >
+                    {isCreatingIssue ? (
+                      <ActivityIndicator color={isDark ? '#1f2937' : '#ffffff'} />
+                    ) : (
+                      <Text style={styles.primaryButtonText}>Submit issue</Text>
+                    )}
+                  </Pressable>
+                </View>
+              ) : null}
+
+              {issueMessage && !showIssueForm ? <Text style={styles.infoText}>{issueMessage}</Text> : null}
+
+              {issues.length > 0 ? (
+                <View style={styles.visitorList}>
+                  <Text style={styles.infoTitle}>Recent issues</Text>
+                  {issues.map((issue) => (
+                    <View style={styles.visitorCard} key={issue.id}>
+                      <View style={styles.rowBetween}>
+                        <View style={styles.flexFill}>
+                          <Text style={styles.actionLabel}>{issue.title}</Text>
+                          <Text style={styles.actionDetail}>{issue.category} — {formatStatus(issue.status)}</Text>
+                        </View>
+                        <Text style={[
+                          styles.statusBadge,
+                          (issue.status === 'resolved' || issue.status === 'closed') ? null : styles.statusBadgeDanger,
+                        ]}>
+                          {formatStatus(issue.status)}
+                        </Text>
+                      </View>
+                      <Text style={styles.sectionText} numberOfLines={2}>{issue.description}</Text>
+                      <Text style={styles.sectionText}>Created: {formatDate(issue.createdAt)}</Text>
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <Text style={styles.sectionText}>No issues submitted yet.</Text>
+              )}
+            </View>
+
             <View style={styles.grid}>
               {actionItems.map((item) => (
                 <Pressable
@@ -998,10 +1176,10 @@ export default function App() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (isDark: boolean) => StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#f6f7f9",
+    backgroundColor: isDark ? isDark ? "#f9fafb" : "#111827" : "#f6f7f9",
   },
   container: {
     gap: 18,
@@ -1013,26 +1191,26 @@ const styles = StyleSheet.create({
     paddingTop: 16,
   },
   kicker: {
-    color: "#116a57",
+    color: isDark ? "#14b8a6" : "#116a57",
     fontSize: 13,
     fontWeight: "800",
     textTransform: "uppercase",
   },
   title: {
-    color: "#111827",
+    color: isDark ? "#f9fafb" : "#111827",
     fontSize: 30,
     fontWeight: "800",
     lineHeight: 36,
   },
   subtitle: {
-    color: "#5b6472",
+    color: isDark ? "#9ca3af" : "#5b6472",
     fontSize: 16,
     lineHeight: 23,
   },
   statusPanel: {
     alignItems: "center",
-    backgroundColor: "#ffffff",
-    borderColor: "#d7dce3",
+    backgroundColor: isDark ? "#1f2937" : "#ffffff",
+    borderColor: isDark ? "#374151" : "#d7dce3",
     borderRadius: 8,
     borderWidth: 1,
     flexDirection: "row",
@@ -1040,74 +1218,74 @@ const styles = StyleSheet.create({
     padding: 18,
   },
   panel: {
-    backgroundColor: "#ffffff",
-    borderColor: "#d7dce3",
+    backgroundColor: isDark ? "#1f2937" : "#ffffff",
+    borderColor: isDark ? "#374151" : "#d7dce3",
     borderRadius: 8,
     borderWidth: 1,
     gap: 14,
     padding: 18,
   },
   welcomePanel: {
-    backgroundColor: "#e6f3ef",
-    borderColor: "#b7d8ce",
+    backgroundColor: isDark ? "#134e4a" : "#e6f3ef",
+    borderColor: isDark ? "#0f766e" : "#b7d8ce",
     borderRadius: 8,
     borderWidth: 1,
     gap: 8,
     padding: 18,
   },
   panelLabel: {
-    color: "#5b6472",
+    color: isDark ? "#9ca3af" : "#5b6472",
     fontSize: 13,
     fontWeight: "700",
     textTransform: "uppercase",
   },
   panelValue: {
-    color: "#111827",
+    color: isDark ? "#f9fafb" : "#111827",
     fontSize: 24,
     fontWeight: "800",
     marginTop: 6,
   },
   sectionTitle: {
-    color: "#111827",
+    color: isDark ? "#f9fafb" : "#111827",
     fontSize: 22,
     fontWeight: "800",
   },
   sectionText: {
-    color: "#5b6472",
+    color: isDark ? "#9ca3af" : "#5b6472",
     fontSize: 15,
     lineHeight: 22,
   },
   statusDot: {
-    backgroundColor: "#b42318",
+    backgroundColor: isDark ? "#ef4444" : "#b42318",
     borderRadius: 8,
     height: 16,
     width: 16,
   },
   statusDotOnline: {
-    backgroundColor: "#116a57",
+    backgroundColor: isDark ? "#14b8a6" : "#116a57",
   },
   form: {
     gap: 10,
   },
   inputLabel: {
-    color: "#111827",
+    color: isDark ? "#f9fafb" : "#111827",
     fontSize: 14,
     fontWeight: "700",
   },
   input: {
-    backgroundColor: "#ffffff",
-    borderColor: "#c8ced7",
+    backgroundColor: isDark ? "#1f2937" : "#ffffff",
+    borderColor: isDark ? "#4b5563" : "#c8ced7",
     borderRadius: 8,
     borderWidth: 1,
-    color: "#111827",
+    color: isDark ? "#f9fafb" : "#111827",
     fontSize: 16,
     minHeight: 48,
     paddingHorizontal: 14,
   },
   dateButton: {
     alignItems: "center",
-    backgroundColor: "#ffffff",
-    borderColor: "#c8ced7",
+    backgroundColor: isDark ? "#1f2937" : "#ffffff",
+    borderColor: isDark ? "#4b5563" : "#c8ced7",
     borderRadius: 8,
     borderWidth: 1,
     flexDirection: "row",
@@ -1115,51 +1293,51 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   dateButtonPressed: {
-    borderColor: "#116a57",
+    borderColor: isDark ? "#14b8a6" : "#116a57",
   },
   dateButtonError: {
-    borderColor: "#b42318",
+    borderColor: isDark ? "#ef4444" : "#b42318",
   },
   dateButtonText: {
-    color: "#111827",
+    color: isDark ? "#f9fafb" : "#111827",
     fontSize: 16,
     fontWeight: "700",
   },
   pickerPanel: {
-    backgroundColor: "#ffffff",
-    borderColor: "#d7dce3",
+    backgroundColor: isDark ? "#1f2937" : "#ffffff",
+    borderColor: isDark ? "#374151" : "#d7dce3",
     borderRadius: 8,
     borderWidth: 1,
     gap: 10,
     padding: 12,
   },
   errorText: {
-    color: "#b42318",
+    color: isDark ? "#ef4444" : "#b42318",
     fontSize: 14,
     lineHeight: 20,
   },
   primaryButton: {
     alignItems: "center",
-    backgroundColor: "#116a57",
+    backgroundColor: isDark ? "#14b8a6" : "#116a57",
     borderRadius: 8,
     justifyContent: "center",
     minHeight: 48,
     paddingHorizontal: 18,
   },
   primaryButtonPressed: {
-    backgroundColor: "#0a4f41",
+    backgroundColor: isDark ? "#0d9488" : "#0a4f41",
   },
   disabledButton: {
     opacity: 0.45,
   },
   primaryButtonText: {
-    color: "#ffffff",
+    color: isDark ? "#1f2937" : "#ffffff",
     fontSize: 16,
     fontWeight: "800",
   },
   secondaryButton: {
     alignItems: "center",
-    borderColor: "#116a57",
+    borderColor: isDark ? "#14b8a6" : "#116a57",
     borderRadius: 8,
     borderWidth: 1,
     justifyContent: "center",
@@ -1167,7 +1345,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   secondaryButtonText: {
-    color: "#116a57",
+    color: isDark ? "#14b8a6" : "#116a57",
     fontSize: 15,
     fontWeight: "800",
   },
@@ -1176,7 +1354,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   linkButtonText: {
-    color: "#116a57",
+    color: isDark ? "#14b8a6" : "#116a57",
     fontSize: 15,
     fontWeight: "800",
   },
@@ -1194,9 +1372,9 @@ const styles = StyleSheet.create({
   },
   statusBadge: {
     alignSelf: "flex-start",
-    backgroundColor: "#f3ead7",
+    backgroundColor: isDark ? "#78350f" : "#f3ead7",
     borderRadius: 8,
-    color: "#7a4f10",
+    color: isDark ? "#fbbf24" : "#7a4f10",
     fontSize: 13,
     fontWeight: "800",
     overflow: "hidden",
@@ -1205,30 +1383,30 @@ const styles = StyleSheet.create({
     textTransform: "capitalize",
   },
   statusBadgeDanger: {
-    backgroundColor: "#fde8e5",
-    color: "#b42318",
+    backgroundColor: isDark ? "#7f1d1d" : "#fde8e5",
+    color: isDark ? "#ef4444" : "#b42318",
   },
   infoPanel: {
-    backgroundColor: "#eaf0ff",
-    borderColor: "#b9c9ef",
+    backgroundColor: isDark ? "#1e3a8a" : "#eaf0ff",
+    borderColor: isDark ? "#1d4ed8" : "#b9c9ef",
     borderRadius: 8,
     borderWidth: 1,
     gap: 6,
     padding: 14,
   },
   infoTitle: {
-    color: "#244a8f",
+    color: isDark ? "#60a5fa" : "#244a8f",
     fontSize: 15,
     fontWeight: "800",
   },
   infoText: {
-    color: "#263b5e",
+    color: isDark ? "#93c5fd" : "#263b5e",
     fontSize: 14,
     lineHeight: 20,
   },
   uploadPanel: {
-    backgroundColor: "#ffffff",
-    borderColor: "#b9c9ef",
+    backgroundColor: isDark ? "#1f2937" : "#ffffff",
+    borderColor: isDark ? "#1d4ed8" : "#b9c9ef",
     borderRadius: 8,
     borderWidth: 1,
     gap: 12,
@@ -1241,8 +1419,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   visitorCard: {
-    backgroundColor: "#ffffff",
-    borderColor: "#d7dce3",
+    backgroundColor: isDark ? "#1f2937" : "#ffffff",
+    borderColor: isDark ? "#374151" : "#d7dce3",
     borderRadius: 8,
     borderWidth: 1,
     gap: 12,
@@ -1259,15 +1437,15 @@ const styles = StyleSheet.create({
   },
   qrPanel: {
     alignItems: "center",
-    backgroundColor: "#ffffff",
-    borderColor: "#d7dce3",
+    backgroundColor: isDark ? "#1f2937" : "#ffffff",
+    borderColor: isDark ? "#374151" : "#d7dce3",
     borderRadius: 8,
     borderWidth: 1,
     gap: 12,
     padding: 16,
   },
   tokenText: {
-    color: "#384252",
+    color: isDark ? "#d1d5db" : "#384252",
     fontFamily: Platform.select({ android: "monospace", ios: "Courier", default: undefined }),
     fontSize: 12,
     lineHeight: 18,
@@ -1278,56 +1456,56 @@ const styles = StyleSheet.create({
     paddingRight: 8,
   },
   documentTypeChip: {
-    borderColor: "#c8ced7",
+    borderColor: isDark ? "#4b5563" : "#c8ced7",
     borderRadius: 8,
     borderWidth: 1,
     paddingHorizontal: 12,
     paddingVertical: 9,
   },
   documentTypeChipSelected: {
-    backgroundColor: "#116a57",
-    borderColor: "#116a57",
+    backgroundColor: isDark ? "#14b8a6" : "#116a57",
+    borderColor: isDark ? "#14b8a6" : "#116a57",
   },
   documentTypeText: {
-    color: "#384252",
+    color: isDark ? "#d1d5db" : "#384252",
     fontSize: 13,
     fontWeight: "800",
   },
   documentTypeTextSelected: {
-    color: "#ffffff",
+    color: isDark ? "#1f2937" : "#ffffff",
   },
   grid: {
     gap: 12,
   },
   actionCard: {
-    backgroundColor: "#ffffff",
-    borderColor: "#d7dce3",
+    backgroundColor: isDark ? "#1f2937" : "#ffffff",
+    borderColor: isDark ? "#374151" : "#d7dce3",
     borderRadius: 8,
     borderWidth: 1,
     padding: 18,
   },
   actionCardPressed: {
-    borderColor: "#116a57",
+    borderColor: isDark ? "#14b8a6" : "#116a57",
     transform: [{ scale: 0.99 }],
   },
   actionLabel: {
-    color: "#111827",
+    color: isDark ? "#f9fafb" : "#111827",
     fontSize: 18,
     fontWeight: "800",
   },
   actionDetail: {
-    color: "#5b6472",
+    color: isDark ? "#9ca3af" : "#5b6472",
     fontSize: 14,
     lineHeight: 20,
     marginTop: 6,
   },
   footerPanel: {
-    backgroundColor: "#eef1f5",
+    backgroundColor: isDark ? "#374151" : "#eef1f5",
     borderRadius: 8,
     padding: 18,
   },
   footerText: {
-    color: "#384252",
+    color: isDark ? "#d1d5db" : "#384252",
     fontSize: 15,
     fontWeight: "700",
     marginTop: 8,

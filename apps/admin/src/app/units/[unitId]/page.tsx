@@ -34,7 +34,7 @@ export default async function UnitDetailPage({ params, searchParams }: UnitDetai
             </Link>
             <h1 className="mt-2 text-3xl font-semibold">Unit {unit.unitNumber}</h1>
             <p className="mt-2 text-sm text-muted">
-              {unit.type} / {unit.areaSqm ? `${unit.areaSqm} sqm` : "Area not set"} / {unit.status}
+              <span className="font-semibold text-foreground uppercase">{unit.status}</span>
             </p>
           </div>
           <div className="flex flex-wrap gap-3">

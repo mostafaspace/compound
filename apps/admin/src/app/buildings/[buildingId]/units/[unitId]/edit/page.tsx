@@ -53,17 +53,6 @@ export default async function EditUnitPage({ params }: EditUnitPageProps) {
               </select>
             </label>
             <label className="text-sm font-medium">
-              Type
-              <select className="mt-2 h-11 w-full rounded-lg border border-line px-3" name="type" defaultValue={unit.type}>
-                <option value="apartment">Apartment</option>
-                <option value="villa">Villa</option>
-                <option value="duplex">Duplex</option>
-                <option value="retail">Retail</option>
-                <option value="office">Office</option>
-                <option value="other">Other</option>
-              </select>
-            </label>
-            <label className="text-sm font-medium">
               Status
               <select className="mt-2 h-11 w-full rounded-lg border border-line px-3" name="status" defaultValue={unit.status}>
                 <option value="active">Active</option>
@@ -71,10 +60,6 @@ export default async function EditUnitPage({ params }: EditUnitPageProps) {
                 <option value="blocked">Blocked</option>
                 <option value="archived">Archived</option>
               </select>
-            </label>
-            <label className="text-sm font-medium">
-              Area sqm
-              <input className="mt-2 h-11 w-full rounded-lg border border-line px-3" name="areaSqm" type="number" step="0.01" defaultValue={unit.areaSqm ?? ""} />
             </label>
             <label className="text-sm font-medium">
               Bedrooms

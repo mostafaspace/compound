@@ -23,8 +23,6 @@ class Unit extends Model
         'building_id',
         'floor_id',
         'unit_number',
-        'type',
-        'area_sqm',
         'bedrooms',
         'status',
         'metadata',
@@ -37,11 +35,9 @@ class Unit extends Model
     {
         return [
             'archived_at' => 'datetime',
-            'area_sqm' => 'decimal:2',
             'bedrooms' => 'integer',
             'metadata' => 'array',
             'status' => UnitStatus::class,
-            'type' => UnitType::class,
         ];
     }
 

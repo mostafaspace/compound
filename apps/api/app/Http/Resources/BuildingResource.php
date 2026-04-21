@@ -21,6 +21,7 @@ class BuildingResource extends JsonResource
             'compoundId' => $this->compound_id,
             'name' => $this->name,
             'code' => $this->code,
+            'type' => $this->type,
             'sortOrder' => $this->sort_order,
             'floorsCount' => $this->whenCounted('floors'),
             'unitsCount' => $this->whenCounted('units'),

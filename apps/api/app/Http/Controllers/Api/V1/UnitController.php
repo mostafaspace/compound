@@ -35,8 +35,6 @@ class UnitController extends Controller
             'compound_id' => $building->compound_id,
             'floor_id' => $validated['floorId'] ?? null,
             'unit_number' => $validated['unitNumber'],
-            'type' => $validated['type'],
-            'area_sqm' => $validated['areaSqm'] ?? null,
             'bedrooms' => $validated['bedrooms'] ?? null,
             'status' => $validated['status'] ?? 'active',
         ]);
@@ -58,8 +56,6 @@ class UnitController extends Controller
         $unit->fill([
             'floor_id' => array_key_exists('floorId', $validated) ? $validated['floorId'] : $unit->floor_id,
             'unit_number' => $validated['unitNumber'] ?? $unit->unit_number,
-            'type' => $validated['type'] ?? $unit->type,
-            'area_sqm' => array_key_exists('areaSqm', $validated) ? $validated['areaSqm'] : $unit->area_sqm,
             'bedrooms' => array_key_exists('bedrooms', $validated) ? $validated['bedrooms'] : $unit->bedrooms,
             'status' => $validated['status'] ?? $unit->status,
         ])->save();

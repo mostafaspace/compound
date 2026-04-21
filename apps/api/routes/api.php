@@ -17,8 +17,9 @@ use App\Http\Controllers\Api\V1\UnitMembershipController;
 use App\Http\Controllers\Api\V1\UserDocumentController;
 use App\Http\Controllers\Api\V1\VerificationRequestController;
 use App\Http\Controllers\Api\V1\VisitorRequestController;
+use App\Http\Controllers\Api\V1\IssueController;
+use App\Http\Controllers\Api\V1\IssueCommentController;
 use Illuminate\Support\Facades\Route;
-
 Route::prefix('v1')->name('api.v1.')->group(function (): void {
     Route::get('/status', SystemStatusController::class)->name('status');
 
@@ -62,6 +63,11 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::middleware('role:resident_owner,resident_tenant')
             ->get('/my/verification-requests', [VerificationRequestController::class, 'mine'])
             ->name('my.verification-requests.index');
+
+        // Issue Management for residents
+        Route::get('/my/issues', [IssueController::class, 'myIssues'])->name('my.issues.index');
+        Route::post('/issues', [IssueController::class, 'store'])->name('issues.store');
+        Route::post('/issues/{issue}/comments', [IssueCommentController::class, 'store'])->name('issues.comments.store');
 
         Route::middleware('role:super_admin,compound_admin,security_guard,support_agent,resident_owner,resident_tenant')
             ->group(function (): void {
@@ -139,5 +145,10 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
                 ->name('representative-assignments.update');
             Route::post('/representative-assignments/{representativeAssignment}/expire', [RepresentativeAssignmentController::class, 'expire'])
                 ->name('representative-assignments.expire');
+            // Issue Management for admins
+            Route::get('/issues', [IssueController::class, 'index'])->name('issues.index');
+            Route::get('/issues/{issue}', [IssueController::class, 'show'])->name('issues.show');
+            Route::patch('/issues/{issue}', [IssueController::class, 'update'])->name('issues.update');
+            Route::put('/issues/{issue}', [IssueController::class, 'update'])->name('issues.update');
         });
 });

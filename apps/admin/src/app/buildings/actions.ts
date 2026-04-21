@@ -1,6 +1,6 @@
 "use server";
 
-import type { UnitStatus, UnitType } from "@compound/contracts";
+import type { UnitStatus } from "@compound/contracts";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -42,11 +42,9 @@ export async function createUnitAction(buildingId: string, formData: FormData) {
   const floorId = String(formData.get("floorId") ?? "");
 
   await createUnit(buildingId, {
-    areaSqm: optionalNumber(formData.get("areaSqm")),
     bedrooms: optionalNumber(formData.get("bedrooms")),
     floorId: floorId === "" ? undefined : floorId,
     status: String(formData.get("status") ?? "active") as UnitStatus,
-    type: String(formData.get("type") ?? "apartment") as UnitType,
     unitNumber: String(formData.get("unitNumber") ?? ""),
   });
 
@@ -111,11 +109,9 @@ export async function updateUnitAction(buildingId: string, unitId: string, formD
   const floorId = String(formData.get("floorId") ?? "");
 
   await updateUnit(unitId, {
-    areaSqm: optionalNumber(formData.get("areaSqm")),
     bedrooms: optionalNumber(formData.get("bedrooms")),
     floorId: floorId === "" ? undefined : floorId,
     status: String(formData.get("status") ?? "active") as UnitStatus,
-    type: String(formData.get("type") ?? "apartment") as UnitType,
     unitNumber: String(formData.get("unitNumber") ?? ""),
   });
 

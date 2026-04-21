@@ -1,5 +1,5 @@
 export const config = {
-  apiBaseUrl: process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1",
+  apiBaseUrl: (process.env.API_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL) ?? "http://localhost:8000/api/v1",
   reverb: {
     key: process.env.NEXT_PUBLIC_REVERB_APP_KEY ?? "compound-local-key",
     host: process.env.NEXT_PUBLIC_REVERB_HOST ?? "127.0.0.1",

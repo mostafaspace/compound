@@ -3,14 +3,10 @@ import type { AuthenticatedUser, UnitRelation, VerificationStatus } from "./plat
 export const compoundStatusValues = ["draft", "active", "suspended", "archived"] as const;
 
 export type CompoundStatus = (typeof compoundStatusValues)[number];
-
+ 
 export const unitStatusValues = ["active", "vacant", "blocked", "archived"] as const;
 
 export type UnitStatus = (typeof unitStatusValues)[number];
-
-export const unitTypeValues = ["apartment", "villa", "duplex", "retail", "office", "other"] as const;
-
-export type UnitType = (typeof unitTypeValues)[number];
 
 export interface CompoundSummary {
   id: string;
@@ -70,8 +66,6 @@ export interface UnitSummary {
   buildingId: string;
   floorId: string | null;
   unitNumber: string;
-  type: UnitType;
-  areaSqm: string | null;
   bedrooms: number | null;
   status: UnitStatus;
   createdAt: string | null;
@@ -122,8 +116,6 @@ export interface CreateFloorInput {
 export interface CreateUnitInput {
   floorId?: string;
   unitNumber: string;
-  type: UnitType;
-  areaSqm?: number;
   bedrooms?: number;
   status?: UnitStatus;
 }

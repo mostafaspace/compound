@@ -1,0 +1,15 @@
+{
+  "Navigation": {
+    "dashboard": "لوحة القيادة",
+    "compounds": "المجمعات السكنية",
+    "buildings": "المباني",
+    "units": "الوحدات",
+    "visitors": "الزوار",
+    "signOut": "تسجيل الخروج"
+  },
+  "Theme": {
+    "light": "الوضع الفاتح",
+    "dark": "الوضع المظلم",
+    "system": "تلقائي"
+  }
+}

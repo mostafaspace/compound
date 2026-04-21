@@ -20,15 +20,15 @@ class StoreBuildingRequest extends FormRequest
         $compound = $this->route('compound');
 
         return [
-            'name' => ['required', 'string', 'max:160'],
+            'name' => ['required', 'string', 'max:255'],
             'code' => [
                 'required',
                 'string',
-                'max:32',
+                'max:50',
                 'alpha_dash:ascii',
                 Rule::unique('buildings', 'code')->where('compound_id', $compound?->id),
             ],
-            'sortOrder' => ['nullable', 'integer', 'min:0', 'max:65535'],
+            'sortOrder' => ['nullable', 'integer', 'min:0'],
         ];
     }
 }

@@ -1,0 +1,15 @@
+{
+  "Navigation": {
+    "dashboard": "Dashboard",
+    "compounds": "Compounds",
+    "buildings": "Buildings",
+    "units": "Units",
+    "visitors": "Visitors",
+    "signOut": "Sign Out"
+  },
+  "Theme": {
+    "light": "Light Mode",
+    "dark": "Dark Mode",
+    "system": "System Auto"
+  }
+}

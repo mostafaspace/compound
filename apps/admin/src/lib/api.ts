@@ -20,6 +20,9 @@ import type {
   DocumentType,
   FloorSummary,
   InvitationStatus,
+  Issue,
+  IssueCategory,
+  IssueStatus,
   ResidentInvitation,
   LoginInput,
   LoginResult,
@@ -31,6 +34,7 @@ import type {
   UpdateBuildingInput,
   UpdateCompoundInput,
   UpdateFloorInput,
+  UpdateIssueInput,
   UpdateNotificationPreferenceInput,
   UpdateUnitInput,
   UserNotification,
@@ -1056,4 +1060,89 @@ async function visitorDecision(
   const payload = (await response.json()) as ApiEnvelope<VisitorRequest>;
 
   return payload.data;
+}
+
+
+
+export async function getIssues(input: {
+  buildingId?: string;
+  status?: IssueStatus | "all";
+  category?: IssueCategory | "all";
+} = {}): Promise<Issue[]> {
+  try {
+    const params = new URLSearchParams();
+
+    if (input.buildingId) {
+      params.set("building_id", input.buildingId);
+    }
+    if (input.status && input.status !== "all") {
+      params.set("status", input.status);
+    }
+    if (input.category && input.category !== "all") {
+      params.set("category", input.category);
+    }
+
+    const query = params.toString();
+    const response = await fetch(`${config.apiBaseUrl}/issues${query ? `?${query}` : ""}`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+
+    if (!response.ok) return [];
+    
+    // We expect paginated envelope
+    const payload = await response.json();
+    return payload.data;
+  } catch {
+    return [];
+  }
+}
+
+export async function getIssue(issueId: string): Promise<Issue | null> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/issues/${issueId}`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+
+    if (!response.ok) return null;
+
+    const payload = await response.json() as ApiEnvelope<Issue>;
+    return payload.data;
+  } catch {
+    return null;
+  }
+}
+
+export async function updateIssue(issueId: string, input: UpdateIssueInput): Promise<Issue | null> {
+  const response = await fetch(`${config.apiBaseUrl}/issues/${issueId}`, {
+    body: JSON.stringify(input),
+    headers: {
+      ...(await apiHeaders(true)),
+      "Content-Type": "application/json",
+    },
+    method: "PATCH",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to update issue: ${response.status}`);
+  }
+
+  const payload = await response.json() as ApiEnvelope<Issue>;
+  return payload.data;
+}
+
+export async function createIssueComment(issueId: string, body: string, isInternal = false) {
+  const response = await fetch(`${config.apiBaseUrl}/issues/${issueId}/comments`, {
+    body: JSON.stringify({ body, isInternal }),
+    headers: {
+      ...(await apiHeaders(true)),
+      "Content-Type": "application/json",
+    },
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to create comment: ${response.status}`);
+  }
 }

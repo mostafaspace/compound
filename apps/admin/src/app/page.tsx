@@ -80,6 +80,12 @@ export default async function Home() {
             </Link>
             <Link
               className="inline-flex h-11 items-center rounded-lg border border-line bg-panel px-4 text-sm font-semibold text-foreground transition hover:border-brand"
+              href="/issues"
+            >
+              Issues
+            </Link>
+            <Link
+              className="inline-flex h-11 items-center rounded-lg border border-line bg-panel px-4 text-sm font-semibold text-foreground transition hover:border-brand"
               href="/onboarding"
             >
               Onboarding

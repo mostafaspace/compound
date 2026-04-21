@@ -116,8 +116,8 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
             <thead className="bg-background text-muted">
               <tr>
                 <th className="px-4 py-3 font-semibold">Unit</th>
-                <th className="px-4 py-3 font-semibold">Type</th>
-                <th className="px-4 py-3 font-semibold">Area</th>
+                <th className="px-4 py-3 font-semibold">Floor</th>
+                <th className="px-4 py-3 font-semibold">Residents</th>
                 <th className="px-4 py-3 font-semibold">Status</th>
                 <th className="px-4 py-3 font-semibold">Actions</th>
               </tr>
@@ -125,7 +125,7 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
             <tbody className="divide-y divide-line">
               {units.length === 0 ? (
                 <tr>
-                  <td className="px-4 py-6 text-muted" colSpan={5}>
+                  <td className="px-4 py-6 text-muted" colSpan={4}>
                     No units yet.
                   </td>
                 </tr>
@@ -137,8 +137,8 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
                         {unit.unitNumber}
                       </Link>
                     </td>
-                    <td className="px-4 py-4 capitalize">{unit.type}</td>
-                    <td className="px-4 py-4">{unit.areaSqm ? `${unit.areaSqm} sqm` : "Not set"}</td>
+                    <td className="px-4 py-4 text-muted">{unit.floorId ? floors.find(f => f.id === unit.floorId)?.label ?? "—" : "—"}</td>
+                    <td className="px-4 py-4">{unit.memberships?.length ?? 0}</td>
                     <td className="px-4 py-4">
                       <span className="rounded-lg bg-[#e6f3ef] px-2.5 py-1 text-xs font-semibold capitalize text-brand">
                         {unit.status}

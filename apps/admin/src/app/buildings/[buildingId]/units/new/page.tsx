@@ -31,7 +31,9 @@ export default async function NewUnitPage({ params }: NewUnitPageProps) {
             {building.name}
           </Link>
           <h1 className="mt-2 text-3xl font-semibold">New unit</h1>
-          <p className="mt-2 text-sm text-muted">Create a billable and occupiable unit in this building.</p>
+          <p className="mt-2 text-sm text-muted">
+            Create a billable unit. Specific type and area are less important.
+          </p>
         </div>
       </header>
 
@@ -61,18 +63,6 @@ export default async function NewUnitPage({ params }: NewUnitPageProps) {
             </label>
 
             <label className="grid gap-2">
-              <span className="text-sm font-semibold">Type</span>
-              <select className="h-11 rounded-lg border border-line px-3 text-sm outline-none focus:border-brand" name="type">
-                <option value="apartment">Apartment</option>
-                <option value="villa">Villa</option>
-                <option value="duplex">Duplex</option>
-                <option value="retail">Retail</option>
-                <option value="office">Office</option>
-                <option value="other">Other</option>
-              </select>
-            </label>
-
-            <label className="grid gap-2">
               <span className="text-sm font-semibold">Status</span>
               <select className="h-11 rounded-lg border border-line px-3 text-sm outline-none focus:border-brand" name="status">
                 <option value="active">Active</option>
@@ -80,17 +70,6 @@ export default async function NewUnitPage({ params }: NewUnitPageProps) {
                 <option value="blocked">Blocked</option>
                 <option value="archived">Archived</option>
               </select>
-            </label>
-
-            <label className="grid gap-2">
-              <span className="text-sm font-semibold">Area sqm</span>
-              <input
-                className="h-11 rounded-lg border border-line px-3 text-sm outline-none focus:border-brand"
-                min={0}
-                name="areaSqm"
-                step="0.01"
-                type="number"
-              />
             </label>
 
             <label className="grid gap-2">
