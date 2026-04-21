@@ -71,13 +71,18 @@ class Announcement extends Model
         return $this->hasMany(AnnouncementAcknowledgement::class);
     }
 
+    public function revisions(): HasMany
+    {
+        return $this->hasMany(AnnouncementRevision::class);
+    }
+
     public function isPublishedForFeed(): bool
     {
         if ($this->status === AnnouncementStatus::Archived || $this->archived_at !== null) {
             return false;
         }
 
-        if (! in_array($this->status, [AnnouncementStatus::Published, AnnouncementStatus::Scheduled], true)) {
+        if ($this->status !== AnnouncementStatus::Published) {
             return false;
         }
 
@@ -86,5 +91,22 @@ class Announcement extends Model
         }
 
         return $this->expires_at === null || $this->expires_at->isFuture();
+    }
+
+    public function effectiveStatus(): AnnouncementStatus
+    {
+        if ($this->status === AnnouncementStatus::Archived || $this->archived_at !== null) {
+            return AnnouncementStatus::Archived;
+        }
+
+        if (
+            $this->status === AnnouncementStatus::Published
+            && $this->expires_at !== null
+            && $this->expires_at->isPast()
+        ) {
+            return AnnouncementStatus::Expired;
+        }
+
+        return $this->status;
     }
 }

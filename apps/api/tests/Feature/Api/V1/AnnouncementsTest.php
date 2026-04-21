@@ -59,6 +59,12 @@ class AnnouncementsTest extends TestCase
             'category' => 'announcements',
             'title' => 'Water maintenance',
         ]);
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $resident->id,
+            'category' => 'announcements',
+            'title' => 'Water maintenance',
+            'metadata->titleAr' => 'صيانة المياه',
+        ]);
         $this->assertDatabaseMissing('notifications', [
             'user_id' => $otherResident->id,
             'category' => 'announcements',
@@ -106,6 +112,11 @@ class AnnouncementsTest extends TestCase
         $this->postJson("/api/v1/announcements/{$announcementId}/publish")
             ->assertOk()
             ->assertJsonPath('data.status', AnnouncementStatus::Scheduled->value);
+        $this->assertDatabaseMissing('notifications', [
+            'user_id' => $resident->id,
+            'category' => 'announcements',
+            'title' => 'Security drill',
+        ]);
 
         Sanctum::actingAs($resident);
         $this->getJson('/api/v1/my/announcements')
@@ -113,6 +124,12 @@ class AnnouncementsTest extends TestCase
             ->assertJsonCount(0, 'data');
 
         $this->travelTo($scheduledAt->addMinute());
+        $this->artisan('announcements:publish-due')->assertSuccessful();
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $resident->id,
+            'category' => 'announcements',
+            'title' => 'Security drill',
+        ]);
 
         $this->getJson('/api/v1/my/announcements')
             ->assertOk()
@@ -162,15 +179,21 @@ class AnnouncementsTest extends TestCase
             ->assertForbidden();
 
         Sanctum::actingAs($resident);
-        $this->postJson("/api/v1/announcements/{$announcementId}/acknowledge")
+        $acknowledgementResponse = $this->postJson("/api/v1/announcements/{$announcementId}/acknowledge")
             ->assertOk()
             ->assertJsonPath('data.announcementId', $announcementId)
             ->assertJsonPath('data.acknowledgedAt', fn (?string $value): bool => $value !== null);
+        $firstAcknowledgedAt = $acknowledgementResponse->json('data.acknowledgedAt');
 
         $this->assertDatabaseHas('announcement_acknowledgements', [
             'announcement_id' => $announcementId,
             'user_id' => $resident->id,
         ]);
+
+        $this->travel(10)->minutes();
+        $this->postJson("/api/v1/announcements/{$announcementId}/acknowledge")
+            ->assertOk()
+            ->assertJsonPath('data.acknowledgedAt', $firstAcknowledgedAt);
 
         Sanctum::actingAs($admin);
         $this->getJson("/api/v1/announcements/{$announcementId}/acknowledgements")
@@ -259,7 +282,122 @@ class AnnouncementsTest extends TestCase
             'action' => 'announcements.updated',
             'auditable_id' => $announcementId,
         ]);
+        $this->assertDatabaseHas('announcement_revisions', [
+            'announcement_id' => $announcementId,
+            'revision' => 1,
+        ]);
+        $this->assertDatabaseHas('announcement_revisions', [
+            'announcement_id' => $announcementId,
+            'revision' => 2,
+        ]);
         $this->assertSame(2, Announcement::find($announcementId)->revision);
+    }
+
+    public function test_expired_announcements_are_marked_and_filterable_in_archive(): void
+    {
+        [$admin, $resident, , $building] = $this->buildingScenario();
+
+        Sanctum::actingAs($admin);
+
+        $announcementId = $this->postJson('/api/v1/announcements', [
+            'titleEn' => 'Pool closure',
+            'titleAr' => 'إغلاق المسبح',
+            'bodyEn' => 'The pool is closed today only.',
+            'bodyAr' => 'المسبح مغلق اليوم فقط.',
+            'category' => AnnouncementCategory::General->value,
+            'targetType' => AnnouncementTargetType::Building->value,
+            'targetIds' => [$building->id],
+            'expiresAt' => now()->addMinute()->toIso8601String(),
+        ])->assertCreated()->json('data.id');
+
+        $this->postJson("/api/v1/announcements/{$announcementId}/publish")
+            ->assertOk();
+
+        Sanctum::actingAs($resident);
+        $this->getJson('/api/v1/my/announcements')
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
+
+        $this->travel(2)->minutes();
+        $this->artisan('announcements:expire-due')->assertSuccessful();
+
+        $this->getJson('/api/v1/my/announcements')
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
+
+        Sanctum::actingAs($admin);
+        $this->getJson('/api/v1/announcements?status=expired')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $announcementId)
+            ->assertJsonPath('data.0.status', AnnouncementStatus::Expired->value);
+    }
+
+    public function test_archive_filters_by_author_building_and_dates(): void
+    {
+        [$admin, , , $building] = $this->buildingScenario();
+        $otherAdmin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
+        $otherBuilding = Building::factory()->create();
+
+        Sanctum::actingAs($admin);
+        $matchingId = $this->postJson('/api/v1/announcements', [
+            'titleEn' => 'Building notice',
+            'titleAr' => 'إعلان المبنى',
+            'bodyEn' => 'Notice for this building.',
+            'bodyAr' => 'إعلان لهذا المبنى.',
+            'category' => AnnouncementCategory::General->value,
+            'targetType' => AnnouncementTargetType::Building->value,
+            'targetIds' => [$building->id],
+        ])->assertCreated()->json('data.id');
+        $this->postJson("/api/v1/announcements/{$matchingId}/publish")->assertOk();
+
+        Sanctum::actingAs($otherAdmin);
+        $otherId = $this->postJson('/api/v1/announcements', [
+            'titleEn' => 'Other building notice',
+            'titleAr' => 'إعلان مبنى آخر',
+            'bodyEn' => 'Notice for another building.',
+            'bodyAr' => 'إعلان لمبنى آخر.',
+            'category' => AnnouncementCategory::General->value,
+            'targetType' => AnnouncementTargetType::Building->value,
+            'targetIds' => [$otherBuilding->id],
+        ])->assertCreated()->json('data.id');
+        $this->postJson("/api/v1/announcements/{$otherId}/publish")->assertOk();
+
+        Sanctum::actingAs($admin);
+        $this->getJson('/api/v1/announcements?authorId='.$admin->id.'&buildingId='.$building->id.'&publishedFrom='.now()->subMinute()->toDateString())
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $matchingId);
+    }
+
+    public function test_update_validation_prevents_invalid_targeting(): void
+    {
+        [$admin, , , $building] = $this->buildingScenario();
+
+        Sanctum::actingAs($admin);
+        $announcementId = $this->postJson('/api/v1/announcements', [
+            'titleEn' => 'Valid notice',
+            'titleAr' => 'إعلان صحيح',
+            'bodyEn' => 'A valid notice.',
+            'bodyAr' => 'إعلان صحيح.',
+            'category' => AnnouncementCategory::General->value,
+            'targetType' => AnnouncementTargetType::Building->value,
+            'targetIds' => [$building->id],
+        ])->assertCreated()->json('data.id');
+
+        $this->patchJson("/api/v1/announcements/{$announcementId}", [
+            'targetType' => AnnouncementTargetType::Role->value,
+            'targetRole' => null,
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['targetRole']);
+
+        $this->patchJson("/api/v1/announcements/{$announcementId}", [
+            'targetType' => AnnouncementTargetType::Building->value,
+            'targetIds' => [],
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['targetIds']);
     }
 
     private function buildingScenario(): array

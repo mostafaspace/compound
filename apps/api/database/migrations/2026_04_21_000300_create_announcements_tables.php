@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('announcements', function (Blueprint $table): void {
             $table->ulid('id')->primary();
-            $table->foreignId('created_by')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->string('category')->index();
             $table->string('priority')->default('normal')->index();
             $table->string('status')->default('draft')->index();
@@ -36,6 +36,18 @@ return new class extends Migration
             $table->index(['target_type', 'target_role']);
         });
 
+        Schema::create('announcement_revisions', function (Blueprint $table): void {
+            $table->ulid('id')->primary();
+            $table->foreignUlid('announcement_id')->constrained()->cascadeOnDelete();
+            $table->unsignedInteger('revision');
+            $table->foreignId('changed_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->json('snapshot');
+            $table->json('change_summary')->nullable();
+            $table->timestamps();
+
+            $table->unique(['announcement_id', 'revision']);
+        });
+
         Schema::create('announcement_acknowledgements', function (Blueprint $table): void {
             $table->id();
             $table->foreignUlid('announcement_id')->constrained()->cascadeOnDelete();
@@ -51,6 +63,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('announcement_acknowledgements');
+        Schema::dropIfExists('announcement_revisions');
         Schema::dropIfExists('announcements');
     }
 };

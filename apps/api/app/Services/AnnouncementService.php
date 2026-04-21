@@ -8,7 +8,7 @@ use App\Enums\AnnouncementTargetType;
 use App\Enums\NotificationCategory;
 use App\Models\Announcements\Announcement;
 use App\Models\Announcements\AnnouncementAcknowledgement;
-use App\Models\Property\UnitMembership;
+use App\Models\Announcements\AnnouncementRevision;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -39,7 +39,61 @@ class AnnouncementService
                 : $query,
         };
 
+        if ($announcement->requires_verified_membership && $announcement->target_type === AnnouncementTargetType::Role) {
+            $query->whereHas('unitMemberships', fn (Builder $membership): Builder => $membership->activeForAccess());
+        }
+
         return $query->get()->unique('id')->values();
+    }
+
+    public function applyVisibleToUser(Builder $query, User $user): Builder
+    {
+        $memberships = $user->unitMemberships()
+            ->activeForAccess()
+            ->with('unit')
+            ->get();
+        $unitIds = $memberships->pluck('unit.id')->filter()->unique()->values();
+        $floorIds = $memberships->pluck('unit.floor_id')->filter()->unique()->values();
+        $buildingIds = $memberships->pluck('unit.building_id')->filter()->unique()->values();
+        $compoundIds = $memberships->pluck('unit.compound_id')->filter()->unique()->values();
+        $hasVerifiedMembership = $memberships->isNotEmpty();
+
+        return $query->where(function (Builder $query) use (
+            $user,
+            $hasVerifiedMembership,
+            $compoundIds,
+            $buildingIds,
+            $floorIds,
+            $unitIds
+        ): void {
+            $query->where(function (Builder $query) use ($hasVerifiedMembership): void {
+                $query->where('target_type', AnnouncementTargetType::All->value)
+                    ->where(function (Builder $query) use ($hasVerifiedMembership): void {
+                        $query->where('requires_verified_membership', false);
+
+                        if ($hasVerifiedMembership) {
+                            $query->orWhere('requires_verified_membership', true);
+                        }
+                    });
+            });
+
+            $query->orWhere(function (Builder $query) use ($user, $hasVerifiedMembership): void {
+                $query->where('target_type', AnnouncementTargetType::Role->value)
+                    ->where('target_role', $user->role->value)
+                    ->where(function (Builder $query) use ($hasVerifiedMembership): void {
+                        $query->where('requires_verified_membership', false);
+
+                        if ($hasVerifiedMembership) {
+                            $query->orWhere('requires_verified_membership', true);
+                        }
+                    });
+            });
+
+            $this->orWhereJsonTarget($query, AnnouncementTargetType::Compound, $compoundIds->all());
+            $this->orWhereJsonTarget($query, AnnouncementTargetType::Building, $buildingIds->all());
+            $this->orWhereJsonTarget($query, AnnouncementTargetType::Floor, $floorIds->all());
+            $this->orWhereJsonTarget($query, AnnouncementTargetType::Unit, $unitIds->all());
+        });
     }
 
     public function canUserView(Announcement $announcement, User $user): bool
@@ -48,7 +102,10 @@ class AnnouncementService
             return false;
         }
 
-        return $this->recipients($announcement)->contains(fn (User $recipient): bool => $recipient->is($user));
+        return $this->applyVisibleToUser(
+            Announcement::query()->whereKey($announcement->id),
+            $user
+        )->exists();
     }
 
     public function publish(Announcement $announcement): Announcement
@@ -61,6 +118,8 @@ class AnnouncementService
             'published_at' => $isFutureSchedule ? null : now(),
             'last_published_snapshot' => $this->snapshot($announcement),
         ])->save();
+
+        $this->recordRevision($announcement, null, ['action' => 'published']);
 
         if (! $isFutureSchedule) {
             $this->notifyRecipients($announcement);
@@ -81,12 +140,59 @@ class AnnouncementService
 
     public function acknowledge(Announcement $announcement, User $user): AnnouncementAcknowledgement
     {
-        return AnnouncementAcknowledgement::query()->updateOrCreate(
+        return AnnouncementAcknowledgement::query()->firstOrCreate(
             [
                 'announcement_id' => $announcement->id,
                 'user_id' => $user->id,
             ],
             ['acknowledged_at' => now()]
+        );
+    }
+
+    public function publishDueScheduled(): int
+    {
+        $count = 0;
+
+        Announcement::query()
+            ->where('status', AnnouncementStatus::Scheduled->value)
+            ->whereNotNull('scheduled_at')
+            ->where('scheduled_at', '<=', now())
+            ->each(function (Announcement $announcement) use (&$count): void {
+                $announcement->forceFill([
+                    'status' => AnnouncementStatus::Published,
+                    'published_at' => now(),
+                    'last_published_snapshot' => $this->snapshot($announcement),
+                ])->save();
+
+                $this->recordRevision($announcement, null, ['action' => 'scheduled_published']);
+                $this->notifyRecipients($announcement);
+                $count++;
+            });
+
+        return $count;
+    }
+
+    public function expireDueAnnouncements(): int
+    {
+        return Announcement::query()
+            ->where('status', AnnouncementStatus::Published->value)
+            ->whereNotNull('expires_at')
+            ->where('expires_at', '<=', now())
+            ->update(['status' => AnnouncementStatus::Expired]);
+    }
+
+    public function recordRevision(Announcement $announcement, ?User $changedBy, array $changeSummary = []): AnnouncementRevision
+    {
+        return AnnouncementRevision::query()->firstOrCreate(
+            [
+                'announcement_id' => $announcement->id,
+                'revision' => $announcement->revision,
+            ],
+            [
+                'changed_by' => $changedBy?->id,
+                'snapshot' => $this->snapshot($announcement),
+                'change_summary' => $changeSummary,
+            ]
         );
     }
 
@@ -138,6 +244,26 @@ class AnnouncementService
                 priority: $announcement->priority->value,
             );
         }
+    }
+
+    /**
+     * @param  Builder<Announcement>  $query
+     * @param  list<string>  $ids
+     */
+    private function orWhereJsonTarget(Builder $query, AnnouncementTargetType $targetType, array $ids): void
+    {
+        if ($ids === []) {
+            return;
+        }
+
+        $query->orWhere(function (Builder $query) use ($targetType, $ids): void {
+            $query->where('target_type', $targetType->value)
+                ->where(function (Builder $query) use ($ids): void {
+                    foreach ($ids as $id) {
+                        $query->orWhereJsonContains('target_ids', $id);
+                    }
+                });
+        });
     }
 
     /**

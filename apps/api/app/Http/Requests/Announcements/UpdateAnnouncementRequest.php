@@ -37,6 +37,38 @@ class UpdateAnnouncementRequest extends FormRequest
         ];
     }
 
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator): void {
+            $announcement = $this->route('announcement');
+            $targetType = $this->input('targetType', $announcement?->target_type?->value);
+            $targetIds = $this->input('targetIds', $announcement?->target_ids ?? []);
+            $targetRole = $this->input('targetRole', $announcement?->target_role);
+            $scheduledAt = $this->date('scheduledAt') ?? $announcement?->scheduled_at;
+            $expiresAt = $this->date('expiresAt') ?? $announcement?->expires_at;
+
+            if ($targetType === AnnouncementTargetType::Role->value && empty($targetRole)) {
+                $validator->errors()->add('targetRole', 'A target role is required for role-targeted announcements.');
+            }
+
+            if (
+                in_array($targetType, [
+                    AnnouncementTargetType::Compound->value,
+                    AnnouncementTargetType::Building->value,
+                    AnnouncementTargetType::Floor->value,
+                    AnnouncementTargetType::Unit->value,
+                ], true)
+                && empty($targetIds)
+            ) {
+                $validator->errors()->add('targetIds', 'At least one target id is required for property-scoped announcements.');
+            }
+
+            if ($scheduledAt !== null && $expiresAt !== null && $expiresAt->lessThanOrEqualTo($scheduledAt)) {
+                $validator->errors()->add('expiresAt', 'The expiry date must be after the scheduled date.');
+            }
+        });
+    }
+
     public function payload(): array
     {
         $map = [
