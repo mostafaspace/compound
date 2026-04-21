@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 
 import { LogoutButton } from "@/components/logout-button";
 import { getCompounds, getCurrentUser } from "@/lib/api";
@@ -14,7 +15,7 @@ function BuildingIcon() {
 
 export default async function CompoundsPage() {
   await requireAdminUser(getCurrentUser);
-  const compounds = await getCompounds();
+  const [compounds, t] = await Promise.all([getCompounds(), getTranslations("Registry")]);
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -22,18 +23,16 @@ export default async function CompoundsPage() {
         <div className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-6 md:flex-row md:items-center md:justify-between lg:px-8">
           <div>
             <Link className="text-sm font-semibold text-brand hover:text-brand-strong" href="/">
-              Dashboard
+              {t("dashboard")}
             </Link>
-            <h1 className="mt-2 text-3xl font-semibold">Property registry</h1>
-            <p className="mt-2 max-w-2xl text-sm text-muted">
-              Compounds are the top-level operating boundary for users, units, finance, governance, and security.
-            </p>
+            <h1 className="mt-2 text-3xl font-semibold">{t("propertyRegistry")}</h1>
+            <p className="mt-2 max-w-2xl text-sm text-muted">{t("propertyRegistryDesc")}</p>
           </div>
           <Link
             className="inline-flex h-11 items-center justify-center rounded-lg bg-brand px-4 text-sm font-semibold text-white transition hover:bg-brand-strong"
             href="/compounds/new"
           >
-            New compound
+            {t("newCompound")}
           </Link>
           <LogoutButton />
         </div>
@@ -45,23 +44,20 @@ export default async function CompoundsPage() {
             <div className="flex size-11 items-center justify-center rounded-lg bg-[#e6f3ef] text-brand">
               <BuildingIcon />
             </div>
-            <h2 className="mt-5 text-xl font-semibold">No compounds loaded</h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
-              Start the Laravel API and seed the database to load local compounds. You can also create the first compound once
-              the API is running.
-            </p>
+            <h2 className="mt-5 text-xl font-semibold">{t("noCompoundsTitle")}</h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">{t("noCompoundsDesc")}</p>
           </div>
         ) : (
           <div className="overflow-hidden rounded-lg border border-line bg-panel">
             <table className="w-full border-collapse text-left text-sm">
               <thead className="bg-background text-muted">
                 <tr>
-                  <th className="px-4 py-3 font-semibold">Compound</th>
-                  <th className="px-4 py-3 font-semibold">Code</th>
-                  <th className="px-4 py-3 font-semibold">Units</th>
-                  <th className="px-4 py-3 font-semibold">Buildings</th>
-                  <th className="px-4 py-3 font-semibold">Status</th>
-                  <th className="px-4 py-3 font-semibold">Actions</th>
+                  <th className="px-4 py-3 font-semibold">{t("compound")}</th>
+                  <th className="px-4 py-3 font-semibold">{t("code")}</th>
+                  <th className="px-4 py-3 font-semibold">{t("units")}</th>
+                  <th className="px-4 py-3 font-semibold">{t("buildings")}</th>
+                  <th className="px-4 py-3 font-semibold">{t("status")}</th>
+                  <th className="px-4 py-3 font-semibold">{t("actions")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
@@ -71,7 +67,7 @@ export default async function CompoundsPage() {
                       <Link className="font-semibold text-brand hover:text-brand-strong" href={`/compounds/${compound.id}`}>
                         {compound.name}
                       </Link>
-                      <div className="text-muted">{compound.legalName ?? "No legal name"}</div>
+                      <div className="text-muted">{compound.legalName ?? t("noLegalName")}</div>
                     </td>
                     <td className="px-4 py-4 font-mono text-xs">{compound.code}</td>
                     <td className="px-4 py-4">{compound.unitsCount ?? 0}</td>
@@ -86,7 +82,7 @@ export default async function CompoundsPage() {
                         className="inline-flex h-10 items-center justify-center rounded-lg border border-line px-3 text-sm font-semibold hover:border-brand"
                         href={`/compounds/${compound.id}/edit`}
                       >
-                        Edit
+                        {t("edit")}
                       </Link>
                     </td>
                   </tr>

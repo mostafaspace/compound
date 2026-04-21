@@ -1,24 +1,21 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 
 import { LogoutButton } from "@/components/logout-button";
 import { getCompound, getCurrentUser } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
 
 interface CompoundDetailPageProps {
-  params: Promise<{
-    compoundId: string;
-  }>;
+  params: Promise<{ compoundId: string }>;
 }
 
 export default async function CompoundDetailPage({ params }: CompoundDetailPageProps) {
   await requireAdminUser(getCurrentUser);
   const { compoundId } = await params;
-  const compound = await getCompound(compoundId);
+  const [compound, t] = await Promise.all([getCompound(compoundId), getTranslations("Registry")]);
 
-  if (!compound) {
-    notFound();
-  }
+  if (!compound) notFound();
 
   const buildings = compound.buildings ?? [];
 
@@ -28,7 +25,7 @@ export default async function CompoundDetailPage({ params }: CompoundDetailPageP
         <div className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-6 md:flex-row md:items-center md:justify-between lg:px-8">
           <div>
             <Link className="text-sm font-semibold text-brand hover:text-brand-strong" href="/compounds">
-              Property registry
+              {t("propertyRegistry")}
             </Link>
             <h1 className="mt-2 text-3xl font-semibold">{compound.name}</h1>
             <p className="mt-2 text-sm text-muted">
@@ -40,13 +37,13 @@ export default async function CompoundDetailPage({ params }: CompoundDetailPageP
               className="inline-flex h-11 items-center justify-center rounded-lg border border-line bg-panel px-4 text-sm font-semibold hover:border-brand"
               href={`/compounds/${compound.id}/edit`}
             >
-              Edit compound
+              {t("editCompound")}
             </Link>
             <Link
               className="inline-flex h-11 items-center justify-center rounded-lg bg-brand px-4 text-sm font-semibold text-white transition hover:bg-brand-strong"
               href={`/compounds/${compound.id}/buildings/new`}
             >
-              New building
+              {t("newBuilding")}
             </Link>
             <LogoutButton />
           </div>
@@ -55,15 +52,15 @@ export default async function CompoundDetailPage({ params }: CompoundDetailPageP
 
       <section className="mx-auto grid max-w-7xl gap-5 px-5 py-6 md:grid-cols-3 lg:px-8">
         <article className="rounded-lg border border-line bg-panel p-5">
-          <p className="text-sm font-medium text-muted">Buildings</p>
+          <p className="text-sm font-medium text-muted">{t("buildings")}</p>
           <p className="mt-3 text-3xl font-semibold text-brand">{compound.buildingsCount ?? buildings.length}</p>
         </article>
         <article className="rounded-lg border border-line bg-panel p-5">
-          <p className="text-sm font-medium text-muted">Units</p>
+          <p className="text-sm font-medium text-muted">{t("units")}</p>
           <p className="mt-3 text-3xl font-semibold text-accent">{compound.unitsCount ?? 0}</p>
         </article>
         <article className="rounded-lg border border-line bg-panel p-5">
-          <p className="text-sm font-medium text-muted">Status</p>
+          <p className="text-sm font-medium text-muted">{t("status")}</p>
           <p className="mt-3 text-3xl font-semibold capitalize text-brand-strong">{compound.status}</p>
         </article>
       </section>
@@ -73,21 +70,19 @@ export default async function CompoundDetailPage({ params }: CompoundDetailPageP
           <table className="w-full border-collapse text-left text-sm">
             <thead className="bg-background text-muted">
               <tr>
-                <th className="px-4 py-3 font-semibold">Building</th>
-                <th className="px-4 py-3 font-semibold">Code</th>
-                <th className="px-4 py-3 font-semibold">Floors</th>
-                <th className="px-4 py-3 font-semibold">Units</th>
-                <th className="px-4 py-3 font-semibold">Order</th>
-                <th className="px-4 py-3 font-semibold">Status</th>
-                <th className="px-4 py-3 font-semibold">Actions</th>
+                <th className="px-4 py-3 font-semibold">{t("building")}</th>
+                <th className="px-4 py-3 font-semibold">{t("code")}</th>
+                <th className="px-4 py-3 font-semibold">{t("floors")}</th>
+                <th className="px-4 py-3 font-semibold">{t("units")}</th>
+                <th className="px-4 py-3 font-semibold">{t("order")}</th>
+                <th className="px-4 py-3 font-semibold">{t("status")}</th>
+                <th className="px-4 py-3 font-semibold">{t("actions")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
               {buildings.length === 0 ? (
                 <tr>
-                  <td className="px-4 py-6 text-muted" colSpan={7}>
-                    No buildings yet.
-                  </td>
+                  <td className="px-4 py-6 text-muted" colSpan={7}>{t("noBuildings")}</td>
                 </tr>
               ) : (
                 buildings.map((building) => (
@@ -103,7 +98,7 @@ export default async function CompoundDetailPage({ params }: CompoundDetailPageP
                     <td className="px-4 py-4">{building.sortOrder}</td>
                     <td className="px-4 py-4">
                       <span className="rounded-lg bg-[#e6f3ef] px-2.5 py-1 text-xs font-semibold capitalize text-brand">
-                        {building.archivedAt ? "archived" : "active"}
+                        {building.archivedAt ? t("archived") : t("active")}
                       </span>
                     </td>
                     <td className="px-4 py-4">
@@ -111,7 +106,7 @@ export default async function CompoundDetailPage({ params }: CompoundDetailPageP
                         className="inline-flex h-10 items-center justify-center rounded-lg border border-line px-3 text-sm font-semibold hover:border-brand"
                         href={`/buildings/${building.id}/edit`}
                       >
-                        Edit
+                        {t("edit")}
                       </Link>
                     </td>
                   </tr>

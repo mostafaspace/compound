@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 
 import { getBuilding, getCurrentUser } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
@@ -7,19 +8,15 @@ import { requireAdminUser } from "@/lib/session";
 import { createUnitAction } from "../../../actions";
 
 interface NewUnitPageProps {
-  params: Promise<{
-    buildingId: string;
-  }>;
+  params: Promise<{ buildingId: string }>;
 }
 
 export default async function NewUnitPage({ params }: NewUnitPageProps) {
   await requireAdminUser(getCurrentUser);
   const { buildingId } = await params;
-  const building = await getBuilding(buildingId);
+  const [building, t] = await Promise.all([getBuilding(buildingId), getTranslations("Registry")]);
 
-  if (!building) {
-    notFound();
-  }
+  if (!building) notFound();
 
   const floors = building.floors ?? [];
 
@@ -30,10 +27,8 @@ export default async function NewUnitPage({ params }: NewUnitPageProps) {
           <Link className="text-sm font-semibold text-brand hover:text-brand-strong" href={`/buildings/${building.id}`}>
             {building.name}
           </Link>
-          <h1 className="mt-2 text-3xl font-semibold">New unit</h1>
-          <p className="mt-2 text-sm text-muted">
-            Create a billable unit. Specific type and area are less important.
-          </p>
+          <h1 className="mt-2 text-3xl font-semibold">{t("newUnitTitle")}</h1>
+          <p className="mt-2 text-sm text-muted">{t("newUnitDesc")}</p>
         </div>
       </header>
 
@@ -41,7 +36,7 @@ export default async function NewUnitPage({ params }: NewUnitPageProps) {
         <form action={createUnitAction.bind(null, building.id)} className="rounded-lg border border-line bg-panel p-5">
           <div className="grid gap-5 md:grid-cols-2">
             <label className="grid gap-2">
-              <span className="text-sm font-semibold">Unit number</span>
+              <span className="text-sm font-semibold">{t("unitNumber")}</span>
               <input
                 className="h-11 rounded-lg border border-line px-3 text-sm outline-none focus:border-brand"
                 name="unitNumber"
@@ -51,29 +46,27 @@ export default async function NewUnitPage({ params }: NewUnitPageProps) {
             </label>
 
             <label className="grid gap-2">
-              <span className="text-sm font-semibold">Floor</span>
+              <span className="text-sm font-semibold">{t("floor")}</span>
               <select className="h-11 rounded-lg border border-line px-3 text-sm outline-none focus:border-brand" name="floorId">
-                <option value="">No floor</option>
+                <option value="">{t("noFloor")}</option>
                 {floors.map((floor) => (
-                  <option key={floor.id} value={floor.id}>
-                    {floor.label}
-                  </option>
+                  <option key={floor.id} value={floor.id}>{floor.label}</option>
                 ))}
               </select>
             </label>
 
             <label className="grid gap-2">
-              <span className="text-sm font-semibold">Status</span>
+              <span className="text-sm font-semibold">{t("status")}</span>
               <select className="h-11 rounded-lg border border-line px-3 text-sm outline-none focus:border-brand" name="status">
-                <option value="active">Active</option>
-                <option value="vacant">Vacant</option>
-                <option value="blocked">Blocked</option>
-                <option value="archived">Archived</option>
+                <option value="active">{t("active")}</option>
+                <option value="vacant">{t("vacant")}</option>
+                <option value="blocked">{t("blocked")}</option>
+                <option value="archived">{t("archived")}</option>
               </select>
             </label>
 
             <label className="grid gap-2">
-              <span className="text-sm font-semibold">Bedrooms</span>
+              <span className="text-sm font-semibold">{t("bedrooms")}</span>
               <input
                 className="h-11 rounded-lg border border-line px-3 text-sm outline-none focus:border-brand"
                 min={0}
@@ -88,13 +81,13 @@ export default async function NewUnitPage({ params }: NewUnitPageProps) {
               className="inline-flex h-11 items-center justify-center rounded-lg border border-line px-4 text-sm font-semibold hover:border-brand"
               href={`/buildings/${building.id}`}
             >
-              Cancel
+              {t("cancel")}
             </Link>
             <button
               className="inline-flex h-11 items-center justify-center rounded-lg bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"
               type="submit"
             >
-              Create unit
+              {t("createUnit")}
             </button>
           </div>
         </form>

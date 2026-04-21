@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 
 import { getCurrentUser } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
@@ -7,18 +8,17 @@ import { createCompoundAction } from "../actions";
 
 export default async function NewCompoundPage() {
   await requireAdminUser(getCurrentUser);
+  const t = await getTranslations("Registry");
 
   return (
     <main className="min-h-screen bg-background text-foreground">
       <header className="border-b border-line bg-panel">
         <div className="mx-auto max-w-4xl px-5 py-6 lg:px-8">
           <Link className="text-sm font-semibold text-brand hover:text-brand-strong" href="/compounds">
-            Property registry
+            {t("propertyRegistry")}
           </Link>
-          <h1 className="mt-2 text-3xl font-semibold">New compound</h1>
-          <p className="mt-2 text-sm text-muted">
-            Create the operating boundary before importing buildings, floors, units, residents, finance balances, and staff.
-          </p>
+          <h1 className="mt-2 text-3xl font-semibold">{t("newCompoundTitle")}</h1>
+          <p className="mt-2 text-sm text-muted">{t("newCompoundDesc")}</p>
         </div>
       </header>
 
@@ -26,7 +26,7 @@ export default async function NewCompoundPage() {
         <form action={createCompoundAction} className="rounded-lg border border-line bg-panel p-5">
           <div className="grid gap-5 md:grid-cols-2">
             <label className="grid gap-2">
-              <span className="text-sm font-semibold">Compound name</span>
+              <span className="text-sm font-semibold">{t("compoundName")}</span>
               <input
                 className="h-11 rounded-lg border border-line px-3 text-sm outline-none focus:border-brand"
                 name="name"
@@ -36,7 +36,7 @@ export default async function NewCompoundPage() {
             </label>
 
             <label className="grid gap-2">
-              <span className="text-sm font-semibold">Code</span>
+              <span className="text-sm font-semibold">{t("code")}</span>
               <input
                 className="h-11 rounded-lg border border-line px-3 font-mono text-sm uppercase outline-none focus:border-brand"
                 name="code"
@@ -46,7 +46,7 @@ export default async function NewCompoundPage() {
             </label>
 
             <label className="grid gap-2 md:col-span-2">
-              <span className="text-sm font-semibold">Legal name</span>
+              <span className="text-sm font-semibold">{t("legalName")}</span>
               <input
                 className="h-11 rounded-lg border border-line px-3 text-sm outline-none focus:border-brand"
                 name="legalName"
@@ -55,7 +55,7 @@ export default async function NewCompoundPage() {
             </label>
 
             <label className="grid gap-2">
-              <span className="text-sm font-semibold">Timezone</span>
+              <span className="text-sm font-semibold">{t("timezone")}</span>
               <select className="h-11 rounded-lg border border-line px-3 text-sm outline-none focus:border-brand" name="timezone">
                 <option value="Africa/Cairo">Africa/Cairo</option>
                 <option value="UTC">UTC</option>
@@ -63,7 +63,7 @@ export default async function NewCompoundPage() {
             </label>
 
             <label className="grid gap-2">
-              <span className="text-sm font-semibold">Currency</span>
+              <span className="text-sm font-semibold">{t("currency")}</span>
               <select className="h-11 rounded-lg border border-line px-3 text-sm outline-none focus:border-brand" name="currency">
                 <option value="EGP">EGP</option>
                 <option value="USD">USD</option>
@@ -77,13 +77,13 @@ export default async function NewCompoundPage() {
               className="inline-flex h-11 items-center justify-center rounded-lg border border-line px-4 text-sm font-semibold hover:border-brand"
               href="/compounds"
             >
-              Cancel
+              {t("cancel")}
             </Link>
             <button
               className="inline-flex h-11 items-center justify-center rounded-lg bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"
               type="submit"
             >
-              Create compound
+              {t("createCompound")}
             </button>
           </div>
         </form>
