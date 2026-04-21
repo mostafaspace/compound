@@ -1441,3 +1441,349 @@ export async function createIssueComment(issueId: string, body: string, isIntern
     throw new Error(`Failed to create comment: ${response.status}`);
   }
 }
+
+// ─── Dues: Charge Types ────────────────────────────────────────────────────
+
+export interface ChargeType {
+  id: string;
+  name: string;
+  code: string;
+  defaultAmount: string | null;
+  isRecurring: boolean;
+  createdAt: string;
+}
+
+export async function getChargeTypes(): Promise<ChargeType[]> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/finance/charge-types`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const payload = (await response.json()) as { data: ChargeType[] };
+
+    return payload.data;
+  } catch {
+    return [];
+  }
+}
+
+export async function getChargeType(id: string): Promise<ChargeType | null> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/finance/charge-types/${id}`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const payload = (await response.json()) as { data: ChargeType };
+
+    return payload.data;
+  } catch {
+    return null;
+  }
+}
+
+export async function createChargeType(input: {
+  name: string;
+  code: string;
+  defaultAmount: string | null;
+  isRecurring: boolean;
+}): Promise<ChargeType> {
+  const response = await fetch(`${config.apiBaseUrl}/finance/charge-types`, {
+    body: JSON.stringify(input),
+    headers: {
+      ...(await apiHeaders(true)),
+      "Content-Type": "application/json",
+    },
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to create charge type: ${response.status}`);
+  }
+
+  const payload = (await response.json()) as { data: ChargeType };
+
+  return payload.data;
+}
+
+export async function updateChargeType(
+  id: string,
+  input: {
+    name: string;
+    code: string;
+    defaultAmount: string | null;
+    isRecurring: boolean;
+  },
+): Promise<ChargeType> {
+  const response = await fetch(`${config.apiBaseUrl}/finance/charge-types/${id}`, {
+    body: JSON.stringify(input),
+    headers: {
+      ...(await apiHeaders(true)),
+      "Content-Type": "application/json",
+    },
+    method: "PATCH",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to update charge type: ${response.status}`);
+  }
+
+  const payload = (await response.json()) as { data: ChargeType };
+
+  return payload.data;
+}
+
+// ─── Dues: Recurring Charges ───────────────────────────────────────────────
+
+export interface RecurringCharge {
+  id: string;
+  compoundId: string;
+  chargeTypeId: string | null;
+  name: string;
+  amount: string;
+  currency: string;
+  frequency: "monthly" | "quarterly" | "annual" | "one_time";
+  billingDay: number | null;
+  targetType: "all" | "floor" | "unit";
+  targetIds: string[];
+  startsAt: string | null;
+  endsAt: string | null;
+  isActive: boolean;
+  lastRunAt: string | null;
+  createdAt: string;
+}
+
+export async function getRecurringCharges(input: {
+  compound_id?: string;
+  is_active?: boolean;
+} = {}): Promise<RecurringCharge[]> {
+  try {
+    const params = new URLSearchParams();
+
+    if (input.compound_id) {
+      params.set("compound_id", input.compound_id);
+    }
+
+    if (input.is_active !== undefined) {
+      params.set("is_active", input.is_active ? "1" : "0");
+    }
+
+    const query = params.toString();
+    const response = await fetch(`${config.apiBaseUrl}/finance/recurring-charges${query ? `?${query}` : ""}`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const payload = (await response.json()) as { data: RecurringCharge[] };
+
+    return payload.data;
+  } catch {
+    return [];
+  }
+}
+
+export async function createRecurringCharge(input: {
+  name: string;
+  amount: string;
+  currency: string;
+  frequency: string;
+  billingDay?: number;
+  targetType: string;
+  compoundId?: string;
+  startsAt?: string;
+}): Promise<RecurringCharge> {
+  const response = await fetch(`${config.apiBaseUrl}/finance/recurring-charges`, {
+    body: JSON.stringify(input),
+    headers: {
+      ...(await apiHeaders(true)),
+      "Content-Type": "application/json",
+    },
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to create recurring charge: ${response.status}`);
+  }
+
+  const payload = (await response.json()) as { data: RecurringCharge };
+
+  return payload.data;
+}
+
+export async function deactivateRecurringCharge(id: string): Promise<RecurringCharge> {
+  const response = await fetch(`${config.apiBaseUrl}/finance/recurring-charges/${id}/deactivate`, {
+    headers: await apiHeaders(true),
+    method: "PATCH",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to deactivate recurring charge: ${response.status}`);
+  }
+
+  const payload = (await response.json()) as { data: RecurringCharge };
+
+  return payload.data;
+}
+
+// ─── Dues: Collection Campaigns ───────────────────────────────────────────
+
+export interface CollectionCampaign {
+  id: string;
+  compoundId: string;
+  name: string;
+  description: string | null;
+  status: "draft" | "active" | "closed" | "archived";
+  targetAmount: number | null;
+  startedAt: string | null;
+  closedAt: string | null;
+  createdAt: string;
+}
+
+export async function getCollectionCampaigns(input: {
+  compound_id?: string;
+  status?: string;
+} = {}): Promise<CollectionCampaign[]> {
+  try {
+    const params = new URLSearchParams();
+
+    if (input.compound_id) {
+      params.set("compound_id", input.compound_id);
+    }
+
+    if (input.status) {
+      params.set("status", input.status);
+    }
+
+    const query = params.toString();
+    const response = await fetch(`${config.apiBaseUrl}/finance/collection-campaigns${query ? `?${query}` : ""}`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const payload = (await response.json()) as { data: CollectionCampaign[] };
+
+    return payload.data;
+  } catch {
+    return [];
+  }
+}
+
+export async function getCollectionCampaign(id: string): Promise<CollectionCampaign | null> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/finance/collection-campaigns/${id}`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const payload = (await response.json()) as { data: CollectionCampaign };
+
+    return payload.data;
+  } catch {
+    return null;
+  }
+}
+
+export async function createCollectionCampaign(input: {
+  name: string;
+  description?: string;
+  targetAmount?: number;
+  compoundId?: string;
+}): Promise<CollectionCampaign> {
+  const response = await fetch(`${config.apiBaseUrl}/finance/collection-campaigns`, {
+    body: JSON.stringify(input),
+    headers: {
+      ...(await apiHeaders(true)),
+      "Content-Type": "application/json",
+    },
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to create collection campaign: ${response.status}`);
+  }
+
+  const payload = (await response.json()) as { data: CollectionCampaign };
+
+  return payload.data;
+}
+
+export async function publishCollectionCampaign(id: string): Promise<CollectionCampaign> {
+  const response = await fetch(`${config.apiBaseUrl}/finance/collection-campaigns/${id}/publish`, {
+    headers: await apiHeaders(true),
+    method: "PATCH",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to publish collection campaign: ${response.status}`);
+  }
+
+  const payload = (await response.json()) as { data: CollectionCampaign };
+
+  return payload.data;
+}
+
+export async function archiveCollectionCampaign(id: string): Promise<CollectionCampaign> {
+  const response = await fetch(`${config.apiBaseUrl}/finance/collection-campaigns/${id}/archive`, {
+    headers: await apiHeaders(true),
+    method: "PATCH",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to archive collection campaign: ${response.status}`);
+  }
+
+  const payload = (await response.json()) as { data: CollectionCampaign };
+
+  return payload.data;
+}
+
+export async function applyCollectionCampaignCharges(
+  id: string,
+  input: {
+    unitAccountIds: string[];
+    amount: number;
+    description: string;
+  },
+): Promise<{ count: number }> {
+  const response = await fetch(`${config.apiBaseUrl}/finance/collection-campaigns/${id}/charges`, {
+    body: JSON.stringify({
+      unit_account_ids: input.unitAccountIds,
+      amount: input.amount,
+      description: input.description,
+    }),
+    headers: {
+      ...(await apiHeaders(true)),
+      "Content-Type": "application/json",
+    },
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to apply campaign charges: ${response.status}`);
+  }
+
+  const payload = (await response.json()) as { data: { count: number } };
+
+  return payload.data;
+}

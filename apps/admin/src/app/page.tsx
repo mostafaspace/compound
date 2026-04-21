@@ -21,6 +21,7 @@ const navLinks = [
   { href: "/issues", key: "issues" },
   { href: "/announcements", key: "announcements" },
   { href: "/finance", key: "finance" },
+  { href: "/dues", key: "dues" },
   { href: "/onboarding", key: "onboarding" },
   { href: "/audit-logs", key: "auditLogs" },
 ];
