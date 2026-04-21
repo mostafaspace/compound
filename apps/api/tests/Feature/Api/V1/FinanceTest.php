@@ -1,0 +1,219 @@
+<?php
+
+namespace Tests\Feature\Api\V1;
+
+use App\Enums\LedgerEntryType;
+use App\Enums\NotificationCategory;
+use App\Enums\PaymentStatus;
+use App\Enums\UnitRelationType;
+use App\Enums\UserRole;
+use App\Enums\VerificationStatus;
+use App\Models\Finance\LedgerEntry;
+use App\Models\Finance\PaymentSubmission;
+use App\Models\Finance\UnitAccount;
+use App\Models\Property\Building;
+use App\Models\Property\Compound;
+use App\Models\Property\Unit;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Storage;
+use Laravel\Sanctum\Sanctum;
+use Tests\TestCase;
+
+class FinanceTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_finance_reviewer_can_create_account_and_post_ledger_charge(): void
+    {
+        $reviewer = User::factory()->create(['role' => UserRole::FinanceReviewer->value]);
+        $unit = $this->createUnit();
+
+        Sanctum::actingAs($reviewer);
+
+        $accountId = $this->postJson('/api/v1/finance/unit-accounts', [
+            'unitId' => $unit->id,
+            'currency' => 'egp',
+            'openingBalance' => 1200,
+            'description' => 'Initial imported balance',
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.unitId', $unit->id)
+            ->assertJsonPath('data.currency', 'EGP')
+            ->assertJsonPath('data.balance', '1200.00')
+            ->assertJsonPath('data.ledgerEntries.0.type', LedgerEntryType::OpeningBalance->value)
+            ->json('data.id');
+
+        $this->postJson("/api/v1/finance/unit-accounts/{$accountId}/ledger-entries", [
+            'type' => LedgerEntryType::Charge->value,
+            'amount' => 350,
+            'description' => 'Monthly maintenance charge',
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.type', LedgerEntryType::Charge->value)
+            ->assertJsonPath('data.amount', '350.00');
+
+        $this->assertDatabaseHas('unit_accounts', [
+            'id' => $accountId,
+            'balance' => '1550.00',
+        ]);
+        $this->assertDatabaseHas('audit_logs', [
+            'actor_id' => $reviewer->id,
+            'action' => 'finance.unit_account_created',
+        ]);
+        $this->assertDatabaseHas('audit_logs', [
+            'actor_id' => $reviewer->id,
+            'action' => 'finance.ledger_entry_created',
+        ]);
+    }
+
+    public function test_resident_can_view_only_verified_unit_accounts_and_submit_payment(): void
+    {
+        Storage::fake('local');
+        config(['filesystems.default' => 'local']);
+
+        $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+        $ownUnit = $this->createUnit();
+        $otherUnit = $this->createUnit('B-202');
+        $ownAccount = UnitAccount::factory()->for($ownUnit)->create(['balance' => '500.00']);
+        $otherAccount = UnitAccount::factory()->for($otherUnit)->create(['balance' => '700.00']);
+
+        $ownUnit->memberships()->create([
+            'user_id' => $resident->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'verification_status' => VerificationStatus::Verified->value,
+            'is_primary' => true,
+        ]);
+
+        Sanctum::actingAs($resident);
+
+        $this->getJson('/api/v1/my/finance/unit-accounts')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $ownAccount->id);
+
+        $this->post("/api/v1/finance/unit-accounts/{$ownAccount->id}/payment-submissions", [
+            'amount' => 250,
+            'method' => 'bank_transfer',
+            'reference' => 'TRX-100',
+            'notes' => 'Paid from resident bank app.',
+            'proof' => UploadedFile::fake()->create('receipt.pdf', 128, 'application/pdf'),
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.unitAccountId', $ownAccount->id)
+            ->assertJsonPath('data.submittedBy', $resident->id)
+            ->assertJsonPath('data.status', PaymentStatus::Submitted->value)
+            ->assertJsonPath('data.hasProof', true);
+
+        $payment = PaymentSubmission::query()->firstOrFail();
+        $this->assertNotNull($payment->proof_path);
+        Storage::disk('local')->assertExists($payment->proof_path);
+
+        $this->postJson("/api/v1/finance/unit-accounts/{$otherAccount->id}/payment-submissions", [
+            'amount' => 100,
+            'method' => 'bank_transfer',
+        ])->assertForbidden();
+    }
+
+    public function test_reviewer_can_approve_payment_and_create_payment_ledger_entry(): void
+    {
+        $reviewer = User::factory()->create(['role' => UserRole::FinanceReviewer->value]);
+        $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+        $unit = $this->createUnit();
+        $account = UnitAccount::factory()->for($unit)->create(['balance' => '1000.00']);
+        $payment = PaymentSubmission::factory()->for($account)->create([
+            'submitted_by' => $resident->id,
+            'amount' => '400.00',
+            'currency' => 'EGP',
+            'status' => PaymentStatus::Submitted->value,
+        ]);
+
+        Event::fake();
+        Sanctum::actingAs($reviewer);
+
+        $this->patchJson("/api/v1/finance/payment-submissions/{$payment->id}/approve", [
+            'description' => 'Bank transfer matched statement.',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.status', PaymentStatus::Approved->value)
+            ->assertJsonPath('data.reviewedBy', $reviewer->id);
+
+        $this->assertDatabaseHas('unit_accounts', [
+            'id' => $account->id,
+            'balance' => '600.00',
+        ]);
+        $this->assertDatabaseHas('ledger_entries', [
+            'unit_account_id' => $account->id,
+            'type' => LedgerEntryType::Payment->value,
+            'amount' => '-400.00',
+            'reference_id' => $payment->id,
+        ]);
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $resident->id,
+            'category' => NotificationCategory::Finance->value,
+            'title' => 'Payment approved',
+        ]);
+        $this->assertDatabaseHas('audit_logs', [
+            'actor_id' => $reviewer->id,
+            'action' => 'finance.payment_approved',
+        ]);
+    }
+
+    public function test_reviewer_can_reject_payment_with_reason_without_changing_balance(): void
+    {
+        $reviewer = User::factory()->create(['role' => UserRole::FinanceReviewer->value]);
+        $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+        $account = UnitAccount::factory()->for($this->createUnit())->create(['balance' => '1000.00']);
+        $payment = PaymentSubmission::factory()->for($account)->create([
+            'submitted_by' => $resident->id,
+            'amount' => '300.00',
+            'status' => PaymentStatus::Submitted->value,
+        ]);
+
+        Event::fake();
+        Sanctum::actingAs($reviewer);
+
+        $this->patchJson("/api/v1/finance/payment-submissions/{$payment->id}/reject")
+            ->assertUnprocessable();
+
+        $this->patchJson("/api/v1/finance/payment-submissions/{$payment->id}/reject", [
+            'reason' => 'Receipt is unreadable.',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.status', PaymentStatus::Rejected->value)
+            ->assertJsonPath('data.rejectionReason', 'Receipt is unreadable.');
+
+        $this->assertDatabaseHas('unit_accounts', [
+            'id' => $account->id,
+            'balance' => '1000.00',
+        ]);
+        $this->assertSame(0, LedgerEntry::query()->count());
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $resident->id,
+            'category' => NotificationCategory::Finance->value,
+            'title' => 'Payment rejected',
+        ]);
+    }
+
+    public function test_resident_cannot_use_admin_finance_routes(): void
+    {
+        $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+        Sanctum::actingAs($resident);
+
+        $this->getJson('/api/v1/finance/unit-accounts')->assertForbidden();
+        $this->getJson('/api/v1/finance/payment-submissions')->assertForbidden();
+    }
+
+    private function createUnit(string $unitNumber = 'A-101'): Unit
+    {
+        $compound = Compound::factory()->create();
+        $building = Building::factory()->for($compound)->create();
+
+        return Unit::factory()
+            ->for($compound)
+            ->for($building)
+            ->create(['floor_id' => null, 'unit_number' => $unitNumber]);
+    }
+}

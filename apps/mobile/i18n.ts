@@ -32,7 +32,7 @@ const resources = {
       },
       Theme: {
         light: "الوضع الفاتح",
-        dark: "الوضع المظلم",
+        dark: "الوضع الداكن",
         system: "تلقائي",
       },
     },
@@ -40,7 +40,6 @@ const resources = {
 };
 
 i18n.use(initReactI18next).init({
-  compatibilityJSON: "v3",
   resources,
   lng: I18nManager.isRTL ? "ar" : "en",
   fallbackLng: "en",

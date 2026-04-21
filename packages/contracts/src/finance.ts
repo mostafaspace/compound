@@ -27,3 +27,67 @@ export interface MoneyAmount {
   amount: string;
   currency: "EGP" | "USD" | "EUR" | string;
 }
+
+export interface UnitAccount {
+  id: string;
+  unitId: string;
+  balance: string;
+  currency: string;
+  ledgerEntries?: LedgerEntry[];
+  paymentSubmissions?: PaymentSubmission[];
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+export interface LedgerEntry {
+  id: number;
+  unitAccountId: string;
+  type: LedgerEntryType;
+  amount: string;
+  description: string | null;
+  referenceType: string | null;
+  referenceId: string | null;
+  createdBy: number | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+export interface PaymentSubmission {
+  id: string;
+  unitAccountId: string;
+  submittedBy: number | null;
+  amount: string;
+  currency: string;
+  method: string;
+  reference: string | null;
+  hasProof: boolean;
+  status: PaymentStatus;
+  notes: string | null;
+  metadata: Record<string, unknown>;
+  reviewedBy: number | null;
+  reviewedAt: string | null;
+  rejectionReason: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+export interface CreateUnitAccountInput {
+  unitId: string;
+  currency?: string;
+  openingBalance?: number;
+  description?: string;
+}
+
+export interface CreateLedgerEntryInput {
+  type: Exclude<LedgerEntryType, "payment">;
+  amount: number;
+  description: string;
+}
+
+export interface CreatePaymentSubmissionInput {
+  amount: number;
+  currency?: string;
+  method: string;
+  reference?: string;
+  notes?: string;
+}

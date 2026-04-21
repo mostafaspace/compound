@@ -6,6 +6,8 @@ use App\Http\Controllers\Api\V1\BuildingController;
 use App\Http\Controllers\Api\V1\CompoundController;
 use App\Http\Controllers\Api\V1\DocumentTypeController;
 use App\Http\Controllers\Api\V1\FloorController;
+use App\Http\Controllers\Api\V1\Finance\PaymentSubmissionController;
+use App\Http\Controllers\Api\V1\Finance\UnitAccountController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\NotificationPreferenceController;
 use App\Http\Controllers\Api\V1\OrgChartController;
@@ -63,6 +65,12 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::middleware('role:resident_owner,resident_tenant')
             ->get('/my/verification-requests', [VerificationRequestController::class, 'mine'])
             ->name('my.verification-requests.index');
+        Route::middleware('role:resident_owner,resident_tenant')->group(function (): void {
+            Route::get('/my/finance/unit-accounts', [UnitAccountController::class, 'mine'])
+                ->name('my.finance.unit-accounts.index');
+            Route::get('/my/finance/payment-submissions', [PaymentSubmissionController::class, 'mine'])
+                ->name('my.finance.payment-submissions.index');
+        });
 
         // Issue Management for residents
         Route::get('/my/issues', [IssueController::class, 'myIssues'])->name('my.issues.index');
@@ -98,7 +106,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             ->name('units.responsible-party');
     });
 
-    Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,board_member,finance_reviewer,support_agent'])
+        Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,board_member,finance_reviewer,support_agent'])
         ->group(function (): void {
             Route::apiResource('compounds', CompoundController::class)->except(['destroy']);
             Route::apiResource('compounds.buildings', BuildingController::class)->shallow()->except(['destroy']);
@@ -151,4 +159,25 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             Route::patch('/issues/{issue}', [IssueController::class, 'update'])->name('issues.update');
             Route::put('/issues/{issue}', [IssueController::class, 'update'])->name('issues.update');
         });
+
+    Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,board_member,finance_reviewer'])
+        ->prefix('finance')
+        ->name('finance.')
+        ->group(function (): void {
+            Route::get('/unit-accounts', [UnitAccountController::class, 'index'])->name('unit-accounts.index');
+            Route::post('/unit-accounts', [UnitAccountController::class, 'store'])->name('unit-accounts.store');
+            Route::get('/unit-accounts/{unitAccount}', [UnitAccountController::class, 'show'])->name('unit-accounts.show');
+            Route::post('/unit-accounts/{unitAccount}/ledger-entries', [UnitAccountController::class, 'storeLedgerEntry'])
+                ->name('unit-accounts.ledger-entries.store');
+            Route::get('/payment-submissions', [PaymentSubmissionController::class, 'index'])
+                ->name('payment-submissions.index');
+            Route::patch('/payment-submissions/{paymentSubmission}/approve', [PaymentSubmissionController::class, 'approve'])
+                ->name('payment-submissions.approve');
+            Route::patch('/payment-submissions/{paymentSubmission}/reject', [PaymentSubmissionController::class, 'reject'])
+                ->name('payment-submissions.reject');
+        });
+
+    Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,board_member,finance_reviewer,support_agent,resident_owner,resident_tenant'])
+        ->post('/finance/unit-accounts/{unitAccount}/payment-submissions', [UnitAccountController::class, 'submitPayment'])
+        ->name('finance.unit-accounts.payment-submissions.store');
 });

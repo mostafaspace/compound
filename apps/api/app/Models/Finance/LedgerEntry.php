@@ -2,6 +2,7 @@
 
 namespace App\Models\Finance;
 
+use App\Enums\LedgerEntryType;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -26,6 +27,7 @@ class LedgerEntry extends Model
     {
         return [
             'amount' => 'decimal:2',
+            'type' => LedgerEntryType::class,
         ];
     }
 
