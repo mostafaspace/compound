@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\AuditLogController;
+use App\Http\Controllers\Api\V1\AnnouncementController;
 use App\Http\Controllers\Api\V1\BuildingController;
 use App\Http\Controllers\Api\V1\CompoundController;
 use App\Http\Controllers\Api\V1\DocumentTypeController;
@@ -78,6 +79,10 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::get('/my/issues', [IssueController::class, 'myIssues'])->name('my.issues.index');
         Route::post('/issues', [IssueController::class, 'store'])->name('issues.store');
         Route::post('/issues/{issue}/comments', [IssueCommentController::class, 'store'])->name('issues.comments.store');
+        Route::get('/my/announcements', [AnnouncementController::class, 'feed'])->name('my.announcements.index');
+        Route::get('/announcements/{announcement}', [AnnouncementController::class, 'show'])->name('announcements.show');
+        Route::post('/announcements/{announcement}/acknowledge', [AnnouncementController::class, 'acknowledge'])
+            ->name('announcements.acknowledge');
 
         Route::middleware('role:super_admin,compound_admin,security_guard,support_agent,resident_owner,resident_tenant')
             ->group(function (): void {
@@ -163,6 +168,17 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             Route::get('/issues/{issue}', [IssueController::class, 'show'])->name('issues.show');
             Route::patch('/issues/{issue}', [IssueController::class, 'update'])->name('issues.update');
             Route::put('/issues/{issue}', [IssueController::class, 'update'])->name('issues.update');
+
+            // Official announcements and notices
+            Route::get('/announcements', [AnnouncementController::class, 'index'])->name('announcements.index');
+            Route::post('/announcements', [AnnouncementController::class, 'store'])->name('announcements.store');
+            Route::patch('/announcements/{announcement}', [AnnouncementController::class, 'update'])->name('announcements.update');
+            Route::post('/announcements/{announcement}/publish', [AnnouncementController::class, 'publish'])
+                ->name('announcements.publish');
+            Route::post('/announcements/{announcement}/archive', [AnnouncementController::class, 'archive'])
+                ->name('announcements.archive');
+            Route::get('/announcements/{announcement}/acknowledgements', [AnnouncementController::class, 'acknowledgements'])
+                ->name('announcements.acknowledgements');
         });
 
     Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,board_member,finance_reviewer'])
