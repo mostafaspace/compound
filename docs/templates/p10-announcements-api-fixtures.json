@@ -1,0 +1,128 @@
+{
+  "purpose": "Sample request bodies for CM-48 P10 announcements manual QA. Replace placeholder IDs before use.",
+  "placeholders": {
+    "compoundId": "01JEXAMPLECOMPOUND000001",
+    "buildingAId": "01JEXAMPLEBUILDINGA00001",
+    "buildingBId": "01JEXAMPLEBUILDINGB00001",
+    "floorAId": "01JEXAMPLEFLOORA0000001",
+    "unitA101Id": "01JEXAMPLEUNITA10100001",
+    "futureScheduledAt": "2026-04-22T09:00:00+02:00",
+    "futureExpiresAt": "2026-04-23T18:00:00+02:00",
+    "pastExpiresAt": "2026-04-20T18:00:00+02:00"
+  },
+  "announcements": [
+    {
+      "fixtureName": "building-maintenance-requires-acknowledgement",
+      "expectedAudience": "Residents with active verified membership in Building A only.",
+      "createEndpoint": "POST /api/v1/announcements",
+      "publishEndpoint": "POST /api/v1/announcements/{announcement}/publish",
+      "body": {
+        "titleEn": "Water maintenance in Building A",
+        "titleAr": "صيانة المياه في مبنى أ",
+        "bodyEn": "Water service in Building A will be interrupted on Wednesday from 10:00 AM to 1:00 PM. Please store enough water before the maintenance window.",
+        "bodyAr": "سيتم قطع خدمة المياه في مبنى أ يوم الأربعاء من الساعة 10:00 صباحا حتى 1:00 ظهرا. يرجى تخزين كمية كافية من المياه قبل موعد الصيانة.",
+        "category": "maintenance_notice",
+        "priority": "high",
+        "targetType": "building",
+        "targetIds": [
+          "01JEXAMPLEBUILDINGA00001"
+        ],
+        "requiresVerifiedMembership": true,
+        "requiresAcknowledgement": true,
+        "attachments": [
+          {
+            "name": "maintenance-window.pdf",
+            "labelEn": "Maintenance window details",
+            "labelAr": "تفاصيل موعد الصيانة",
+            "url": "s3://compound-qa/announcements/maintenance-window.pdf"
+          }
+        ]
+      }
+    },
+    {
+      "fixtureName": "security-role-targeted-critical",
+      "expectedAudience": "Security guards only.",
+      "createEndpoint": "POST /api/v1/announcements",
+      "publishEndpoint": "POST /api/v1/announcements/{announcement}/publish",
+      "body": {
+        "titleEn": "Gate protocol update",
+        "titleAr": "تحديث إجراءات البوابة",
+        "bodyEn": "Starting tonight, all delivery vehicles must be verified against the visitor request before entry. Escalate unmatched passes to the security supervisor.",
+        "bodyAr": "اعتبارا من الليلة، يجب التحقق من جميع سيارات التوصيل من خلال طلب الزيارة قبل السماح بالدخول. يرجى تصعيد التصاريح غير المطابقة إلى مشرف الأمن.",
+        "category": "security_alert",
+        "priority": "critical",
+        "targetType": "role",
+        "targetRole": "security_guard",
+        "requiresAcknowledgement": true
+      }
+    },
+    {
+      "fixtureName": "scheduled-meeting-reminder",
+      "expectedAudience": "All users with active verified membership, hidden before scheduledAt.",
+      "createEndpoint": "POST /api/v1/announcements",
+      "publishEndpoint": "POST /api/v1/announcements/{announcement}/publish",
+      "body": {
+        "titleEn": "Owners association meeting reminder",
+        "titleAr": "تذكير باجتماع اتحاد الملاك",
+        "bodyEn": "The owners association meeting will be held tomorrow at 7:00 PM in the clubhouse meeting room.",
+        "bodyAr": "سيعقد اجتماع اتحاد الملاك غدا في الساعة 7:00 مساء في قاعة الاجتماعات بالنادي.",
+        "category": "meeting_reminder",
+        "priority": "normal",
+        "targetType": "all",
+        "requiresVerifiedMembership": true,
+        "requiresAcknowledgement": false,
+        "scheduledAt": "2026-04-22T09:00:00+02:00",
+        "expiresAt": "2026-04-23T18:00:00+02:00"
+      }
+    },
+    {
+      "fixtureName": "unit-specific-association-decision",
+      "expectedAudience": "Users attached to Unit A-101 only.",
+      "createEndpoint": "POST /api/v1/announcements",
+      "publishEndpoint": "POST /api/v1/announcements/{announcement}/publish",
+      "body": {
+        "titleEn": "Association decision for Unit A-101",
+        "titleAr": "قرار اتحاد خاص بالوحدة أ-101",
+        "bodyEn": "The association has approved the maintenance request related to Unit A-101. Please acknowledge receipt of this official notice.",
+        "bodyAr": "وافق الاتحاد على طلب الصيانة المتعلق بالوحدة أ-101. يرجى تأكيد الاطلاع على هذا الإشعار الرسمي.",
+        "category": "association_decision",
+        "priority": "high",
+        "targetType": "unit",
+        "targetIds": [
+          "01JEXAMPLEUNITA10100001"
+        ],
+        "requiresVerifiedMembership": true,
+        "requiresAcknowledgement": true
+      }
+    },
+    {
+      "fixtureName": "floor-general-notice-with-expiry",
+      "expectedAudience": "Residents on Floor A only until expiresAt, then admin archive/list only.",
+      "createEndpoint": "POST /api/v1/announcements",
+      "publishEndpoint": "POST /api/v1/announcements/{announcement}/publish",
+      "body": {
+        "titleEn": "Corridor cleaning schedule",
+        "titleAr": "جدول تنظيف الممر",
+        "bodyEn": "The corridor on your floor will be cleaned today between 4:00 PM and 5:00 PM.",
+        "bodyAr": "سيتم تنظيف الممر في طابقكم اليوم بين الساعة 4:00 مساء و5:00 مساء.",
+        "category": "building",
+        "priority": "low",
+        "targetType": "floor",
+        "targetIds": [
+          "01JEXAMPLEFLOORA0000001"
+        ],
+        "requiresVerifiedMembership": true,
+        "requiresAcknowledgement": false,
+        "expiresAt": "2026-04-20T18:00:00+02:00"
+      }
+    }
+  ],
+  "manualAssertions": [
+    "Create each fixture as an admin, then publish it unless the test requires draft-only behavior.",
+    "Check GET /api/v1/my/announcements as every target and non-target test user.",
+    "Check GET /api/v1/notifications and unread count for targeted users after immediate publish.",
+    "Check POST /api/v1/announcements/{announcement}/acknowledge only for fixtures with requiresAcknowledgement=true.",
+    "Check GET /api/v1/announcements/{announcement}/acknowledgements as admin after acknowledgements.",
+    "Archive at least one published fixture and confirm it leaves resident feed but remains visible to admins."
+  ]
+}

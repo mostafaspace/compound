@@ -10,6 +10,7 @@
     "onboarding": "Onboarding",
     "auditLogs": "Audit logs",
     "visitors": "Visitors",
+    "announcements": "Announcements",
     "signOut": "Sign Out"
   },
   "Language": {
@@ -300,6 +301,136 @@
       "rejected": "Rejected",
       "allocated": "Allocated",
       "refunded": "Refunded"
+    }
+  },
+  "Announcements": {
+    "back": "Dashboard",
+    "title": "Announcements",
+    "subtitle": "Publish official English and Arabic notices with targeting, archive control, and acknowledgement tracking.",
+    "actions": {
+      "new": "New announcement",
+      "edit": "Edit",
+      "publish": "Publish",
+      "archive": "Archive",
+      "acknowledgements": "Acknowledgements"
+    },
+    "messages": {
+      "created": "Announcement draft created.",
+      "updated": "Announcement updated.",
+      "published": "Announcement published or scheduled.",
+      "archived": "Announcement archived."
+    },
+    "metrics": {
+      "total": "Loaded notices",
+      "published": "Published",
+      "scheduled": "Scheduled",
+      "archived": "Archived"
+    },
+    "filters": {
+      "all": "All",
+      "search": "Search",
+      "status": "Status",
+      "category": "Category",
+      "targetType": "Target type",
+      "targetId": "Building, floor, or unit ID",
+      "authorId": "Author ID",
+      "from": "From",
+      "to": "To",
+      "apply": "Apply filters",
+      "archive": "Archive view",
+      "clear": "Clear"
+    },
+    "composer": {
+      "newTitle": "Create notice",
+      "editTitle": "Edit notice",
+      "create": "Create draft",
+      "update": "Save changes",
+      "cancel": "Cancel edit",
+      "revision": "Revision {revision}"
+    },
+    "list": {
+      "title": "Notice register",
+      "subtitle": "Official records shown with lifecycle, targeting, and acknowledgement state.",
+      "empty": "No announcements match the selected filters.",
+      "revision": "Revision {revision}",
+      "targetIds": "{count, plural, one {# target ID} other {# target IDs}}",
+      "noTargetIds": "No explicit IDs"
+    },
+    "fields": {
+      "notice": "Notice",
+      "titleEn": "English title",
+      "titleAr": "Arabic title",
+      "bodyEn": "English body",
+      "bodyAr": "Arabic body",
+      "category": "Category",
+      "priority": "Priority",
+      "target": "Target",
+      "targetType": "Target type",
+      "targetIds": "Target IDs, comma separated",
+      "targetRole": "Target role",
+      "noRole": "No role",
+      "status": "Status",
+      "actions": "Actions",
+      "dates": "Dates",
+      "publishedAt": "Published",
+      "scheduledAt": "Scheduled",
+      "expiresAt": "Expires",
+      "archivedAt": "Archived",
+      "acknowledgements": "Acknowledgements",
+      "requiresVerifiedMembership": "Require verified membership",
+      "requiresAcknowledgement": "Require acknowledgement",
+      "attachmentName": "Attachment name",
+      "attachmentUrl": "Attachment URL"
+    },
+    "statuses": {
+      "draft": "Draft",
+      "scheduled": "Scheduled",
+      "published": "Published",
+      "expired": "Expired",
+      "archived": "Archived"
+    },
+    "categories": {
+      "general": "General",
+      "building": "Building notice",
+      "association_decision": "Association decision",
+      "security_alert": "Security alert",
+      "maintenance_notice": "Maintenance notice",
+      "meeting_reminder": "Meeting reminder"
+    },
+    "priorities": {
+      "low": "Low",
+      "normal": "Normal",
+      "high": "High",
+      "critical": "Critical"
+    },
+    "targetTypes": {
+      "all": "All residents and staff",
+      "compound": "Compound",
+      "building": "Building",
+      "floor": "Floor",
+      "unit": "Unit",
+      "role": "Role"
+    },
+    "roles": {
+      "super_admin": "Super admin",
+      "compound_admin": "Compound admin",
+      "board_member": "Board member",
+      "finance_reviewer": "Finance reviewer",
+      "security_guard": "Security guard",
+      "resident_owner": "Resident owner",
+      "resident_tenant": "Resident tenant",
+      "support_agent": "Support agent"
+    },
+    "acknowledgements": {
+      "title": "Acknowledgement details",
+      "summary": "{acknowledged} acknowledged, {pending} pending, {targeted} targeted",
+      "counts": "{acknowledged} / {targeted}",
+      "pending": "{count, plural, =0 {No pending acknowledgements} one {# pending} other {# pending}}",
+      "notRequired": "Not required",
+      "pendingSummary": "Waiting for summary",
+      "close": "Close",
+      "empty": "No acknowledgements have been recorded yet.",
+      "unknownUser": "Unknown user"
     }
   }
 }

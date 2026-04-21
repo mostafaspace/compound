@@ -10,6 +10,7 @@
     "onboarding": "التسجيل والتحقق",
     "auditLogs": "سجل التدقيق",
     "visitors": "الزوار",
+    "announcements": "الإعلانات",
     "signOut": "تسجيل الخروج"
   },
   "Language": {
@@ -300,6 +301,136 @@
       "rejected": "مرفوض",
       "allocated": "مخصص",
       "refunded": "مسترد"
+    }
+  },
+  "Announcements": {
+    "back": "لوحة القيادة",
+    "title": "الإعلانات",
+    "subtitle": "انشر الإشعارات الرسمية بالعربية والإنجليزية مع الاستهداف والأرشفة وتتبع الإقرارات.",
+    "actions": {
+      "new": "إعلان جديد",
+      "edit": "تعديل",
+      "publish": "نشر",
+      "archive": "أرشفة",
+      "acknowledgements": "الإقرارات"
+    },
+    "messages": {
+      "created": "تم إنشاء مسودة الإعلان.",
+      "updated": "تم تحديث الإعلان.",
+      "published": "تم نشر الإعلان أو جدولته.",
+      "archived": "تمت أرشفة الإعلان."
+    },
+    "metrics": {
+      "total": "الإعلانات المحملة",
+      "published": "منشور",
+      "scheduled": "مجدول",
+      "archived": "مؤرشف"
+    },
+    "filters": {
+      "all": "الكل",
+      "search": "بحث",
+      "status": "الحالة",
+      "category": "الفئة",
+      "targetType": "نوع الاستهداف",
+      "targetId": "معرف المبنى أو الطابق أو الوحدة",
+      "authorId": "معرف الكاتب",
+      "from": "من",
+      "to": "إلى",
+      "apply": "تطبيق الفلاتر",
+      "archive": "عرض الأرشيف",
+      "clear": "مسح"
+    },
+    "composer": {
+      "newTitle": "إنشاء إشعار",
+      "editTitle": "تعديل إشعار",
+      "create": "إنشاء مسودة",
+      "update": "حفظ التغييرات",
+      "cancel": "إلغاء التعديل",
+      "revision": "المراجعة {revision}"
+    },
+    "list": {
+      "title": "سجل الإشعارات",
+      "subtitle": "سجلات رسمية موضحة حسب دورة الحياة والاستهداف وحالة الإقرار.",
+      "empty": "لا توجد إعلانات تطابق الفلاتر المحددة.",
+      "revision": "المراجعة {revision}",
+      "targetIds": "{count, plural, zero {لا توجد معرفات} one {معرف واحد} two {معرفان} few {# معرفات} many {# معرفا} other {# معرف}}",
+      "noTargetIds": "لا توجد معرفات محددة"
+    },
+    "fields": {
+      "notice": "الإشعار",
+      "titleEn": "العنوان بالإنجليزية",
+      "titleAr": "العنوان بالعربية",
+      "bodyEn": "النص بالإنجليزية",
+      "bodyAr": "النص بالعربية",
+      "category": "الفئة",
+      "priority": "الأولوية",
+      "target": "الاستهداف",
+      "targetType": "نوع الاستهداف",
+      "targetIds": "معرفات الاستهداف مفصولة بفواصل",
+      "targetRole": "الدور المستهدف",
+      "noRole": "لا يوجد دور",
+      "status": "الحالة",
+      "actions": "الإجراءات",
+      "dates": "التواريخ",
+      "publishedAt": "النشر",
+      "scheduledAt": "الجدولة",
+      "expiresAt": "الانتهاء",
+      "archivedAt": "الأرشفة",
+      "acknowledgements": "الإقرارات",
+      "requiresVerifiedMembership": "يتطلب عضوية موثقة",
+      "requiresAcknowledgement": "يتطلب إقرارا بالاطلاع",
+      "attachmentName": "اسم المرفق",
+      "attachmentUrl": "رابط المرفق"
+    },
+    "statuses": {
+      "draft": "مسودة",
+      "scheduled": "مجدول",
+      "published": "منشور",
+      "expired": "منتهي",
+      "archived": "مؤرشف"
+    },
+    "categories": {
+      "general": "عام",
+      "building": "إشعار مبنى",
+      "association_decision": "قرار اتحاد",
+      "security_alert": "تنبيه أمني",
+      "maintenance_notice": "إشعار صيانة",
+      "meeting_reminder": "تذكير اجتماع"
+    },
+    "priorities": {
+      "low": "منخفضة",
+      "normal": "عادية",
+      "high": "مرتفعة",
+      "critical": "حرجة"
+    },
+    "targetTypes": {
+      "all": "كل السكان والموظفين",
+      "compound": "المجمع",
+      "building": "المبنى",
+      "floor": "الطابق",
+      "unit": "الوحدة",
+      "role": "الدور"
+    },
+    "roles": {
+      "super_admin": "مدير عام",
+      "compound_admin": "مدير المجمع",
+      "board_member": "عضو مجلس",
+      "finance_reviewer": "مراجع مالي",
+      "security_guard": "فرد أمن",
+      "resident_owner": "مالك مقيم",
+      "resident_tenant": "مستأجر مقيم",
+      "support_agent": "فريق الدعم"
+    },
+    "acknowledgements": {
+      "title": "تفاصيل الإقرارات",
+      "summary": "{acknowledged} أقروا، {pending} بانتظار الإقرار، {targeted} مستهدفون",
+      "counts": "{acknowledged} / {targeted}",
+      "pending": "{count, plural, zero {لا توجد إقرارات معلقة} one {إقرار واحد معلق} two {إقراران معلقان} few {# إقرارات معلقة} many {# إقرارا معلقا} other {# إقرار معلق}}",
+      "notRequired": "غير مطلوب",
+      "pendingSummary": "بانتظار الملخص",
+      "close": "إغلاق",
+      "empty": "لم يتم تسجيل أي إقرارات بعد.",
+      "unknownUser": "مستخدم غير معروف"
     }
   }
 }

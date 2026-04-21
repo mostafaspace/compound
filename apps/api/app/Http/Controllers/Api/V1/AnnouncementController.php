@@ -64,12 +64,19 @@ class AnnouncementController extends Controller
                 ->whereJsonContains('target_ids', $request->input('buildingId'));
         }
 
-        if ($request->filled('publishedFrom')) {
-            $query->where('published_at', '>=', $request->date('publishedFrom'));
+        if ($request->filled('targetId')) {
+            $query->whereJsonContains('target_ids', $request->input('targetId'));
         }
 
-        if ($request->filled('publishedTo')) {
-            $query->where('published_at', '<=', $request->date('publishedTo'));
+        $publishedFrom = $request->filled('publishedFrom') ? 'publishedFrom' : ($request->filled('from') ? 'from' : null);
+        $publishedTo = $request->filled('publishedTo') ? 'publishedTo' : ($request->filled('to') ? 'to' : null);
+
+        if ($publishedFrom !== null) {
+            $query->where('published_at', '>=', $request->date($publishedFrom));
+        }
+
+        if ($publishedTo !== null) {
+            $query->where('published_at', '<=', $request->date($publishedTo));
         }
 
         if ($request->filled('archivedFrom')) {

@@ -2,12 +2,17 @@ import "server-only";
 
 import type {
   ApiEnvelope,
+  Announcement,
+  AnnouncementAcknowledgement,
+  AnnouncementAcknowledgementSummary,
+  AnnouncementFilters,
   AuditLogEntry,
   AuditLogFilters,
   BuildingDetail,
   BuildingSummary,
   CompoundDetail,
   AuthenticatedUser,
+  CreateAnnouncementInput,
   CreateResidentInvitationInput,
   CompoundSummary,
   CreateBuildingInput,
@@ -37,6 +42,7 @@ import type {
   UnitAccount,
   UnitSummary,
   UpdateBuildingInput,
+  UpdateAnnouncementInput,
   UpdateCompoundInput,
   UpdateFloorInput,
   UpdateIssueInput,
@@ -349,6 +355,174 @@ export async function updateNotificationPreferences(
   const payload = (await response.json()) as ApiEnvelope<NotificationPreference>;
 
   return payload.data;
+}
+
+export async function getAnnouncements(input: AnnouncementFilters = {}): Promise<Announcement[]> {
+  try {
+    const params = new URLSearchParams();
+
+    if (input.status && input.status !== "all") {
+      params.set("status", input.status);
+    }
+
+    if (input.category && input.category !== "all") {
+      params.set("category", input.category);
+    }
+
+    if (input.targetType && input.targetType !== "all") {
+      params.set("targetType", input.targetType);
+    }
+
+    if (input.targetId?.trim()) {
+      params.set("targetId", input.targetId.trim());
+    }
+
+    if (input.authorId) {
+      params.set("authorId", String(input.authorId));
+    }
+
+    if (input.from) {
+      params.set("from", input.from);
+    }
+
+    if (input.to) {
+      params.set("to", input.to);
+    }
+
+    if (input.search?.trim()) {
+      params.set("search", input.search.trim());
+    }
+
+    if (input.perPage) {
+      params.set("perPage", String(input.perPage));
+    }
+
+    const query = params.toString();
+    const response = await fetch(`${config.apiBaseUrl}/announcements${query ? `?${query}` : ""}`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const payload = (await response.json()) as PaginatedEnvelope<Announcement>;
+
+    return payload.data;
+  } catch {
+    return [];
+  }
+}
+
+export async function getAnnouncement(announcementId: string): Promise<Announcement | null> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/announcements/${announcementId}`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const payload = (await response.json()) as ApiEnvelope<Announcement>;
+
+    return payload.data;
+  } catch {
+    return null;
+  }
+}
+
+export async function createAnnouncement(input: CreateAnnouncementInput): Promise<Announcement> {
+  const response = await fetch(`${config.apiBaseUrl}/announcements`, {
+    body: JSON.stringify(input),
+    headers: {
+      ...(await apiHeaders(true)),
+      "Content-Type": "application/json",
+    },
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to create announcement: ${response.status}`);
+  }
+
+  const payload = (await response.json()) as ApiEnvelope<Announcement>;
+
+  return payload.data;
+}
+
+export async function updateAnnouncement(announcementId: string, input: UpdateAnnouncementInput): Promise<Announcement> {
+  const response = await fetch(`${config.apiBaseUrl}/announcements/${announcementId}`, {
+    body: JSON.stringify(input),
+    headers: {
+      ...(await apiHeaders(true)),
+      "Content-Type": "application/json",
+    },
+    method: "PATCH",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to update announcement: ${response.status}`);
+  }
+
+  const payload = (await response.json()) as ApiEnvelope<Announcement>;
+
+  return payload.data;
+}
+
+export async function publishAnnouncement(announcementId: string): Promise<Announcement> {
+  const response = await fetch(`${config.apiBaseUrl}/announcements/${announcementId}/publish`, {
+    headers: await apiHeaders(true),
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to publish announcement: ${response.status}`);
+  }
+
+  const payload = (await response.json()) as ApiEnvelope<Announcement>;
+
+  return payload.data;
+}
+
+export async function archiveAnnouncement(announcementId: string): Promise<Announcement> {
+  const response = await fetch(`${config.apiBaseUrl}/announcements/${announcementId}/archive`, {
+    headers: await apiHeaders(true),
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to archive announcement: ${response.status}`);
+  }
+
+  const payload = (await response.json()) as ApiEnvelope<Announcement>;
+
+  return payload.data;
+}
+
+export async function getAnnouncementAcknowledgements(announcementId: string): Promise<{
+  summary: AnnouncementAcknowledgementSummary;
+  data: AnnouncementAcknowledgement[];
+} | null> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/announcements/${announcementId}/acknowledgements`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    return (await response.json()) as {
+      summary: AnnouncementAcknowledgementSummary;
+      data: AnnouncementAcknowledgement[];
+    };
+  } catch {
+    return null;
+  }
 }
 
 export async function getFinanceUnitAccounts(input: { unitId?: string } = {}): Promise<UnitAccount[]> {
