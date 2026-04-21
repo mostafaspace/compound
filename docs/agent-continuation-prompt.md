@@ -22,7 +22,6 @@ Tech stack:
 - Monorepo: apps/api, apps/admin, apps/mobile, packages/*
 
 Local Docker environment:
-- Do not move the project back to XAMPP. Docker is the expected local runtime now.
 - Start stack: docker compose -f infra/docker-compose.yml up -d --build
 - API: http://localhost:8000
 - Admin web in Docker: http://localhost:3001
