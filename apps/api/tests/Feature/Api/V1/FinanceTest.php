@@ -206,6 +206,229 @@ class FinanceTest extends TestCase
         $this->getJson('/api/v1/finance/payment-submissions')->assertForbidden();
     }
 
+    public function test_account_created_without_opening_balance_has_zero_balance(): void
+    {
+        $reviewer = User::factory()->create(['role' => UserRole::FinanceReviewer->value]);
+        $unit = $this->createUnit();
+        Sanctum::actingAs($reviewer);
+
+        $this->postJson('/api/v1/finance/unit-accounts', ['unitId' => $unit->id])
+            ->assertCreated()
+            ->assertJsonPath('data.balance', '0.00')
+            ->assertJsonPath('data.ledgerEntries', []);
+    }
+
+    public function test_multiple_ledger_entry_types_correctly_update_balance(): void
+    {
+        $reviewer = User::factory()->create(['role' => UserRole::FinanceReviewer->value]);
+        $account = UnitAccount::factory()->for($this->createUnit())->create(['balance' => '0.00']);
+        Sanctum::actingAs($reviewer);
+
+        $base = "/api/v1/finance/unit-accounts/{$account->id}/ledger-entries";
+
+        $this->postJson($base, ['type' => LedgerEntryType::Charge->value, 'amount' => 500, 'description' => 'Maintenance'])
+            ->assertCreated();
+        $this->postJson($base, ['type' => LedgerEntryType::Penalty->value, 'amount' => 100, 'description' => 'Late fee'])
+            ->assertCreated();
+        $this->postJson($base, ['type' => LedgerEntryType::Adjustment->value, 'amount' => -200, 'description' => 'Correction'])
+            ->assertCreated();
+        $this->postJson($base, ['type' => LedgerEntryType::Refund->value, 'amount' => -50, 'description' => 'Overpayment'])
+            ->assertCreated();
+
+        $this->assertDatabaseHas('unit_accounts', ['id' => $account->id, 'balance' => '350.00']);
+        $this->assertSame(4, LedgerEntry::query()->where('unit_account_id', $account->id)->count());
+    }
+
+    public function test_ledger_entry_rejects_payment_type_and_zero_amount(): void
+    {
+        $reviewer = User::factory()->create(['role' => UserRole::FinanceReviewer->value]);
+        $account = UnitAccount::factory()->for($this->createUnit())->create();
+        Sanctum::actingAs($reviewer);
+
+        $base = "/api/v1/finance/unit-accounts/{$account->id}/ledger-entries";
+
+        $this->postJson($base, ['type' => LedgerEntryType::Payment->value, 'amount' => 100, 'description' => 'Direct pay'])
+            ->assertUnprocessable();
+
+        $this->postJson($base, ['type' => LedgerEntryType::Charge->value, 'amount' => 0, 'description' => 'Zero'])
+            ->assertUnprocessable();
+    }
+
+    public function test_cannot_create_duplicate_account_for_same_unit(): void
+    {
+        $reviewer = User::factory()->create(['role' => UserRole::FinanceReviewer->value]);
+        $unit = $this->createUnit();
+        UnitAccount::factory()->for($unit)->create();
+        Sanctum::actingAs($reviewer);
+
+        $this->postJson('/api/v1/finance/unit-accounts', ['unitId' => $unit->id])
+            ->assertUnprocessable();
+    }
+
+    public function test_unit_account_index_supports_unit_id_filter(): void
+    {
+        $reviewer = User::factory()->create(['role' => UserRole::FinanceReviewer->value]);
+        $unit1 = $this->createUnit('A-101');
+        $unit2 = $this->createUnit('B-202');
+        $account1 = UnitAccount::factory()->for($unit1)->create();
+        UnitAccount::factory()->for($unit2)->create();
+        Sanctum::actingAs($reviewer);
+
+        $this->getJson("/api/v1/finance/unit-accounts?unitId={$unit1->id}")
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $account1->id);
+    }
+
+    public function test_admin_can_view_account_detail_with_ledger_entries(): void
+    {
+        $reviewer = User::factory()->create(['role' => UserRole::FinanceReviewer->value]);
+        $account = UnitAccount::factory()->for($this->createUnit('A-201'))->create(['balance' => '750.00']);
+
+        LedgerEntry::query()->create([
+            'unit_account_id' => $account->id,
+            'type' => LedgerEntryType::Charge->value,
+            'amount' => '750.00',
+            'description' => 'Annual fee',
+            'created_by' => $reviewer->id,
+        ]);
+
+        Sanctum::actingAs($reviewer);
+
+        $this->getJson("/api/v1/finance/unit-accounts/{$account->id}")
+            ->assertOk()
+            ->assertJsonPath('data.id', $account->id)
+            ->assertJsonPath('data.balance', '750.00')
+            ->assertJsonCount(1, 'data.ledgerEntries');
+
+        $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+        Sanctum::actingAs($resident);
+
+        $this->getJson("/api/v1/finance/unit-accounts/{$account->id}")
+            ->assertForbidden();
+    }
+
+    public function test_cannot_approve_or_reject_already_reviewed_payment(): void
+    {
+        $reviewer = User::factory()->create(['role' => UserRole::FinanceReviewer->value]);
+        $account = UnitAccount::factory()->for($this->createUnit())->create(['balance' => '800.00']);
+        $payment = PaymentSubmission::factory()->for($account)->create([
+            'amount' => '200.00',
+            'status' => PaymentStatus::Submitted->value,
+        ]);
+
+        Event::fake();
+        Sanctum::actingAs($reviewer);
+
+        $this->patchJson("/api/v1/finance/payment-submissions/{$payment->id}/approve")
+            ->assertOk();
+
+        $this->patchJson("/api/v1/finance/payment-submissions/{$payment->id}/approve")
+            ->assertUnprocessable();
+
+        $this->patchJson("/api/v1/finance/payment-submissions/{$payment->id}/reject", ['reason' => 'Late'])
+            ->assertUnprocessable();
+    }
+
+    public function test_board_member_can_approve_payment(): void
+    {
+        $boardMember = User::factory()->create(['role' => UserRole::BoardMember->value]);
+        $account = UnitAccount::factory()->for($this->createUnit())->create(['balance' => '600.00']);
+        $payment = PaymentSubmission::factory()->for($account)->create([
+            'amount' => '150.00',
+            'status' => PaymentStatus::Submitted->value,
+        ]);
+
+        Event::fake();
+        Sanctum::actingAs($boardMember);
+
+        $this->patchJson("/api/v1/finance/payment-submissions/{$payment->id}/approve")
+            ->assertOk()
+            ->assertJsonPath('data.status', PaymentStatus::Approved->value);
+
+        $this->assertDatabaseHas('unit_accounts', ['id' => $account->id, 'balance' => '450.00']);
+    }
+
+    public function test_resident_can_list_own_payment_submissions(): void
+    {
+        $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+        $otherResident = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+        $account = UnitAccount::factory()->for($this->createUnit())->create();
+
+        PaymentSubmission::factory()->for($account)->count(2)->create(['submitted_by' => $resident->id]);
+        PaymentSubmission::factory()->for($account)->create(['submitted_by' => $otherResident->id]);
+
+        Sanctum::actingAs($resident);
+
+        $this->getJson('/api/v1/my/finance/payment-submissions')
+            ->assertOk()
+            ->assertJsonCount(2, 'data');
+    }
+
+    public function test_payment_submission_index_supports_status_filter(): void
+    {
+        $reviewer = User::factory()->create(['role' => UserRole::FinanceReviewer->value]);
+        $account = UnitAccount::factory()->for($this->createUnit())->create();
+
+        PaymentSubmission::factory()->for($account)->count(2)->create(['status' => PaymentStatus::Submitted->value]);
+        PaymentSubmission::factory()->for($account)->create(['status' => PaymentStatus::Approved->value]);
+
+        Sanctum::actingAs($reviewer);
+
+        $this->getJson('/api/v1/finance/payment-submissions?status=submitted')
+            ->assertOk()
+            ->assertJsonCount(2, 'data');
+
+        $this->getJson('/api/v1/finance/payment-submissions?status=approved')
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
+    }
+
+    public function test_unauthenticated_requests_are_rejected(): void
+    {
+        $this->getJson('/api/v1/finance/unit-accounts')->assertUnauthorized();
+        $this->getJson('/api/v1/finance/payment-submissions')->assertUnauthorized();
+        $this->getJson('/api/v1/my/finance/unit-accounts')->assertUnauthorized();
+        $this->getJson('/api/v1/my/finance/payment-submissions')->assertUnauthorized();
+    }
+
+    public function test_payment_notifications_include_arabic_translations(): void
+    {
+        $reviewer = User::factory()->create(['role' => UserRole::FinanceReviewer->value]);
+        $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+        $account = UnitAccount::factory()->for($this->createUnit())->create(['balance' => '1000.00']);
+
+        $approvedPayment = PaymentSubmission::factory()->for($account)->create([
+            'submitted_by' => $resident->id,
+            'amount' => '300.00',
+            'status' => PaymentStatus::Submitted->value,
+        ]);
+        $rejectedPayment = PaymentSubmission::factory()->for($account)->create([
+            'submitted_by' => $resident->id,
+            'amount' => '200.00',
+            'status' => PaymentStatus::Submitted->value,
+        ]);
+
+        Event::fake();
+        Sanctum::actingAs($reviewer);
+
+        $this->patchJson("/api/v1/finance/payment-submissions/{$approvedPayment->id}/approve")->assertOk();
+        $this->patchJson("/api/v1/finance/payment-submissions/{$rejectedPayment->id}/reject", ['reason' => 'Unclear receipt'])->assertOk();
+
+        $notifications = \App\Models\Notification::query()
+            ->where('user_id', $resident->id)
+            ->get()
+            ->keyBy('title');
+
+        $approveNotif = $notifications->get('Payment approved');
+        $this->assertNotNull($approveNotif);
+        $this->assertSame('تمت الموافقة على الدفعة', $approveNotif->metadata['titleTranslations']['ar'] ?? null);
+
+        $rejectNotif = $notifications->get('Payment rejected');
+        $this->assertNotNull($rejectNotif);
+        $this->assertSame('تم رفض الدفعة', $rejectNotif->metadata['titleTranslations']['ar'] ?? null);
+    }
+
     private function createUnit(string $unitNumber = 'A-101'): Unit
     {
         $compound = Compound::factory()->create();
