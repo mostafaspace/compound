@@ -64,8 +64,8 @@ class StoreIssueRequest extends FormRequest
 
         // CM-207: Auto-route issue to floor or building representative
         if ($buildingId) {
-            $rep = RepresentativeAssignment::where('auditable_type', 'building')
-                ->where('auditable_id', $buildingId)
+            $rep = RepresentativeAssignment::where('building_id', $buildingId)
+                ->where('is_active', true)
                 ->first();
             
             if ($rep && $rep->user_id) {

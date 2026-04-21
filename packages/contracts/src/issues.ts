@@ -64,3 +64,13 @@ export interface CreateIssueCommentInput {
   body: string;
   isInternal?: boolean;
 }
+
+export interface IssueAttachment {
+  id: string;
+  issueId: string;
+  uploadedBy: number | null;
+  originalName: string;
+  mimeType: string | null;
+  size: number;
+  createdAt: string;
+}

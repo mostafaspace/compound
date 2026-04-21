@@ -1,5 +1,6 @@
 import type { IssueCategory, IssueStatus } from "@compound/contracts";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 
 import { LogoutButton } from "@/components/logout-button";
 import { getCurrentUser, getIssues } from "@/lib/api";
@@ -12,30 +13,15 @@ interface IssuesPageProps {
   }>;
 }
 
-const statusFilters: Array<{ label: string; value: IssueStatus | "all" }> = [
-  { label: "All", value: "all" },
-  { label: "New", value: "new" },
-  { label: "In progress", value: "in_progress" },
-  { label: "Escalated", value: "escalated" },
-  { label: "Resolved", value: "resolved" },
-  { label: "Closed", value: "closed" },
-];
-
-const categoryFilters: Array<{ label: string; value: IssueCategory | "all" }> = [
-  { label: "All", value: "all" },
-  { label: "Maintenance", value: "maintenance" },
-  { label: "Security", value: "security" },
-  { label: "Cleaning", value: "cleaning" },
-  { label: "Noise", value: "noise" },
-  { label: "Other", value: "other" },
-];
+const statusValues: Array<IssueStatus | "all"> = ["all", "new", "in_progress", "escalated", "resolved", "closed"];
+const categoryValues: Array<IssueCategory | "all"> = ["all", "maintenance", "security", "cleaning", "noise", "other"];
 
 function parseStatus(value?: string): IssueStatus | "all" {
-  return statusFilters.some((f) => f.value === value) ? (value as IssueStatus | "all") : "all";
+  return statusValues.includes(value as IssueStatus | "all") ? (value as IssueStatus | "all") : "all";
 }
 
 function parseCategory(value?: string): IssueCategory | "all" {
-  return categoryFilters.some((f) => f.value === value) ? (value as IssueCategory | "all") : "all";
+  return categoryValues.includes(value as IssueCategory | "all") ? (value as IssueCategory | "all") : "all";
 }
 
 function statusTone(status: string): string {
@@ -51,10 +37,6 @@ function priorityTone(priority: string): string {
   return "bg-background text-muted";
 }
 
-function formatEnum(value: string): string {
-  return value.replaceAll("_", " ");
-}
-
 function formatDate(value: string | null): string {
   if (!value) return "—";
   return new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
@@ -66,7 +48,51 @@ export default async function IssuesPage({ searchParams }: IssuesPageProps) {
   const activeStatus = parseStatus(params.status);
   const activeCategory = parseCategory(params.category);
 
-  const issues = await getIssues({ status: activeStatus, category: activeCategory });
+  const [issues, t] = await Promise.all([
+    getIssues({ status: activeStatus, category: activeCategory }),
+    getTranslations("Issues"),
+  ]);
+
+  const statusFilters: Array<{ label: string; value: IssueStatus | "all" }> = [
+    { label: t("allStatuses"), value: "all" },
+    { label: t("statusNew"), value: "new" },
+    { label: t("statusInProgress"), value: "in_progress" },
+    { label: t("statusEscalated"), value: "escalated" },
+    { label: t("statusResolved"), value: "resolved" },
+    { label: t("statusClosed"), value: "closed" },
+  ];
+
+  const categoryFilters: Array<{ label: string; value: IssueCategory | "all" }> = [
+    { label: t("allCategories"), value: "all" },
+    { label: t("catMaintenance"), value: "maintenance" },
+    { label: t("catSecurity"), value: "security" },
+    { label: t("catCleaning"), value: "cleaning" },
+    { label: t("catNoise"), value: "noise" },
+    { label: t("catOther"), value: "other" },
+  ];
+
+  const statusLabel: Record<string, string> = {
+    new: t("statusNew"),
+    in_progress: t("statusInProgress"),
+    escalated: t("statusEscalated"),
+    resolved: t("statusResolved"),
+    closed: t("statusClosed"),
+  };
+
+  const priorityLabel: Record<string, string> = {
+    low: t("priorityLow"),
+    normal: t("priorityNormal"),
+    high: t("priorityHigh"),
+    urgent: t("priorityUrgent"),
+  };
+
+  const categoryLabel: Record<string, string> = {
+    maintenance: t("catMaintenance"),
+    security: t("catSecurity"),
+    cleaning: t("catCleaning"),
+    noise: t("catNoise"),
+    other: t("catOther"),
+  };
 
   const issuesHref = (nextStatus: IssueStatus | "all", nextCategory: IssueCategory | "all") => {
     const hrefParams = new URLSearchParams();
@@ -84,10 +110,7 @@ export default async function IssuesPage({ searchParams }: IssuesPageProps) {
             <Link className="text-sm font-semibold text-brand hover:text-brand-strong" href="/">
               Dashboard
             </Link>
-            <h1 className="mt-2 text-3xl font-semibold">Issue management</h1>
-            <p className="mt-2 max-w-2xl text-sm text-muted">
-              Review resident complaints, track issue resolution, and manage escalations across all compounds.
-            </p>
+            <h1 className="mt-2 text-3xl font-semibold">{t("title")}</h1>
           </div>
           <div className="flex flex-wrap gap-3">
             <Link
@@ -104,7 +127,7 @@ export default async function IssuesPage({ searchParams }: IssuesPageProps) {
       <section className="mx-auto max-w-7xl px-5 py-6 lg:px-8">
         <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
-            <h2 className="text-xl font-semibold">Status</h2>
+            <h2 className="text-xl font-semibold">{t("status")}</h2>
             <nav className="mt-3 flex flex-wrap gap-2" aria-label="Issue status filters">
               {statusFilters.map((f) => (
                 <Link
@@ -122,7 +145,7 @@ export default async function IssuesPage({ searchParams }: IssuesPageProps) {
             </nav>
           </div>
           <div>
-            <h2 className="text-xl font-semibold">Category</h2>
+            <h2 className="text-xl font-semibold">{t("category")}</h2>
             <nav className="mt-3 flex flex-wrap gap-2" aria-label="Issue category filters">
               {categoryFilters.map((f) => (
                 <Link
@@ -146,21 +169,21 @@ export default async function IssuesPage({ searchParams }: IssuesPageProps) {
             <thead className="bg-background text-muted">
               <tr>
                 <th className="px-4 py-3 font-semibold">ID</th>
-                <th className="px-4 py-3 font-semibold">Title</th>
-                <th className="px-4 py-3 font-semibold">Reporter</th>
-                <th className="px-4 py-3 font-semibold">Category</th>
-                <th className="px-4 py-3 font-semibold">Location</th>
-                <th className="px-4 py-3 font-semibold">Assigned to</th>
-                <th className="px-4 py-3 font-semibold">Status</th>
-                <th className="px-4 py-3 font-semibold">Priority</th>
-                <th className="px-4 py-3 font-semibold">Created</th>
+                <th className="px-4 py-3 font-semibold">{t("issueTitle")}</th>
+                <th className="px-4 py-3 font-semibold">{t("reporter")}</th>
+                <th className="px-4 py-3 font-semibold">{t("category")}</th>
+                <th className="px-4 py-3 font-semibold">{t("location")}</th>
+                <th className="px-4 py-3 font-semibold">{t("assignee")}</th>
+                <th className="px-4 py-3 font-semibold">{t("status")}</th>
+                <th className="px-4 py-3 font-semibold">{t("priority")}</th>
+                <th className="px-4 py-3 font-semibold">{t("createdAt")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
               {issues.length === 0 ? (
                 <tr>
                   <td className="px-4 py-6 text-muted" colSpan={9}>
-                    No issues match the current filters.
+                    {t("noIssues")}
                   </td>
                 </tr>
               ) : (
@@ -176,7 +199,7 @@ export default async function IssuesPage({ searchParams }: IssuesPageProps) {
                       <div className="font-semibold">{issue.reporter?.name ?? "Unknown"}</div>
                       <div className="text-muted">{issue.reporter?.email ?? ""}</div>
                     </td>
-                    <td className="px-4 py-4 capitalize">{formatEnum(issue.category)}</td>
+                    <td className="px-4 py-4">{categoryLabel[issue.category] ?? issue.category}</td>
                     <td className="px-4 py-4">
                       {issue.unit ? (
                         <span>Unit {issue.unit.unitNumber}</span>
@@ -186,15 +209,15 @@ export default async function IssuesPage({ searchParams }: IssuesPageProps) {
                         <span className="text-muted">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-4">{issue.assignee?.name ?? <span className="text-muted">Unassigned</span>}</td>
+                    <td className="px-4 py-4">{issue.assignee?.name ?? <span className="text-muted">{t("unassigned")}</span>}</td>
                     <td className="px-4 py-4">
-                      <span className={`rounded-lg px-2.5 py-1 text-xs font-semibold capitalize ${statusTone(issue.status)}`}>
-                        {formatEnum(issue.status)}
+                      <span className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${statusTone(issue.status)}`}>
+                        {statusLabel[issue.status] ?? issue.status}
                       </span>
                     </td>
                     <td className="px-4 py-4">
-                      <span className={`rounded-lg px-2.5 py-1 text-xs font-semibold capitalize ${priorityTone(issue.priority)}`}>
-                        {issue.priority}
+                      <span className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${priorityTone(issue.priority)}`}>
+                        {priorityLabel[issue.priority] ?? issue.priority}
                       </span>
                     </td>
                     <td className="px-4 py-4 text-muted">{formatDate(issue.createdAt)}</td>

@@ -1,6 +1,7 @@
 import type { IssueStatus } from "@compound/contracts";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 
 import { LogoutButton } from "@/components/logout-button";
 import { getCurrentUser, getIssue } from "@/lib/api";
@@ -17,23 +18,11 @@ interface IssueDetailPageProps {
   }>;
 }
 
-const statusOptions: Array<{ label: string; value: IssueStatus }> = [
-  { label: "New", value: "new" },
-  { label: "In progress", value: "in_progress" },
-  { label: "Escalated", value: "escalated" },
-  { label: "Resolved", value: "resolved" },
-  { label: "Closed", value: "closed" },
-];
-
 function statusTone(status: string): string {
   if (status === "resolved" || status === "closed") return "bg-[#e6f3ef] text-brand";
   if (status === "escalated") return "bg-[#fff3f2] text-danger";
   if (status === "in_progress") return "bg-[#eaf0ff] text-[#244a8f]";
   return "bg-[#f3ead7] text-accent";
-}
-
-function formatEnum(value: string): string {
-  return value.replaceAll("_", " ");
 }
 
 function formatDate(value: string | null): string {
@@ -45,11 +34,46 @@ export default async function IssueDetailPage({ params, searchParams }: IssueDet
   await requireAdminUser(getCurrentUser);
   const { issueId } = await params;
   const sp = searchParams ? await searchParams : {};
-  const issue = await getIssue(issueId);
+
+  const [issue, t] = await Promise.all([
+    getIssue(issueId),
+    getTranslations("Issues"),
+  ]);
 
   if (!issue) {
     notFound();
   }
+
+  const statusOptions: Array<{ label: string; value: IssueStatus }> = [
+    { label: t("statusNew"), value: "new" },
+    { label: t("statusInProgress"), value: "in_progress" },
+    { label: t("statusEscalated"), value: "escalated" },
+    { label: t("statusResolved"), value: "resolved" },
+    { label: t("statusClosed"), value: "closed" },
+  ];
+
+  const statusLabel: Record<string, string> = {
+    new: t("statusNew"),
+    in_progress: t("statusInProgress"),
+    escalated: t("statusEscalated"),
+    resolved: t("statusResolved"),
+    closed: t("statusClosed"),
+  };
+
+  const priorityLabel: Record<string, string> = {
+    low: t("priorityLow"),
+    normal: t("priorityNormal"),
+    high: t("priorityHigh"),
+    urgent: t("priorityUrgent"),
+  };
+
+  const categoryLabel: Record<string, string> = {
+    maintenance: t("catMaintenance"),
+    security: t("catSecurity"),
+    cleaning: t("catCleaning"),
+    noise: t("catNoise"),
+    other: t("catOther"),
+  };
 
   const nonInternalComments = issue.comments?.filter((c) => !c.isInternal) ?? [];
   const internalComments = issue.comments?.filter((c) => c.isInternal) ?? [];
@@ -61,11 +85,11 @@ export default async function IssueDetailPage({ params, searchParams }: IssueDet
         <div className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-6 md:flex-row md:items-center md:justify-between lg:px-8">
           <div>
             <Link className="text-sm font-semibold text-brand hover:text-brand-strong" href="/issues">
-              ← All issues
+              ← {t("backToIssues")}
             </Link>
             <h1 className="mt-2 text-3xl font-semibold">{issue.title}</h1>
             <p className="mt-2 max-w-2xl text-sm text-muted">
-              Reported by {issue.reporter?.name ?? "Unknown"} on {formatDate(issue.createdAt)}
+              {t("reporter")}: {issue.reporter?.name ?? "Unknown"} — {formatDate(issue.createdAt)}
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
@@ -77,17 +101,17 @@ export default async function IssueDetailPage({ params, searchParams }: IssueDet
       <section className="mx-auto max-w-7xl px-5 py-6 lg:px-8">
         {sp.updated ? (
           <p className="mb-4 rounded-lg bg-[#e6f3ef] px-4 py-3 text-sm font-medium text-brand">
-            Issue status updated.
+            {t("updateStatus")}
           </p>
         ) : null}
         {sp.assigned ? (
           <p className="mb-4 rounded-lg bg-[#e6f3ef] px-4 py-3 text-sm font-medium text-brand">
-            Issue assignment updated.
+            {t("reassign")}
           </p>
         ) : null}
         {sp.commented ? (
           <p className="mb-4 rounded-lg bg-[#e6f3ef] px-4 py-3 text-sm font-medium text-brand">
-            Comment posted.
+            {t("addComment")}
           </p>
         ) : null}
 
@@ -95,15 +119,15 @@ export default async function IssueDetailPage({ params, searchParams }: IssueDet
           {/* Left column: issue details */}
           <div className="md:col-span-2 space-y-6">
             <div className="rounded-lg border border-line bg-panel p-5">
-              <h2 className="text-lg font-semibold">Description</h2>
+              <h2 className="text-lg font-semibold">{t("description")}</h2>
               <p className="mt-3 whitespace-pre-wrap text-sm leading-6">{issue.description}</p>
             </div>
 
             {/* Public comments */}
             <div className="rounded-lg border border-line bg-panel p-5">
-              <h2 className="text-lg font-semibold">Activity thread</h2>
+              <h2 className="text-lg font-semibold">{t("activity")}</h2>
               {nonInternalComments.length === 0 ? (
-                <p className="mt-3 text-sm text-muted">No public comments yet.</p>
+                <p className="mt-3 text-sm text-muted">{t("noIssues")}</p>
               ) : (
                 <div className="mt-3 divide-y divide-line">
                   {nonInternalComments.map((comment) => (
@@ -123,7 +147,7 @@ export default async function IssueDetailPage({ params, searchParams }: IssueDet
                   <textarea
                     className="h-24 w-full rounded-lg border border-line bg-background px-3 py-2 text-sm outline-none focus:border-brand"
                     name="body"
-                    placeholder="Write a public reply…"
+                    placeholder={t("commentPlaceholder")}
                     required
                   />
                   <div className="flex items-center gap-4">
@@ -131,7 +155,7 @@ export default async function IssueDetailPage({ params, searchParams }: IssueDet
                       className="inline-flex h-10 items-center justify-center rounded-lg bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"
                       type="submit"
                     >
-                      Post comment
+                      {t("addComment")}
                     </button>
                   </div>
                 </form>
@@ -140,10 +164,10 @@ export default async function IssueDetailPage({ params, searchParams }: IssueDet
 
             {/* Internal notes (admin-only) */}
             <div className="rounded-lg border border-line bg-panel p-5">
-              <h2 className="text-lg font-semibold">Internal notes</h2>
-              <p className="text-xs text-muted">Only visible to admins and staff — not shown to the resident.</p>
+              <h2 className="text-lg font-semibold">{t("internalNote")}</h2>
+              <p className="text-xs text-muted">{t("internalNoteLabel")}</p>
               {internalComments.length === 0 ? (
-                <p className="mt-3 text-sm text-muted">No internal notes yet.</p>
+                <p className="mt-3 text-sm text-muted">{t("noIssues")}</p>
               ) : (
                 <div className="mt-3 divide-y divide-line">
                   {internalComments.map((comment) => (
@@ -164,14 +188,14 @@ export default async function IssueDetailPage({ params, searchParams }: IssueDet
                   <textarea
                     className="h-24 w-full rounded-lg border border-line bg-background px-3 py-2 text-sm outline-none focus:border-brand"
                     name="body"
-                    placeholder="Write an internal note…"
+                    placeholder={t("commentPlaceholder")}
                     required
                   />
                   <button
                     className="inline-flex h-10 items-center justify-center rounded-lg border border-line px-4 text-sm font-semibold hover:border-brand"
                     type="submit"
                   >
-                    Add internal note
+                    {t("internalNote")}
                   </button>
                 </form>
               ) : null}
@@ -182,39 +206,39 @@ export default async function IssueDetailPage({ params, searchParams }: IssueDet
           <div className="space-y-6">
             <div className="rounded-lg border border-line bg-panel p-5 space-y-4">
               <div>
-                <span className="text-xs font-semibold text-muted">Status</span>
+                <span className="text-xs font-semibold text-muted">{t("status")}</span>
                 <div className="mt-1">
-                  <span className={`rounded-lg px-2.5 py-1 text-xs font-semibold capitalize ${statusTone(issue.status)}`}>
-                    {formatEnum(issue.status)}
+                  <span className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${statusTone(issue.status)}`}>
+                    {statusLabel[issue.status] ?? issue.status}
                   </span>
                 </div>
               </div>
               <div>
-                <span className="text-xs font-semibold text-muted">Priority</span>
-                <div className="mt-1 capitalize text-sm">{issue.priority}</div>
+                <span className="text-xs font-semibold text-muted">{t("priority")}</span>
+                <div className="mt-1 text-sm">{priorityLabel[issue.priority] ?? issue.priority}</div>
               </div>
               <div>
-                <span className="text-xs font-semibold text-muted">Category</span>
-                <div className="mt-1 capitalize text-sm">{formatEnum(issue.category)}</div>
+                <span className="text-xs font-semibold text-muted">{t("category")}</span>
+                <div className="mt-1 text-sm">{categoryLabel[issue.category] ?? issue.category}</div>
               </div>
               <div>
-                <span className="text-xs font-semibold text-muted">Reporter</span>
+                <span className="text-xs font-semibold text-muted">{t("reporter")}</span>
                 <div className="mt-1 text-sm font-semibold">{issue.reporter?.name ?? "Unknown"}</div>
                 <div className="text-xs text-muted">{issue.reporter?.email ?? ""}</div>
               </div>
               <div>
-                <span className="text-xs font-semibold text-muted">Assigned to</span>
-                <div className="mt-1 text-sm font-semibold">{issue.assignee?.name ?? "Unassigned"}</div>
+                <span className="text-xs font-semibold text-muted">{t("assignee")}</span>
+                <div className="mt-1 text-sm font-semibold">{issue.assignee?.name ?? t("unassigned")}</div>
               </div>
               <div>
-                <span className="text-xs font-semibold text-muted">Location</span>
+                <span className="text-xs font-semibold text-muted">{t("location")}</span>
                 <div className="mt-1 text-sm">
                   {issue.unit ? `Unit ${issue.unit.unitNumber}` : issue.building?.name ?? "—"}
                 </div>
               </div>
               {issue.resolvedAt ? (
                 <div>
-                  <span className="text-xs font-semibold text-muted">Resolved at</span>
+                  <span className="text-xs font-semibold text-muted">{t("resolvedAt")}</span>
                   <div className="mt-1 text-sm">{formatDate(issue.resolvedAt)}</div>
                 </div>
               ) : null}
@@ -223,7 +247,7 @@ export default async function IssueDetailPage({ params, searchParams }: IssueDet
             {/* Status transition */}
             {!isClosed ? (
               <div className="rounded-lg border border-line bg-panel p-5">
-                <h3 className="text-sm font-semibold">Update status</h3>
+                <h3 className="text-sm font-semibold">{t("updateStatus")}</h3>
                 <form action={updateIssueStatusAction.bind(null, issue.id)} className="mt-3 flex flex-col gap-3">
                   <select
                     className="h-10 w-full rounded-lg border border-line bg-background px-3 text-sm"
@@ -240,7 +264,7 @@ export default async function IssueDetailPage({ params, searchParams }: IssueDet
                     className="inline-flex h-10 items-center justify-center rounded-lg bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"
                     type="submit"
                   >
-                    Save status
+                    {t("save")}
                   </button>
                 </form>
               </div>
@@ -249,19 +273,19 @@ export default async function IssueDetailPage({ params, searchParams }: IssueDet
             {/* Reassign */}
             {!isClosed ? (
               <div className="rounded-lg border border-line bg-panel p-5">
-                <h3 className="text-sm font-semibold">Reassign</h3>
+                <h3 className="text-sm font-semibold">{t("reassign")}</h3>
                 <form action={assignIssueAction.bind(null, issue.id)} className="mt-3 flex flex-col gap-3">
                   <input
                     className="h-10 w-full rounded-lg border border-line bg-background px-3 text-sm"
                     defaultValue={issue.assignedTo ?? ""}
                     name="assignedTo"
-                    placeholder="User ID (leave empty to unassign)"
+                    placeholder={t("unassigned")}
                   />
                   <button
                     className="inline-flex h-10 items-center justify-center rounded-lg border border-line px-4 text-sm font-semibold hover:border-brand"
                     type="submit"
                   >
-                    Update assignment
+                    {t("save")}
                   </button>
                 </form>
               </div>

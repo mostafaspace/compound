@@ -5,13 +5,18 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Issues\StoreIssueRequest;
 use App\Http\Requests\Issues\UpdateIssueRequest;
+use App\Http\Resources\Issues\IssueResource;
 use App\Models\Issues\Issue;
+use App\Services\IssueService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class IssueController extends Controller
 {
-    public function index(Request $request): JsonResponse
+    public function __construct(private readonly IssueService $issueService) {}
+
+    public function index(Request $request): AnonymousResourceCollection|JsonResponse
     {
         $query = Issue::with(['reporter', 'assignee', 'unit', 'building'])
             ->latest();
@@ -29,77 +34,91 @@ class IssueController extends Controller
         }
 
         return match ($request->input('paginate', 'true')) {
-            'false' => response()->json(['data' => $query->get()]),
-            default => response()->json($query->paginate(20)),
+            'false' => IssueResource::collection($query->get()),
+            default => IssueResource::collection($query->paginate(20)),
         };
     }
 
-    public function myIssues(Request $request): JsonResponse
+    public function myIssues(Request $request): AnonymousResourceCollection
     {
         $issues = Issue::with(['assignee', 'unit', 'building'])
             ->where('reported_by', $request->user()?->id)
             ->latest()
             ->get();
 
-        return response()->json(['data' => $issues]);
+        return IssueResource::collection($issues);
     }
 
     public function store(StoreIssueRequest $request): JsonResponse
     {
         $location = $request->resolveLocationAndQueue();
 
-        $issue = Issue::create([
-            'compound_id' => $location['compound_id'],
-            'building_id' => $location['building_id'],
-            'unit_id' => $request->input('unitId'),
-            'reported_by' => $request->user()?->id,
-            'assigned_to' => $location['assigned_to'],
-            'category' => $request->input('category'),
-            'title' => $request->input('title'),
-            'description' => $request->input('description'),
-            'priority' => $request->input('priority', 'normal'),
-            'status' => 'new',
-        ]);
+        /** @var \App\Models\User $user */
+        $user = $request->user();
 
-        return response()->json([
-            'data' => $issue->load(['reporter', 'assignee', 'unit', 'building'])
-        ], 201);
+        $issue = $this->issueService->createIssue(
+            data: [
+                'unit_id' => $request->input('unitId'),
+                'category' => $request->input('category'),
+                'title' => $request->input('title'),
+                'description' => $request->input('description'),
+                'priority' => $request->input('priority', 'normal'),
+            ],
+            reporter: $user,
+            location: $location,
+        );
+
+        return IssueResource::make($issue->load(['reporter', 'assignee', 'unit', 'building']))
+            ->response()
+            ->setStatusCode(201);
     }
 
     public function show(Issue $issue): JsonResponse
     {
-        return response()->json([
-            'data' => $issue->load(['reporter', 'assignee', 'unit', 'building', 'comments.user'])
-        ]);
+        return IssueResource::make(
+            $issue->load(['reporter', 'assignee', 'unit', 'building', 'comments.user', 'attachments'])
+        )->response();
     }
 
     public function update(UpdateIssueRequest $request, Issue $issue): JsonResponse
     {
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+
+        $changes = [];
+
         if ($request->has('status')) {
-            $issue->status = $request->input('status');
-            if ($issue->status === 'resolved' || $issue->status === 'closed') {
-                $issue->resolved_at = $issue->resolved_at ?? now();
-            } else {
-                $issue->resolved_at = null;
-            }
+            $changes['status'] = $request->input('status');
         }
 
         if ($request->has('priority')) {
-            $issue->priority = $request->input('priority');
+            $changes['priority'] = $request->input('priority');
         }
 
         if ($request->has('assignedTo')) {
-            $issue->assigned_to = $request->input('assignedTo');
+            $changes['assigned_to'] = $request->input('assignedTo');
         }
 
         if ($request->has('categoryId')) {
-            $issue->category = $request->input('categoryId');
+            $changes['category'] = $request->input('categoryId');
         }
 
-        $issue->save();
+        $issue = $this->issueService->updateIssue($issue, $changes, $user);
 
-        return response()->json([
-            'data' => $issue->load(['reporter', 'assignee', 'unit', 'building'])
+        return IssueResource::make($issue->load(['reporter', 'assignee', 'unit', 'building']))->response();
+    }
+
+    public function escalate(Request $request, Issue $issue): JsonResponse
+    {
+        $request->validate([
+            'reason' => ['required', 'string', 'max:1000'],
         ]);
+
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+
+        $issue = $this->issueService->escalateIssue($issue, $user, $request->input('reason'));
+
+        return IssueResource::make($issue->load(['reporter', 'assignee', 'unit', 'building']))->response();
     }
 }

@@ -4,7 +4,8 @@
       "mcp__mcp-registry__search_mcp_registry",
       "Skill(update-config)",
       "Skill(update-config:*)",
-      "Bash(gh api *)"
+      "Bash(gh api *)",
+      "mcp__Claude_in_Chrome__tabs_context_mcp"
     ]
   }
 }

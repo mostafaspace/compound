@@ -6,6 +6,7 @@ use App\Models\Compound;
 use App\Models\Property\Building;
 use App\Models\Property\Unit;
 use App\Models\User;
+use Database\Factories\Issues\IssueFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -14,8 +15,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Issue extends Model
 {
+    /** @use HasFactory<IssueFactory> */
     use HasFactory;
     use HasUlids;
+
+    protected static function newFactory(): IssueFactory
+    {
+        return IssueFactory::new();
+    }
 
     protected $fillable = [
         'compound_id',
@@ -29,12 +36,14 @@ class Issue extends Model
         'status',
         'priority',
         'resolved_at',
+        'metadata',
     ];
 
     protected function casts(): array
     {
         return [
             'resolved_at' => 'datetime',
+            'metadata' => 'array',
         ];
     }
 
@@ -84,5 +93,13 @@ class Issue extends Model
     public function comments(): HasMany
     {
         return $this->hasMany(IssueComment::class);
+    }
+
+    /**
+     * @return HasMany<IssueAttachment, $this>
+     */
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(IssueAttachment::class);
     }
 }
