@@ -5,6 +5,11 @@
       "command": "uvx",
       "args": ["mcp-atlassian"],
       "envFile": "${workspaceFolder}/.vscode/mcp.env"
+    },
+    "playwright": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["@playwright/mcp@latest"]
     }
   }
 }
