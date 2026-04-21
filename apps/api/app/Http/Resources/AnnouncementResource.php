@@ -32,7 +32,17 @@ class AnnouncementResource extends JsonResource
                 'en' => $this->body_en,
                 'ar' => $this->body_ar,
             ],
-            'attachments' => $this->attachments ?? [],
+            'attachments' => [
+                ...($this->attachments ?? []),
+                ...$this->whenLoaded('uploadedAttachments', fn () => $this->uploadedAttachments->map(fn ($attachment): array => [
+                    'id' => $attachment->id,
+                    'name' => $attachment->original_name,
+                    'mimeType' => $attachment->mime_type,
+                    'size' => $attachment->size,
+                    'downloadUrl' => "/api/v1/announcements/{$this->id}/attachments/{$attachment->id}/download",
+                    'createdAt' => $attachment->created_at?->toIso8601String(),
+                ])->all(), []),
+            ],
             'revision' => $this->revision,
             'scheduledAt' => $this->scheduled_at?->toIso8601String(),
             'publishedAt' => $this->published_at?->toIso8601String(),

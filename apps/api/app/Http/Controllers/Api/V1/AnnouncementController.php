@@ -5,15 +5,18 @@ namespace App\Http\Controllers\Api\V1;
 use App\Enums\AnnouncementStatus;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Announcements\StoreAnnouncementAttachmentRequest;
 use App\Http\Requests\Announcements\StoreAnnouncementRequest;
 use App\Http\Requests\Announcements\UpdateAnnouncementRequest;
 use App\Http\Resources\AnnouncementResource;
 use App\Models\Announcements\Announcement;
+use App\Models\Announcements\AnnouncementAttachment;
 use App\Services\AnnouncementService;
 use App\Support\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\Storage;
 
 class AnnouncementController extends Controller
 {
@@ -134,7 +137,7 @@ class AnnouncementController extends Controller
             metadata: ['status' => $announcement->status->value]
         );
 
-        return new AnnouncementResource($announcement->load('author'));
+        return new AnnouncementResource($announcement->load(['author', 'uploadedAttachments']));
     }
 
     public function show(Request $request, Announcement $announcement): AnnouncementResource
@@ -146,6 +149,7 @@ class AnnouncementController extends Controller
 
         return new AnnouncementResource($announcement->load([
             'author',
+            'uploadedAttachments',
             'acknowledgements' => fn ($query) => $query->where('user_id', $request->user()?->id),
         ]));
     }
@@ -227,6 +231,61 @@ class AnnouncementController extends Controller
         return new AnnouncementResource($announcement->load('author'));
     }
 
+    public function storeAttachment(
+        StoreAnnouncementAttachmentRequest $request,
+        Announcement $announcement
+    ): JsonResponse {
+        $file = $request->file('file');
+        $disk = config('filesystems.default', 'local');
+        $path = $file->store("announcements/{$announcement->id}", $disk);
+
+        $attachment = $announcement->uploadedAttachments()->create([
+            'uploaded_by' => $request->user()?->id,
+            'disk' => $disk,
+            'path' => $path,
+            'original_name' => $file->getClientOriginalName(),
+            'mime_type' => $file->getClientMimeType(),
+            'size' => $file->getSize() ?: 0,
+        ]);
+
+        $this->auditLogger->record(
+            action: 'announcements.attachment_uploaded',
+            actor: $request->user(),
+            request: $request,
+            statusCode: 201,
+            auditableType: $announcement::class,
+            auditableId: $announcement->id,
+            metadata: ['attachmentId' => $attachment->id, 'originalName' => $attachment->original_name]
+        );
+
+        return response()->json([
+            'data' => $this->attachmentPayload($attachment),
+        ], 201);
+    }
+
+    public function downloadAttachment(
+        Request $request,
+        Announcement $announcement,
+        AnnouncementAttachment $attachment
+    ) {
+        abort_unless($attachment->announcement_id === $announcement->id, 404);
+        abort_unless(
+            $this->isAnnouncementAdmin($request) || $this->announcementService->canUserView($announcement, $request->user()),
+            403
+        );
+
+        $this->auditLogger->record(
+            action: 'announcements.attachment_downloaded',
+            actor: $request->user(),
+            request: $request,
+            auditableType: $announcement::class,
+            auditableId: $announcement->id,
+            metadata: ['attachmentId' => $attachment->id]
+        );
+
+        return Storage::disk($attachment->disk)->download($attachment->path, $attachment->original_name);
+    }
+
     public function acknowledge(Request $request, Announcement $announcement): JsonResponse
     {
         abort_unless($this->announcementService->canUserView($announcement, $request->user()), 403);
@@ -263,6 +322,18 @@ class AnnouncementController extends Controller
                 'acknowledgedAt' => $acknowledgement->acknowledged_at->toIso8601String(),
             ])->values(),
         ]);
+    }
+
+    private function attachmentPayload(AnnouncementAttachment $attachment): array
+    {
+        return [
+            'id' => $attachment->id,
+            'name' => $attachment->original_name,
+            'mimeType' => $attachment->mime_type,
+            'size' => $attachment->size,
+            'downloadUrl' => "/api/v1/announcements/{$attachment->announcement_id}/attachments/{$attachment->id}/download",
+            'createdAt' => $attachment->created_at?->toIso8601String(),
+        ];
     }
 
     private function isAnnouncementAdmin(Request $request): bool

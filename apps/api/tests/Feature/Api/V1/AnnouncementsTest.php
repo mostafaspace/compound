@@ -18,6 +18,8 @@ use App\Models\Property\Unit;
 use App\Models\Property\UnitMembership;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -398,6 +400,44 @@ class AnnouncementsTest extends TestCase
         ])
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['targetIds']);
+    }
+
+    public function test_announcement_attachments_are_downloadable_only_by_authorized_targets(): void
+    {
+        Storage::fake(config('filesystems.default', 'local'));
+
+        [$admin, $resident, $otherResident, $building] = $this->buildingScenario();
+
+        Sanctum::actingAs($admin);
+        $announcementId = $this->postJson('/api/v1/announcements', [
+            'titleEn' => 'Attachment notice',
+            'titleAr' => 'إعلان بمرفق',
+            'bodyEn' => 'Please read the attached file.',
+            'bodyAr' => 'يرجى قراءة الملف المرفق.',
+            'category' => AnnouncementCategory::General->value,
+            'targetType' => AnnouncementTargetType::Building->value,
+            'targetIds' => [$building->id],
+        ])->assertCreated()->json('data.id');
+
+        $attachment = $this->post("/api/v1/announcements/{$announcementId}/attachments", [
+            'file' => UploadedFile::fake()->createWithContent('notice.txt', 'official notice'),
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.name', 'notice.txt')
+            ->assertJsonPath('data.downloadUrl', fn (?string $value): bool => str_contains((string) $value, '/download'))
+            ->json('data');
+
+        $this->postJson("/api/v1/announcements/{$announcementId}/publish")
+            ->assertOk();
+
+        Sanctum::actingAs($otherResident);
+        $this->get("/api/v1/announcements/{$announcementId}/attachments/{$attachment['id']}/download")
+            ->assertForbidden();
+
+        Sanctum::actingAs($resident);
+        $this->get("/api/v1/announcements/{$announcementId}/attachments/{$attachment['id']}/download")
+            ->assertOk()
+            ->assertDownload('notice.txt');
     }
 
     private function buildingScenario(): array

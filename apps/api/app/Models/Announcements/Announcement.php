@@ -71,6 +71,11 @@ class Announcement extends Model
         return $this->hasMany(AnnouncementAcknowledgement::class);
     }
 
+    public function uploadedAttachments(): HasMany
+    {
+        return $this->hasMany(AnnouncementAttachment::class);
+    }
+
     public function revisions(): HasMany
     {
         return $this->hasMany(AnnouncementRevision::class);

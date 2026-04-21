@@ -81,6 +81,8 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::post('/issues/{issue}/comments', [IssueCommentController::class, 'store'])->name('issues.comments.store');
         Route::get('/my/announcements', [AnnouncementController::class, 'feed'])->name('my.announcements.index');
         Route::get('/announcements/{announcement}', [AnnouncementController::class, 'show'])->name('announcements.show');
+        Route::get('/announcements/{announcement}/attachments/{attachment}/download', [AnnouncementController::class, 'downloadAttachment'])
+            ->name('announcements.attachments.download');
         Route::post('/announcements/{announcement}/acknowledge', [AnnouncementController::class, 'acknowledge'])
             ->name('announcements.acknowledge');
 
@@ -177,6 +179,8 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
                 ->name('announcements.publish');
             Route::post('/announcements/{announcement}/archive', [AnnouncementController::class, 'archive'])
                 ->name('announcements.archive');
+            Route::post('/announcements/{announcement}/attachments', [AnnouncementController::class, 'storeAttachment'])
+                ->name('announcements.attachments.store');
             Route::get('/announcements/{announcement}/acknowledgements', [AnnouncementController::class, 'acknowledgements'])
                 ->name('announcements.acknowledgements');
         });
