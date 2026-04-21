@@ -1,0 +1,4 @@
+unitNumber,type,status,floorId,areaSqm,bedrooms
+301,apartment,active,01JEXAMPLEFLOOR0000000001,122.50,3
+302,duplex,vacant,01JEXAMPLEFLOOR0000000001,160.00,4
+G-01,commercial,active,01JEXAMPLEFLOOR0000000002,85.00,0
