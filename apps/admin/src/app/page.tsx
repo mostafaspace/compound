@@ -1,21 +1,27 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 
 import { LogoutButton } from "@/components/logout-button";
 import { getCurrentUser, getSystemStatus } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
 
 const workstreams = [
-  { label: "Finance review", value: "12", detail: "payments awaiting allocation", tone: "text-brand" },
-  { label: "Visitor gate", value: "38", detail: "active passes today", tone: "text-accent" },
-  { label: "Resident issues", value: "7", detail: "breached response targets", tone: "text-danger" },
-  { label: "Governance", value: "3", detail: "open approvals", tone: "text-brand-strong" },
+  { key: "financeReview", value: "12", tone: "text-brand" },
+  { key: "visitorGate", value: "38", tone: "text-accent" },
+  { key: "residentIssues", value: "7", tone: "text-danger" },
+  { key: "governance", value: "3", tone: "text-brand-strong" },
 ];
 
-const priorityQueue = [
-  "Verify new owner onboarding requests",
-  "Review unallocated bank transfer receipts",
-  "Approve urgent maintenance vendor estimate",
-  "Publish board meeting action items",
+const priorityQueue = ["ownerOnboarding", "bankReceipts", "vendorEstimate", "boardActions"];
+
+const navLinks = [
+  { href: "/compounds", key: "compounds" },
+  { href: "/documents", key: "documents" },
+  { href: "/visitors", key: "visitors" },
+  { href: "/issues", key: "issues" },
+  { href: "/finance", key: "finance" },
+  { href: "/onboarding", key: "onboarding" },
+  { href: "/audit-logs", key: "auditLogs" },
 ];
 
 function CheckIcon() {
@@ -32,19 +38,20 @@ function CheckIcon() {
 
 export default async function Home() {
   const user = await requireAdminUser(getCurrentUser);
+  const t = await getTranslations("Dashboard");
+  const nav = await getTranslations("Navigation");
   const status = await getSystemStatus();
   const apiOnline = status?.status === "ok";
+  const role = user.role.replaceAll("_", " ");
 
   return (
     <main className="min-h-screen bg-background text-foreground">
       <header className="border-b border-line bg-panel">
         <div className="mx-auto flex max-w-7xl flex-col gap-6 px-5 py-6 md:flex-row md:items-center md:justify-between lg:px-8">
           <div>
-            <p className="text-sm font-semibold uppercase text-brand">Compound operations</p>
-            <h1 className="mt-2 text-3xl font-semibold md:text-4xl">Production control center</h1>
-            <p className="mt-2 text-sm text-muted">
-              Signed in as {user.name} / {user.role.replaceAll("_", " ")}
-            </p>
+            <p className="text-sm font-semibold uppercase text-brand">{t("eyebrow")}</p>
+            <h1 className="mt-2 text-3xl font-semibold md:text-4xl">{t("title")}</h1>
+            <p className="mt-2 text-sm text-muted">{t("signedInAs", { name: user.name, role })}</p>
           </div>
           <div className="flex flex-wrap gap-3">
             <a
@@ -52,50 +59,23 @@ export default async function Home() {
               href="#priority-queue"
             >
               <CheckIcon />
-              Review queue
+              {t("actions.reviewQueue")}
             </a>
             <a
               className="inline-flex h-11 items-center rounded-lg border border-line bg-panel px-4 text-sm font-semibold text-foreground transition hover:border-brand"
               href="#system-status"
             >
-              System status
+              {t("actions.systemStatus")}
             </a>
-            <Link
-              className="inline-flex h-11 items-center rounded-lg border border-line bg-panel px-4 text-sm font-semibold text-foreground transition hover:border-brand"
-              href="/compounds"
-            >
-              Property registry
-            </Link>
-            <Link
-              className="inline-flex h-11 items-center rounded-lg border border-line bg-panel px-4 text-sm font-semibold text-foreground transition hover:border-brand"
-              href="/documents"
-            >
-              Documents
-            </Link>
-            <Link
-              className="inline-flex h-11 items-center rounded-lg border border-line bg-panel px-4 text-sm font-semibold text-foreground transition hover:border-brand"
-              href="/visitors"
-            >
-              Visitors
-            </Link>
-            <Link
-              className="inline-flex h-11 items-center rounded-lg border border-line bg-panel px-4 text-sm font-semibold text-foreground transition hover:border-brand"
-              href="/issues"
-            >
-              Issues
-            </Link>
-            <Link
-              className="inline-flex h-11 items-center rounded-lg border border-line bg-panel px-4 text-sm font-semibold text-foreground transition hover:border-brand"
-              href="/onboarding"
-            >
-              Onboarding
-            </Link>
-            <Link
-              className="inline-flex h-11 items-center rounded-lg border border-line bg-panel px-4 text-sm font-semibold text-foreground transition hover:border-brand"
-              href="/audit-logs"
-            >
-              Audit logs
-            </Link>
+            {navLinks.map((link) => (
+              <Link
+                className="inline-flex h-11 items-center rounded-lg border border-line bg-panel px-4 text-sm font-semibold text-foreground transition hover:border-brand"
+                href={link.href}
+                key={link.href}
+              >
+                {nav(link.key)}
+              </Link>
+            ))}
             <LogoutButton />
           </div>
         </div>
@@ -103,10 +83,10 @@ export default async function Home() {
 
       <section className="mx-auto grid max-w-7xl gap-5 px-5 py-6 md:grid-cols-2 lg:grid-cols-4 lg:px-8">
         {workstreams.map((item) => (
-          <article className="rounded-lg border border-line bg-panel p-5" key={item.label}>
-            <p className="text-sm font-medium text-muted">{item.label}</p>
+          <article className="rounded-lg border border-line bg-panel p-5" key={item.key}>
+            <p className="text-sm font-medium text-muted">{t(`workstreams.${item.key}.label`)}</p>
             <p className={`mt-4 text-4xl font-semibold ${item.tone}`}>{item.value}</p>
-            <p className="mt-2 text-sm text-muted">{item.detail}</p>
+            <p className="mt-2 text-sm text-muted">{t(`workstreams.${item.key}.detail`)}</p>
           </article>
         ))}
       </section>
@@ -115,10 +95,10 @@ export default async function Home() {
         <div id="priority-queue" className="rounded-lg border border-line bg-panel p-5">
           <div className="flex items-center justify-between gap-4 border-b border-line pb-4">
             <div>
-              <h2 className="text-xl font-semibold">Priority queue</h2>
-              <p className="mt-1 text-sm text-muted">Sorted by SLA, financial risk, and resident impact.</p>
+              <h2 className="text-xl font-semibold">{t("priorityQueue.title")}</h2>
+              <p className="mt-1 text-sm text-muted">{t("priorityQueue.subtitle")}</p>
             </div>
-            <span className="rounded-lg bg-[#e6f3ef] px-3 py-1 text-sm font-semibold text-brand">Live</span>
+            <span className="rounded-lg bg-[#e6f3ef] px-3 py-1 text-sm font-semibold text-brand">{t("priorityQueue.live")}</span>
           </div>
           <ol className="mt-4 divide-y divide-line">
             {priorityQueue.map((item, index) => (
@@ -126,32 +106,32 @@ export default async function Home() {
                 <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-background text-sm font-semibold">
                   {index + 1}
                 </span>
-                <span className="text-base font-medium">{item}</span>
+                <span className="text-base font-medium">{t(`priorityQueue.items.${item}`)}</span>
               </li>
             ))}
           </ol>
         </div>
 
         <aside id="system-status" className="rounded-lg border border-line bg-panel p-5">
-          <h2 className="text-xl font-semibold">System status</h2>
+          <h2 className="text-xl font-semibold">{t("systemStatus.title")}</h2>
           <div className="mt-5 space-y-4 text-sm">
             <div className="flex items-center justify-between border-b border-line pb-3">
-              <span className="text-muted">API</span>
+              <span className="text-muted">{t("systemStatus.api")}</span>
               <span className={apiOnline ? "font-semibold text-brand" : "font-semibold text-danger"}>
-                {apiOnline ? "Online" : "Offline"}
+                {apiOnline ? t("systemStatus.online") : t("systemStatus.offline")}
               </span>
             </div>
             <div className="flex items-center justify-between border-b border-line pb-3">
-              <span className="text-muted">Environment</span>
-              <span className="font-semibold">{status?.environment ?? "not connected"}</span>
+              <span className="text-muted">{t("systemStatus.environment")}</span>
+              <span className="font-semibold">{status?.environment ?? t("systemStatus.notConnected")}</span>
             </div>
             <div className="flex items-center justify-between border-b border-line pb-3">
-              <span className="text-muted">Timezone</span>
-              <span className="font-semibold">{status?.timezone ?? "pending"}</span>
+              <span className="text-muted">{t("systemStatus.timezone")}</span>
+              <span className="font-semibold">{status?.timezone ?? t("systemStatus.pending")}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-muted">Realtime</span>
-              <span className="font-semibold text-accent">Reverb first</span>
+              <span className="text-muted">{t("systemStatus.realtime")}</span>
+              <span className="font-semibold text-accent">{t("systemStatus.reverbFirst")}</span>
             </div>
           </div>
         </aside>

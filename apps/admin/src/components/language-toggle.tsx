@@ -1,12 +1,13 @@
 "use client";
 
 import { useTransition } from "react";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 import { setUserLocale } from "@/services/locale";
 
 export function LanguageToggle() {
   const locale = useLocale();
+  const t = useTranslations("Language");
   const [isPending, startTransition] = useTransition();
 
   const handleToggle = () => {
@@ -22,10 +23,10 @@ export function LanguageToggle() {
         className="flex h-7 items-center justify-center rounded-md px-3 text-sm font-bold text-muted transition-colors hover:text-foreground disabled:opacity-50"
         disabled={isPending}
         onClick={handleToggle}
-        title="Toggle Language"
+        title={t("toggle")}
         type="button"
       >
-        {locale === "en" ? "عربي" : "EN"}
+        {locale === "en" ? t("arabic") : "EN"}
       </button>
     </div>
   );

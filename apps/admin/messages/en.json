@@ -4,13 +4,92 @@
     "compounds": "Compounds",
     "buildings": "Buildings",
     "units": "Units",
+    "documents": "Documents",
+    "issues": "Issues",
+    "finance": "Finance",
+    "onboarding": "Onboarding",
+    "auditLogs": "Audit logs",
     "visitors": "Visitors",
     "signOut": "Sign Out"
+  },
+  "Language": {
+    "toggle": "Toggle language",
+    "arabic": "Arabic"
   },
   "Theme": {
     "light": "Light Mode",
     "dark": "Dark Mode",
     "system": "System Auto"
+  },
+  "Login": {
+    "brand": "Compound admin",
+    "heroTitle": "Operations console",
+    "heroSubtitle": "Secure access for property registry, finance, residents, governance, support, and security operations.",
+    "seedHint": "Use a seeded admin account after running backend migrations and seeders.",
+    "title": "Sign in",
+    "subtitle": "Access is limited to active admin, board, finance, and support users.",
+    "submit": "Sign in",
+    "fields": {
+      "email": "Email",
+      "password": "Password",
+      "passwordPlaceholder": "password"
+    },
+    "errors": {
+      "invalid": "Credentials are invalid, the account is inactive, or the API is unavailable."
+    },
+    "messages": {
+      "acceptedInvite": "Account completed. Sign in with the password you just created."
+    }
+  },
+  "Dashboard": {
+    "eyebrow": "Compound operations",
+    "title": "Production control center",
+    "signedInAs": "Signed in as {name} / {role}",
+    "actions": {
+      "reviewQueue": "Review queue",
+      "systemStatus": "System status"
+    },
+    "workstreams": {
+      "financeReview": {
+        "label": "Finance review",
+        "detail": "payments awaiting allocation"
+      },
+      "visitorGate": {
+        "label": "Visitor gate",
+        "detail": "active passes today"
+      },
+      "residentIssues": {
+        "label": "Resident issues",
+        "detail": "breached response targets"
+      },
+      "governance": {
+        "label": "Governance",
+        "detail": "open approvals"
+      }
+    },
+    "priorityQueue": {
+      "title": "Priority queue",
+      "subtitle": "Sorted by SLA, financial risk, and resident impact.",
+      "live": "Live",
+      "items": {
+        "ownerOnboarding": "Verify new owner onboarding requests",
+        "bankReceipts": "Review unallocated bank transfer receipts",
+        "vendorEstimate": "Approve urgent maintenance vendor estimate",
+        "boardActions": "Publish board meeting action items"
+      }
+    },
+    "systemStatus": {
+      "title": "System status",
+      "api": "API",
+      "online": "Online",
+      "offline": "Offline",
+      "environment": "Environment",
+      "notConnected": "not connected",
+      "timezone": "Timezone",
+      "pending": "pending",
+      "realtime": "Realtime",
+      "reverbFirst": "Reverb first"
+    }
   },
   "Notifications": {
     "ariaLabel": "{count, plural, =0 {Notifications} one {Notifications, # unread} other {Notifications, # unread}}",
