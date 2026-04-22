@@ -232,6 +232,103 @@
     "documents": "Documents",
     "onboarding": "Onboarding"
   },
+  "Onboarding": {
+    "back": "Dashboard",
+    "propertyRegistry": "Property registry",
+    "title": "Resident onboarding",
+    "subtitle": "Track invite delivery, resend expired links, and revoke pending access before residents complete their account.",
+    "messages": {
+      "resent": "Invitation resent with a new secure acceptance link.",
+      "revoked": "Invitation revoked. The previous acceptance link can no longer be used.",
+      "approved": "Verification approved. The resident account is now active and the linked membership is verified.",
+      "rejected": "Verification rejected. The account was suspended and the linked membership was marked rejected.",
+      "moreInfo": "More information requested. The resident remains in pending review until an admin approves or rejects."
+    },
+    "verification": {
+      "title": "Verification review queue",
+      "subtitle": "Review accepted residents before account activation and keep membership verification aligned with the decision.",
+      "filtersLabel": "Verification status filters",
+      "empty": "No verification requests match the current filters."
+    },
+    "invitations": {
+      "title": "Invitation delivery",
+      "filtersLabel": "Invitation status filters",
+      "empty": "No invitations match the current filters."
+    },
+    "filters": {
+      "all": "All",
+      "search": "Search",
+      "searchPlaceholder": "Search name or email"
+    },
+    "fields": {
+      "resident": "Resident",
+      "requestedAccess": "Requested access",
+      "unit": "Unit",
+      "reviewStatus": "Review status",
+      "decisionNotes": "Decision notes",
+      "reviewActions": "Review actions",
+      "role": "Role",
+      "status": "Status",
+      "delivery": "Delivery",
+      "actions": "Actions"
+    },
+    "actions": {
+      "approvalNote": "Optional approval note",
+      "approve": "Approve",
+      "rejectionReason": "Rejection reason",
+      "reject": "Reject",
+      "requestedInformation": "Requested information",
+      "askInfo": "Ask info",
+      "closed": "Closed",
+      "resend": "Resend",
+      "revoke": "Revoke",
+      "noAction": "No action"
+    },
+    "fallback": {
+      "user": "User {id}",
+      "emailUnavailable": "Email unavailable",
+      "notSet": "Not set",
+      "notLinked": "Not linked",
+      "noNote": "No note yet",
+      "pendingResident": "Pending resident"
+    },
+    "dates": {
+      "submitted": "Submitted {date}",
+      "reviewed": "Reviewed {date}",
+      "expires": "Expires {date}"
+    },
+    "delivery": {
+      "sent": "{count, plural, one {# sent} other {# sent}}"
+    },
+    "invitationStatuses": {
+      "pending": "Pending",
+      "expired": "Expired",
+      "accepted": "Accepted",
+      "revoked": "Revoked"
+    },
+    "reviewStatuses": {
+      "pending_review": "Pending review",
+      "more_info_requested": "More info requested",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "roles": {
+      "super_admin": "Super admin",
+      "compound_admin": "Compound admin",
+      "board_member": "Board member",
+      "finance_reviewer": "Finance reviewer",
+      "security_guard": "Security guard",
+      "resident_owner": "Resident owner",
+      "resident_tenant": "Resident tenant",
+      "support_agent": "Support agent"
+    },
+    "relations": {
+      "owner": "Owner",
+      "tenant": "Tenant",
+      "resident": "Resident",
+      "representative": "Representative"
+    }
+  },
   "Finance": {
     "back": "Dashboard",
     "title": "Finance",

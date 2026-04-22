@@ -1,5 +1,6 @@
 import type { InvitationStatus, ResidentInvitation, VerificationRequest, VerificationRequestStatus } from "@compound/contracts";
 import Link from "next/link";
+import { getLocale, getTranslations } from "next-intl/server";
 
 import { LogoutButton } from "@/components/logout-button";
 import { getCurrentUser, getResidentInvitations, getVerificationRequests } from "@/lib/api";
@@ -26,28 +27,23 @@ interface OnboardingPageProps {
   }>;
 }
 
-const statuses: Array<{ label: string; value: InvitationStatus | "all" }> = [
-  { label: "All", value: "all" },
-  { label: "Pending", value: "pending" },
-  { label: "Expired", value: "expired" },
-  { label: "Accepted", value: "accepted" },
-  { label: "Revoked", value: "revoked" },
-];
-
-const reviewStatuses: Array<{ label: string; value: VerificationRequestStatus | "all" }> = [
-  { label: "All", value: "all" },
-  { label: "Pending review", value: "pending_review" },
-  { label: "More info requested", value: "more_info_requested" },
-  { label: "Approved", value: "approved" },
-  { label: "Rejected", value: "rejected" },
+const statusValues: Array<InvitationStatus | "all"> = ["all", "pending", "expired", "accepted", "revoked"];
+const reviewStatusValues: Array<VerificationRequestStatus | "all"> = [
+  "all",
+  "pending_review",
+  "more_info_requested",
+  "approved",
+  "rejected",
 ];
 
 function parseStatus(value?: string): InvitationStatus | "all" {
-  return statuses.some((status) => status.value === value) ? (value as InvitationStatus | "all") : "all";
+  return statusValues.includes(value as InvitationStatus | "all") ? (value as InvitationStatus | "all") : "all";
 }
 
 function parseReviewStatus(value?: string): VerificationRequestStatus | "all" {
-  return reviewStatuses.some((status) => status.value === value) ? (value as VerificationRequestStatus | "all") : "all";
+  return reviewStatusValues.includes(value as VerificationRequestStatus | "all")
+    ? (value as VerificationRequestStatus | "all")
+    : "all";
 }
 
 function statusTone(status: InvitationStatus): string {
@@ -78,19 +74,15 @@ function reviewStatusTone(status: VerificationRequestStatus): string {
   return "bg-[#f3ead7] text-accent";
 }
 
-function formatDate(value: string | null): string {
+function formatDate(value: string | null, locale: string, emptyLabel: string): string {
   if (!value) {
-    return "Not set";
+    return emptyLabel;
   }
 
-  return new Intl.DateTimeFormat("en", {
+  return new Intl.DateTimeFormat(locale, {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
-}
-
-function formatEnum(value: string | null): string {
-  return value ? value.replaceAll("_", " ") : "Not set";
 }
 
 function canResend(invitation: ResidentInvitation): boolean {
@@ -111,10 +103,60 @@ export default async function OnboardingPage({ searchParams }: OnboardingPagePro
   const activeStatus = parseStatus(params.status);
   const activeReviewStatus = parseReviewStatus(params.reviewStatus);
   const query = params.q ?? "";
-  const [invitations, verificationRequests] = await Promise.all([
+  const [invitations, verificationRequests, t, locale] = await Promise.all([
     getResidentInvitations({ q: query, status: activeStatus }),
     getVerificationRequests({ q: query, status: activeReviewStatus }),
+    getTranslations("Onboarding"),
+    getLocale(),
   ]);
+
+  const invitationStatuses: Array<{ label: string; value: InvitationStatus | "all" }> = [
+    { label: t("filters.all"), value: "all" },
+    { label: t("invitationStatuses.pending"), value: "pending" },
+    { label: t("invitationStatuses.expired"), value: "expired" },
+    { label: t("invitationStatuses.accepted"), value: "accepted" },
+    { label: t("invitationStatuses.revoked"), value: "revoked" },
+  ];
+
+  const reviewStatuses: Array<{ label: string; value: VerificationRequestStatus | "all" }> = [
+    { label: t("filters.all"), value: "all" },
+    { label: t("reviewStatuses.pending_review"), value: "pending_review" },
+    { label: t("reviewStatuses.more_info_requested"), value: "more_info_requested" },
+    { label: t("reviewStatuses.approved"), value: "approved" },
+    { label: t("reviewStatuses.rejected"), value: "rejected" },
+  ];
+
+  const invitationStatusLabel: Record<InvitationStatus, string> = {
+    accepted: t("invitationStatuses.accepted"),
+    expired: t("invitationStatuses.expired"),
+    pending: t("invitationStatuses.pending"),
+    revoked: t("invitationStatuses.revoked"),
+  };
+
+  const reviewStatusLabel: Record<VerificationRequestStatus, string> = {
+    approved: t("reviewStatuses.approved"),
+    more_info_requested: t("reviewStatuses.more_info_requested"),
+    pending_review: t("reviewStatuses.pending_review"),
+    rejected: t("reviewStatuses.rejected"),
+  };
+
+  const roleLabel: Record<string, string> = {
+    board_member: t("roles.board_member"),
+    compound_admin: t("roles.compound_admin"),
+    finance_reviewer: t("roles.finance_reviewer"),
+    resident_owner: t("roles.resident_owner"),
+    resident_tenant: t("roles.resident_tenant"),
+    security_guard: t("roles.security_guard"),
+    super_admin: t("roles.super_admin"),
+    support_agent: t("roles.support_agent"),
+  };
+
+  const relationLabel: Record<string, string> = {
+    owner: t("relations.owner"),
+    representative: t("relations.representative"),
+    resident: t("relations.resident"),
+    tenant: t("relations.tenant"),
+  };
 
   const onboardingHref = (nextStatus: InvitationStatus | "all", nextReviewStatus: VerificationRequestStatus | "all") => {
     const hrefParams = new URLSearchParams();
@@ -142,11 +184,11 @@ export default async function OnboardingPage({ searchParams }: OnboardingPagePro
         <div className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-6 md:flex-row md:items-center md:justify-between lg:px-8">
           <div>
             <Link className="text-sm font-semibold text-brand hover:text-brand-strong" href="/">
-              Dashboard
+              {t("back")}
             </Link>
-            <h1 className="mt-2 text-3xl font-semibold">Resident onboarding</h1>
+            <h1 className="mt-2 text-3xl font-semibold">{t("title")}</h1>
             <p className="mt-2 max-w-2xl text-sm text-muted">
-              Track invite delivery, resend expired links, and revoke pending access before residents complete their account.
+              {t("subtitle")}
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
@@ -154,7 +196,7 @@ export default async function OnboardingPage({ searchParams }: OnboardingPagePro
               className="inline-flex h-11 items-center justify-center rounded-lg border border-line bg-panel px-4 text-sm font-semibold hover:border-brand"
               href="/compounds"
             >
-              Property registry
+              {t("propertyRegistry")}
             </Link>
             <LogoutButton />
           </div>
@@ -164,39 +206,39 @@ export default async function OnboardingPage({ searchParams }: OnboardingPagePro
       <section className="mx-auto max-w-7xl px-5 py-6 lg:px-8">
         {params.resent ? (
           <p className="mb-4 rounded-lg bg-[#e6f3ef] px-4 py-3 text-sm font-medium text-brand">
-            Invitation resent with a new secure acceptance link.
+            {t("messages.resent")}
           </p>
         ) : null}
         {params.revoked ? (
           <p className="mb-4 rounded-lg bg-[#fff3f2] px-4 py-3 text-sm font-medium text-danger">
-            Invitation revoked. The previous acceptance link can no longer be used.
+            {t("messages.revoked")}
           </p>
         ) : null}
         {params.approved ? (
           <p className="mb-4 rounded-lg bg-[#e6f3ef] px-4 py-3 text-sm font-medium text-brand">
-            Verification approved. The resident account is now active and the linked membership is verified.
+            {t("messages.approved")}
           </p>
         ) : null}
         {params.rejected ? (
           <p className="mb-4 rounded-lg bg-[#fff3f2] px-4 py-3 text-sm font-medium text-danger">
-            Verification rejected. The account was suspended and the linked membership was marked rejected.
+            {t("messages.rejected")}
           </p>
         ) : null}
         {params.moreInfo ? (
           <p className="mb-4 rounded-lg bg-[#eaf0ff] px-4 py-3 text-sm font-medium text-[#244a8f]">
-            More information requested. The resident remains in pending review until an admin approves or rejects.
+            {t("messages.moreInfo")}
           </p>
         ) : null}
 
         <div className="mb-8">
           <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
-              <h2 className="text-xl font-semibold">Verification review queue</h2>
+              <h2 className="text-xl font-semibold">{t("verification.title")}</h2>
               <p className="mt-1 max-w-2xl text-sm text-muted">
-                Review accepted residents before account activation and keep membership verification aligned with the decision.
+                {t("verification.subtitle")}
               </p>
             </div>
-            <nav className="flex flex-wrap gap-2" aria-label="Verification status filters">
+            <nav className="flex flex-wrap gap-2" aria-label={t("verification.filtersLabel")}>
               {reviewStatuses.map((status) => (
                 <Link
                   className={`inline-flex h-10 items-center justify-center rounded-lg border px-3 text-sm font-semibold ${
@@ -217,31 +259,33 @@ export default async function OnboardingPage({ searchParams }: OnboardingPagePro
             <table className="w-full min-w-[1100px] border-collapse text-left text-sm">
               <thead className="bg-background text-muted">
                 <tr>
-                  <th className="px-4 py-3 font-semibold">Resident</th>
-                  <th className="px-4 py-3 font-semibold">Requested access</th>
-                  <th className="px-4 py-3 font-semibold">Unit</th>
-                  <th className="px-4 py-3 font-semibold">Review status</th>
-                  <th className="px-4 py-3 font-semibold">Decision notes</th>
-                  <th className="px-4 py-3 font-semibold">Review actions</th>
+                  <th className="px-4 py-3 font-semibold">{t("fields.resident")}</th>
+                  <th className="px-4 py-3 font-semibold">{t("fields.requestedAccess")}</th>
+                  <th className="px-4 py-3 font-semibold">{t("fields.unit")}</th>
+                  <th className="px-4 py-3 font-semibold">{t("fields.reviewStatus")}</th>
+                  <th className="px-4 py-3 font-semibold">{t("fields.decisionNotes")}</th>
+                  <th className="px-4 py-3 font-semibold">{t("fields.reviewActions")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
                 {verificationRequests.length === 0 ? (
                   <tr>
                     <td className="px-4 py-6 text-muted" colSpan={6}>
-                      No verification requests match the current filters.
+                      {t("verification.empty")}
                     </td>
                   </tr>
                 ) : (
                   verificationRequests.map((request) => (
                     <tr key={request.id}>
                       <td className="px-4 py-4 align-top">
-                        <div className="font-semibold">{request.user?.name ?? `User ${request.userId}`}</div>
-                        <div className="text-muted">{request.user?.email ?? "Email unavailable"}</div>
+                        <div className="font-semibold">{request.user?.name ?? t("fallback.user", { id: request.userId })}</div>
+                        <div className="text-muted">{request.user?.email ?? t("fallback.emailUnavailable")}</div>
                       </td>
-                      <td className="px-4 py-4 align-top capitalize">
-                        <div>{formatEnum(request.requestedRole)}</div>
-                        <div className="text-muted">{formatEnum(request.relationType)}</div>
+                      <td className="px-4 py-4 align-top">
+                        <div>{roleLabel[request.requestedRole] ?? request.requestedRole}</div>
+                        <div className="text-muted">
+                          {request.relationType ? relationLabel[request.relationType] ?? request.relationType : t("fallback.notSet")}
+                        </div>
                       </td>
                       <td className="px-4 py-4 align-top">
                         {request.unit ? (
@@ -249,20 +293,26 @@ export default async function OnboardingPage({ searchParams }: OnboardingPagePro
                             {request.unit.unitNumber}
                           </Link>
                         ) : (
-                          <span className="text-muted">Not linked</span>
+                          <span className="text-muted">{t("fallback.notLinked")}</span>
                         )}
                       </td>
                       <td className="px-4 py-4 align-top">
-                        <span className={`rounded-lg px-2.5 py-1 text-xs font-semibold capitalize ${reviewStatusTone(request.status)}`}>
-                          {formatEnum(request.status)}
+                        <span className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${reviewStatusTone(request.status)}`}>
+                          {reviewStatusLabel[request.status]}
                         </span>
-                        <div className="mt-2 text-xs text-muted">Submitted {formatDate(request.submittedAt)}</div>
-                        {request.reviewedAt ? <div className="text-xs text-muted">Reviewed {formatDate(request.reviewedAt)}</div> : null}
+                        <div className="mt-2 text-xs text-muted">
+                          {t("dates.submitted", { date: formatDate(request.submittedAt, locale, t("fallback.notSet")) })}
+                        </div>
+                        {request.reviewedAt ? (
+                          <div className="text-xs text-muted">
+                            {t("dates.reviewed", { date: formatDate(request.reviewedAt, locale, t("fallback.notSet")) })}
+                          </div>
+                        ) : null}
                       </td>
                       <td className="max-w-64 px-4 py-4 align-top text-sm">
                         {request.decisionNote ? <p>{request.decisionNote}</p> : null}
                         {request.moreInfoNote ? <p className="mt-2 text-[#244a8f]">{request.moreInfoNote}</p> : null}
-                        {!request.decisionNote && !request.moreInfoNote ? <span className="text-muted">No note yet</span> : null}
+                        {!request.decisionNote && !request.moreInfoNote ? <span className="text-muted">{t("fallback.noNote")}</span> : null}
                       </td>
                       <td className="px-4 py-4 align-top">
                         {canReview(request) ? (
@@ -271,46 +321,46 @@ export default async function OnboardingPage({ searchParams }: OnboardingPagePro
                               <input
                                 className="h-10 min-w-0 flex-1 rounded-lg border border-line px-2"
                                 name="note"
-                                placeholder="Optional approval note"
+                                placeholder={t("actions.approvalNote")}
                               />
                               <button
                                 className="inline-flex h-10 items-center justify-center rounded-lg bg-brand px-3 text-sm font-semibold text-white hover:bg-brand-strong"
                                 type="submit"
                               >
-                                Approve
+                                {t("actions.approve")}
                               </button>
                             </form>
                             <form action={rejectVerificationRequestAction.bind(null, request.id)} className="flex gap-2">
                               <input
                                 className="h-10 min-w-0 flex-1 rounded-lg border border-line px-2"
                                 name="note"
-                                placeholder="Rejection reason"
+                                placeholder={t("actions.rejectionReason")}
                                 required
                               />
                               <button
                                 className="inline-flex h-10 items-center justify-center rounded-lg border border-danger px-3 text-sm font-semibold text-danger"
                                 type="submit"
                               >
-                                Reject
+                                {t("actions.reject")}
                               </button>
                             </form>
                             <form action={requestMoreInfoAction.bind(null, request.id)} className="flex gap-2">
                               <input
                                 className="h-10 min-w-0 flex-1 rounded-lg border border-line px-2"
                                 name="note"
-                                placeholder="Requested information"
+                                placeholder={t("actions.requestedInformation")}
                                 required
                               />
                               <button
                                 className="inline-flex h-10 items-center justify-center rounded-lg border border-line px-3 text-sm font-semibold hover:border-brand"
                                 type="submit"
                               >
-                                Ask info
+                                {t("actions.askInfo")}
                               </button>
                             </form>
                           </div>
                         ) : (
-                          <span className="text-muted">Closed</span>
+                          <span className="text-muted">{t("actions.closed")}</span>
                         )}
                       </td>
                     </tr>
@@ -323,9 +373,9 @@ export default async function OnboardingPage({ searchParams }: OnboardingPagePro
 
         <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
-            <h2 className="text-xl font-semibold">Invitation delivery</h2>
-            <nav className="mt-3 flex flex-wrap gap-2" aria-label="Invitation status filters">
-              {statuses.map((status) => (
+            <h2 className="text-xl font-semibold">{t("invitations.title")}</h2>
+            <nav className="mt-3 flex flex-wrap gap-2" aria-label={t("invitations.filtersLabel")}>
+              {invitationStatuses.map((status) => (
                 <Link
                   className={`inline-flex h-10 items-center justify-center rounded-lg border px-3 text-sm font-semibold ${
                     activeStatus === status.value
@@ -348,63 +398,65 @@ export default async function OnboardingPage({ searchParams }: OnboardingPagePro
               className="h-11 min-w-0 flex-1 rounded-lg border border-line bg-panel px-3 text-sm outline-none focus:border-brand md:w-80"
               defaultValue={query}
               name="q"
-              placeholder="Search name or email"
+              placeholder={t("filters.searchPlaceholder")}
               type="search"
             />
             <button
               className="inline-flex h-11 items-center justify-center rounded-lg bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"
               type="submit"
             >
-              Search
+              {t("filters.search")}
             </button>
           </form>
         </div>
 
         <div className="overflow-hidden rounded-lg border border-line bg-panel">
           <table className="w-full border-collapse text-left text-sm">
-            <thead className="bg-background text-muted">
-              <tr>
-                <th className="px-4 py-3 font-semibold">Resident</th>
-                <th className="px-4 py-3 font-semibold">Role</th>
-                <th className="px-4 py-3 font-semibold">Unit</th>
-                <th className="px-4 py-3 font-semibold">Status</th>
-                <th className="px-4 py-3 font-semibold">Delivery</th>
-                <th className="px-4 py-3 font-semibold">Actions</th>
+              <thead className="bg-background text-muted">
+                <tr>
+                <th className="px-4 py-3 font-semibold">{t("fields.resident")}</th>
+                <th className="px-4 py-3 font-semibold">{t("fields.role")}</th>
+                <th className="px-4 py-3 font-semibold">{t("fields.unit")}</th>
+                <th className="px-4 py-3 font-semibold">{t("fields.status")}</th>
+                <th className="px-4 py-3 font-semibold">{t("fields.delivery")}</th>
+                <th className="px-4 py-3 font-semibold">{t("fields.actions")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
               {invitations.length === 0 ? (
-                <tr>
-                  <td className="px-4 py-6 text-muted" colSpan={6}>
-                    No invitations match the current filters.
-                  </td>
-                </tr>
+                  <tr>
+                    <td className="px-4 py-6 text-muted" colSpan={6}>
+                    {t("invitations.empty")}
+                    </td>
+                  </tr>
               ) : (
                 invitations.map((invitation) => (
                   <tr key={invitation.id}>
                     <td className="px-4 py-4">
-                      <div className="font-semibold">{invitation.user?.name ?? "Pending resident"}</div>
+                      <div className="font-semibold">{invitation.user?.name ?? t("fallback.pendingResident")}</div>
                       <div className="text-muted">{invitation.email}</div>
                     </td>
-                    <td className="px-4 py-4 capitalize">{invitation.role.replaceAll("_", " ")}</td>
+                    <td className="px-4 py-4">{roleLabel[invitation.role] ?? invitation.role}</td>
                     <td className="px-4 py-4">
                       {invitation.unit ? (
                         <Link className="font-semibold text-brand hover:text-brand-strong" href={`/units/${invitation.unit.id}`}>
                           {invitation.unit.unitNumber}
                         </Link>
                       ) : (
-                        <span className="text-muted">Not linked</span>
+                        <span className="text-muted">{t("fallback.notLinked")}</span>
                       )}
                     </td>
                     <td className="px-4 py-4">
-                      <span className={`rounded-lg px-2.5 py-1 text-xs font-semibold capitalize ${statusTone(invitation.status)}`}>
-                        {invitation.status}
+                      <span className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${statusTone(invitation.status)}`}>
+                        {invitationStatusLabel[invitation.status]}
                       </span>
-                      <div className="mt-2 text-xs text-muted">Expires {formatDate(invitation.expiresAt)}</div>
+                      <div className="mt-2 text-xs text-muted">
+                        {t("dates.expires", { date: formatDate(invitation.expiresAt, locale, t("fallback.notSet")) })}
+                      </div>
                     </td>
                     <td className="px-4 py-4">
-                      <div>{invitation.deliveryCount} sent</div>
-                      <div className="text-muted">{formatDate(invitation.lastSentAt)}</div>
+                      <div>{t("delivery.sent", { count: invitation.deliveryCount })}</div>
+                      <div className="text-muted">{formatDate(invitation.lastSentAt, locale, t("fallback.notSet"))}</div>
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex flex-wrap gap-2">
@@ -414,7 +466,7 @@ export default async function OnboardingPage({ searchParams }: OnboardingPagePro
                               className="inline-flex h-10 items-center justify-center rounded-lg border border-line px-3 text-sm font-semibold hover:border-brand"
                               type="submit"
                             >
-                              Resend
+                              {t("actions.resend")}
                             </button>
                           </form>
                         ) : null}
@@ -424,11 +476,11 @@ export default async function OnboardingPage({ searchParams }: OnboardingPagePro
                               className="inline-flex h-10 items-center justify-center rounded-lg border border-danger px-3 text-sm font-semibold text-danger"
                               type="submit"
                             >
-                              Revoke
+                              {t("actions.revoke")}
                             </button>
                           </form>
                         ) : null}
-                        {!canResend(invitation) && !canRevoke(invitation) ? <span className="text-muted">No action</span> : null}
+                        {!canResend(invitation) && !canRevoke(invitation) ? <span className="text-muted">{t("actions.noAction")}</span> : null}
                       </div>
                     </td>
                   </tr>

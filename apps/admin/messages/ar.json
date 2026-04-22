@@ -232,6 +232,103 @@
     "documents": "المستندات",
     "onboarding": "التسجيل"
   },
+  "Onboarding": {
+    "back": "لوحة القيادة",
+    "propertyRegistry": "سجل العقارات",
+    "title": "تسجيل السكان والتحقق",
+    "subtitle": "تابع تسليم الدعوات، وأعد إرسال الروابط المنتهية، وألغ الوصول المعلق قبل أن يكمل السكان حساباتهم.",
+    "messages": {
+      "resent": "تمت إعادة إرسال الدعوة برابط قبول آمن جديد.",
+      "revoked": "تم إلغاء الدعوة. لم يعد رابط القبول السابق صالحا للاستخدام.",
+      "approved": "تمت الموافقة على التحقق. أصبح حساب الساكن نشطا وتم توثيق العضوية المرتبطة.",
+      "rejected": "تم رفض التحقق. تم تعليق الحساب وتم تمييز العضوية المرتبطة كمرفوضة.",
+      "moreInfo": "تم طلب معلومات إضافية. يبقى الساكن قيد المراجعة حتى يوافق المسؤول أو يرفض الطلب."
+    },
+    "verification": {
+      "title": "قائمة مراجعة التحقق",
+      "subtitle": "راجع السكان المقبولين قبل تفعيل الحساب وحافظ على توافق توثيق العضوية مع القرار.",
+      "filtersLabel": "مرشحات حالة التحقق",
+      "empty": "لا توجد طلبات تحقق تطابق المرشحات الحالية."
+    },
+    "invitations": {
+      "title": "تسليم الدعوات",
+      "filtersLabel": "مرشحات حالة الدعوة",
+      "empty": "لا توجد دعوات تطابق المرشحات الحالية."
+    },
+    "filters": {
+      "all": "الكل",
+      "search": "بحث",
+      "searchPlaceholder": "ابحث بالاسم أو البريد الإلكتروني"
+    },
+    "fields": {
+      "resident": "الساكن",
+      "requestedAccess": "الوصول المطلوب",
+      "unit": "الوحدة",
+      "reviewStatus": "حالة المراجعة",
+      "decisionNotes": "ملاحظات القرار",
+      "reviewActions": "إجراءات المراجعة",
+      "role": "الدور",
+      "status": "الحالة",
+      "delivery": "التسليم",
+      "actions": "الإجراءات"
+    },
+    "actions": {
+      "approvalNote": "ملاحظة موافقة اختيارية",
+      "approve": "موافقة",
+      "rejectionReason": "سبب الرفض",
+      "reject": "رفض",
+      "requestedInformation": "المعلومات المطلوبة",
+      "askInfo": "طلب معلومات",
+      "closed": "مغلق",
+      "resend": "إعادة إرسال",
+      "revoke": "إلغاء",
+      "noAction": "لا يوجد إجراء"
+    },
+    "fallback": {
+      "user": "مستخدم {id}",
+      "emailUnavailable": "البريد الإلكتروني غير متاح",
+      "notSet": "غير محدد",
+      "notLinked": "غير مرتبط",
+      "noNote": "لا توجد ملاحظة بعد",
+      "pendingResident": "ساكن معلق"
+    },
+    "dates": {
+      "submitted": "تم الإرسال {date}",
+      "reviewed": "تمت المراجعة {date}",
+      "expires": "ينتهي {date}"
+    },
+    "delivery": {
+      "sent": "{count, plural, zero {لم ترسل} one {أرسلت مرة واحدة} two {أرسلت مرتين} few {أرسلت # مرات} many {أرسلت # مرة} other {أرسلت # مرة}}"
+    },
+    "invitationStatuses": {
+      "pending": "معلقة",
+      "expired": "منتهية",
+      "accepted": "مقبولة",
+      "revoked": "ملغاة"
+    },
+    "reviewStatuses": {
+      "pending_review": "قيد المراجعة",
+      "more_info_requested": "مطلوب معلومات إضافية",
+      "approved": "مقبول",
+      "rejected": "مرفوض"
+    },
+    "roles": {
+      "super_admin": "مدير عام",
+      "compound_admin": "مدير المجمع",
+      "board_member": "عضو مجلس",
+      "finance_reviewer": "مراجع مالي",
+      "security_guard": "فرد أمن",
+      "resident_owner": "مالك مقيم",
+      "resident_tenant": "مستأجر مقيم",
+      "support_agent": "فريق الدعم"
+    },
+    "relations": {
+      "owner": "مالك",
+      "tenant": "مستأجر",
+      "resident": "ساكن",
+      "representative": "ممثل"
+    }
+  },
   "Finance": {
     "back": "لوحة القيادة",
     "title": "المالية",
