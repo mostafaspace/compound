@@ -139,24 +139,25 @@ Run these checks in both English and Arabic.
 - Long Arabic labels do not overflow buttons, table cells, filters, modals, or empty states.
 - Status and relation labels are understandable in Arabic:
   - Owner: `مالك`
-  - Resident: `مقيم`
+  - Resident: `ساكن`
   - Tenant: `مستأجر`
-  - Shop holder: `صاحب محل`
-  - Authorized occupant: `ساكن مصرح له`
-  - Active: `نشط`
-  - Archived: `مؤرشف`
-  - Vacant: `شاغر`
+  - Representative: `ممثل`
+  - Active: `نشطة`
+  - Archived: `مؤرشفة`
+  - Vacant: `شاغرة`
 
 ## Mobile Human Checks
 
-Run these checks in both English and Arabic if the current mobile build exposes resident unit context.
+Run these checks in both English and Arabic. The resident mobile shell now exposes a dedicated **My unit profile** / **ملف وحدتي** card backed by `GET /api/v1/my/units`.
 
 - Resident sees only the units returned by `GET /api/v1/my/units`.
+- The unit profile card shows compound, building, floor, unit number, unit type, relation, primary badge, verification status, unit status, and membership active window.
+- If the resident has multiple active verified memberships, all units are visible and the primary membership appears first.
+- Visitor pass creation and mobile issue creation use the primary active membership unit first, with verification-request unit history only as a fallback.
+- The empty state explains that the administration must approve unit membership before scoped workflows are fully available.
 - Resident cannot see another user's units by changing local state or replaying API calls.
-- Arabic mobile copy is translated and uses right-to-left layout where applicable.
-- Unit/building/floor labels do not overflow on small devices.
-
-If mobile does not yet expose this screen, keep the API evidence attached to CM-27 and require the future mobile story to reuse `GET /api/v1/my/units` instead of adding a separate access rule.
+- Arabic mobile copy is translated and uses right-to-left layout where applicable, including badges, metadata labels, empty state, and refresh states.
+- Unit/building/floor labels and long Arabic membership notes do not overflow on small devices.
 
 ## Regression Checks
 
@@ -177,6 +178,8 @@ docker compose -f infra/docker-compose.yml exec -T api php artisan test tests/Fe
 docker compose -f infra/docker-compose.yml exec -T api sh -lc "QUEUE_CONNECTION=sync BROADCAST_CONNECTION=null php artisan test"
 docker compose -f infra/docker-compose.yml exec -T api php artisan queue:failed
 docker compose -f infra/docker-compose.yml ps
+npm run typecheck -w apps/mobile
+npm run typecheck -w apps/admin
 ```
 
 Expected results:
@@ -186,6 +189,8 @@ Expected results:
 - No failed queue jobs remain.
 - API status endpoint returns 200.
 - Admin login page returns 200.
+- Mobile TypeScript typecheck passes after the shared property contract update.
+- Admin TypeScript typecheck passes after the shared property contract update.
 
 ## Human Sign-Off
 
@@ -198,5 +203,5 @@ Only accept CM-3 after all rows below pass.
 | Admin registry UI in Arabic/RTL |  |  |  |
 | CSV dry run/import/export |  |  |  |
 | Resident scoped unit access |  |  |  |
-| Mobile unit context, if exposed |  |  |  |
+| Mobile unit context in English and Arabic/RTL |  |  |  |
 | Downstream readiness for finance/visitors/issues/voting |  |  |  |

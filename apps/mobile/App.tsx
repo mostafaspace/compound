@@ -7,6 +7,7 @@ import type {
   Issue,
   LoginResult,
   PaginatedEnvelope,
+  UnitMembership,
   UserNotification,
   VerificationRequest,
   VisitorRequest,
@@ -170,14 +171,43 @@ function isVisitorClosed(visitorRequest: VisitorRequest): boolean {
   return ["cancelled", "completed", "denied"].includes(visitorRequest.status);
 }
 
-function visitorLocation(visitorRequest: VisitorRequest): string {
+function visitorLocation(visitorRequest: VisitorRequest, unitLabel: string): string {
   const unit = visitorRequest.unit;
 
   if (!unit) {
     return visitorRequest.unitId;
   }
 
-  return [unit.compoundName, unit.buildingName, `Unit ${unit.unitNumber}`].filter(Boolean).join(" / ");
+  return [unit.compoundName, unit.buildingName, unitLabel].filter(Boolean).join(" / ");
+}
+
+function membershipUnitLabel(membership: UnitMembership | null, fallbackUnitId: string | null, t: (key: string, options?: Record<string, unknown>) => string): string {
+  if (membership?.unit?.unitNumber) {
+    return t("Common.unit", { unit: membership.unit.unitNumber });
+  }
+
+  if (fallbackUnitId) {
+    return t("Common.unit", { unit: fallbackUnitId });
+  }
+
+  return t("Property.noUnit");
+}
+
+function formatUnitLocation(membership: UnitMembership, t: (key: string, options?: Record<string, unknown>) => string): string {
+  const unit = membership.unit;
+
+  if (!unit) {
+    return t("Property.unitId", { id: membership.unitId });
+  }
+
+  const parts = [
+    unit.compound?.name,
+    unit.building?.name ? t("Property.buildingValue", { building: unit.building.name }) : null,
+    unit.floor?.label ? t("Property.floorValue", { floor: unit.floor.label }) : null,
+    t("Common.unit", { unit: unit.unitNumber }),
+  ];
+
+  return parts.filter(Boolean).join(" / ");
 }
 
 export default function App() {
@@ -195,6 +225,7 @@ export default function App() {
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [user, setUser] = useState<AuthenticatedUser | null>(null);
   const [verificationRequests, setVerificationRequests] = useState<VerificationRequest[]>([]);
+  const [unitMemberships, setUnitMemberships] = useState<UnitMembership[]>([]);
   const [visitorRequests, setVisitorRequests] = useState<VisitorRequest[]>([]);
   const [visitorPassTokens, setVisitorPassTokens] = useState<Record<string, string>>({});
   const [documentTypes, setDocumentTypes] = useState<DocumentType[]>([]);
@@ -209,12 +240,14 @@ export default function App() {
   const [visitPickerMode, setVisitPickerMode] = useState<VisitPickerMode>("date");
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [isRefreshingRequests, setIsRefreshingRequests] = useState(false);
+  const [isRefreshingUnits, setIsRefreshingUnits] = useState(false);
   const [isRefreshingVisitors, setIsRefreshingVisitors] = useState(false);
   const [isRestoringSession, setIsRestoringSession] = useState(true);
   const [isUploadingDocument, setIsUploadingDocument] = useState(false);
   const [isCreatingVisitor, setIsCreatingVisitor] = useState(false);
   const [isCancellingVisitorId, setIsCancellingVisitorId] = useState<string | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [unitMessage, setUnitMessage] = useState<string | null>(null);
   const [uploadMessage, setUploadMessage] = useState<string | null>(null);
   const [visitorMessage, setVisitorMessage] = useState<string | null>(null);
   const [issues, setIssues] = useState<Issue[]>([]);
@@ -306,6 +339,7 @@ export default function App() {
 
         await Promise.all([
           loadVerificationRequests(credentials.password),
+          loadUnitMemberships(credentials.password),
           loadDocumentTypes(credentials.password),
           loadVisitorRequests(credentials.password),
           loadIssues(credentials.password),
@@ -393,6 +427,38 @@ export default function App() {
       setVerificationRequests(payload.data);
     } finally {
       setIsRefreshingRequests(false);
+    }
+  }
+
+  async function loadUnitMemberships(token = authToken) {
+    if (!token) {
+      return;
+    }
+
+    setUnitMessage(null);
+    setIsRefreshingUnits(true);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/my/units?perPage=20`, {
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        setUnitMemberships([]);
+        setUnitMessage(t("Property.loadError"));
+        return;
+      }
+
+      const payload = (await response.json()) as PaginatedEnvelope<UnitMembership>;
+      setUnitMemberships(payload.data);
+    } catch {
+      setUnitMemberships([]);
+      setUnitMessage(t("Property.networkError"));
+    } finally {
+      setIsRefreshingUnits(false);
     }
   }
 
@@ -638,6 +704,7 @@ export default function App() {
 
       await Promise.all([
         loadVerificationRequests(payload.data.token),
+        loadUnitMemberships(payload.data.token),
         loadDocumentTypes(payload.data.token),
         loadVisitorRequests(payload.data.token),
         loadIssues(payload.data.token),
@@ -892,6 +959,7 @@ export default function App() {
     setAuthToken(null);
     setUser(null);
     setVerificationRequests([]);
+    setUnitMemberships([]);
     setVisitorRequests([]);
     setVisitorPassTokens({});
     setAnnouncements([]);
@@ -900,6 +968,7 @@ export default function App() {
     resetVisitorForm();
     setPassword("");
     setAuthError(null);
+    setUnitMessage(null);
     setUploadMessage(null);
     setVisitorMessage(null);
     setAnnouncementsError(null);
@@ -973,6 +1042,8 @@ export default function App() {
     verificationRequests.find((request) => request.unitId && request.status === "approved") ??
     verificationRequests.find((request) => request.unitId) ??
     null;
+  const primaryUnitMembership = unitMemberships.find((membership) => membership.isPrimary) ?? unitMemberships[0] ?? null;
+  const activeUnitId = primaryUnitMembership?.unitId ?? residentUnitRequest?.unitId ?? null;
   const activeVisitorRequests = visitorRequests.filter((visitorRequest) => !isVisitorClosed(visitorRequest));
   const hasInvalidVisitWindow = visitEndsAt <= visitStartsAt;
   const isPending = user?.status === "pending_review";
@@ -1183,6 +1254,108 @@ export default function App() {
                   role: t(`Common.roles.${user.role}`, { defaultValue: formatStatus(user.role) }),
                 })}
               </Text>
+            </View>
+
+            <View style={styles.panel}>
+              <View style={styles.announcementHeaderRow}>
+                <View style={styles.flexFill}>
+                  <Text style={[styles.panelLabel, styles.localizedText]}>{t("Property.label")}</Text>
+                  <Text style={[styles.sectionTitle, styles.localizedText]}>{t("Property.title")}</Text>
+                  <Text style={[styles.sectionText, styles.localizedText]}>
+                    {t("Property.membershipCount", { count: unitMemberships.length })}
+                  </Text>
+                </View>
+                <Pressable accessibilityRole="button" onPress={() => void loadUnitMemberships()} style={styles.secondaryButton}>
+                  <Text style={styles.secondaryButtonText}>
+                    {isRefreshingUnits ? t("Common.refreshing") : t("Common.refresh")}
+                  </Text>
+                </Pressable>
+              </View>
+
+              {unitMessage ? <Text style={[styles.infoText, styles.localizedText]}>{unitMessage}</Text> : null}
+
+              {isRefreshingUnits && unitMemberships.length === 0 ? (
+                <View style={styles.loadingRow}>
+                  <ActivityIndicator color={isDark ? "#14b8a6" : "#116a57"} />
+                  <Text style={[styles.sectionText, styles.localizedText]}>{t("Property.loading")}</Text>
+                </View>
+              ) : null}
+
+              {!isRefreshingUnits && unitMemberships.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <Text style={[styles.infoTitle, styles.localizedText]}>{t("Property.emptyTitle")}</Text>
+                  <Text style={[styles.infoText, styles.localizedText]}>{t("Property.emptyDetail")}</Text>
+                </View>
+              ) : null}
+
+              {unitMemberships.length > 0 ? (
+                <View style={styles.visitorList}>
+                  {unitMemberships.map((membership) => {
+                    const unit = membership.unit;
+
+                    return (
+                      <View style={styles.visitorCard} key={membership.id}>
+                        <View style={styles.rowBetween}>
+                          <View style={styles.flexFill}>
+                            <Text style={[styles.actionLabel, styles.localizedText]}>
+                              {membershipUnitLabel(membership, membership.unitId, t)}
+                            </Text>
+                            <Text style={[styles.actionDetail, styles.localizedText]}>{formatUnitLocation(membership, t)}</Text>
+                          </View>
+                          <Text style={styles.statusBadge}>
+                            {t(`Common.relations.${membership.relationType}`, {
+                              defaultValue: formatStatus(membership.relationType),
+                            })}
+                          </Text>
+                        </View>
+                        <View style={styles.announcementBadgeRow}>
+                          {membership.isPrimary ? (
+                            <Text style={styles.categoryBadge}>{t("Property.primary")}</Text>
+                          ) : null}
+                          <Text style={styles.priorityBadge}>
+                            {t(`Common.verificationStatuses.${membership.verificationStatus}`, {
+                              defaultValue: formatStatus(membership.verificationStatus),
+                            })}
+                          </Text>
+                          {unit?.status ? (
+                            <Text style={styles.priorityBadge}>
+                              {t(`Property.statuses.${unit.status}`, { defaultValue: formatStatus(unit.status) })}
+                            </Text>
+                          ) : null}
+                        </View>
+                        {unit ? (
+                          <View style={styles.propertyMetaGrid}>
+                            <View style={styles.propertyMetaItem}>
+                              <Text style={[styles.panelLabel, styles.localizedText]}>{t("Property.compound")}</Text>
+                              <Text style={[styles.sectionText, styles.localizedText]}>{unit.compound?.name ?? t("Property.notSet")}</Text>
+                            </View>
+                            <View style={styles.propertyMetaItem}>
+                              <Text style={[styles.panelLabel, styles.localizedText]}>{t("Property.building")}</Text>
+                              <Text style={[styles.sectionText, styles.localizedText]}>{unit.building?.name ?? t("Property.notSet")}</Text>
+                            </View>
+                            <View style={styles.propertyMetaItem}>
+                              <Text style={[styles.panelLabel, styles.localizedText]}>{t("Property.floor")}</Text>
+                              <Text style={[styles.sectionText, styles.localizedText]}>{unit.floor?.label ?? t("Property.notSet")}</Text>
+                            </View>
+                            <View style={styles.propertyMetaItem}>
+                              <Text style={[styles.panelLabel, styles.localizedText]}>{t("Property.type")}</Text>
+                              <Text style={[styles.sectionText, styles.localizedText]}>
+                                {unit.type ? t(`Property.types.${unit.type}`, { defaultValue: formatStatus(unit.type) }) : t("Property.notSet")}
+                              </Text>
+                            </View>
+                          </View>
+                        ) : null}
+                        <Text style={[styles.sectionText, styles.localizedText]}>
+                          {t("Property.activeWindow", {
+                            end: formatDateForLocale(membership.endsAt, announcementLocale, t("Property.openEnded")),
+                            start: formatDateForLocale(membership.startsAt, announcementLocale, t("Property.notSet")),
+                          })}
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              ) : null}
             </View>
 
             <View style={styles.panel}>
@@ -1402,10 +1575,10 @@ export default function App() {
                 </Pressable>
               </View>
 
-              {residentUnitRequest?.unitId ? (
+              {activeUnitId ? (
                 <View style={styles.visitorForm}>
-                  <Text style={styles.sectionText}>
-                    {t("Common.unit", { unit: residentUnitRequest.unit?.unitNumber ?? residentUnitRequest.unitId })}
+                  <Text style={[styles.sectionText, styles.localizedText]}>
+                    {membershipUnitLabel(primaryUnitMembership, residentUnitRequest?.unitId ?? null, t)}
                   </Text>
                   <Text style={[styles.inputLabel, styles.localizedText]}>{t("Visitors.name")}</Text>
                   <TextInput
@@ -1487,7 +1660,7 @@ export default function App() {
                   <Pressable
                     accessibilityRole="button"
                     disabled={isCreatingVisitor || !visitorName.trim() || hasInvalidVisitWindow}
-                    onPress={() => void handleCreateVisitor(residentUnitRequest.unitId!)}
+                    onPress={() => void handleCreateVisitor(activeUnitId)}
                     style={[
                       styles.primaryButton,
                       (isCreatingVisitor || !visitorName.trim() || hasInvalidVisitWindow) && styles.disabledButton,
@@ -1516,7 +1689,9 @@ export default function App() {
                         <View style={styles.rowBetween}>
                           <View style={styles.flexFill}>
                             <Text style={styles.actionLabel}>{visitorRequest.visitorName}</Text>
-                            <Text style={styles.actionDetail}>{visitorLocation(visitorRequest)}</Text>
+                            <Text style={[styles.actionDetail, styles.localizedText]}>
+                              {visitorLocation(visitorRequest, t("Common.unit", { unit: visitorRequest.unit?.unitNumber ?? visitorRequest.unitId }))}
+                            </Text>
                           </View>
                           <Text
                             style={[
@@ -1593,7 +1768,7 @@ export default function App() {
                 </View>
               </View>
 
-              {showIssueForm && residentUnitRequest?.unitId ? (
+              {showIssueForm && activeUnitId ? (
                 <View style={styles.visitorForm}>
                   <Text style={[styles.inputLabel, styles.localizedText]}>{t("Issues.category")}</Text>
                   <View style={{flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 8}}>
@@ -1635,7 +1810,7 @@ export default function App() {
                   <Pressable
                     accessibilityRole="button"
                     disabled={isCreatingIssue || !issueTitle.trim() || !issueDescription.trim()}
-                    onPress={() => void handleCreateIssue(residentUnitRequest.unitId!)}
+                    onPress={() => void handleCreateIssue(activeUnitId)}
                     style={[
                       styles.primaryButton,
                       (isCreatingIssue || !issueTitle.trim() || !issueDescription.trim()) && styles.disabledButton,
@@ -1999,6 +2174,22 @@ const getStyles = (isDark: boolean, isRtl: boolean) => StyleSheet.create({
   },
   announcementMetaBlock: {
     gap: 2,
+  },
+  propertyMetaGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  propertyMetaItem: {
+    backgroundColor: isDark ? "#111827" : "#fbfcfd",
+    borderColor: isDark ? "#374151" : "#d7dce3",
+    borderRadius: 8,
+    borderWidth: 1,
+    flexBasis: "47%",
+    flexGrow: 1,
+    gap: 4,
+    minWidth: 130,
+    padding: 10,
   },
   acknowledgementPanel: {
     backgroundColor: isDark ? "#172554" : "#eef4ff",

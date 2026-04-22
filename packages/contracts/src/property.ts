@@ -8,6 +8,10 @@ export const unitStatusValues = ["active", "vacant", "blocked", "archived"] as c
 
 export type UnitStatus = (typeof unitStatusValues)[number];
 
+export const unitTypeValues = ["apartment", "studio", "villa", "duplex", "retail", "office", "other"] as const;
+
+export type UnitType = (typeof unitTypeValues)[number];
+
 export interface CompoundSummary {
   id: string;
   name: string;
@@ -63,9 +67,14 @@ export interface FloorSummary {
 export interface UnitSummary {
   id: string;
   compoundId: string;
+  compound?: CompoundSummary | null;
   buildingId: string;
+  building?: BuildingSummary | null;
   floorId: string | null;
+  floor?: FloorSummary | null;
   unitNumber: string;
+  type?: UnitType;
+  areaSqm?: string | number | null;
   bedrooms: number | null;
   status: UnitStatus;
   createdAt: string | null;
@@ -82,6 +91,7 @@ export interface UnitDetail extends UnitSummary {
 export interface UnitMembership {
   id: number;
   unitId: string;
+  unit?: UnitSummary | null;
   userId: number;
   user?: AuthenticatedUser;
   relationType: UnitRelation;
