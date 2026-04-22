@@ -7,6 +7,7 @@ import type {
   Issue,
   LoginResult,
   PaginatedEnvelope,
+  UserNotification,
   VerificationRequest,
   VisitorRequest,
 } from "@compound/contracts";
@@ -104,13 +105,9 @@ const visitorTokenService = "compound.mobile.visitorPassTokens";
 
 type VisitPickerTarget = "starts" | "ends";
 type VisitPickerMode = "date" | "time" | "datetime";
+type IssueCategory = CreateIssueInput["category"];
 
-const actionItems = [
-  { label: "Visitor QR", detail: "Create or revoke guest passes" },
-  { label: "Payments", detail: "Submit receipts and view balance" },
-  { label: "Complaints", detail: "Track issues and responses" },
-  { label: "Announcements", detail: "Read official board updates" },
-];
+const issueCategories: IssueCategory[] = ["maintenance", "security", "cleaning", "noise", "other"];
 
 function formatStatus(value: string): string {
   return value.replaceAll("_", " ");
@@ -144,6 +141,17 @@ function localizedText(value: LocalizedText, language: string): string {
   }
 
   return value.en || value.ar;
+}
+
+function localizedNotificationText(notification: UserNotification, key: "title" | "body", language: string): string {
+  const arabicKey = key === "title" ? "titleAr" : "bodyAr";
+  const arabicValue = notification.metadata[arabicKey];
+
+  if (language.startsWith("ar") && typeof arabicValue === "string" && arabicValue.trim()) {
+    return arabicValue;
+  }
+
+  return notification[key];
 }
 
 function defaultVisitStartsAt(): Date {
@@ -211,6 +219,9 @@ export default function App() {
   const [visitorMessage, setVisitorMessage] = useState<string | null>(null);
   const [issues, setIssues] = useState<Issue[]>([]);
   const [isRefreshingIssues, setIsRefreshingIssues] = useState(false);
+  const [notifications, setNotifications] = useState<UserNotification[]>([]);
+  const [isRefreshingNotifications, setIsRefreshingNotifications] = useState(false);
+  const [notificationMessage, setNotificationMessage] = useState<string | null>(null);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [isRefreshingAnnouncements, setIsRefreshingAnnouncements] = useState(false);
   const [announcementsError, setAnnouncementsError] = useState<string | null>(null);
@@ -219,13 +230,22 @@ export default function App() {
   const [isCreatingIssue, setIsCreatingIssue] = useState(false);
   const [issueTitle, setIssueTitle] = useState("");
   const [issueDescription, setIssueDescription] = useState("");
-  const [issueCategory, setIssueCategory] = useState<string>("maintenance");
+  const [issueCategory, setIssueCategory] = useState<IssueCategory>("maintenance");
   const [issueMessage, setIssueMessage] = useState<string | null>(null);
   const [showIssueForm, setShowIssueForm] = useState(false);
 
   const apiBaseUrl = useMemo(
     () => defaultApiBaseUrl,
     [],
+  );
+  const actionItems = useMemo(
+    () => [
+      { label: t("QuickActions.visitors"), detail: t("QuickActions.visitorsDetail") },
+      { label: t("QuickActions.payments"), detail: t("QuickActions.paymentsDetail") },
+      { label: t("QuickActions.issues"), detail: t("QuickActions.issuesDetail") },
+      { label: t("QuickActions.announcements"), detail: t("QuickActions.announcementsDetail") },
+    ],
+    [t],
   );
 
   useEffect(() => {
@@ -289,6 +309,7 @@ export default function App() {
           loadDocumentTypes(credentials.password),
           loadVisitorRequests(credentials.password),
           loadIssues(credentials.password),
+          loadNotifications(credentials.password),
           loadAnnouncements(credentials.password),
         ]);
       } catch {
@@ -620,6 +641,7 @@ export default function App() {
         loadDocumentTypes(payload.data.token),
         loadVisitorRequests(payload.data.token),
         loadIssues(payload.data.token),
+        loadNotifications(payload.data.token),
         loadAnnouncements(payload.data.token),
       ]);
     } catch {
@@ -647,6 +669,95 @@ export default function App() {
       setIssues(payload.data);
     } finally {
       setIsRefreshingIssues(false);
+    }
+  }
+
+  async function loadNotifications(token = authToken) {
+    if (!token) {
+      return;
+    }
+
+    setNotificationMessage(null);
+    setIsRefreshingNotifications(true);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/notifications?perPage=10`, {
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        setNotifications([]);
+        setNotificationMessage(t("Notifications.loadError"));
+        return;
+      }
+
+      const payload = (await response.json()) as PaginatedEnvelope<UserNotification>;
+      setNotifications(payload.data);
+    } catch {
+      setNotificationMessage(t("Notifications.networkError"));
+    } finally {
+      setIsRefreshingNotifications(false);
+    }
+  }
+
+  async function handleMarkNotificationRead(notification: UserNotification) {
+    if (!authToken || notification.readAt) {
+      return;
+    }
+
+    setNotificationMessage(null);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/notifications/${notification.id}/read`, {
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        setNotificationMessage(t("Notifications.readError"));
+        return;
+      }
+
+      const payload = (await response.json()) as ApiEnvelope<UserNotification>;
+      setNotifications((current) => current.map((item) => (item.id === payload.data.id ? payload.data : item)));
+      setNotificationMessage(t("Notifications.readSuccess"));
+    } catch {
+      setNotificationMessage(t("Notifications.networkError"));
+    }
+  }
+
+  async function handleArchiveNotification(notification: UserNotification) {
+    if (!authToken) {
+      return;
+    }
+
+    setNotificationMessage(null);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/notifications/${notification.id}/archive`, {
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        setNotificationMessage(t("Notifications.archiveError"));
+        return;
+      }
+
+      const payload = (await response.json()) as ApiEnvelope<UserNotification>;
+      setNotifications((current) => current.filter((item) => item.id !== payload.data.id));
+      setNotificationMessage(t("Notifications.archiveSuccess"));
+    } catch {
+      setNotificationMessage(t("Notifications.networkError"));
     }
   }
 
@@ -759,17 +870,17 @@ export default function App() {
         method: "POST",
       });
       if (!response.ok) {
-        setIssueMessage("Issue could not be submitted. Try again.");
+        setIssueMessage(t("Issues.submitError"));
         return;
       }
-      setIssueMessage("Issue submitted. An admin will review it shortly.");
+      setIssueMessage(t("Issues.submitSuccess"));
       setIssueTitle("");
       setIssueDescription("");
       setIssueCategory("maintenance");
       setShowIssueForm(false);
       await loadIssues(authToken);
     } catch {
-      setIssueMessage("Could not reach the issue service.");
+      setIssueMessage(t("Issues.networkError"));
     } finally {
       setIsCreatingIssue(false);
     }
@@ -870,6 +981,7 @@ export default function App() {
   const pendingAnnouncementAcknowledgements = announcements.filter(
     (announcement) => announcement.requiresAcknowledgement && !announcement.acknowledgedAt,
   ).length;
+  const unreadNotificationCount = notifications.filter((notification) => !notification.readAt).length;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -1059,6 +1171,82 @@ export default function App() {
               <Text style={styles.panelLabel}>Signed in</Text>
               <Text style={styles.sectionTitle}>{user.name}</Text>
               <Text style={styles.sectionText}>{formatStatus(user.role)} account is active.</Text>
+            </View>
+
+            <View style={styles.panel}>
+              <View style={styles.announcementHeaderRow}>
+                <View style={styles.flexFill}>
+                  <Text style={[styles.panelLabel, styles.localizedText]}>{t("Notifications.label")}</Text>
+                  <Text style={[styles.sectionTitle, styles.localizedText]}>{t("Notifications.title")}</Text>
+                  <Text style={[styles.sectionText, styles.localizedText]}>
+                    {t("Notifications.count", { count: unreadNotificationCount })}
+                  </Text>
+                </View>
+                <Pressable accessibilityRole="button" onPress={() => void loadNotifications()} style={styles.secondaryButton}>
+                  <Text style={styles.secondaryButtonText}>
+                    {isRefreshingNotifications ? t("Notifications.refreshing") : t("Notifications.refresh")}
+                  </Text>
+                </Pressable>
+              </View>
+
+              {notificationMessage ? <Text style={[styles.infoText, styles.localizedText]}>{notificationMessage}</Text> : null}
+
+              {isRefreshingNotifications && notifications.length === 0 ? (
+                <View style={styles.loadingRow}>
+                  <ActivityIndicator color={isDark ? "#14b8a6" : "#116a57"} />
+                  <Text style={[styles.sectionText, styles.localizedText]}>{t("Notifications.loading")}</Text>
+                </View>
+              ) : null}
+
+              {!isRefreshingNotifications && notifications.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <Text style={[styles.infoTitle, styles.localizedText]}>{t("Notifications.empty")}</Text>
+                </View>
+              ) : null}
+
+              {notifications.length > 0 ? (
+                <View style={styles.visitorList}>
+                  {notifications.map((notification) => (
+                    <View style={styles.announcementCard} key={notification.id}>
+                      <View style={styles.announcementBadgeRow}>
+                        <Text style={styles.categoryBadge}>
+                          {t(`Notifications.categories.${notification.category}`, {
+                            defaultValue: formatStatus(notification.category),
+                          })}
+                        </Text>
+                        {!notification.readAt ? <Text style={styles.priorityBadge}>{t("Notifications.unread")}</Text> : null}
+                      </View>
+                      <Text style={[styles.actionLabel, styles.localizedText]}>
+                        {localizedNotificationText(notification, "title", language)}
+                      </Text>
+                      <Text style={[styles.sectionText, styles.localizedText]}>
+                        {localizedNotificationText(notification, "body", language)}
+                      </Text>
+                      <Text style={[styles.actionDetail, styles.localizedText]}>
+                        {formatDateForLocale(notification.createdAt, announcementLocale, "")}
+                      </Text>
+                      <View style={{ flexDirection: isRtl ? "row-reverse" : "row", flexWrap: "wrap", gap: 8 }}>
+                        {!notification.readAt ? (
+                          <Pressable
+                            accessibilityRole="button"
+                            onPress={() => void handleMarkNotificationRead(notification)}
+                            style={styles.secondaryButton}
+                          >
+                            <Text style={styles.secondaryButtonText}>{t("Notifications.markRead")}</Text>
+                          </Pressable>
+                        ) : null}
+                        <Pressable
+                          accessibilityRole="button"
+                          onPress={() => void handleArchiveNotification(notification)}
+                          style={styles.secondaryButton}
+                        >
+                          <Text style={styles.secondaryButtonText}>{t("Notifications.archive")}</Text>
+                        </Pressable>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
             </View>
 
             <View style={styles.panel}>
@@ -1372,25 +1560,25 @@ export default function App() {
             <View style={styles.panel}>
               <View style={styles.rowBetween}>
                 <View style={styles.flexFill}>
-                  <Text style={styles.panelLabel}>Complaints</Text>
-                  <Text style={styles.sectionTitle}>My issues</Text>
-                  <Text style={styles.sectionText}>{issues.length} submitted</Text>
+                  <Text style={[styles.panelLabel, styles.localizedText]}>{t("Issues.label")}</Text>
+                  <Text style={[styles.sectionTitle, styles.localizedText]}>{t("Issues.title")}</Text>
+                  <Text style={[styles.sectionText, styles.localizedText]}>{t("Issues.count", { count: issues.length })}</Text>
                 </View>
                 <View style={{flexDirection: 'row', gap: 8}}>
                   <Pressable accessibilityRole="button" onPress={() => setShowIssueForm(!showIssueForm)} style={styles.secondaryButton}>
-                    <Text style={styles.secondaryButtonText}>{showIssueForm ? 'Cancel' : 'New issue'}</Text>
+                    <Text style={styles.secondaryButtonText}>{showIssueForm ? t("Issues.cancel") : t("Issues.newIssue")}</Text>
                   </Pressable>
                   <Pressable accessibilityRole="button" onPress={() => void loadIssues()} style={styles.secondaryButton}>
-                    <Text style={styles.secondaryButtonText}>{isRefreshingIssues ? 'Refreshing' : 'Refresh'}</Text>
+                    <Text style={styles.secondaryButtonText}>{isRefreshingIssues ? t("Issues.refreshing") : t("Issues.refresh")}</Text>
                   </Pressable>
                 </View>
               </View>
 
               {showIssueForm && residentUnitRequest?.unitId ? (
                 <View style={styles.visitorForm}>
-                  <Text style={styles.inputLabel}>Category</Text>
+                  <Text style={[styles.inputLabel, styles.localizedText]}>{t("Issues.category")}</Text>
                   <View style={{flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 8}}>
-                    {['maintenance', 'security', 'cleaning', 'noise', 'other'].map((cat) => (
+                    {issueCategories.map((cat) => (
                       <Pressable
                         key={cat}
                         accessibilityRole="button"
@@ -1404,27 +1592,27 @@ export default function App() {
                           styles.documentTypeText,
                           issueCategory === cat && styles.documentTypeTextSelected,
                         ]}>
-                          {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                          {t(`Issues.categories.${cat}`)}
                         </Text>
                       </Pressable>
                     ))}
                   </View>
-                  <Text style={styles.inputLabel}>Title</Text>
+                  <Text style={[styles.inputLabel, styles.localizedText]}>{t("Issues.issueTitle")}</Text>
                   <TextInput
                     onChangeText={setIssueTitle}
-                    placeholder="Brief summary of the issue"
+                    placeholder={t("Issues.titlePlaceholder")}
                     style={styles.input}
                     value={issueTitle}
                   />
-                  <Text style={styles.inputLabel}>Description</Text>
+                  <Text style={[styles.inputLabel, styles.localizedText]}>{t("Issues.description")}</Text>
                   <TextInput
                     multiline
                     onChangeText={setIssueDescription}
-                    placeholder="Describe the issue in detail"
+                    placeholder={t("Issues.descriptionPlaceholder")}
                     style={[styles.input, styles.multilineInput]}
                     value={issueDescription}
                   />
-                  {issueMessage ? <Text style={styles.infoText}>{issueMessage}</Text> : null}
+                  {issueMessage ? <Text style={[styles.infoText, styles.localizedText]}>{issueMessage}</Text> : null}
                   <Pressable
                     accessibilityRole="button"
                     disabled={isCreatingIssue || !issueTitle.trim() || !issueDescription.trim()}
@@ -1437,38 +1625,43 @@ export default function App() {
                     {isCreatingIssue ? (
                       <ActivityIndicator color={isDark ? '#1f2937' : '#ffffff'} />
                     ) : (
-                      <Text style={styles.primaryButtonText}>Submit issue</Text>
+                      <Text style={styles.primaryButtonText}>{t("Issues.submit")}</Text>
                     )}
                   </Pressable>
                 </View>
               ) : null}
 
-              {issueMessage && !showIssueForm ? <Text style={styles.infoText}>{issueMessage}</Text> : null}
+              {issueMessage && !showIssueForm ? <Text style={[styles.infoText, styles.localizedText]}>{issueMessage}</Text> : null}
 
               {issues.length > 0 ? (
                 <View style={styles.visitorList}>
-                  <Text style={styles.infoTitle}>Recent issues</Text>
+                  <Text style={[styles.infoTitle, styles.localizedText]}>{t("Issues.recent")}</Text>
                   {issues.map((issue) => (
                     <View style={styles.visitorCard} key={issue.id}>
                       <View style={styles.rowBetween}>
                         <View style={styles.flexFill}>
                           <Text style={styles.actionLabel}>{issue.title}</Text>
-                          <Text style={styles.actionDetail}>{issue.category} — {formatStatus(issue.status)}</Text>
+                          <Text style={[styles.actionDetail, styles.localizedText]}>
+                            {t(`Issues.categories.${issue.category}`, { defaultValue: formatStatus(issue.category) })} -{" "}
+                            {t(`Issues.statuses.${issue.status}`, { defaultValue: formatStatus(issue.status) })}
+                          </Text>
                         </View>
                         <Text style={[
                           styles.statusBadge,
                           (issue.status === 'resolved' || issue.status === 'closed') ? null : styles.statusBadgeDanger,
                         ]}>
-                          {formatStatus(issue.status)}
+                          {t(`Issues.statuses.${issue.status}`, { defaultValue: formatStatus(issue.status) })}
                         </Text>
                       </View>
                       <Text style={styles.sectionText} numberOfLines={2}>{issue.description}</Text>
-                      <Text style={styles.sectionText}>Created: {formatDate(issue.createdAt)}</Text>
+                      <Text style={[styles.sectionText, styles.localizedText]}>
+                        {t("Issues.created", { date: formatDateForLocale(issue.createdAt, announcementLocale, "") })}
+                      </Text>
                     </View>
                   ))}
                 </View>
               ) : (
-                <Text style={styles.sectionText}>No issues submitted yet.</Text>
+                <Text style={[styles.sectionText, styles.localizedText]}>{t("Issues.empty")}</Text>
               )}
             </View>
 

@@ -354,7 +354,12 @@
   },
   "Issues": {
     "title": "البلاغات والشكاوى",
+    "back": "لوحة القيادة",
+    "propertyRegistry": "سجل العقارات",
     "newIssue": "بلاغ جديد",
+    "id": "المعرف",
+    "statusFiltersLabel": "مرشحات حالة البلاغ",
+    "categoryFiltersLabel": "مرشحات فئة البلاغ",
     "allStatuses": "جميع الحالات",
     "allCategories": "جميع الفئات",
     "statusNew": "جديد",
@@ -396,6 +401,9 @@
     "attachments": "المرفقات",
     "noAttachments": "لا توجد مرفقات",
     "unassigned": "غير معين",
+    "unknownReporter": "غير معروف",
+    "systemUser": "النظام",
+    "unitNumber": "وحدة {unit}",
     "you": "أنت"
   },
   "Announcements": {

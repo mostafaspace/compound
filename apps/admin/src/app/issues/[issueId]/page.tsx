@@ -1,7 +1,7 @@
 import type { IssueStatus } from "@compound/contracts";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 
 import { LogoutButton } from "@/components/logout-button";
 import { getCurrentUser, getIssue } from "@/lib/api";
@@ -25,9 +25,9 @@ function statusTone(status: string): string {
   return "bg-[#f3ead7] text-accent";
 }
 
-function formatDate(value: string | null): string {
+function formatDate(value: string | null, locale: string): string {
   if (!value) return "—";
-  return new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+  return new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
 }
 
 export default async function IssueDetailPage({ params, searchParams }: IssueDetailPageProps) {
@@ -35,9 +35,10 @@ export default async function IssueDetailPage({ params, searchParams }: IssueDet
   const { issueId } = await params;
   const sp = searchParams ? await searchParams : {};
 
-  const [issue, t] = await Promise.all([
+  const [issue, t, locale] = await Promise.all([
     getIssue(issueId),
     getTranslations("Issues"),
+    getLocale(),
   ]);
 
   if (!issue) {
@@ -89,7 +90,7 @@ export default async function IssueDetailPage({ params, searchParams }: IssueDet
             </Link>
             <h1 className="mt-2 text-3xl font-semibold">{issue.title}</h1>
             <p className="mt-2 max-w-2xl text-sm text-muted">
-              {t("reporter")}: {issue.reporter?.name ?? "Unknown"} — {formatDate(issue.createdAt)}
+              {t("reporter")}: {issue.reporter?.name ?? t("unknownReporter")} - {formatDate(issue.createdAt, locale)}
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
@@ -133,8 +134,8 @@ export default async function IssueDetailPage({ params, searchParams }: IssueDet
                   {nonInternalComments.map((comment) => (
                     <div key={comment.id} className="py-3">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold">{comment.user?.name ?? "System"}</span>
-                        <span className="text-xs text-muted">{formatDate(comment.createdAt)}</span>
+                        <span className="text-sm font-semibold">{comment.user?.name ?? t("systemUser")}</span>
+                        <span className="text-xs text-muted">{formatDate(comment.createdAt, locale)}</span>
                       </div>
                       <p className="mt-1 text-sm leading-6 whitespace-pre-wrap">{comment.body}</p>
                     </div>
@@ -173,8 +174,8 @@ export default async function IssueDetailPage({ params, searchParams }: IssueDet
                   {internalComments.map((comment) => (
                     <div key={comment.id} className="py-3">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold">{comment.user?.name ?? "System"}</span>
-                        <span className="text-xs text-muted">{formatDate(comment.createdAt)}</span>
+                        <span className="text-sm font-semibold">{comment.user?.name ?? t("systemUser")}</span>
+                        <span className="text-xs text-muted">{formatDate(comment.createdAt, locale)}</span>
                       </div>
                       <p className="mt-1 text-sm leading-6 whitespace-pre-wrap">{comment.body}</p>
                     </div>
@@ -223,7 +224,7 @@ export default async function IssueDetailPage({ params, searchParams }: IssueDet
               </div>
               <div>
                 <span className="text-xs font-semibold text-muted">{t("reporter")}</span>
-                <div className="mt-1 text-sm font-semibold">{issue.reporter?.name ?? "Unknown"}</div>
+                <div className="mt-1 text-sm font-semibold">{issue.reporter?.name ?? t("unknownReporter")}</div>
                 <div className="text-xs text-muted">{issue.reporter?.email ?? ""}</div>
               </div>
               <div>
@@ -233,13 +234,13 @@ export default async function IssueDetailPage({ params, searchParams }: IssueDet
               <div>
                 <span className="text-xs font-semibold text-muted">{t("location")}</span>
                 <div className="mt-1 text-sm">
-                  {issue.unit ? `Unit ${issue.unit.unitNumber}` : issue.building?.name ?? "—"}
+                  {issue.unit ? t("unitNumber", { unit: issue.unit.unitNumber }) : issue.building?.name ?? "—"}
                 </div>
               </div>
               {issue.resolvedAt ? (
                 <div>
                   <span className="text-xs font-semibold text-muted">{t("resolvedAt")}</span>
-                  <div className="mt-1 text-sm">{formatDate(issue.resolvedAt)}</div>
+                  <div className="mt-1 text-sm">{formatDate(issue.resolvedAt, locale)}</div>
                 </div>
               ) : null}
             </div>

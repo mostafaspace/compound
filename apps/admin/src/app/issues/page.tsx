@@ -1,6 +1,6 @@
 import type { IssueCategory, IssueStatus } from "@compound/contracts";
 import Link from "next/link";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 
 import { LogoutButton } from "@/components/logout-button";
 import { getCurrentUser, getIssues } from "@/lib/api";
@@ -37,9 +37,9 @@ function priorityTone(priority: string): string {
   return "bg-background text-muted";
 }
 
-function formatDate(value: string | null): string {
+function formatDate(value: string | null, locale: string): string {
   if (!value) return "—";
-  return new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+  return new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
 }
 
 export default async function IssuesPage({ searchParams }: IssuesPageProps) {
@@ -48,9 +48,10 @@ export default async function IssuesPage({ searchParams }: IssuesPageProps) {
   const activeStatus = parseStatus(params.status);
   const activeCategory = parseCategory(params.category);
 
-  const [issues, t] = await Promise.all([
+  const [issues, t, locale] = await Promise.all([
     getIssues({ status: activeStatus, category: activeCategory }),
     getTranslations("Issues"),
+    getLocale(),
   ]);
 
   const statusFilters: Array<{ label: string; value: IssueStatus | "all" }> = [
@@ -108,7 +109,7 @@ export default async function IssuesPage({ searchParams }: IssuesPageProps) {
         <div className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-6 md:flex-row md:items-center md:justify-between lg:px-8">
           <div>
             <Link className="text-sm font-semibold text-brand hover:text-brand-strong" href="/">
-              Dashboard
+              {t("back")}
             </Link>
             <h1 className="mt-2 text-3xl font-semibold">{t("title")}</h1>
           </div>
@@ -117,7 +118,7 @@ export default async function IssuesPage({ searchParams }: IssuesPageProps) {
               className="inline-flex h-11 items-center justify-center rounded-lg border border-line bg-panel px-4 text-sm font-semibold hover:border-brand"
               href="/compounds"
             >
-              Property registry
+              {t("propertyRegistry")}
             </Link>
             <LogoutButton />
           </div>
@@ -128,7 +129,7 @@ export default async function IssuesPage({ searchParams }: IssuesPageProps) {
         <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
             <h2 className="text-xl font-semibold">{t("status")}</h2>
-            <nav className="mt-3 flex flex-wrap gap-2" aria-label="Issue status filters">
+            <nav className="mt-3 flex flex-wrap gap-2" aria-label={t("statusFiltersLabel")}>
               {statusFilters.map((f) => (
                 <Link
                   className={`inline-flex h-10 items-center justify-center rounded-lg border px-3 text-sm font-semibold ${
@@ -146,7 +147,7 @@ export default async function IssuesPage({ searchParams }: IssuesPageProps) {
           </div>
           <div>
             <h2 className="text-xl font-semibold">{t("category")}</h2>
-            <nav className="mt-3 flex flex-wrap gap-2" aria-label="Issue category filters">
+            <nav className="mt-3 flex flex-wrap gap-2" aria-label={t("categoryFiltersLabel")}>
               {categoryFilters.map((f) => (
                 <Link
                   className={`inline-flex h-10 items-center justify-center rounded-lg border px-3 text-sm font-semibold ${
@@ -168,7 +169,7 @@ export default async function IssuesPage({ searchParams }: IssuesPageProps) {
           <table className="w-full min-w-[1100px] border-collapse text-left text-sm">
             <thead className="bg-background text-muted">
               <tr>
-                <th className="px-4 py-3 font-semibold">ID</th>
+                <th className="px-4 py-3 font-semibold">{t("id")}</th>
                 <th className="px-4 py-3 font-semibold">{t("issueTitle")}</th>
                 <th className="px-4 py-3 font-semibold">{t("reporter")}</th>
                 <th className="px-4 py-3 font-semibold">{t("category")}</th>
@@ -196,13 +197,13 @@ export default async function IssuesPage({ searchParams }: IssuesPageProps) {
                       </Link>
                     </td>
                     <td className="px-4 py-4">
-                      <div className="font-semibold">{issue.reporter?.name ?? "Unknown"}</div>
+                      <div className="font-semibold">{issue.reporter?.name ?? t("unknownReporter")}</div>
                       <div className="text-muted">{issue.reporter?.email ?? ""}</div>
                     </td>
                     <td className="px-4 py-4">{categoryLabel[issue.category] ?? issue.category}</td>
                     <td className="px-4 py-4">
                       {issue.unit ? (
-                        <span>Unit {issue.unit.unitNumber}</span>
+                        <span>{t("unitNumber", { unit: issue.unit.unitNumber })}</span>
                       ) : issue.building ? (
                         <span>{issue.building.name}</span>
                       ) : (
@@ -220,7 +221,7 @@ export default async function IssuesPage({ searchParams }: IssuesPageProps) {
                         {priorityLabel[issue.priority] ?? issue.priority}
                       </span>
                     </td>
-                    <td className="px-4 py-4 text-muted">{formatDate(issue.createdAt)}</td>
+                    <td className="px-4 py-4 text-muted">{formatDate(issue.createdAt, locale)}</td>
                   </tr>
                 ))
               )}

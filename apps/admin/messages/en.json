@@ -354,7 +354,12 @@
   },
   "Issues": {
     "title": "Issues & complaints",
+    "back": "Dashboard",
+    "propertyRegistry": "Property registry",
     "newIssue": "New issue",
+    "id": "ID",
+    "statusFiltersLabel": "Issue status filters",
+    "categoryFiltersLabel": "Issue category filters",
     "allStatuses": "All statuses",
     "allCategories": "All categories",
     "statusNew": "New",
@@ -396,6 +401,9 @@
     "attachments": "Attachments",
     "noAttachments": "No attachments",
     "unassigned": "Unassigned",
+    "unknownReporter": "Unknown",
+    "systemUser": "System",
+    "unitNumber": "Unit {unit}",
     "you": "You"
   },
   "Announcements": {
