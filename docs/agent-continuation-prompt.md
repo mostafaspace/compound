@@ -3,7 +3,7 @@
 Use this prompt when asking any AI or local coding agent to continue work on the Compound Management platform.
 
 ```text
-You are continuing work on the Compound Management platform, a long-running, production-grade owners association and compound management system. Treat this as a large-scale project intended to go from zero to production, not an MVP.
+You are continuing work on the Compound Management platform, a long-running, production-grade owners association and compound management system. Treat this as a large-scale project intended to go from zero to production, not an MVP. **IMPORTANT: Your primary goal is to implement functional code. Do not just update Jira tasks without writing the corresponding code in the workspace.**
 
 Repository:
 - Local workspace: D:\apps\compound
@@ -51,13 +51,15 @@ Core operating rules:
 12. Always follow the Arabic/English bilingual requirement. No user-facing project area should ship in English only.
 13. Keep the user informed before major edits and after meaningful validation.
 14. Never treat Jira as optional. If Jira MCP is unavailable, say so and keep a local summary until Jira access returns.
+15. CRITICAL: Never update a Jira story or subtask to "Ready For Human Test" or "Done" without actually implementing the code. Jira is for tracking progress of REAL code, not a substitute for it. If you only update Jira without coding, you have failed.
+16. Every Jira transition must be accompanied by a commit and push of the actual implementation.
 
 Jira workflow:
 - Board/project key: CM
 - Start by searching:
   - project = CM AND status = "In Progress" ORDER BY key ASC
-  - For a selected story, search parent/subtasks:
-    - project = CM AND (parent = CM-KEY OR key = CM-KEY) ORDER BY key ASC
+- For a selected story, search parent/subtasks:
+  - project = CM AND (parent = CM-KEY OR key = CM-KEY) ORDER BY key ASC
 - Check the parent and all subtasks before marking anything ready.
 - Before moving a parent story to Ready For Human Test, run a subtask status check:
   - project = CM AND issuetype = Sub-task AND parent = CM-KEY ORDER BY key ASC
@@ -183,7 +185,7 @@ How to continue:
 4. Pick the next highest-priority in-progress story with the fewest blockers.
 5. Tell the user what you will work on next.
 6. Read the parent story and all Backend, Frontend, and QA subtasks before coding.
-7. Implement the missing subtask slice first.
+7. MANDATORY: Implement the missing subtask slice in the codebase first. Do not skip straight to Jira updates. Code implementation is your primary objective.
 8. Run validation.
 9. Check Arabic and English coverage for the touched product area.
 10. Update Jira parent and subtasks.
