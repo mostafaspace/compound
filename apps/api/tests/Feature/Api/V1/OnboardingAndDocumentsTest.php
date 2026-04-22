@@ -63,7 +63,20 @@ class OnboardingAndDocumentsTest extends TestCase
         $this->assertIsString($token);
 
         $resident = User::query()->where('email', 'nora.owner@example.com')->firstOrFail();
-        Notification::assertSentTo($resident, ResidentInvitationNotification::class);
+        Notification::assertSentTo(
+            $resident,
+            ResidentInvitationNotification::class,
+            function (ResidentInvitationNotification $notification) use ($resident): bool {
+                $payload = $notification->toArray($resident);
+                $mail = $notification->toMail($resident);
+                $rendered = (string) $mail->render();
+
+                return str_contains($payload['titleAr'], 'دعوة')
+                    && str_contains($mail->subject, 'دعوة')
+                    && str_contains($rendered, 'أكمل حسابك')
+                    && str_contains($rendered, 'هذه الدعوة مرتبطة بالوحدة A-101');
+            },
+        );
         $this->assertSame(AccountStatus::Invited, $resident->status);
         $this->assertDatabaseHas('resident_invitations', [
             'email' => 'nora.owner@example.com',
@@ -257,8 +270,18 @@ class OnboardingAndDocumentsTest extends TestCase
         Notification::assertSentTo(
             $resident,
             VerificationDecisionNotification::class,
-            fn (VerificationDecisionNotification $notification, array $channels): bool => $notification->toArray($resident)['status'] === VerificationRequestStatus::Approved->value
-                && $notification->toArray($resident)['note'] === 'Ownership verified against submitted documents.',
+            function (VerificationDecisionNotification $notification, array $channels) use ($resident): bool {
+                $payload = $notification->toArray($resident);
+                $mail = $notification->toMail($resident);
+                $rendered = (string) $mail->render();
+
+                return $payload['status'] === VerificationRequestStatus::Approved->value
+                    && $payload['note'] === 'Ownership verified against submitted documents.'
+                    && $payload['titleAr'] === 'تمت الموافقة على حسابك في المجمع'
+                    && str_contains($payload['bodyAr'], 'تمت الموافقة على وصولك')
+                    && str_contains($mail->subject, 'تمت الموافقة')
+                    && str_contains($rendered, 'ملاحظة المراجع');
+            },
         );
     }
 

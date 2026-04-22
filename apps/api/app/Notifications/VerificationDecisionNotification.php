@@ -31,20 +31,25 @@ class VerificationDecisionNotification extends Notification implements ShouldQue
     public function toMail(object $notifiable): MailMessage
     {
         $message = (new MailMessage)
-            ->subject($this->subject())
-            ->greeting($this->greeting())
+            ->subject($this->subject().' / '.$this->subjectAr())
+            ->greeting($this->greeting().' / '.$this->greetingAr())
             ->line($this->introLine())
-            ->line($this->unitLine());
+            ->line($this->introLineAr())
+            ->line($this->unitLine())
+            ->line($this->unitLineAr());
 
         if ($this->note) {
             $message->line('Reviewer note: '.$this->note);
+            $message->line('ملاحظة المراجع: '.$this->note);
         }
 
         if ($this->actionUrl) {
-            $message->action($this->actionLabel(), $this->actionUrl);
+            $message->action($this->actionLabel().' / '.$this->actionLabelAr(), $this->actionUrl);
         }
 
-        return $message->line('Contact the compound administration team if you have questions about this decision.');
+        return $message
+            ->line('Contact the compound administration team if you have questions about this decision.')
+            ->line('تواصل مع إدارة المجمع إذا كانت لديك أسئلة عن هذا القرار.');
     }
 
     /**
@@ -58,6 +63,10 @@ class VerificationDecisionNotification extends Notification implements ShouldQue
             'unitNumber' => $this->unitNumber,
             'note' => $this->note,
             'actionUrl' => $this->actionUrl,
+            'titleEn' => $this->subject(),
+            'titleAr' => $this->subjectAr(),
+            'bodyEn' => $this->introLine(),
+            'bodyAr' => $this->introLineAr(),
         ];
     }
 
@@ -71,6 +80,16 @@ class VerificationDecisionNotification extends Notification implements ShouldQue
         };
     }
 
+    private function subjectAr(): string
+    {
+        return match ($this->status) {
+            VerificationRequestStatus::Approved => 'تمت الموافقة على حسابك في المجمع',
+            VerificationRequestStatus::Rejected => 'تم رفض طلب التحقق الخاص بك',
+            VerificationRequestStatus::MoreInfoRequested => 'مطلوب معلومات إضافية لحسابك في المجمع',
+            VerificationRequestStatus::PendingReview => 'حسابك في المجمع قيد المراجعة',
+        };
+    }
+
     private function greeting(): string
     {
         return match ($this->status) {
@@ -78,6 +97,16 @@ class VerificationDecisionNotification extends Notification implements ShouldQue
             VerificationRequestStatus::Rejected => 'Verification was rejected',
             VerificationRequestStatus::MoreInfoRequested => 'More information is needed',
             VerificationRequestStatus::PendingReview => 'Your account is under review',
+        };
+    }
+
+    private function greetingAr(): string
+    {
+        return match ($this->status) {
+            VerificationRequestStatus::Approved => 'تمت الموافقة على حسابك',
+            VerificationRequestStatus::Rejected => 'تم رفض التحقق',
+            VerificationRequestStatus::MoreInfoRequested => 'مطلوب معلومات إضافية',
+            VerificationRequestStatus::PendingReview => 'حسابك قيد المراجعة',
         };
     }
 
@@ -91,11 +120,28 @@ class VerificationDecisionNotification extends Notification implements ShouldQue
         };
     }
 
+    private function introLineAr(): string
+    {
+        return match ($this->status) {
+            VerificationRequestStatus::Approved => "تمت الموافقة على وصولك إلى {$this->compoundName}. يمكنك الآن استخدام حساب الساكن.",
+            VerificationRequestStatus::Rejected => "تم رفض طلب وصولك إلى {$this->compoundName} أثناء التحقق.",
+            VerificationRequestStatus::MoreInfoRequested => "تحتاج إدارة المجمع إلى معلومات إضافية قبل الموافقة على وصولك إلى {$this->compoundName}.",
+            VerificationRequestStatus::PendingReview => "طلب وصولك إلى {$this->compoundName} ما زال قيد المراجعة.",
+        };
+    }
+
     private function unitLine(): string
     {
         return $this->unitNumber
             ? "This decision is linked to unit {$this->unitNumber}."
             : 'This decision is not linked to a specific unit.';
+    }
+
+    private function unitLineAr(): string
+    {
+        return $this->unitNumber
+            ? "هذا القرار مرتبط بالوحدة {$this->unitNumber}."
+            : 'هذا القرار غير مرتبط بوحدة محددة.';
     }
 
     private function actionLabel(): string
@@ -104,6 +150,15 @@ class VerificationDecisionNotification extends Notification implements ShouldQue
             VerificationRequestStatus::MoreInfoRequested => 'Provide information',
             VerificationRequestStatus::Approved => 'Open resident app',
             VerificationRequestStatus::Rejected, VerificationRequestStatus::PendingReview => 'Review account',
+        };
+    }
+
+    private function actionLabelAr(): string
+    {
+        return match ($this->status) {
+            VerificationRequestStatus::MoreInfoRequested => 'تقديم المعلومات',
+            VerificationRequestStatus::Approved => 'فتح تطبيق الساكن',
+            VerificationRequestStatus::Rejected, VerificationRequestStatus::PendingReview => 'مراجعة الحساب',
         };
     }
 }

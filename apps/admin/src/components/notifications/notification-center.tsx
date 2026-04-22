@@ -75,6 +75,17 @@ function formatTime(value: string, locale: string): string {
   }).format(new Date(value));
 }
 
+function localizedNotificationText(notification: UserNotification, key: "title" | "body", locale: string): string {
+  const metadataKey = locale.startsWith("ar") ? `${key}Ar` : `${key}En`;
+  const localizedValue = notification.metadata[metadataKey];
+
+  if (typeof localizedValue === "string" && localizedValue.trim()) {
+    return localizedValue;
+  }
+
+  return notification[key];
+}
+
 export function NotificationCenter({
   initialNotifications,
   initialPreferences,
@@ -269,8 +280,8 @@ export function NotificationCenter({
                       <div className="min-w-0 flex-1">
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <p className="text-sm font-semibold text-foreground">{notification.title}</p>
-                            <p className="mt-1 text-sm leading-5 text-muted">{notification.body}</p>
+                            <p className="text-sm font-semibold text-foreground">{localizedNotificationText(notification, "title", locale)}</p>
+                            <p className="mt-1 text-sm leading-5 text-muted">{localizedNotificationText(notification, "body", locale)}</p>
                           </div>
                           {!notification.readAt ? <span className="mt-1 size-2 shrink-0 rounded-full bg-brand" /> : null}
                         </div>

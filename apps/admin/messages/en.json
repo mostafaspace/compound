@@ -329,6 +329,24 @@
       "representative": "Representative"
     }
   },
+  "InviteAcceptance": {
+    "eyebrow": "Private invitation",
+    "title": "Complete your compound account",
+    "subtitle": "This private invite is for {email}. Set your password and confirm your contact details before signing in.",
+    "unitLinked": "Unit {unit}",
+    "unitNotLinked": "Unit not linked yet",
+    "notSet": "Not set",
+    "fields": {
+      "unit": "Unit",
+      "expires": "Invitation expires",
+      "name": "Name",
+      "phone": "Phone",
+      "password": "Password",
+      "confirmPassword": "Confirm password"
+    },
+    "submit": "Complete account",
+    "privacyNote": "After completion, your account remains restricted until the compound administration team approves your verification request."
+  },
   "Finance": {
     "back": "Dashboard",
     "title": "Finance",

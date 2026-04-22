@@ -211,27 +211,46 @@ class VerificationRequestController extends Controller
             actionUrl: $actionUrl,
         ));
 
+        $titleEn = match ($verificationRequest->status) {
+            VerificationRequestStatus::Approved => 'Verification approved',
+            VerificationRequestStatus::Rejected => 'Verification rejected',
+            VerificationRequestStatus::MoreInfoRequested => 'More information requested',
+            VerificationRequestStatus::PendingReview => 'Verification pending review',
+        };
+        $titleAr = match ($verificationRequest->status) {
+            VerificationRequestStatus::Approved => 'تمت الموافقة على التحقق',
+            VerificationRequestStatus::Rejected => 'تم رفض التحقق',
+            VerificationRequestStatus::MoreInfoRequested => 'مطلوب معلومات إضافية',
+            VerificationRequestStatus::PendingReview => 'التحقق قيد المراجعة',
+        };
+        $bodyEn = match ($verificationRequest->status) {
+            VerificationRequestStatus::Approved => "Your {$compoundName} access has been approved.",
+            VerificationRequestStatus::Rejected => "Your {$compoundName} verification was rejected. Review the note for details.",
+            VerificationRequestStatus::MoreInfoRequested => "The administration team needs more information before approving your {$compoundName} access.",
+            VerificationRequestStatus::PendingReview => "Your {$compoundName} verification is pending review.",
+        };
+        $bodyAr = match ($verificationRequest->status) {
+            VerificationRequestStatus::Approved => "تمت الموافقة على وصولك إلى {$compoundName}.",
+            VerificationRequestStatus::Rejected => "تم رفض تحققك في {$compoundName}. راجع الملاحظة لمعرفة التفاصيل.",
+            VerificationRequestStatus::MoreInfoRequested => "تحتاج الإدارة إلى معلومات إضافية قبل الموافقة على وصولك إلى {$compoundName}.",
+            VerificationRequestStatus::PendingReview => "تحققك في {$compoundName} قيد المراجعة.",
+        };
+
         $this->notificationService->create(
             userId: $verificationRequest->user_id,
             category: NotificationCategory::Documents,
-            title: match ($verificationRequest->status) {
-                VerificationRequestStatus::Approved => 'Verification approved',
-                VerificationRequestStatus::Rejected => 'Verification rejected',
-                VerificationRequestStatus::MoreInfoRequested => 'More information requested',
-                VerificationRequestStatus::PendingReview => 'Verification pending review',
-            },
-            body: match ($verificationRequest->status) {
-                VerificationRequestStatus::Approved => "Your {$compoundName} access has been approved.",
-                VerificationRequestStatus::Rejected => "Your {$compoundName} verification was rejected. Review the note for details.",
-                VerificationRequestStatus::MoreInfoRequested => "The administration team needs more information before approving your {$compoundName} access.",
-                VerificationRequestStatus::PendingReview => "Your {$compoundName} verification is pending review.",
-            },
+            title: $titleEn,
+            body: $bodyEn,
             metadata: [
                 'verificationRequestId' => $verificationRequest->id,
                 'status' => $verificationRequest->status->value,
                 'unitId' => $verificationRequest->unit_id,
                 'unitNumber' => $verificationRequest->unit?->unit_number,
                 'actionUrl' => $actionUrl,
+                'titleEn' => $titleEn,
+                'titleAr' => $titleAr,
+                'bodyEn' => $bodyEn,
+                'bodyAr' => $bodyAr,
             ],
             priority: $verificationRequest->status === VerificationRequestStatus::MoreInfoRequested ? 'high' : 'normal',
         );
