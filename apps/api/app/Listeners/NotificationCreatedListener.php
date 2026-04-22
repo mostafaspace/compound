@@ -3,27 +3,26 @@
 namespace App\Listeners;
 
 use App\Events\NotificationCreatedEvent;
+use App\Models\Notification;
 use App\Support\AuditLogger;
 
 class NotificationCreatedListener
 {
-    public function __construct(private AuditLogger $auditLogger)
-    {
-    }
+    public function __construct(private AuditLogger $auditLogger) {}
 
     public function handle(NotificationCreatedEvent $event): void
     {
         $this->auditLogger->record(
             action: 'notifications.created',
-            auditableType: $event->notification::class,
-            auditableId: $event->notification->id,
+            auditableType: Notification::class,
+            auditableId: $event->notificationId,
             metadata: [
-                'id' => $event->notification->id,
-                'user_id' => $event->notification->user_id,
-                'category' => $event->notification->category->value,
-                'channel' => $event->notification->channel,
-                'priority' => $event->notification->priority,
-                'title' => $event->notification->title,
+                'id' => $event->notificationId,
+                'user_id' => $event->userId,
+                'category' => $event->category,
+                'channel' => $event->channel,
+                'priority' => $event->priority,
+                'title' => $event->title,
             ]
         );
     }

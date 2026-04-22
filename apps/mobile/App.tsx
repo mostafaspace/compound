@@ -638,7 +638,7 @@ export default function App() {
 
     try {
       const response = await fetch(`${apiBaseUrl}/visitor-requests/${visitorRequestId}/cancel`, {
-        body: JSON.stringify({ reason: "Cancelled by resident from mobile app." }),
+        body: JSON.stringify({ reason: t("Visitors.cancelReason") }),
         headers: {
           Accept: "application/json",
           Authorization: `Bearer ${authToken}`,

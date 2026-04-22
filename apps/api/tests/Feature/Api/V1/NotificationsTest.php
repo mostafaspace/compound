@@ -199,7 +199,7 @@ class NotificationsTest extends TestCase
 
         Event::assertDispatched(
             NotificationCreatedEvent::class,
-            fn (NotificationCreatedEvent $event): bool => $event->notification->is($notification)
+            fn (NotificationCreatedEvent $event): bool => $event->notificationId === $notification->id
         );
     }
 
@@ -225,5 +225,26 @@ class NotificationsTest extends TestCase
         $this->assertSame('high', $payload['priority']);
         $this->assertSame('System notice', $payload['title']);
         $this->assertSame(['actionUrl' => '/notifications'], $payload['metadata']);
+    }
+
+    public function test_created_event_payload_survives_model_cleanup_before_broadcast_job_runs(): void
+    {
+        $notification = Notification::factory()->create([
+            'category' => NotificationCategory::Visitors->value,
+            'title' => 'Visitor update',
+            'body' => 'Visitor arrived.',
+            'metadata' => ['visitorRequestId' => 'vr-2'],
+        ]);
+
+        $event = new NotificationCreatedEvent($notification);
+        $notification->delete();
+
+        $restoredEvent = unserialize(serialize($event));
+        $payload = $restoredEvent->broadcastWith();
+
+        $this->assertSame($event->notificationId, $payload['id']);
+        $this->assertSame($event->userId, $payload['userId']);
+        $this->assertSame('visitors', $payload['category']);
+        $this->assertSame(['visitorRequestId' => 'vr-2'], $payload['metadata']);
     }
 }
