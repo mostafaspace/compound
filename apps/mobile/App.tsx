@@ -113,12 +113,12 @@ function formatStatus(value: string): string {
   return value.replaceAll("_", " ");
 }
 
-function formatDate(value: string | null): string {
+function formatDate(value: string | null, locale = "en"): string {
   if (!value) {
-    return "Not set";
+    return locale.startsWith("ar") ? "غير محدد" : "Not set";
   }
 
-  return new Intl.DateTimeFormat("en", {
+  return new Intl.DateTimeFormat(locale, {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
@@ -509,7 +509,7 @@ export default function App() {
     }
 
     if (visitEndsAt <= visitStartsAt) {
-      setVisitorMessage("Visit end time must be after the start time.");
+      setVisitorMessage(t("Visitors.invalidWindow"));
       return;
     }
 
@@ -538,7 +538,7 @@ export default function App() {
       });
 
       if (!response.ok) {
-        setVisitorMessage("Visitor pass could not be created. Check the visit window and unit access.");
+        setVisitorMessage(t("Visitors.createError"));
         return;
       }
 
@@ -553,10 +553,10 @@ export default function App() {
         });
       }
 
-      setVisitorMessage("Visitor pass created. Show the QR code at the gate.");
+      setVisitorMessage(t("Visitors.createSuccess"));
       resetVisitorForm();
     } catch {
-      setVisitorMessage("Could not reach the visitor service.");
+      setVisitorMessage(t("Visitors.networkError"));
     } finally {
       setIsCreatingVisitor(false);
     }
@@ -582,7 +582,7 @@ export default function App() {
       });
 
       if (!response.ok) {
-        setVisitorMessage("Visitor pass could not be cancelled.");
+        setVisitorMessage(t("Visitors.cancelError"));
         return;
       }
 
@@ -594,9 +594,9 @@ export default function App() {
       const nextTokens = { ...visitorPassTokens };
       delete nextTokens[visitorRequestId];
       await saveVisitorPassTokens(nextTokens);
-      setVisitorMessage("Visitor pass cancelled.");
+      setVisitorMessage(t("Visitors.cancelSuccess"));
     } catch {
-      setVisitorMessage("Could not reach the visitor service.");
+      setVisitorMessage(t("Visitors.networkError"));
     } finally {
       setIsCancellingVisitorId(null);
     }
@@ -621,7 +621,7 @@ export default function App() {
       });
 
       if (!response.ok) {
-        setAuthError("Email or password is incorrect, or the account cannot sign in yet.");
+        setAuthError(t("Auth.invalidCredentials"));
         return;
       }
 
@@ -645,7 +645,7 @@ export default function App() {
         loadAnnouncements(payload.data.token),
       ]);
     } catch {
-      setAuthError("Could not reach the compound API.");
+      setAuthError(t("Auth.networkError"));
     } finally {
       setIsSigningIn(false);
     }
@@ -922,7 +922,7 @@ export default function App() {
       });
 
       if (!document.hasRequestedType) {
-        setUploadMessage("Select a PDF or image file.");
+        setUploadMessage(t("Documents.selectFile"));
         return;
       }
 
@@ -951,18 +951,18 @@ export default function App() {
       });
 
       if (!response.ok) {
-        setUploadMessage("Upload failed. Check the file size and document type.");
+        setUploadMessage(t("Documents.uploadError"));
         return;
       }
 
-      setUploadMessage("Document uploaded for admin review.");
+      setUploadMessage(t("Documents.uploadSuccess"));
       await loadVerificationRequests(authToken);
     } catch (error) {
       if (isErrorWithCode(error) && error.code === errorCodes.OPERATION_CANCELED) {
         return;
       }
 
-      setUploadMessage("Document upload could not be completed.");
+      setUploadMessage(t("Documents.uploadNetworkError"));
     } finally {
       setIsUploadingDocument(false);
     }
@@ -989,7 +989,7 @@ export default function App() {
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.header}>
           <View style={styles.headerRow}>
-            <Text style={styles.kicker}>Compound</Text>
+            <Text style={[styles.kicker, styles.localizedText]}>{t("App.brand")}</Text>
             <View style={styles.themeToggle}>
               {(["light", "system", "dark"] as const).map((mode) => (
                 <Pressable
@@ -1005,15 +1005,15 @@ export default function App() {
               ))}
             </View>
           </View>
-          <Text style={styles.title}>Resident workspace</Text>
-          <Text style={styles.subtitle}>Unit access, verification, visitors, finance, complaints, and official updates.</Text>
+          <Text style={[styles.title, styles.localizedText]}>{t("App.title")}</Text>
+          <Text style={[styles.subtitle, styles.localizedText]}>{t("App.subtitle")}</Text>
         </View>
 
         <View style={styles.statusPanel}>
           <View>
-            <Text style={styles.panelLabel}>API status</Text>
-            <Text style={styles.panelValue}>
-              {isLoadingStatus ? "Checking" : status?.status === "ok" ? "Online" : "Offline"}
+            <Text style={[styles.panelLabel, styles.localizedText]}>{t("Status.label")}</Text>
+            <Text style={[styles.panelValue, styles.localizedText]}>
+              {isLoadingStatus ? t("Status.checking") : status?.status === "ok" ? t("Status.online") : t("Status.offline")}
             </Text>
           </View>
           <View style={[styles.statusDot, status?.status === "ok" && styles.statusDotOnline]} />
@@ -1022,30 +1022,30 @@ export default function App() {
         {!user && isRestoringSession ? (
           <View style={styles.panel}>
             <ActivityIndicator color={isDark ? "#14b8a6" : "#116a57"} />
-            <Text style={styles.sectionText}>Restoring resident session.</Text>
+            <Text style={[styles.sectionText, styles.localizedText]}>{t("Auth.restoring")}</Text>
           </View>
         ) : null}
 
         {!user && !isRestoringSession ? (
           <View style={styles.panel}>
-            <Text style={styles.sectionTitle}>Sign in</Text>
-            <Text style={styles.sectionText}>Use the email and password from your accepted invitation.</Text>
+            <Text style={[styles.sectionTitle, styles.localizedText]}>{t("Auth.signIn")}</Text>
+            <Text style={[styles.sectionText, styles.localizedText]}>{t("Auth.instructions")}</Text>
             <View style={styles.form}>
-              <Text style={styles.inputLabel}>Email</Text>
+              <Text style={[styles.inputLabel, styles.localizedText]}>{t("Auth.email")}</Text>
               <TextInput
                 autoCapitalize="none"
                 autoComplete="email"
                 inputMode="email"
                 onChangeText={setEmail}
-                placeholder="resident@example.com"
+                placeholder={t("Auth.emailPlaceholder")}
                 style={styles.input}
                 value={email}
               />
-              <Text style={styles.inputLabel}>Password</Text>
+              <Text style={[styles.inputLabel, styles.localizedText]}>{t("Auth.password")}</Text>
               <TextInput
                 autoCapitalize="none"
                 onChangeText={setPassword}
-                placeholder="Password"
+                placeholder={t("Auth.passwordPlaceholder")}
                 secureTextEntry
                 style={styles.input}
                 value={password}
@@ -1061,7 +1061,7 @@ export default function App() {
                   (!email.trim() || !password) && styles.disabledButton,
                 ]}
               >
-                {isSigningIn ? <ActivityIndicator color={isDark ? "#1f2937" : "#ffffff"} /> : <Text style={styles.primaryButtonText}>Sign in</Text>}
+                {isSigningIn ? <ActivityIndicator color={isDark ? "#1f2937" : "#ffffff"} /> : <Text style={styles.primaryButtonText}>{t("Auth.signIn")}</Text>}
               </Pressable>
             </View>
           </View>
@@ -1069,10 +1069,10 @@ export default function App() {
 
         {user && !isResident(user) ? (
           <View style={styles.panel}>
-            <Text style={styles.sectionTitle}>Resident account required</Text>
-            <Text style={styles.sectionText}>This mobile workspace is only available to resident owner and tenant accounts.</Text>
+            <Text style={[styles.sectionTitle, styles.localizedText]}>{t("Auth.residentRequired")}</Text>
+            <Text style={[styles.sectionText, styles.localizedText]}>{t("Auth.residentRequiredDetail")}</Text>
             <Pressable accessibilityRole="button" onPress={() => void handleSignOut()} style={styles.secondaryButton}>
-              <Text style={styles.secondaryButtonText}>Sign out</Text>
+              <Text style={styles.secondaryButtonText}>{t("Auth.signOut")}</Text>
             </Pressable>
           </View>
         ) : null}
@@ -1081,35 +1081,43 @@ export default function App() {
           <View style={styles.panel}>
             <View style={styles.rowBetween}>
               <View>
-                <Text style={styles.panelLabel}>Verification</Text>
-                <Text style={styles.sectionTitle}>Pending review</Text>
+                <Text style={[styles.panelLabel, styles.localizedText]}>{t("Verification.label")}</Text>
+                <Text style={[styles.sectionTitle, styles.localizedText]}>{t("Verification.pendingTitle")}</Text>
               </View>
               <Pressable accessibilityRole="button" onPress={() => void loadVerificationRequests()} style={styles.secondaryButton}>
-                <Text style={styles.secondaryButtonText}>{isRefreshingRequests ? "Refreshing" : "Refresh"}</Text>
+                <Text style={styles.secondaryButtonText}>{isRefreshingRequests ? t("Common.refreshing") : t("Common.refresh")}</Text>
               </Pressable>
             </View>
 
             {latestRequest ? (
               <View style={styles.reviewBlock}>
-                <Text style={styles.statusBadge}>{formatStatus(latestRequest.status)}</Text>
-                <Text style={styles.sectionText}>Requested access: {formatStatus(latestRequest.requestedRole)}</Text>
-                <Text style={styles.sectionText}>Submitted: {formatDate(latestRequest.submittedAt)}</Text>
-                {latestRequest.unit ? <Text style={styles.sectionText}>Unit: {latestRequest.unit.unitNumber}</Text> : null}
+                <Text style={styles.statusBadge}>{t(`Common.statuses.${latestRequest.status}`, { defaultValue: formatStatus(latestRequest.status) })}</Text>
+                <Text style={[styles.sectionText, styles.localizedText]}>
+                  {t("Verification.requestedAccess", {
+                    role: t(`Common.roles.${latestRequest.requestedRole}`, { defaultValue: formatStatus(latestRequest.requestedRole) }),
+                  })}
+                </Text>
+                <Text style={[styles.sectionText, styles.localizedText]}>
+                  {t("Verification.submitted", { date: formatDate(latestRequest.submittedAt, announcementLocale) })}
+                </Text>
+                {latestRequest.unit ? (
+                  <Text style={[styles.sectionText, styles.localizedText]}>{t("Common.unit", { unit: latestRequest.unit.unitNumber })}</Text>
+                ) : null}
                 {latestRequest.moreInfoNote ? (
                   <View style={styles.infoPanel}>
-                    <Text style={styles.infoTitle}>More information requested</Text>
+                    <Text style={[styles.infoTitle, styles.localizedText]}>{t("Verification.moreInfoRequested")}</Text>
                     <Text style={styles.infoText}>{latestRequest.moreInfoNote}</Text>
                   </View>
                 ) : null}
                 {latestRequest.decisionNote ? (
                   <View style={styles.infoPanel}>
-                    <Text style={styles.infoTitle}>Reviewer note</Text>
+                    <Text style={[styles.infoTitle, styles.localizedText]}>{t("Verification.reviewerNote")}</Text>
                     <Text style={styles.infoText}>{latestRequest.decisionNote}</Text>
                   </View>
                 ) : null}
                 {latestRequest.status === "more_info_requested" ? (
                   <View style={styles.uploadPanel}>
-                    <Text style={styles.infoTitle}>Upload follow-up document</Text>
+                    <Text style={[styles.infoTitle, styles.localizedText]}>{t("Documents.followUpTitle")}</Text>
                     {documentTypes.length > 0 ? (
                       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.documentTypeRow}>
                         {documentTypes.map((documentType) => (
@@ -1134,7 +1142,7 @@ export default function App() {
                         ))}
                       </ScrollView>
                     ) : (
-                      <Text style={styles.infoText}>No active document types are available yet.</Text>
+                      <Text style={[styles.infoText, styles.localizedText]}>{t("Documents.noTypes")}</Text>
                     )}
                     {uploadMessage ? <Text style={styles.infoText}>{uploadMessage}</Text> : null}
                     <Pressable
@@ -1149,18 +1157,18 @@ export default function App() {
                       {isUploadingDocument ? (
                         <ActivityIndicator color={isDark ? "#1f2937" : "#ffffff"} />
                       ) : (
-                        <Text style={styles.primaryButtonText}>Choose and upload</Text>
+                        <Text style={styles.primaryButtonText}>{t("Documents.chooseAndUpload")}</Text>
                       )}
                     </Pressable>
                   </View>
                 ) : null}
               </View>
             ) : (
-              <Text style={styles.sectionText}>No verification request is linked to this account yet.</Text>
+              <Text style={[styles.sectionText, styles.localizedText]}>{t("Verification.noRequest")}</Text>
             )}
 
             <Pressable accessibilityRole="button" onPress={() => void handleSignOut()} style={styles.linkButton}>
-              <Text style={styles.linkButtonText}>Sign out</Text>
+              <Text style={styles.linkButtonText}>{t("Auth.signOut")}</Text>
             </Pressable>
           </View>
         ) : null}
@@ -1168,9 +1176,13 @@ export default function App() {
         {isActiveResident ? (
           <>
             <View style={styles.welcomePanel}>
-              <Text style={styles.panelLabel}>Signed in</Text>
+              <Text style={[styles.panelLabel, styles.localizedText]}>{t("Auth.signedIn")}</Text>
               <Text style={styles.sectionTitle}>{user.name}</Text>
-              <Text style={styles.sectionText}>{formatStatus(user.role)} account is active.</Text>
+              <Text style={[styles.sectionText, styles.localizedText]}>
+                {t("Auth.activeAccount", {
+                  role: t(`Common.roles.${user.role}`, { defaultValue: formatStatus(user.role) }),
+                })}
+              </Text>
             </View>
 
             <View style={styles.panel}>
@@ -1379,58 +1391,60 @@ export default function App() {
             <View style={styles.panel}>
               <View style={styles.rowBetween}>
                 <View style={styles.flexFill}>
-                  <Text style={styles.panelLabel}>Visitor QR</Text>
-                  <Text style={styles.sectionTitle}>Guest passes</Text>
-                  <Text style={styles.sectionText}>{activeVisitorRequests.length} active or pending</Text>
+                  <Text style={[styles.panelLabel, styles.localizedText]}>{t("Visitors.label")}</Text>
+                  <Text style={[styles.sectionTitle, styles.localizedText]}>{t("Visitors.title")}</Text>
+                  <Text style={[styles.sectionText, styles.localizedText]}>
+                    {t("Visitors.activeCount", { count: activeVisitorRequests.length })}
+                  </Text>
                 </View>
                 <Pressable accessibilityRole="button" onPress={() => void loadVisitorRequests()} style={styles.secondaryButton}>
-                  <Text style={styles.secondaryButtonText}>{isRefreshingVisitors ? "Refreshing" : "Refresh"}</Text>
+                  <Text style={styles.secondaryButtonText}>{isRefreshingVisitors ? t("Common.refreshing") : t("Common.refresh")}</Text>
                 </Pressable>
               </View>
 
               {residentUnitRequest?.unitId ? (
                 <View style={styles.visitorForm}>
                   <Text style={styles.sectionText}>
-                    Unit: {residentUnitRequest.unit?.unitNumber ?? residentUnitRequest.unitId}
+                    {t("Common.unit", { unit: residentUnitRequest.unit?.unitNumber ?? residentUnitRequest.unitId })}
                   </Text>
-                  <Text style={styles.inputLabel}>Visitor name</Text>
+                  <Text style={[styles.inputLabel, styles.localizedText]}>{t("Visitors.name")}</Text>
                   <TextInput
                     onChangeText={setVisitorName}
-                    placeholder="Full name"
+                    placeholder={t("Visitors.namePlaceholder")}
                     style={styles.input}
                     value={visitorName}
                   />
                   <View style={styles.twoColumn}>
                     <View style={styles.flexFill}>
-                      <Text style={styles.inputLabel}>Phone</Text>
+                      <Text style={[styles.inputLabel, styles.localizedText]}>{t("Visitors.phone")}</Text>
                       <TextInput
                         inputMode="tel"
                         onChangeText={setVisitorPhone}
-                        placeholder="Optional"
+                        placeholder={t("Common.optional")}
                         style={styles.input}
                         value={visitorPhone}
                       />
                     </View>
                     <View style={styles.flexFill}>
-                      <Text style={styles.inputLabel}>Vehicle plate</Text>
+                      <Text style={[styles.inputLabel, styles.localizedText]}>{t("Visitors.vehiclePlate")}</Text>
                       <TextInput
                         autoCapitalize="characters"
                         onChangeText={setVisitorVehiclePlate}
-                        placeholder="Optional"
+                        placeholder={t("Common.optional")}
                         style={styles.input}
                         value={visitorVehiclePlate}
                       />
                     </View>
                   </View>
-                  <Text style={styles.inputLabel}>Visit starts</Text>
+                  <Text style={[styles.inputLabel, styles.localizedText]}>{t("Visitors.visitStarts")}</Text>
                   <Pressable
                     accessibilityRole="button"
                     onPress={() => openVisitPicker("starts")}
                     style={({ pressed }) => [styles.dateButton, pressed && styles.dateButtonPressed]}
                   >
-                    <Text style={styles.dateButtonText}>{formatDate(visitStartsAt.toISOString())}</Text>
+                    <Text style={styles.dateButtonText}>{formatDate(visitStartsAt.toISOString(), announcementLocale)}</Text>
                   </Pressable>
-                  <Text style={styles.inputLabel}>Visit ends</Text>
+                  <Text style={[styles.inputLabel, styles.localizedText]}>{t("Visitors.visitEnds")}</Text>
                   <Pressable
                     accessibilityRole="button"
                     onPress={() => openVisitPicker("ends")}
@@ -1440,7 +1454,7 @@ export default function App() {
                       hasInvalidVisitWindow && styles.dateButtonError,
                     ]}
                   >
-                    <Text style={styles.dateButtonText}>{formatDate(visitEndsAt.toISOString())}</Text>
+                    <Text style={styles.dateButtonText}>{formatDate(visitEndsAt.toISOString(), announcementLocale)}</Text>
                   </Pressable>
                   {visitPickerTarget ? (
                     <View style={styles.pickerPanel}>
@@ -1456,20 +1470,20 @@ export default function App() {
                           onPress={() => setVisitPickerTarget(null)}
                           style={styles.secondaryButton}
                         >
-                          <Text style={styles.secondaryButtonText}>Done</Text>
+                          <Text style={styles.secondaryButtonText}>{t("Common.done")}</Text>
                         </Pressable>
                       ) : null}
                     </View>
                   ) : null}
-                  <Text style={styles.inputLabel}>Notes</Text>
+                  <Text style={[styles.inputLabel, styles.localizedText]}>{t("Visitors.notes")}</Text>
                   <TextInput
                     multiline
                     onChangeText={setVisitorNotes}
-                    placeholder="Gate note, delivery details, or expected companion"
+                    placeholder={t("Visitors.notesPlaceholder")}
                     style={[styles.input, styles.multilineInput]}
                     value={visitorNotes}
                   />
-                  {visitorMessage ? <Text style={styles.infoText}>{visitorMessage}</Text> : null}
+                  {visitorMessage ? <Text style={[styles.infoText, styles.localizedText]}>{visitorMessage}</Text> : null}
                   <Pressable
                     accessibilityRole="button"
                     disabled={isCreatingVisitor || !visitorName.trim() || hasInvalidVisitWindow}
@@ -1482,16 +1496,16 @@ export default function App() {
                     {isCreatingVisitor ? (
                       <ActivityIndicator color={isDark ? "#1f2937" : "#ffffff"} />
                     ) : (
-                      <Text style={styles.primaryButtonText}>Create visitor pass</Text>
+                      <Text style={styles.primaryButtonText}>{t("Visitors.createPass")}</Text>
                     )}
                   </Pressable>
                 </View>
               ) : (
-                <Text style={styles.sectionText}>A verified unit is required before visitor passes can be created.</Text>
+                <Text style={[styles.sectionText, styles.localizedText]}>{t("Visitors.unitRequired")}</Text>
               )}
 
               <View style={styles.visitorList}>
-                <Text style={styles.infoTitle}>Active and recent passes</Text>
+                <Text style={[styles.infoTitle, styles.localizedText]}>{t("Visitors.recent")}</Text>
                 {visitorRequests.length > 0 ? (
                   visitorRequests.map((visitorRequest) => {
                     const token = visitorPassTokens[visitorRequest.id] ?? visitorRequest.qrToken;
@@ -1512,12 +1526,17 @@ export default function App() {
                                 : null,
                             ]}
                           >
-                            {formatStatus(visitorRequest.status)}
+                            {t(`Common.statuses.${visitorRequest.status}`, { defaultValue: formatStatus(visitorRequest.status) })}
                           </Text>
                         </View>
-                        <Text style={styles.sectionText}>Window: {formatDate(visitorRequest.visitStartsAt)} - {formatDate(visitorRequest.visitEndsAt)}</Text>
+                        <Text style={[styles.sectionText, styles.localizedText]}>
+                          {t("Visitors.window", {
+                            end: formatDate(visitorRequest.visitEndsAt, announcementLocale),
+                            start: formatDate(visitorRequest.visitStartsAt, announcementLocale),
+                          })}
+                        </Text>
                         {visitorRequest.vehiclePlate ? (
-                          <Text style={styles.sectionText}>Vehicle: {visitorRequest.vehiclePlate}</Text>
+                          <Text style={[styles.sectionText, styles.localizedText]}>{t("Visitors.vehicle", { vehicle: visitorRequest.vehiclePlate })}</Text>
                         ) : null}
                         {token && canCancel ? (
                           <View style={styles.qrPanel}>
@@ -1529,8 +1548,8 @@ export default function App() {
                         ) : (
                           <Text style={styles.infoText}>
                             {canCancel
-                              ? "This device does not have the QR token for this pass. Create a new pass if the QR was lost."
-                              : "This pass is closed."}
+                              ? t("Visitors.missingQrToken")
+                              : t("Visitors.passClosed")}
                           </Text>
                         )}
                         {canCancel ? (
@@ -1544,7 +1563,7 @@ export default function App() {
                             ]}
                           >
                             <Text style={styles.secondaryButtonText}>
-                              {isCancellingVisitorId === visitorRequest.id ? "Cancelling" : "Cancel pass"}
+                              {isCancellingVisitorId === visitorRequest.id ? t("Visitors.cancelling") : t("Visitors.cancelPass")}
                             </Text>
                           </Pressable>
                         ) : null}
@@ -1552,7 +1571,7 @@ export default function App() {
                     );
                   })
                 ) : (
-                  <Text style={styles.sectionText}>No visitor passes yet.</Text>
+                  <Text style={[styles.sectionText, styles.localizedText]}>{t("Visitors.empty")}</Text>
                 )}
               </View>
             </View>
@@ -1679,15 +1698,15 @@ export default function App() {
             </View>
 
             <Pressable accessibilityRole="button" onPress={() => void handleSignOut()} style={styles.secondaryButton}>
-              <Text style={styles.secondaryButtonText}>Sign out</Text>
+              <Text style={styles.secondaryButtonText}>{t("Auth.signOut")}</Text>
             </Pressable>
           </>
         ) : null}
 
         <View style={styles.footerPanel}>
-          <Text style={styles.panelLabel}>Environment</Text>
-          <Text style={styles.footerText}>{status?.environment ?? "Not connected"}</Text>
-          <Text style={styles.footerText}>{status?.timezone ?? "Timezone pending"}</Text>
+          <Text style={[styles.panelLabel, styles.localizedText]}>{t("Footer.environment")}</Text>
+          <Text style={[styles.footerText, styles.localizedText]}>{status?.environment ?? t("Footer.notConnected")}</Text>
+          <Text style={[styles.footerText, styles.localizedText]}>{status?.timezone ?? t("Footer.timezonePending")}</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
