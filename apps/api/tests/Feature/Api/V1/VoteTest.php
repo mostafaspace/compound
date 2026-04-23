@@ -198,6 +198,19 @@ class VoteTest extends TestCase
     {
         [, $vote] = $this->makeActiveVoteWithOwner(VoteEligibility::OwnersOnly);
         $tenant = User::factory()->create(['role' => UserRole::ResidentTenant->value]);
+        $building = Building::factory()->create(['compound_id' => $vote->compound_id]);
+        $unit = Unit::factory()->create([
+            'compound_id' => $vote->compound_id,
+            'building_id' => $building->id,
+            'floor_id' => null,
+        ]);
+        UnitMembership::factory()->create([
+            'unit_id' => $unit->id,
+            'user_id' => $tenant->id,
+            'verification_status' => 'verified',
+            'starts_at' => now()->subYear(),
+            'ends_at' => null,
+        ]);
 
         Sanctum::actingAs($tenant);
 
@@ -213,6 +226,19 @@ class VoteTest extends TestCase
     {
         [, $vote] = $this->makeActiveVoteWithOwner(VoteEligibility::OwnersAndResidents);
         $tenant = User::factory()->create(['role' => UserRole::ResidentTenant->value]);
+        $building = Building::factory()->create(['compound_id' => $vote->compound_id]);
+        $unit = Unit::factory()->create([
+            'compound_id' => $vote->compound_id,
+            'building_id' => $building->id,
+            'floor_id' => null,
+        ]);
+        UnitMembership::factory()->create([
+            'unit_id' => $unit->id,
+            'user_id' => $tenant->id,
+            'verification_status' => 'verified',
+            'starts_at' => now()->subYear(),
+            'ends_at' => null,
+        ]);
 
         Sanctum::actingAs($tenant);
 
@@ -223,9 +249,19 @@ class VoteTest extends TestCase
 
     public function test_eligibility_returns_vote_not_active_for_draft(): void
     {
-        $vote = Vote::factory()->create();
+        $compound = Compound::factory()->create();
+        $building = Building::factory()->for($compound)->create();
+        $unit = Unit::factory()->for($compound)->for($building)->create(['floor_id' => null]);
+        $vote = Vote::factory()->create(['compound_id' => $compound->id]);
         VoteOption::factory()->count(2)->create(['vote_id' => $vote->id, 'label' => 'opt']);
         $owner = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+        UnitMembership::factory()->create([
+            'unit_id' => $unit->id,
+            'user_id' => $owner->id,
+            'verification_status' => 'verified',
+            'starts_at' => now()->subYear(),
+            'ends_at' => null,
+        ]);
 
         Sanctum::actingAs($owner);
 
@@ -380,6 +416,88 @@ class VoteTest extends TestCase
         $this->getJson('/api/v1/governance/votes')->assertUnauthorized();
         $this->postJson('/api/v1/governance/votes', [])->assertUnauthorized();
         $this->getJson("/api/v1/governance/votes/{$vote->id}")->assertUnauthorized();
+    }
+
+    public function test_compound_scoped_admin_cannot_access_other_compounds_votes(): void
+    {
+        $compoundA = Compound::factory()->create();
+        $compoundB = Compound::factory()->create();
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compoundA->id,
+        ]);
+        $voteA = Vote::factory()->create([
+            'compound_id' => $compoundA->id,
+            'created_by' => $admin->id,
+        ]);
+        $voteB = Vote::factory()->create([
+            'compound_id' => $compoundB->id,
+            'created_by' => $admin->id,
+        ]);
+        VoteOption::factory()->count(2)->create(['vote_id' => $voteA->id, 'label' => 'opt']);
+        VoteOption::factory()->count(2)->create(['vote_id' => $voteB->id, 'label' => 'opt']);
+
+        Sanctum::actingAs($admin);
+
+        $this->getJson('/api/v1/governance/votes')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $voteA->id);
+
+        $this->getJson("/api/v1/governance/votes?compoundId={$compoundB->id}")
+            ->assertForbidden();
+
+        $this->postJson('/api/v1/governance/votes', [
+            'compoundId' => $compoundB->id,
+            'type' => VoteType::Poll->value,
+            'title' => 'Cross compound vote',
+            'options' => [['label' => 'A'], ['label' => 'B']],
+        ])->assertForbidden();
+
+        $this->getJson("/api/v1/governance/votes/{$voteB->id}")
+            ->assertForbidden();
+
+        $this->patchJson("/api/v1/governance/votes/{$voteB->id}", [
+            'title' => 'Blocked update',
+        ])->assertForbidden();
+
+        $this->postJson("/api/v1/governance/votes/{$voteB->id}/activate")
+            ->assertForbidden();
+
+        $this->postJson("/api/v1/governance/votes/{$voteB->id}/cancel")
+            ->assertForbidden();
+    }
+
+    public function test_resident_cannot_access_vote_from_another_compound(): void
+    {
+        $compoundA = Compound::factory()->create();
+        $buildingA = Building::factory()->for($compoundA)->create();
+        $unitA = Unit::factory()->for($compoundA)->for($buildingA)->create(['floor_id' => null]);
+        $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+        UnitMembership::factory()->create([
+            'unit_id' => $unitA->id,
+            'user_id' => $resident->id,
+            'verification_status' => 'verified',
+            'starts_at' => now()->subYear(),
+            'ends_at' => null,
+        ]);
+
+        $compoundB = Compound::factory()->create();
+        $vote = Vote::factory()->active()->create(['compound_id' => $compoundB->id]);
+        $option = VoteOption::factory()->create(['vote_id' => $vote->id, 'label' => 'Foreign']);
+        VoteOption::factory()->create(['vote_id' => $vote->id, 'label' => 'Other']);
+
+        Sanctum::actingAs($resident);
+
+        $this->getJson("/api/v1/governance/votes/{$vote->id}")
+            ->assertForbidden();
+
+        $this->getJson("/api/v1/governance/votes/{$vote->id}/eligibility")
+            ->assertForbidden();
+
+        $this->postJson("/api/v1/governance/votes/{$vote->id}/cast", [
+            'optionId' => $option->id,
+        ])->assertForbidden();
     }
 
     // ─────────────────────────────────────────────────────────────────

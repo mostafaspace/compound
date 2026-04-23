@@ -3,8 +3,8 @@ import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 
 import { LogoutButton } from "@/components/logout-button";
-import { getCurrentUser, getSystemStatus, getVotes } from "@/lib/api";
-import { requireAdminUser } from "@/lib/session";
+import { getCompounds, getCurrentUser, getSystemStatus, getVotes } from "@/lib/api";
+import { getCompoundContext, requireAdminUser } from "@/lib/session";
 
 import { activateVoteAction, cancelVoteAction, createVoteAction } from "./actions";
 
@@ -24,7 +24,7 @@ function statusTone(status: VoteStatus): string {
 }
 
 function formatDate(value: string | null, locale: string): string {
-  if (!value) return "—";
+  if (!value) return "-";
   return new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(new Date(value));
 }
 
@@ -33,9 +33,19 @@ export default async function GovernancePage({ searchParams }: GovernancePagePro
   const locale = await getLocale();
   const t = await getTranslations("Governance");
   const params = searchParams ? await searchParams : {};
-  const [votes, systemStatus] = await Promise.all([getVotes(), getSystemStatus()]);
+  const [votes, systemStatus, currentUser, compounds, activeCompoundId] = await Promise.all([
+    getVotes(),
+    getSystemStatus(),
+    getCurrentUser(),
+    getCompounds(),
+    getCompoundContext(),
+  ]);
   const isDegraded = systemStatus?.status !== "ok";
   const showDegradedWarning = isDegraded && votes.length === 0;
+  const isSuperAdmin = currentUser?.role === "super_admin";
+  const defaultCompoundId = activeCompoundId ?? compounds[0]?.id ?? "";
+  const lockedCompound = compounds.find((compound) => compound.id === defaultCompoundId) ?? compounds[0] ?? null;
+  const canCreateVote = isSuperAdmin ? compounds.length > 0 : Boolean(lockedCompound);
 
   const typeLabel: Record<VoteType, string> = {
     poll: t("types.poll"),
@@ -62,7 +72,7 @@ export default async function GovernancePage({ searchParams }: GovernancePagePro
         <div className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-6 md:flex-row md:items-center md:justify-between lg:px-8">
           <div>
             <Link className="text-sm font-semibold text-brand hover:text-brand-strong" href="/">
-              ← {t("back")}
+              {"<"} {t("back")}
             </Link>
             <h1 className="mt-2 text-3xl font-semibold">{t("title")}</h1>
             <p className="mt-2 max-w-2xl text-sm text-muted">{t("subtitle")}</p>
@@ -89,7 +99,6 @@ export default async function GovernancePage({ searchParams }: GovernancePagePro
           </div>
         ) : null}
 
-        {/* Create vote form */}
         <div className="rounded-lg border border-line bg-panel p-5">
           <h2 className="text-lg font-semibold">{t("create.title")}</h2>
           <p className="mt-1 text-sm text-muted">{t("create.subtitle")}</p>
@@ -98,11 +107,28 @@ export default async function GovernancePage({ searchParams }: GovernancePagePro
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="text-xs font-semibold text-muted">
                 {t("create.compoundId")}
-                <input
-                  className="mt-1 h-10 w-full rounded-lg border border-line bg-background px-3 text-sm"
-                  name="compoundId"
-                  required
-                />
+                {isSuperAdmin ? (
+                  <select
+                    className="mt-1 h-10 w-full rounded-lg border border-line bg-background px-3 text-sm"
+                    defaultValue={defaultCompoundId}
+                    name="compoundId"
+                    required
+                  >
+                    {compounds.map((compound) => (
+                      <option key={compound.id} value={compound.id}>
+                        {compound.name}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <>
+                    <input name="compoundId" type="hidden" value={lockedCompound?.id ?? ""} />
+                    <div className="mt-1 rounded-lg border border-line bg-background px-3 py-2 text-sm text-foreground">
+                      <div className="font-semibold">{lockedCompound?.name ?? t("create.noCompoundAccess")}</div>
+                      <div className="mt-1 text-xs text-muted">{t("create.compoundLocked")}</div>
+                    </div>
+                  </>
+                )}
               </label>
               <label className="text-xs font-semibold text-muted">
                 {t("fields.type")}
@@ -148,7 +174,6 @@ export default async function GovernancePage({ searchParams }: GovernancePagePro
               </label>
             </div>
 
-            {/* Static 2 options to start — client-side dynamic add not available in RSC */}
             <div className="space-y-2">
               <p className="text-xs font-semibold text-muted">{t("fields.options")} (min. 2)</p>
               {[0, 1, 2, 3].map((i) => (
@@ -163,15 +188,16 @@ export default async function GovernancePage({ searchParams }: GovernancePagePro
             </div>
 
             <button
-              className="inline-flex h-10 items-center rounded-lg bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"
+              className="inline-flex h-10 items-center rounded-lg bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={!canCreateVote}
               type="submit"
             >
               {t("create.submit")}
             </button>
+            {!canCreateVote ? <p className="text-xs text-danger">{t("create.noCompoundAccess")}</p> : null}
           </form>
         </div>
 
-        {/* Votes list */}
         <div className="rounded-lg border border-line bg-panel p-5">
           <h2 className="text-lg font-semibold">{t("title")}</h2>
 
@@ -198,9 +224,7 @@ export default async function GovernancePage({ searchParams }: GovernancePagePro
                         {vote.endsAt ? `Ends ${formatDate(vote.endsAt, locale)}` : null}
                       </p>
                       {vote.options && vote.options.length > 0 ? (
-                        <p className="mt-1 text-xs text-muted">
-                          {vote.options.map((o) => o.label).join(" · ")}
-                        </p>
+                        <p className="mt-1 text-xs text-muted">{vote.options.map((o) => o.label).join(" | ")}</p>
                       ) : null}
                     </div>
 

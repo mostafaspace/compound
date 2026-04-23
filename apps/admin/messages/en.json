@@ -596,7 +596,9 @@
       "addOption": "Add option",
       "removeOption": "Remove",
       "submit": "Create",
-      "compoundId": "Compound ID"
+      "compoundId": "Compound",
+      "compoundLocked": "The vote will be created in your assigned compound scope.",
+      "noCompoundAccess": "No compound is available for governance creation yet."
     }
   },
   "Issues": {

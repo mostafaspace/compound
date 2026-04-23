@@ -12,7 +12,7 @@ use App\Http\Resources\Governance\VoteResource;
 use App\Models\Governance\Vote;
 use App\Models\Governance\VoteOption;
 use App\Models\Governance\VoteParticipation;
-use App\Models\Property\Compound;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -55,10 +55,16 @@ class VoteController extends Controller
                 ->values();
             $query->whereIn('compound_id', $verifiedCompoundIds);
         } else {
+            if (filled($user->compound_id) && isset($validated['compoundId']) && $validated['compoundId'] !== $user->compound_id) {
+                abort(403);
+            }
+
             if (isset($validated['status'])) {
                 $query->where('status', $validated['status']);
             }
-            if (isset($validated['compoundId'])) {
+            if (filled($user->compound_id)) {
+                $query->where('compound_id', $user->compound_id);
+            } elseif (isset($validated['compoundId'])) {
                 $query->where('compound_id', $validated['compoundId']);
             }
         }
@@ -92,6 +98,13 @@ class VoteController extends Controller
             'options'               => ['required', 'array', 'min:2'],
             'options.*.label'       => ['required', 'string', 'max:255'],
         ]);
+        /** @var User $actor */
+        $actor = $request->user();
+
+        if (filled($actor->compound_id)) {
+            abort_if($validated['compoundId'] !== $actor->compound_id, 403);
+            $validated['compoundId'] = $actor->compound_id;
+        }
 
         $vote = Vote::create([
             'compound_id'             => $validated['compoundId'],
@@ -106,7 +119,7 @@ class VoteController extends Controller
             'is_anonymous'            => $validated['isAnonymous'] ?? false,
             'starts_at'               => $validated['startsAt'] ?? null,
             'ends_at'                 => $validated['endsAt'] ?? null,
-            'created_by'              => $request->user()->id,
+            'created_by'              => $actor->id,
         ]);
 
         foreach ($validated['options'] as $index => $optionData) {
@@ -127,6 +140,7 @@ class VoteController extends Controller
      */
     public function show(Request $request, Vote $vote): VoteResource
     {
+        $this->ensureViewerCanAccessVote($request, $vote);
         $vote->load(['options', 'participations']);
 
         return VoteResource::make($vote);
@@ -137,6 +151,8 @@ class VoteController extends Controller
      */
     public function update(Request $request, Vote $vote): VoteResource
     {
+        $this->ensureViewerCanAccessVote($request, $vote);
+
         if ($vote->status !== VoteStatus::Draft->value) {
             abort(422, 'Only draft votes can be edited.');
         }
@@ -181,8 +197,10 @@ class VoteController extends Controller
     /**
      * Activate (open) a vote.
      */
-    public function activate(Vote $vote): VoteResource
+    public function activate(Request $request, Vote $vote): VoteResource
     {
+        $this->ensureViewerCanAccessVote($request, $vote);
+
         if ($vote->status !== VoteStatus::Draft->value) {
             abort(422, 'Only draft votes can be activated.');
         }
@@ -199,8 +217,10 @@ class VoteController extends Controller
     /**
      * Close a vote (stop accepting new votes).
      */
-    public function close(Vote $vote): VoteResource
+    public function close(Request $request, Vote $vote): VoteResource
     {
+        $this->ensureViewerCanAccessVote($request, $vote);
+
         if ($vote->status !== VoteStatus::Active->value) {
             abort(422, 'Only active votes can be closed.');
         }
@@ -213,8 +233,10 @@ class VoteController extends Controller
     /**
      * Cancel a vote.
      */
-    public function cancel(Vote $vote): VoteResource
+    public function cancel(Request $request, Vote $vote): VoteResource
     {
+        $this->ensureViewerCanAccessVote($request, $vote);
+
         if (in_array($vote->status, [VoteStatus::Closed->value, VoteStatus::Cancelled->value])) {
             abort(422, 'This vote cannot be cancelled.');
         }
@@ -229,6 +251,7 @@ class VoteController extends Controller
      */
     public function cast(Request $request, Vote $vote): JsonResponse
     {
+        $this->ensureViewerCanAccessVote($request, $vote);
         $user = $request->user();
 
         $eligibility = $this->checkEligibility($vote, $user);
@@ -269,6 +292,7 @@ class VoteController extends Controller
      */
     public function eligibility(Request $request, Vote $vote): JsonResponse
     {
+        $this->ensureViewerCanAccessVote($request, $vote);
         $user = $request->user();
         $result = $this->checkEligibility($vote, $user);
         $hasVoted = VoteParticipation::query()
@@ -361,5 +385,37 @@ class VoteController extends Controller
         $snapshot['eligibilityPassed'] = true;
 
         return ['eligible' => true, 'reason' => null, 'snapshot' => $snapshot];
+    }
+
+    private function ensureViewerCanAccessVote(Request $request, Vote $vote): void
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $adminRoles = [
+            UserRole::SuperAdmin->value,
+            UserRole::CompoundAdmin->value,
+            UserRole::BoardMember->value,
+            UserRole::FinanceReviewer->value,
+            UserRole::SupportAgent->value,
+        ];
+        $userRole = $user->role->value ?? $user->role;
+
+        if (in_array($userRole, $adminRoles, true)) {
+            if (! filled($user->compound_id) || $userRole === UserRole::SuperAdmin->value) {
+                return;
+            }
+
+            abort_if($user->compound_id !== $vote->compound_id, 403);
+
+            return;
+        }
+
+        $hasMembership = $user->unitMemberships()
+            ->activeForAccess()
+            ->whereHas('unit', fn ($query) => $query->where('compound_id', $vote->compound_id))
+            ->exists();
+
+        abort_unless($hasMembership, 403);
     }
 }
