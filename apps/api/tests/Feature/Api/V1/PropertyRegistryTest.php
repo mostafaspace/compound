@@ -25,8 +25,6 @@ class PropertyRegistryTest extends TestCase
 
     public function test_it_lists_compounds_with_counts(): void
     {
-        Sanctum::actingAs(User::factory()->create(['role' => UserRole::CompoundAdmin->value]));
-
         $compound = Compound::factory()->create(['name' => 'Nile Gardens']);
         $building = Building::factory()->for($compound)->create();
         Floor::factory()->for($building)->create();
@@ -36,9 +34,16 @@ class PropertyRegistryTest extends TestCase
             'type' => 'apartment',
             'status' => 'active',
         ]);
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compound->id,
+        ]);
+
+        Sanctum::actingAs($admin);
 
         $this->getJson('/api/v1/compounds')
             ->assertOk()
+            ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.name', 'Nile Gardens')
             ->assertJsonPath('data.0.buildingsCount', 1)
             ->assertJsonPath('data.0.unitsCount', 1);
@@ -46,7 +51,7 @@ class PropertyRegistryTest extends TestCase
 
     public function test_it_creates_compound_as_draft(): void
     {
-        Sanctum::actingAs(User::factory()->create(['role' => UserRole::CompoundAdmin->value]));
+        Sanctum::actingAs(User::factory()->create(['role' => UserRole::SuperAdmin->value]));
 
         $this->postJson('/api/v1/compounds', [
             'name' => 'Palm Heights',
@@ -63,9 +68,13 @@ class PropertyRegistryTest extends TestCase
 
     public function test_it_creates_nested_building_floor_and_unit(): void
     {
-        Sanctum::actingAs(User::factory()->create(['role' => UserRole::CompoundAdmin->value]));
-
         $compound = Compound::factory()->create();
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compound->id,
+        ]);
+
+        Sanctum::actingAs($admin);
 
         $buildingId = $this->postJson("/api/v1/compounds/{$compound->id}/buildings", [
             'name' => 'Building A',
@@ -100,10 +109,13 @@ class PropertyRegistryTest extends TestCase
 
     public function test_it_updates_and_archives_property_registry_records(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
+        $compound = Compound::factory()->create(['name' => 'Old Compound', 'code' => 'OLD']);
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compound->id,
+        ]);
         Sanctum::actingAs($admin);
 
-        $compound = Compound::factory()->create(['name' => 'Old Compound', 'code' => 'OLD']);
         $building = Building::factory()->for($compound)->create(['name' => 'Old Tower', 'code' => 'A', 'sort_order' => 1]);
         $floor = Floor::factory()->for($building)->create(['label' => 'Old Floor', 'level_number' => 1, 'sort_order' => 1]);
         $unit = Unit::factory()
@@ -179,11 +191,14 @@ class PropertyRegistryTest extends TestCase
 
     public function test_it_manages_unit_memberships(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
         $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+        $compound = Compound::factory()->create();
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compound->id,
+        ]);
         Sanctum::actingAs($admin);
 
-        $compound = Compound::factory()->create();
         $building = Building::factory()->for($compound)->create();
         $unit = Unit::factory()
             ->for($compound)
@@ -215,8 +230,6 @@ class PropertyRegistryTest extends TestCase
 
     public function test_admin_can_search_and_filter_unit_registry_lookup(): void
     {
-        Sanctum::actingAs(User::factory()->create(['role' => UserRole::CompoundAdmin->value]));
-
         $resident = User::factory()->create([
             'email' => 'owner.lookup@example.test',
             'role' => UserRole::ResidentOwner->value,
@@ -224,6 +237,12 @@ class PropertyRegistryTest extends TestCase
         $otherResident = User::factory()->create(['role' => UserRole::ResidentTenant->value]);
 
         $compound = Compound::factory()->create(['name' => 'Lookup Compound', 'code' => 'LOOK']);
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compound->id,
+        ]);
+        Sanctum::actingAs($admin);
+
         $building = Building::factory()->for($compound)->create(['name' => 'Tower Search', 'code' => 'TS']);
         $floor = Floor::factory()->for($building)->create(['label' => 'Fifth', 'level_number' => 5]);
         $matchingUnit = Unit::factory()
@@ -359,11 +378,14 @@ class PropertyRegistryTest extends TestCase
 
     public function test_archived_units_are_hidden_from_lookup_by_default_but_history_is_preserved(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
         $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+        $compound = Compound::factory()->create();
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compound->id,
+        ]);
         Sanctum::actingAs($admin);
 
-        $compound = Compound::factory()->create();
         $building = Building::factory()->for($compound)->create();
         $unit = Unit::factory()->for($compound)->for($building)->create(['unit_number' => '901']);
 
@@ -398,9 +420,13 @@ class PropertyRegistryTest extends TestCase
 
     public function test_admin_can_import_and_export_units_csv(): void
     {
-        Sanctum::actingAs(User::factory()->create(['role' => UserRole::CompoundAdmin->value]));
-
         $compound = Compound::factory()->create();
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compound->id,
+        ]);
+        Sanctum::actingAs($admin);
+
         $building = Building::factory()->for($compound)->create(['code' => 'CSV']);
         $floor = Floor::factory()->for($building)->create(['label' => 'Third', 'level_number' => 3]);
 
@@ -464,9 +490,13 @@ class PropertyRegistryTest extends TestCase
 
     public function test_unit_import_rejects_invalid_rows_without_partial_creates(): void
     {
-        Sanctum::actingAs(User::factory()->create(['role' => UserRole::CompoundAdmin->value]));
-
         $compound = Compound::factory()->create();
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compound->id,
+        ]);
+        Sanctum::actingAs($admin);
+
         $building = Building::factory()->for($compound)->create();
         $otherBuilding = Building::factory()->for($compound)->create();
         $otherFloor = Floor::factory()->for($otherBuilding)->create(['label' => 'Other', 'level_number' => 7]);
@@ -495,5 +525,52 @@ class PropertyRegistryTest extends TestCase
             'building_id' => $building->id,
             'unit_number' => '404',
         ]);
+    }
+
+    public function test_compound_admin_cannot_view_other_compound_details_or_checklist(): void
+    {
+        $compoundA = Compound::factory()->create(['name' => 'Scoped Compound']);
+        $compoundB = Compound::factory()->create(['name' => 'Foreign Compound']);
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compoundA->id,
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $this->getJson("/api/v1/compounds/{$compoundB->id}")
+            ->assertForbidden();
+
+        $this->getJson("/api/v1/compounds/{$compoundB->id}/onboarding-checklist")
+            ->assertForbidden();
+    }
+
+    public function test_compound_admin_cannot_manage_other_compound_buildings_units_or_lookup_scope(): void
+    {
+        $compoundA = Compound::factory()->create(['name' => 'Admin Compound']);
+        $compoundB = Compound::factory()->create(['name' => 'Other Compound']);
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compoundA->id,
+        ]);
+        $buildingB = Building::factory()->for($compoundB)->create();
+        $unitB = Unit::factory()->for($compoundB)->for($buildingB)->create(['floor_id' => null]);
+
+        Sanctum::actingAs($admin);
+
+        $this->postJson("/api/v1/compounds/{$compoundB->id}/buildings", [
+            'name' => 'Blocked Building',
+            'code' => 'BB',
+            'sortOrder' => 1,
+        ])->assertForbidden();
+
+        $this->getJson("/api/v1/buildings/{$buildingB->id}")
+            ->assertForbidden();
+
+        $this->getJson('/api/v1/units?compoundId='.$compoundB->id)
+            ->assertForbidden();
+
+        $this->getJson("/api/v1/units/{$unitB->id}")
+            ->assertForbidden();
     }
 }

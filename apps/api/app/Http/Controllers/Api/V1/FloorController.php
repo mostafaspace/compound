@@ -9,17 +9,24 @@ use App\Http\Requests\Property\UpdateFloorRequest;
 use App\Http\Resources\FloorResource;
 use App\Models\Property\Building;
 use App\Models\Property\Floor;
+use App\Services\CompoundContextService;
 use App\Support\AuditLogger;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Symfony\Component\HttpFoundation\Response;
 
 class FloorController extends Controller
 {
-    public function __construct(private readonly AuditLogger $auditLogger) {}
+    public function __construct(
+        private readonly AuditLogger $auditLogger,
+        private readonly CompoundContextService $compoundContext,
+    ) {}
 
-    public function index(Building $building): AnonymousResourceCollection
+    public function index(Request $request, Building $building): AnonymousResourceCollection
     {
+        $this->compoundContext->ensureCompoundAccess($request, $building->compound_id);
+
         $floors = $building->floors()
             ->withCount('units')
             ->orderBy('sort_order')
@@ -31,6 +38,8 @@ class FloorController extends Controller
 
     public function store(StoreFloorRequest $request, Building $building): JsonResponse
     {
+        $this->compoundContext->ensureCompoundAccess($request, $building->compound_id);
+
         $validated = $request->validated();
 
         $floor = $building->floors()->create([
@@ -44,13 +53,17 @@ class FloorController extends Controller
             ->setStatusCode(Response::HTTP_CREATED);
     }
 
-    public function show(Floor $floor): FloorResource
+    public function show(Request $request, Floor $floor): FloorResource
     {
+        $this->compoundContext->ensureCompoundAccess($request, $floor->building->compound_id);
+
         return FloorResource::make($floor->loadCount('units'));
     }
 
     public function update(UpdateFloorRequest $request, Floor $floor): FloorResource
     {
+        $this->compoundContext->ensureCompoundAccess($request, $floor->building->compound_id);
+
         $validated = $request->validated();
 
         $floor->fill([
@@ -64,6 +77,8 @@ class FloorController extends Controller
 
     public function archive(ArchivePropertyRequest $request, Floor $floor): FloorResource
     {
+        $this->compoundContext->ensureCompoundAccess($request, $floor->building->compound_id);
+
         $validated = $request->validated();
 
         $floor->forceFill([

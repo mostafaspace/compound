@@ -8,18 +8,27 @@ use App\Http\Requests\Property\StoreCompoundRequest;
 use App\Http\Requests\Property\UpdateCompoundRequest;
 use App\Http\Resources\CompoundResource;
 use App\Models\Property\Compound;
+use App\Services\CompoundContextService;
 use App\Support\AuditLogger;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Symfony\Component\HttpFoundation\Response;
 
 class CompoundController extends Controller
 {
-    public function __construct(private readonly AuditLogger $auditLogger) {}
+    public function __construct(
+        private readonly AuditLogger $auditLogger,
+        private readonly CompoundContextService $compoundContext,
+    ) {}
 
-    public function index(): AnonymousResourceCollection
+    public function index(Request $request): AnonymousResourceCollection
     {
         $compounds = Compound::query()
+            ->when(
+                ! $this->compoundContext->canManageAllCompounds($request),
+                fn ($query) => $query->where('id', $request->user()?->compound_id),
+            )
             ->withCount(['buildings', 'units'])
             ->orderBy('name')
             ->paginate();
@@ -29,6 +38,8 @@ class CompoundController extends Controller
 
     public function store(StoreCompoundRequest $request): JsonResponse
     {
+        $this->compoundContext->ensureGlobalCompoundAccess($request);
+
         $validated = $request->validated();
 
         $compound = Compound::query()->create([
@@ -45,8 +56,10 @@ class CompoundController extends Controller
             ->setStatusCode(Response::HTTP_CREATED);
     }
 
-    public function show(Compound $compound): CompoundResource
+    public function show(Request $request, Compound $compound): CompoundResource
     {
+        $this->compoundContext->ensureCompoundAccess($request, $compound->id);
+
         $compound->load([
             'buildings' => fn ($query) => $query->withCount(['floors', 'units'])->orderBy('sort_order')->orderBy('name'),
         ])->loadCount(['buildings', 'units']);
@@ -56,6 +69,8 @@ class CompoundController extends Controller
 
     public function update(UpdateCompoundRequest $request, Compound $compound): CompoundResource
     {
+        $this->compoundContext->ensureCompoundAccess($request, $compound->id);
+
         $validated = $request->validated();
 
         $compound->fill([
@@ -72,6 +87,8 @@ class CompoundController extends Controller
 
     public function archive(ArchivePropertyRequest $request, Compound $compound): CompoundResource
     {
+        $this->compoundContext->ensureCompoundAccess($request, $compound->id);
+
         $validated = $request->validated();
 
         $compound->forceFill([

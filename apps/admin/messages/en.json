@@ -981,6 +981,16 @@
     "complete": "All steps complete — compound is fully configured",
     "done": "Done",
     "notFound": "Compound not found.",
-    "loadError": "Could not load checklist. Please try again."
+    "loadError": "Could not load checklist. Please try again.",
+    "steps": {
+      "compound_activated": "Compound is active",
+      "settings_configured": "Default settings configured",
+      "has_buildings": "At least one building added",
+      "has_units": "At least one unit added",
+      "residents_invited": "First resident invited",
+      "first_resident_verified": "First resident verified",
+      "first_finance_account": "First unit finance account created",
+      "first_announcement": "First announcement published"
+    }
   }
 }

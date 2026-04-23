@@ -36,6 +36,16 @@ export default async function CompoundOnboardingPage({ params }: Props) {
   await requireAdminUser(getCurrentUser);
   const t = await getTranslations("CompoundOnboarding");
   const nav = await getTranslations("Navigation");
+  const stepLabels: Record<string, string> = {
+    compound_activated: t("steps.compound_activated"),
+    settings_configured: t("steps.settings_configured"),
+    has_buildings: t("steps.has_buildings"),
+    has_units: t("steps.has_units"),
+    residents_invited: t("steps.residents_invited"),
+    first_resident_verified: t("steps.first_resident_verified"),
+    first_finance_account: t("steps.first_finance_account"),
+    first_announcement: t("steps.first_announcement"),
+  };
 
   const [compound, checklist] = await Promise.all([
     getCompound(compoundId),
@@ -60,7 +70,7 @@ export default async function CompoundOnboardingPage({ params }: Props) {
         <div className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-6 md:flex-row md:items-center md:justify-between lg:px-8">
           <div>
             <Link className="text-sm font-semibold text-brand hover:text-brand-strong" href={`/compounds/${compoundId}`}>
-              ← {compound.name}
+              {"< "} {compound.name}
             </Link>
             <h1 className="mt-2 text-3xl font-semibold">{t("title")}</h1>
             <p className="mt-2 text-sm text-muted">{t("subtitle", { name: compound.name })}</p>
@@ -110,7 +120,7 @@ export default async function CompoundOnboardingPage({ params }: Props) {
                 <CheckIcon completed={step.completed} />
                 <div className="flex-1">
                   <p className={`text-sm font-semibold ${step.completed ? "text-foreground" : "text-muted"}`}>
-                    {index + 1}. {step.label}
+                    {index + 1}. {stepLabels[step.key] ?? step.label}
                   </p>
                 </div>
                 {step.completed && (

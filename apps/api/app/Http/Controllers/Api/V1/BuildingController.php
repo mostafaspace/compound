@@ -9,17 +9,24 @@ use App\Http\Requests\Property\UpdateBuildingRequest;
 use App\Http\Resources\BuildingResource;
 use App\Models\Property\Building;
 use App\Models\Property\Compound;
+use App\Services\CompoundContextService;
 use App\Support\AuditLogger;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Symfony\Component\HttpFoundation\Response;
 
 class BuildingController extends Controller
 {
-    public function __construct(private readonly AuditLogger $auditLogger) {}
+    public function __construct(
+        private readonly AuditLogger $auditLogger,
+        private readonly CompoundContextService $compoundContext,
+    ) {}
 
-    public function index(Compound $compound): AnonymousResourceCollection
+    public function index(Request $request, Compound $compound): AnonymousResourceCollection
     {
+        $this->compoundContext->ensureCompoundAccess($request, $compound->id);
+
         $buildings = $compound->buildings()
             ->withCount(['floors', 'units'])
             ->orderBy('sort_order')
@@ -31,6 +38,8 @@ class BuildingController extends Controller
 
     public function store(StoreBuildingRequest $request, Compound $compound): JsonResponse
     {
+        $this->compoundContext->ensureCompoundAccess($request, $compound->id);
+
         $validated = $request->validated();
 
         $building = $compound->buildings()->create([
@@ -44,8 +53,10 @@ class BuildingController extends Controller
             ->setStatusCode(Response::HTTP_CREATED);
     }
 
-    public function show(Building $building): BuildingResource
+    public function show(Request $request, Building $building): BuildingResource
     {
+        $this->compoundContext->ensureCompoundAccess($request, $building->compound_id);
+
         $building->load([
             'floors' => fn ($query) => $query->withCount('units')->orderBy('sort_order')->orderBy('level_number'),
             'units' => fn ($query) => $query->orderBy('unit_number'),
@@ -56,6 +67,8 @@ class BuildingController extends Controller
 
     public function update(UpdateBuildingRequest $request, Building $building): BuildingResource
     {
+        $this->compoundContext->ensureCompoundAccess($request, $building->compound_id);
+
         $validated = $request->validated();
 
         $building->fill([
@@ -69,6 +82,8 @@ class BuildingController extends Controller
 
     public function archive(ArchivePropertyRequest $request, Building $building): BuildingResource
     {
+        $this->compoundContext->ensureCompoundAccess($request, $building->compound_id);
+
         $validated = $request->validated();
 
         $building->forceFill([

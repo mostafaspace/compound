@@ -186,12 +186,8 @@ class CompoundIsolationTest extends TestCase
 
         Sanctum::actingAs($adminA);
 
-        // Compound B checklist should still be accessible (no data leakage from this endpoint —
-        // it only exposes aggregate state, not personal data, and is role-gated to staff).
-        // This test confirms the route resolves correctly for a different compound.
         $this->getJson("/api/v1/compounds/{$compoundB->id}/onboarding-checklist")
-            ->assertOk()
-            ->assertJsonPath('data.compoundId', $compoundB->id);
+            ->assertForbidden();
     }
 
     // ──────────────────────────────────────────────────────────────────────

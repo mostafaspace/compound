@@ -13,10 +13,14 @@ use App\Models\Property\Compound;
 use App\Models\ResidentInvitation;
 use App\Models\VerificationRequest;
 use App\Models\Visitors\VisitorRequest;
+use App\Services\CompoundContextService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class CompoundOnboardingController extends Controller
 {
+    public function __construct(private readonly CompoundContextService $compoundContext) {}
+
     /**
      * Return the onboarding checklist state for a compound.
      *
@@ -30,8 +34,10 @@ class CompoundOnboardingController extends Controller
      *  7. first_finance_account — at least one unit account exists for a unit in this compound
      *  8. first_announcement   — at least one announcement tagged to this compound
      */
-    public function __invoke(Compound $compound): JsonResponse
+    public function __invoke(Request $request, Compound $compound): JsonResponse
     {
+        $this->compoundContext->ensureCompoundAccess($request, $compound->id);
+
         $buildingsExist = $compound->buildings()->exists();
         $unitsExist = $buildingsExist && $compound->units()->exists();
 

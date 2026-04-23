@@ -14,6 +14,7 @@ use App\Http\Resources\UnitMembershipResource;
 use App\Http\Resources\UnitResource;
 use App\Models\Property\Building;
 use App\Models\Property\Unit;
+use App\Services\CompoundContextService;
 use App\Support\AuditLogger;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -27,17 +28,26 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class UnitController extends Controller
 {
-    public function __construct(private readonly AuditLogger $auditLogger) {}
+    public function __construct(
+        private readonly AuditLogger $auditLogger,
+        private readonly CompoundContextService $compoundContext,
+    ) {}
 
     public function lookup(IndexUnitsRequest $request): AnonymousResourceCollection
     {
         $validated = $request->validated();
+        $scopedCompoundId = $request->user()?->compound_id;
+
+        if (filled($scopedCompoundId) && filled($validated['compoundId'] ?? null) && $validated['compoundId'] !== $scopedCompoundId) {
+            abort(Response::HTTP_FORBIDDEN);
+        }
 
         $units = Unit::query()
             ->with(['compound', 'building', 'floor', 'memberships.user'])
             ->when(! $request->boolean('includeArchived'), function (Builder $query): void {
                 $query->whereNull('archived_at')->where('status', '!=', UnitStatus::Archived->value);
             })
+            ->when($scopedCompoundId, fn (Builder $query, string $compoundId) => $query->where('compound_id', $compoundId))
             ->when($validated['compoundId'] ?? null, fn (Builder $query, string $compoundId) => $query->where('compound_id', $compoundId))
             ->when($validated['buildingId'] ?? null, fn (Builder $query, string $buildingId) => $query->where('building_id', $buildingId))
             ->when($validated['floorId'] ?? null, fn (Builder $query, string $floorId) => $query->where('floor_id', $floorId))
@@ -81,8 +91,10 @@ class UnitController extends Controller
         return UnitResource::collection($units->paginate($validated['perPage'] ?? 15)->withQueryString());
     }
 
-    public function index(Building $building): AnonymousResourceCollection
+    public function index(Request $request, Building $building): AnonymousResourceCollection
     {
+        $this->compoundContext->ensureCompoundAccess($request, $building->compound_id);
+
         $units = $building->units()
             ->orderBy('unit_number')
             ->paginate();
@@ -92,6 +104,8 @@ class UnitController extends Controller
 
     public function import(ImportUnitsRequest $request, Building $building): JsonResponse
     {
+        $this->compoundContext->ensureCompoundAccess($request, $building->compound_id);
+
         $dryRun = $request->boolean('dryRun');
         $parsed = $this->parseUnitCsv($request->file('file')->getRealPath());
         $validRows = [];
@@ -198,6 +212,8 @@ class UnitController extends Controller
 
     public function export(Request $request, Building $building): StreamedResponse
     {
+        $this->compoundContext->ensureCompoundAccess($request, $building->compound_id);
+
         $this->auditLogger->record('property.units_exported', actor: $request->user(), request: $request, metadata: [
             'building_id' => $building->id,
         ]);
@@ -234,6 +250,8 @@ class UnitController extends Controller
 
     public function store(StoreUnitRequest $request, Building $building): JsonResponse
     {
+        $this->compoundContext->ensureCompoundAccess($request, $building->compound_id);
+
         $validated = $request->validated();
 
         $unit = $building->units()->create([
@@ -251,8 +269,10 @@ class UnitController extends Controller
             ->setStatusCode(Response::HTTP_CREATED);
     }
 
-    public function show(Unit $unit): UnitResource
+    public function show(Request $request, Unit $unit): UnitResource
     {
+        $this->compoundContext->ensureCompoundAccess($request, $unit->compound_id);
+
         return UnitResource::make($unit->load(['compound', 'building', 'floor', 'memberships.user']));
     }
 
@@ -275,6 +295,8 @@ class UnitController extends Controller
 
     public function update(UpdateUnitRequest $request, Unit $unit): UnitResource
     {
+        $this->compoundContext->ensureCompoundAccess($request, $unit->compound_id);
+
         $validated = $request->validated();
 
         $unit->fill([
@@ -291,6 +313,8 @@ class UnitController extends Controller
 
     public function archive(ArchivePropertyRequest $request, Unit $unit): UnitResource
     {
+        $this->compoundContext->ensureCompoundAccess($request, $unit->compound_id);
+
         $validated = $request->validated();
 
         $unit->forceFill([

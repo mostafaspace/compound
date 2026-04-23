@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Resolves the active compound ID for the current request.
@@ -62,5 +63,39 @@ class CompoundContextService
     public function isScoped(Request $request): bool
     {
         return $this->resolve($request) !== null;
+    }
+
+    public function canAccessCompound(Request $request, string $compoundId): bool
+    {
+        /** @var User|null $user */
+        $user = $request->user();
+
+        if (! $user) {
+            return false;
+        }
+
+        if ($user->role === UserRole::SuperAdmin) {
+            return true;
+        }
+
+        return filled($user->compound_id) && $user->compound_id === $compoundId;
+    }
+
+    public function ensureCompoundAccess(Request $request, string $compoundId): void
+    {
+        abort_unless($this->canAccessCompound($request, $compoundId), Response::HTTP_FORBIDDEN);
+    }
+
+    public function canManageAllCompounds(Request $request): bool
+    {
+        /** @var User|null $user */
+        $user = $request->user();
+
+        return $user?->role === UserRole::SuperAdmin;
+    }
+
+    public function ensureGlobalCompoundAccess(Request $request): void
+    {
+        abort_unless($this->canManageAllCompounds($request), Response::HTTP_FORBIDDEN);
     }
 }
