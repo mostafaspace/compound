@@ -422,6 +422,44 @@
       "rejected": "مرفوض",
       "allocated": "مخصص",
       "refunded": "مسترد"
+    },
+    "reports": {
+      "title": "تقرير التحصيل",
+      "subtitle": "ملخص التحصيل لمستوى المحفظة وأرصدة الحسابات وتفصيل طرق الدفع.",
+      "backToFinance": "المالية",
+      "summary": {
+        "title": "الملخص",
+        "totalBilled": "إجمالي المفوتر",
+        "totalCollected": "إجمالي المحصل",
+        "totalOutstanding": "إجمالي المتأخر",
+        "totalCredit": "إجمالي الرصيد الدائن",
+        "collectionRate": "معدل التحصيل",
+        "unpaidUnits": "وحدات غير مسددة",
+        "creditUnits": "وحدات برصيد دائن",
+        "totalAccounts": "إجمالي الحسابات",
+        "pendingPayments": "مدفوعات معلقة",
+        "pendingAmount": "المبلغ المعلق"
+      },
+      "accounts": {
+        "title": "أرصدة الحسابات",
+        "filterAll": "الكل",
+        "filterPositive": "متأخرة",
+        "filterZero": "مسددة",
+        "filterCredit": "دائنة",
+        "unit": "الوحدة",
+        "building": "المبنى",
+        "balance": "الرصيد",
+        "currency": "العملة",
+        "empty": "لا توجد حسابات تطابق الفلتر المحدد."
+      },
+      "paymentMethods": {
+        "title": "طرق الدفع",
+        "subtitle": "المدفوعات المعتمدة مجمعة حسب طريقة الدفع.",
+        "method": "الطريقة",
+        "count": "العدد",
+        "total": "الإجمالي",
+        "empty": "لم يتم تسجيل أي مدفوعات معتمدة بعد."
+      }
     }
   },
   "Dues": {

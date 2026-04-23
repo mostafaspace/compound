@@ -422,6 +422,44 @@
       "rejected": "Rejected",
       "allocated": "Allocated",
       "refunded": "Refunded"
+    },
+    "reports": {
+      "title": "Collections report",
+      "subtitle": "Portfolio-wide collections summary, account balances, and payment method breakdown.",
+      "backToFinance": "Finance",
+      "summary": {
+        "title": "Summary",
+        "totalBilled": "Total billed",
+        "totalCollected": "Total collected",
+        "totalOutstanding": "Total outstanding",
+        "totalCredit": "Total credit",
+        "collectionRate": "Collection rate",
+        "unpaidUnits": "Unpaid units",
+        "creditUnits": "Credit units",
+        "totalAccounts": "Total accounts",
+        "pendingPayments": "Pending payments",
+        "pendingAmount": "Pending amount"
+      },
+      "accounts": {
+        "title": "Account balances",
+        "filterAll": "All",
+        "filterPositive": "Outstanding",
+        "filterZero": "Settled",
+        "filterCredit": "Credit",
+        "unit": "Unit",
+        "building": "Building",
+        "balance": "Balance",
+        "currency": "Currency",
+        "empty": "No accounts match the selected filter."
+      },
+      "paymentMethods": {
+        "title": "Payment methods",
+        "subtitle": "Approved payments grouped by payment method.",
+        "method": "Method",
+        "count": "Count",
+        "total": "Total",
+        "empty": "No approved payments recorded yet."
+      }
     }
   },
   "Dues": {

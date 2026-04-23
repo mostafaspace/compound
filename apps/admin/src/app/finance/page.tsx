@@ -101,7 +101,15 @@ export default async function FinancePage({ searchParams }: FinancePageProps) {
             <h1 className="mt-2 text-3xl font-semibold">{t("title")}</h1>
             <p className="mt-2 max-w-2xl text-sm text-muted">{t("subtitle")}</p>
           </div>
-          <LogoutButton />
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              className="inline-flex h-10 items-center rounded-lg border border-line px-4 text-sm font-semibold hover:border-brand"
+              href="/finance/reports"
+            >
+              {t("reports.title")}
+            </Link>
+            <LogoutButton />
+          </div>
         </div>
       </header>
 

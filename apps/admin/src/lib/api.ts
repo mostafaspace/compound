@@ -23,6 +23,9 @@ import type {
   CreateVisitorRequestInput,
   CreateLedgerEntryInput,
   CreateUnitAccountInput,
+  FinanceReportSummary,
+  FinancePaymentMethodRow,
+  FinanceReportAccountsFilters,
   DocumentStatus,
   DocumentType,
   FloorSummary,
@@ -1836,4 +1839,77 @@ export async function applyCollectionCampaignCharges(
   const payload = (await response.json()) as { data: { count: number } };
 
   return payload.data;
+}
+
+export async function getFinanceReportSummary(): Promise<FinanceReportSummary | null> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/finance/reports/summary`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const payload = (await response.json()) as { data: FinanceReportSummary };
+
+    return payload.data;
+  } catch {
+    return null;
+  }
+}
+
+export async function getFinanceReportAccounts(
+  filters: FinanceReportAccountsFilters = {},
+): Promise<UnitAccount[]> {
+  try {
+    const params = new URLSearchParams();
+
+    if (filters.balanceStatus && filters.balanceStatus !== "all") {
+      params.set("balanceStatus", filters.balanceStatus);
+    }
+
+    if (filters.buildingId) {
+      params.set("buildingId", filters.buildingId);
+    }
+
+    const query = params.toString();
+    const response = await fetch(
+      `${config.apiBaseUrl}/finance/reports/accounts${query ? `?${query}` : ""}`,
+      {
+        cache: "no-store",
+        headers: await apiHeaders(true),
+      },
+    );
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const payload = (await response.json()) as PaginatedEnvelope<UnitAccount>;
+
+    return payload.data;
+  } catch {
+    return [];
+  }
+}
+
+export async function getFinancePaymentMethodBreakdown(): Promise<FinancePaymentMethodRow[]> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/finance/reports/payment-methods`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const payload = (await response.json()) as { data: FinancePaymentMethodRow[] };
+
+    return payload.data;
+  } catch {
+    return [];
+  }
 }

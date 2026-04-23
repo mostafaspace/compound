@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\DocumentTypeController;
 use App\Http\Controllers\Api\V1\FloorController;
 use App\Http\Controllers\Api\V1\Finance\ChargeTypeController;
 use App\Http\Controllers\Api\V1\Finance\CollectionCampaignController;
+use App\Http\Controllers\Api\V1\Finance\FinanceReportController;
 use App\Http\Controllers\Api\V1\Finance\PaymentSubmissionController;
 use App\Http\Controllers\Api\V1\Finance\RecurringChargeController;
 use App\Http\Controllers\Api\V1\Finance\UnitAccountController;
@@ -230,6 +231,13 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             Route::patch('/collection-campaigns/{campaign}/publish', [CollectionCampaignController::class, 'publish'])->name('collection-campaigns.publish');
             Route::patch('/collection-campaigns/{campaign}/archive', [CollectionCampaignController::class, 'archive'])->name('collection-campaigns.archive');
             Route::post('/collection-campaigns/{campaign}/charges', [CollectionCampaignController::class, 'applyCharges'])->name('collection-campaigns.charges.apply');
+
+            // Collections reports
+            Route::prefix('reports')->name('reports.')->group(function (): void {
+                Route::get('/summary', [FinanceReportController::class, 'summary'])->name('summary');
+                Route::get('/accounts', [FinanceReportController::class, 'accounts'])->name('accounts');
+                Route::get('/payment-methods', [FinanceReportController::class, 'paymentMethodBreakdown'])->name('payment-methods');
+            });
         });
 
     Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,board_member,finance_reviewer,support_agent,resident_owner,resident_tenant'])

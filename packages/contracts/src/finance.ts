@@ -136,3 +136,28 @@ export interface CollectionCampaign {
   closedAt: string | null;
   createdAt: string;
 }
+
+export interface FinanceReportSummary {
+  totalBilled: string;
+  totalCollected: string;
+  totalOutstanding: string;
+  totalCredit: string;
+  collectionRate: number;
+  unpaidUnitsCount: number;
+  creditUnitsCount: number;
+  zeroBalanceUnitsCount: number;
+  totalAccountsCount: number;
+  pendingPaymentsCount: number;
+  pendingPaymentsAmount: string;
+}
+
+export interface FinancePaymentMethodRow {
+  method: string;
+  count: number;
+  total: string;
+}
+
+export interface FinanceReportAccountsFilters {
+  balanceStatus?: "all" | "positive" | "zero" | "credit";
+  buildingId?: string;
+}
