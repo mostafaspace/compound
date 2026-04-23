@@ -33,6 +33,8 @@ Default service endpoints:
 - Mailpit SMTP: `127.0.0.1:1025`
 - Mailpit UI: `127.0.0.1:8025`
 
+`npm run infra:up` now also bootstraps the local MinIO bucket `compound-local` through the one-shot `minio-init` service so file uploads and storage health checks do not start in a degraded state.
+
 ## Environment Files
 
 Copy app-specific examples before running each app:

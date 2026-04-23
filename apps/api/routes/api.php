@@ -1,35 +1,37 @@
 <?php
 
-use App\Http\Controllers\Api\V1\AuthController;
-use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\AnnouncementController;
+use App\Http\Controllers\Api\V1\AuditLogController;
+use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BuildingController;
 use App\Http\Controllers\Api\V1\CompoundController;
 use App\Http\Controllers\Api\V1\DocumentTypeController;
-use App\Http\Controllers\Api\V1\FloorController;
 use App\Http\Controllers\Api\V1\Finance\ChargeTypeController;
 use App\Http\Controllers\Api\V1\Finance\CollectionCampaignController;
 use App\Http\Controllers\Api\V1\Finance\FinanceReportController;
 use App\Http\Controllers\Api\V1\Finance\PaymentSubmissionController;
-use App\Http\Controllers\Api\V1\Governance\VoteController;
 use App\Http\Controllers\Api\V1\Finance\RecurringChargeController;
 use App\Http\Controllers\Api\V1\Finance\UnitAccountController;
+use App\Http\Controllers\Api\V1\FloorController;
+use App\Http\Controllers\Api\V1\Governance\VoteController;
+use App\Http\Controllers\Api\V1\IssueAttachmentController;
+use App\Http\Controllers\Api\V1\IssueCommentController;
+use App\Http\Controllers\Api\V1\IssueController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\NotificationPreferenceController;
+use App\Http\Controllers\Api\V1\OperationalStatusController;
 use App\Http\Controllers\Api\V1\OrgChartController;
 use App\Http\Controllers\Api\V1\RepresentativeAssignmentController;
 use App\Http\Controllers\Api\V1\ResidentInvitationController;
+use App\Http\Controllers\Api\V1\SettingsController;
 use App\Http\Controllers\Api\V1\SystemStatusController;
 use App\Http\Controllers\Api\V1\UnitController;
 use App\Http\Controllers\Api\V1\UnitMembershipController;
 use App\Http\Controllers\Api\V1\UserDocumentController;
 use App\Http\Controllers\Api\V1\VerificationRequestController;
 use App\Http\Controllers\Api\V1\VisitorRequestController;
-use App\Http\Controllers\Api\V1\IssueController;
-use App\Http\Controllers\Api\V1\IssueCommentController;
-use App\Http\Controllers\Api\V1\IssueAttachmentController;
-use App\Http\Controllers\Api\V1\SettingsController;
 use Illuminate\Support\Facades\Route;
+
 Route::prefix('v1')->name('api.v1.')->group(function (): void {
     Route::get('/status', SystemStatusController::class)->name('status');
 
@@ -43,6 +45,9 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
     Route::middleware('auth:sanctum')->group(function (): void {
         Route::get('/auth/me', [AuthController::class, 'me'])->name('auth.me');
         Route::post('/auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
+        Route::get('/system/ops-status', OperationalStatusController::class)
+            ->middleware('role:super_admin,compound_admin,support_agent')
+            ->name('system.ops-status');
         Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
         Route::get('/notifications/unread-count', [NotificationController::class, 'getUnreadCount'])
             ->name('notifications.unread-count');
@@ -124,7 +129,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             ->name('units.responsible-party');
     });
 
-        Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,board_member,finance_reviewer,support_agent'])
+    Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,board_member,finance_reviewer,support_agent'])
         ->group(function (): void {
             Route::get('/units', [UnitController::class, 'lookup'])->name('units.lookup');
             Route::post('/buildings/{building}/units/import', [UnitController::class, 'import'])->name('buildings.units.import');

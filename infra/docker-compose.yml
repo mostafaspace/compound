@@ -186,6 +186,18 @@ services:
       timeout: 5s
       retries: 10
 
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >
+        mc alias set compound http://minio:9000 compound_minio compound_minio_secret &&
+        mc mb --ignore-existing compound/compound-local
+    restart: "no"
+
   mailpit:
     image: axllent/mailpit:latest
     ports:

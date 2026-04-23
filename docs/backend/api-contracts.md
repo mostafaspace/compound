@@ -630,7 +630,52 @@ Known action strings:
 ## System Status
 
 ### GET /status *(public)*
-**Response 200** — `{"data": {"status": "ok", "version": "1.0.0"}}`
+**Response 200**
+```json
+{
+  "data": {
+    "service": "compound-api",
+    "status": "ok",
+    "environment": "production",
+    "timezone": "Africa/Cairo",
+    "appVersion": "13.5.0",
+    "timestamp": "2026-04-23T17:31:52+02:00"
+  }
+}
+```
+
+### GET /system/ops-status *(auth:sanctum, roles: SA, CA, SU)*
+Operator-only readiness view for production support.
+
+**Response 200**
+```json
+{
+  "data": {
+    "service": "compound-api",
+    "status": "ok",
+    "environment": "production",
+    "timezone": "Africa/Cairo",
+    "appVersion": "13.5.0",
+    "timestamp": "2026-04-23T17:31:52+02:00",
+    "checks": {
+      "database": { "status": "ok", "driver": "mysql", "latencyMs": 4 },
+      "redis": { "status": "ok", "client": "phpredis", "latencyMs": 1 },
+      "queue": { "status": "ok", "connection": "redis", "failedJobs": 0, "latencyMs": 2 },
+      "storage": { "status": "ok", "disk": "s3", "driver": "s3", "latencyMs": 90 },
+      "broadcasting": {
+        "status": "configured",
+        "connection": "reverb",
+        "driver": "reverb",
+        "host": "reverb",
+        "port": "8080"
+      }
+    },
+    "warnings": ["APP_DEBUG is enabled."]
+  }
+}
+```
+
+If a dependency is degraded, the corresponding check includes a short `message` string and the top-level `status` becomes `degraded`.
 
 ---
 

@@ -3,19 +3,17 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Services\OperationalStatusService;
 use Illuminate\Http\JsonResponse;
 
 class SystemStatusController extends Controller
 {
+    public function __construct(private readonly OperationalStatusService $operationalStatusService) {}
+
     public function __invoke(): JsonResponse
     {
         return response()->json([
-            'data' => [
-                'service' => 'compound-api',
-                'status' => 'ok',
-                'environment' => app()->environment(),
-                'timezone' => config('app.timezone'),
-            ],
+            'data' => $this->operationalStatusService->publicStatus(),
         ]);
     }
 }
