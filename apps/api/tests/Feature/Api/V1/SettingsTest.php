@@ -67,8 +67,11 @@ class SettingsTest extends TestCase
 
     public function test_compound_admin_can_read_namespace_for_their_compound(): void
     {
-        $admin    = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
         $compound = Compound::factory()->create();
+        $admin    = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compound->id,
+        ]);
         Sanctum::actingAs($admin);
 
         $response = $this->getJson("/api/v1/settings/visitors?compoundId={$compound->id}")->assertOk();
@@ -76,6 +79,20 @@ class SettingsTest extends TestCase
         $this->assertEquals($compound->id, $response->json('data.compoundId'));
         $settings = $response->json('data.settings');
         $this->assertArrayHasKey('require_pre_approval', $settings);
+    }
+
+    public function test_compound_admin_cannot_read_another_compounds_settings(): void
+    {
+        $compoundA = Compound::factory()->create();
+        $compoundB = Compound::factory()->create();
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compoundA->id,
+        ]);
+        Sanctum::actingAs($admin);
+
+        $this->getJson("/api/v1/settings/visitors?compoundId={$compoundB->id}")
+            ->assertForbidden();
     }
 
     public function test_reading_unknown_namespace_returns_422(): void
@@ -152,6 +169,49 @@ class SettingsTest extends TestCase
             'namespace'   => 'visitors',
             'key'         => 'require_pre_approval',
         ]);
+    }
+
+    public function test_compound_admin_updates_only_their_compound_settings(): void
+    {
+        $compound = Compound::factory()->create();
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compound->id,
+        ]);
+        Sanctum::actingAs($admin);
+
+        $this->patchJson('/api/v1/settings/visitors', [
+            'settings' => [
+                'require_pre_approval' => true,
+                'max_visitors_per_unit_per_day' => 4,
+            ],
+        ])->assertOk()
+            ->assertJsonPath('data.compoundId', $compound->id)
+            ->assertJsonPath('data.settings.max_visitors_per_unit_per_day', 4);
+
+        $this->assertTrue(
+            CompoundSetting::query()
+                ->where('compound_id', $compound->id)
+                ->where('namespace', 'visitors')
+                ->where('key', 'max_visitors_per_unit_per_day')
+                ->exists()
+        );
+    }
+
+    public function test_compound_admin_cannot_update_another_compounds_settings(): void
+    {
+        $compoundA = Compound::factory()->create();
+        $compoundB = Compound::factory()->create();
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compoundA->id,
+        ]);
+        Sanctum::actingAs($admin);
+
+        $this->patchJson('/api/v1/settings/visitors', [
+            'compoundId' => $compoundB->id,
+            'settings' => ['require_pre_approval' => true],
+        ])->assertForbidden();
     }
 
     public function test_updating_settings_without_compound_sets_global_override(): void

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
 import { LogoutButton } from "@/components/logout-button";
-import { getCurrentUser, getSettings, getSystemStatus } from "@/lib/api";
+import { getCompound, getCurrentUser, getSettings, getSystemStatus } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
 
 import { updateSettingsAction } from "./actions";
@@ -24,7 +24,7 @@ const NAMESPACES = [
 
 type Namespace = (typeof NAMESPACES)[number];
 
-// Field metadata — controls which input type renders for each setting key
+// Field metadata â€” controls which input type renders for each setting key
 interface FieldMeta {
   type: "toggle" | "number" | "text" | "tags";
 }
@@ -66,15 +66,20 @@ function renderValue(key: string, value: unknown): string {
 export default async function SettingsPage({ searchParams }: SettingsPageProps) {
   await requireAdminUser(getCurrentUser);
   const t = await getTranslations("Settings");
-  const nav = await getTranslations("Navigation");
   const sp = searchParams ? await searchParams : {};
 
   // Fetch all namespace data and system status in parallel
   const [nsData, systemStatus] = await Promise.all([
-    Promise.all(NAMESPACES.map((ns) => getSettings(ns).then((d) => ({ ns, settings: d?.settings ?? {} })))),
+    Promise.all(NAMESPACES.map((ns) => getSettings(ns).then((d) => ({
+      ns,
+      compoundId: d?.compoundId ?? null,
+      settings: d?.settings ?? {},
+    })))),
     getSystemStatus(),
   ]);
   const isDegraded = systemStatus?.status !== "ok";
+  const scopedCompoundId = nsData.find(({ compoundId }) => compoundId !== null)?.compoundId ?? null;
+  const scopedCompound = scopedCompoundId ? await getCompound(scopedCompoundId) : null;
   const settingsMap = Object.fromEntries(nsData.map(({ ns, settings }) => [ns, settings])) as Record<
     Namespace,
     Record<string, unknown>
@@ -86,16 +91,25 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         <div className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-6 md:flex-row md:items-center md:justify-between lg:px-8">
           <div>
             <Link className="text-sm font-semibold text-brand hover:text-brand-strong" href="/">
-              ← {nav("dashboard")}
+              {"< "} {t("back")}
             </Link>
             <h1 className="mt-2 text-3xl font-semibold">{t("title")}</h1>
-            <p className="mt-2 max-w-2xl text-sm text-muted">{t("subtitle")}</p>
+            <p className="mt-2 max-w-2xl text-sm text-muted">
+              {scopedCompound ? t("subtitleCompound", { name: scopedCompound.name }) : t("subtitleGlobal")}
+            </p>
           </div>
           <LogoutButton />
         </div>
       </header>
 
       <section className="mx-auto max-w-7xl space-y-8 px-5 py-6 lg:px-8">
+        <div className="rounded-lg border border-line bg-panel px-4 py-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted">{t("scopeLabel")}</p>
+          <p className="mt-1 text-sm font-medium text-foreground">
+            {scopedCompound ? t("scopeCompound", { name: scopedCompound.name }) : t("scopeGlobal")}
+          </p>
+        </div>
+
         {sp.updated ? (
           <p className="rounded-lg bg-[#e6f3ef] px-4 py-3 text-sm font-medium text-brand">{t("updated")}</p>
         ) : null}
@@ -130,8 +144,8 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
                             defaultValue={String(value)}
                             name={key}
                           >
-                            <option value="true">Enabled</option>
-                            <option value="false">Disabled</option>
+                            <option value="true">{t("enabled")}</option>
+                            <option value="false">{t("disabled")}</option>
                           </select>
                         </label>
                       );
@@ -160,7 +174,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
                             className="mt-1 h-10 w-full rounded-lg border border-line bg-background px-3 text-sm"
                             defaultValue={renderValue(key, value)}
                             name={key}
-                            placeholder="comma-separated values"
+                            placeholder={t("arrayPlaceholder")}
                           />
                         </label>
                       );

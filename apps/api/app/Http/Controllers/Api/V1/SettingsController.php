@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Services\CompoundContextService;
 use App\Support\SettingsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -10,7 +11,10 @@ use Illuminate\Validation\ValidationException;
 
 class SettingsController extends Controller
 {
-    public function __construct(protected SettingsService $settings) {}
+    public function __construct(
+        protected SettingsService $settings,
+        protected CompoundContextService $compoundContext,
+    ) {}
 
     /**
      * Return all known namespaces and their default shapes.
@@ -29,14 +33,14 @@ class SettingsController extends Controller
     {
         $this->validateNamespace($namespace);
 
-        $compoundId = $request->query('compoundId');
+        $compoundId = $this->compoundContext->resolveManagedCompound($request);
 
-        $data = $this->settings->getNamespace($namespace, $compoundId ?: null);
+        $data = $this->settings->getNamespace($namespace, $compoundId);
 
         return response()->json([
             'data' => [
                 'namespace'  => $namespace,
-                'compoundId' => $compoundId ?: null,
+                'compoundId' => $compoundId,
                 'settings'   => $data,
             ],
         ]);
@@ -56,7 +60,10 @@ class SettingsController extends Controller
             'reason'     => ['nullable', 'string', 'max:255'],
         ]);
 
-        $compoundId = $validated['compoundId'] ?? null;
+        $compoundId = $this->compoundContext->resolveManagedCompound(
+            $request,
+            $validated['compoundId'] ?? null,
+        );
         $reason     = $validated['reason'] ?? null;
 
         $actor = $request->user();

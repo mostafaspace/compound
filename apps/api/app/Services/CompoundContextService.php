@@ -98,4 +98,49 @@ class CompoundContextService
     {
         abort_unless($this->canManageAllCompounds($request), Response::HTTP_FORBIDDEN);
     }
+
+    public function resolveManagedCompound(
+        Request $request,
+        ?string $requestedCompoundId = null,
+        bool $allowGlobalForSuperAdmin = true,
+    ): ?string {
+        /** @var User|null $user */
+        $user = $request->user();
+
+        abort_unless($user !== null, Response::HTTP_FORBIDDEN);
+
+        $candidate = filled($requestedCompoundId) ? $requestedCompoundId : null;
+
+        if ($candidate === null) {
+            $header = $request->header('X-Compound-Id');
+            if (filled($header)) {
+                $candidate = $header;
+            }
+        }
+
+        if ($candidate === null) {
+            $queryParam = $request->query('compoundId');
+            if (filled($queryParam)) {
+                $candidate = $queryParam;
+            }
+        }
+
+        if ($user->role === UserRole::SuperAdmin) {
+            if ($candidate !== null) {
+                return $candidate;
+            }
+
+            abort_unless($allowGlobalForSuperAdmin, Response::HTTP_FORBIDDEN);
+
+            return null;
+        }
+
+        abort_unless(filled($user->compound_id), Response::HTTP_FORBIDDEN);
+
+        if ($candidate !== null && $candidate !== $user->compound_id) {
+            abort(Response::HTTP_FORBIDDEN);
+        }
+
+        return $user->compound_id;
+    }
 }

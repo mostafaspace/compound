@@ -47,5 +47,6 @@ export async function updateSettingsAction(namespace: string, formData: FormData
   });
 
   revalidatePath("/settings");
+  revalidatePath("/");
   redirect(`/settings?updated=${namespace}`);
 }
