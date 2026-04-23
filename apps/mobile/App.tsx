@@ -5,11 +5,16 @@ import type {
   CreateVisitorRequestInput,
   DocumentType,
   Issue,
+  LedgerEntry,
   LoginResult,
   PaginatedEnvelope,
+  PaymentSubmission,
+  UnitAccount,
   UnitMembership,
   UserNotification,
   VerificationRequest,
+  Vote,
+  VoteEligibilityResult,
   VisitorRequest,
 } from "@compound/contracts";
 import DateTimePicker, { type DateTimePickerEvent } from "@react-native-community/datetimepicker";
@@ -167,6 +172,10 @@ function isResident(user: AuthenticatedUser | null): boolean {
   return user?.role === "resident_owner" || user?.role === "resident_tenant";
 }
 
+function isSecurityGuard(user: AuthenticatedUser | null): boolean {
+  return user?.role === "security_guard";
+}
+
 function isVisitorClosed(visitorRequest: VisitorRequest): boolean {
   return ["cancelled", "completed", "denied"].includes(visitorRequest.status);
 }
@@ -267,6 +276,37 @@ export default function App() {
   const [issueMessage, setIssueMessage] = useState<string | null>(null);
   const [showIssueForm, setShowIssueForm] = useState(false);
 
+  // Finance state
+  const [unitAccounts, setUnitAccounts] = useState<UnitAccount[]>([]);
+  const [isLoadingAccounts, setIsLoadingAccounts] = useState(false);
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
+  const [accountDetail, setAccountDetail] = useState<UnitAccount | null>(null);
+  const [isLoadingAccountDetail, setIsLoadingAccountDetail] = useState(false);
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("bank_transfer");
+  const [paymentReference, setPaymentReference] = useState("");
+  const [paymentNotes, setPaymentNotes] = useState("");
+  const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
+  const [paymentMessage, setPaymentMessage] = useState<string | null>(null);
+
+  // Governance state
+  const [votes, setVotes] = useState<Vote[]>([]);
+  const [isLoadingVotes, setIsLoadingVotes] = useState(false);
+  const [voteMessage, setVoteMessage] = useState<string | null>(null);
+  const [castingVoteId, setCastingVoteId] = useState<string | null>(null);
+  const [voteEligibility, setVoteEligibility] = useState<Record<string, VoteEligibilityResult>>({});
+  const [selectedVoteOption, setSelectedVoteOption] = useState<Record<string, number>>({});
+
+  // Security state
+  const [securityVisitors, setSecurityVisitors] = useState<VisitorRequest[]>([]);
+  const [isLoadingSecurityVisitors, setIsLoadingSecurityVisitors] = useState(false);
+  const [validatePassToken, setValidatePassToken] = useState("");
+  const [validateResult, setValidateResult] = useState<{ result: string; visitorRequest: VisitorRequest | null } | null>(null);
+  const [isValidating, setIsValidating] = useState(false);
+  const [securityMessage, setSecurityMessage] = useState<string | null>(null);
+  const [processingVisitorId, setProcessingVisitorId] = useState<string | null>(null);
+
   const apiBaseUrl = useMemo(
     () => defaultApiBaseUrl,
     [],
@@ -337,7 +377,8 @@ export default function App() {
           setVisitorPassTokens(await loadVisitorPassTokens());
         }
 
-        await Promise.all([
+        const restoredUserData = restoredUser;
+        const loaders: Promise<unknown>[] = [
           loadVerificationRequests(credentials.password),
           loadUnitMemberships(credentials.password),
           loadDocumentTypes(credentials.password),
@@ -345,7 +386,18 @@ export default function App() {
           loadIssues(credentials.password),
           loadNotifications(credentials.password),
           loadAnnouncements(credentials.password),
-        ]);
+        ];
+
+        if (isResident(restoredUserData)) {
+          loaders.push(loadUnitAccounts(credentials.password));
+          loaders.push(loadVotes(credentials.password));
+        }
+
+        if (isSecurityGuard(restoredUserData)) {
+          loaders.push(loadSecurityVisitors(credentials.password));
+        }
+
+        await Promise.all(loaders);
       } catch {
         await Keychain.resetGenericPassword({ service: authTokenService });
       } finally {
@@ -953,6 +1005,192 @@ export default function App() {
     }
   }
 
+  // ── Finance ──────────────────────────────────────────────────────────────
+
+  async function loadUnitAccounts(token = authToken) {
+    if (!token) return;
+    setIsLoadingAccounts(true);
+    setPaymentMessage(null);
+    try {
+      const response = await fetch(`${apiBaseUrl}/my/finance/unit-accounts`, {
+        headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) { setPaymentMessage(t("Finance.loadError")); return; }
+      const payload = (await response.json()) as PaginatedEnvelope<UnitAccount>;
+      setUnitAccounts(payload.data);
+      if (payload.data.length > 0 && !selectedAccountId) {
+        setSelectedAccountId(payload.data[0]!.id);
+      }
+    } catch {
+      setPaymentMessage(t("Finance.networkError"));
+    } finally {
+      setIsLoadingAccounts(false);
+    }
+  }
+
+  async function loadAccountDetail(accountId: string, token = authToken) {
+    if (!token) return;
+    setIsLoadingAccountDetail(true);
+    try {
+      const response = await fetch(`${apiBaseUrl}/my/finance/unit-accounts/${accountId}`, {
+        headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) return;
+      const payload = (await response.json()) as ApiEnvelope<UnitAccount>;
+      setAccountDetail(payload.data);
+    } finally {
+      setIsLoadingAccountDetail(false);
+    }
+  }
+
+  async function handleSubmitPayment(accountId: string) {
+    if (!authToken || !paymentAmount.trim()) return;
+    setPaymentMessage(null);
+    setIsSubmittingPayment(true);
+    try {
+      const formData = new FormData();
+      formData.append("amount", paymentAmount.trim());
+      formData.append("method", paymentMethod);
+      if (paymentReference.trim()) formData.append("reference", paymentReference.trim());
+      if (paymentNotes.trim()) formData.append("notes", paymentNotes.trim());
+
+      const response = await fetch(`${apiBaseUrl}/finance/unit-accounts/${accountId}/payment-submissions`, {
+        body: formData,
+        headers: { Accept: "application/json", Authorization: `Bearer ${authToken}` },
+        method: "POST",
+      });
+      if (!response.ok) { setPaymentMessage(t("Finance.submitError")); return; }
+      setPaymentMessage(t("Finance.submitSuccess"));
+      setPaymentAmount("");
+      setPaymentReference("");
+      setPaymentNotes("");
+      setShowPaymentForm(false);
+      await loadAccountDetail(accountId);
+    } catch {
+      setPaymentMessage(t("Finance.networkError"));
+    } finally {
+      setIsSubmittingPayment(false);
+    }
+  }
+
+  // ── Governance ───────────────────────────────────────────────────────────
+
+  async function loadVotes(token = authToken) {
+    if (!token) return;
+    setIsLoadingVotes(true);
+    setVoteMessage(null);
+    try {
+      const response = await fetch(`${apiBaseUrl}/governance/votes`, {
+        headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) { setVoteMessage(t("Governance.loadError")); return; }
+      const payload = (await response.json()) as PaginatedEnvelope<Vote>;
+      setVotes(payload.data);
+    } catch {
+      setVoteMessage(t("Governance.networkError"));
+    } finally {
+      setIsLoadingVotes(false);
+    }
+  }
+
+  async function loadVoteEligibility(voteId: string, token = authToken) {
+    if (!token) return;
+    try {
+      const response = await fetch(`${apiBaseUrl}/governance/votes/${voteId}/eligibility`, {
+        headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) return;
+      const payload = (await response.json()) as ApiEnvelope<VoteEligibilityResult>;
+      setVoteEligibility((current) => ({ ...current, [voteId]: payload.data }));
+    } catch { /* silent */ }
+  }
+
+  async function handleCastVote(voteId: string, optionId: number) {
+    if (!authToken) return;
+    setVoteMessage(null);
+    setCastingVoteId(voteId);
+    try {
+      const response = await fetch(`${apiBaseUrl}/governance/votes/${voteId}/cast`, {
+        body: JSON.stringify({ optionId }),
+        headers: { Accept: "application/json", Authorization: `Bearer ${authToken}`, "Content-Type": "application/json" },
+        method: "POST",
+      });
+      if (response.status === 409) { setVoteMessage(t("Governance.alreadyVoted")); return; }
+      if (!response.ok) { setVoteMessage(t("Governance.castError")); return; }
+      setVoteMessage(t("Governance.castSuccess"));
+      await loadVoteEligibility(voteId);
+    } catch {
+      setVoteMessage(t("Governance.networkError"));
+    } finally {
+      setCastingVoteId(null);
+    }
+  }
+
+  // ── Security ─────────────────────────────────────────────────────────────
+
+  async function loadSecurityVisitors(token = authToken) {
+    if (!token) return;
+    setIsLoadingSecurityVisitors(true);
+    setSecurityMessage(null);
+    try {
+      const response = await fetch(`${apiBaseUrl}/visitor-requests?status=pending`, {
+        headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) { setSecurityMessage(t("Security.loadError")); return; }
+      const payload = (await response.json()) as PaginatedEnvelope<VisitorRequest>;
+      setSecurityVisitors(payload.data);
+    } catch {
+      setSecurityMessage(t("Security.networkError"));
+    } finally {
+      setIsLoadingSecurityVisitors(false);
+    }
+  }
+
+  async function handleValidatePass() {
+    if (!authToken || !validatePassToken.trim()) return;
+    setIsValidating(true);
+    setValidateResult(null);
+    setSecurityMessage(null);
+    try {
+      const response = await fetch(`${apiBaseUrl}/visitor-requests/validate-pass`, {
+        body: JSON.stringify({ token: validatePassToken.trim() }),
+        headers: { Accept: "application/json", Authorization: `Bearer ${authToken}`, "Content-Type": "application/json" },
+        method: "POST",
+      });
+      if (!response.ok) { setSecurityMessage(t("Security.validateError")); return; }
+      const payload = (await response.json()) as ApiEnvelope<{ result: string; visitorRequest: VisitorRequest | null }>;
+      setValidateResult(payload.data);
+    } catch {
+      setSecurityMessage(t("Security.networkError"));
+    } finally {
+      setIsValidating(false);
+    }
+  }
+
+  async function handleSecurityAction(visitorRequestId: string, action: "allow" | "deny" | "complete") {
+    if (!authToken) return;
+    setProcessingVisitorId(visitorRequestId);
+    setSecurityMessage(null);
+    try {
+      const response = await fetch(`${apiBaseUrl}/visitor-requests/${visitorRequestId}/${action}`, {
+        body: action === "deny" ? JSON.stringify({ reason: "Denied at gate" }) : "{}",
+        headers: { Accept: "application/json", Authorization: `Bearer ${authToken}`, "Content-Type": "application/json" },
+        method: "POST",
+      });
+      if (!response.ok) { setSecurityMessage(t("Security.actionError")); return; }
+      setSecurityMessage(t(`Security.${action}Success`));
+      await loadSecurityVisitors();
+      if (validateResult?.visitorRequest?.id === visitorRequestId) {
+        setValidateResult(null);
+        setValidatePassToken("");
+      }
+    } catch {
+      setSecurityMessage(t("Security.networkError"));
+    } finally {
+      setProcessingVisitorId(null);
+    }
+  }
+
   async function handleSignOut() {
     await Keychain.resetGenericPassword({ service: authTokenService });
     await Keychain.resetGenericPassword({ service: visitorTokenService });
@@ -974,6 +1212,22 @@ export default function App() {
     setAnnouncementsError(null);
     setAnnouncementMessage(null);
     setAcknowledgingAnnouncementId(null);
+    // Finance
+    setUnitAccounts([]);
+    setAccountDetail(null);
+    setSelectedAccountId(null);
+    setPaymentMessage(null);
+    setShowPaymentForm(false);
+    // Governance
+    setVotes([]);
+    setVoteMessage(null);
+    setVoteEligibility({});
+    setSelectedVoteOption({});
+    // Security
+    setSecurityVisitors([]);
+    setSecurityMessage(null);
+    setValidatePassToken("");
+    setValidateResult(null);
   }
 
   async function handlePickAndUploadDocument() {
@@ -1048,6 +1302,7 @@ export default function App() {
   const hasInvalidVisitWindow = visitEndsAt <= visitStartsAt;
   const isPending = user?.status === "pending_review";
   const isActiveResident = user?.status === "active" && isResident(user);
+  const isActiveSecurityGuard = user?.status === "active" && isSecurityGuard(user);
   const announcementLocale = isRtl ? "ar" : "en";
   const pendingAnnouncementAcknowledgements = announcements.filter(
     (announcement) => announcement.requiresAcknowledgement && !announcement.acknowledgedAt,
@@ -1859,6 +2114,219 @@ export default function App() {
               )}
             </View>
 
+            {/* ── Finance ──────────────────────────────────────────────── */}
+            <View style={styles.panel}>
+              <View style={styles.rowBetween}>
+                <View style={styles.flexFill}>
+                  <Text style={[styles.panelLabel, styles.localizedText]}>{t("Finance.label")}</Text>
+                  <Text style={[styles.sectionTitle, styles.localizedText]}>{t("Finance.title")}</Text>
+                </View>
+                <View style={{ flexDirection: "row", gap: 8 }}>
+                  <Pressable accessibilityRole="button" onPress={() => void loadUnitAccounts()} style={styles.secondaryButton}>
+                    <Text style={styles.secondaryButtonText}>{isLoadingAccounts ? t("Finance.loading") : t("Common.refresh")}</Text>
+                  </Pressable>
+                </View>
+              </View>
+              {paymentMessage ? <Text style={[styles.infoText, styles.localizedText]}>{paymentMessage}</Text> : null}
+              {unitAccounts.length === 0 ? (
+                <Text style={[styles.sectionText, styles.localizedText]}>{t("Finance.noAccounts")}</Text>
+              ) : (
+                <>
+                  {unitAccounts.map((account) => (
+                    <View key={account.id} style={styles.itemCard}>
+                      <View style={styles.rowBetween}>
+                        <Text style={styles.actionLabel}>{t("Finance.balance")}</Text>
+                        <Text style={[styles.sectionTitle, { color: parseFloat(account.balance) < 0 ? "#dc2626" : "#116a57" }]}>
+                          {account.balance} {account.currency}
+                        </Text>
+                      </View>
+                      <Pressable
+                        accessibilityRole="button"
+                        onPress={() => {
+                          setSelectedAccountId(account.id);
+                          void loadAccountDetail(account.id);
+                        }}
+                        style={styles.secondaryButton}
+                      >
+                        <Text style={styles.secondaryButtonText}>{t("Finance.viewStatement")}</Text>
+                      </Pressable>
+                      {selectedAccountId === account.id && accountDetail ? (
+                        <View style={{ marginTop: 8 }}>
+                          {isLoadingAccountDetail ? (
+                            <ActivityIndicator />
+                          ) : (
+                            <>
+                              {(accountDetail.ledgerEntries ?? []).slice(0, 10).map((entry: LedgerEntry) => (
+                                <View key={entry.id} style={[styles.itemCard, { marginBottom: 4 }]}>
+                                  <View style={styles.rowBetween}>
+                                    <Text style={styles.sectionText}>{entry.description ?? entry.type}</Text>
+                                    <Text style={[styles.statusBadge, entry.type === "charge" || entry.type === "adjustment" ? styles.statusBadgeDanger : null]}>
+                                      {entry.amount} {accountDetail.currency}
+                                    </Text>
+                                  </View>
+                                  <Text style={[styles.sectionText, { fontSize: 11 }]}>
+                                    {formatDate(entry.createdAt, announcementLocale)}
+                                  </Text>
+                                </View>
+                              ))}
+                              {(accountDetail.paymentSubmissions ?? []).slice(0, 5).map((sub: PaymentSubmission) => (
+                                <View key={sub.id} style={[styles.itemCard, { marginBottom: 4 }]}>
+                                  <View style={styles.rowBetween}>
+                                    <Text style={styles.sectionText}>{t("Finance.paymentSubmission")} — {sub.method}</Text>
+                                    <Text style={styles.statusBadge}>{sub.status}</Text>
+                                  </View>
+                                  <Text style={styles.sectionText}>{sub.amount} {sub.currency}</Text>
+                                  <Text style={[styles.sectionText, { fontSize: 11 }]}>{formatDate(sub.createdAt, announcementLocale)}</Text>
+                                </View>
+                              ))}
+                            </>
+                          )}
+                          <Pressable
+                            accessibilityRole="button"
+                            onPress={() => setShowPaymentForm(!showPaymentForm)}
+                            style={[styles.secondaryButton, { marginTop: 8 }]}
+                          >
+                            <Text style={styles.secondaryButtonText}>
+                              {showPaymentForm ? t("Finance.cancelPayment") : t("Finance.submitPayment")}
+                            </Text>
+                          </Pressable>
+                          {showPaymentForm ? (
+                            <View style={styles.visitorForm}>
+                              <Text style={[styles.inputLabel, styles.localizedText]}>{t("Finance.amount")}</Text>
+                              <TextInput
+                                keyboardType="decimal-pad"
+                                onChangeText={setPaymentAmount}
+                                placeholder={t("Finance.amountPlaceholder")}
+                                style={styles.input}
+                                value={paymentAmount}
+                              />
+                              <Text style={[styles.inputLabel, styles.localizedText]}>{t("Finance.method")}</Text>
+                              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+                                {["bank_transfer", "cash", "check"].map((m) => (
+                                  <Pressable
+                                    accessibilityRole="button"
+                                    key={m}
+                                    onPress={() => setPaymentMethod(m)}
+                                    style={[styles.documentTypeChip, paymentMethod === m && styles.documentTypeChipSelected]}
+                                  >
+                                    <Text style={[styles.documentTypeText, paymentMethod === m && styles.documentTypeTextSelected]}>
+                                      {t(`Finance.methods.${m}`, { defaultValue: m })}
+                                    </Text>
+                                  </Pressable>
+                                ))}
+                              </View>
+                              <Text style={[styles.inputLabel, styles.localizedText]}>{t("Finance.reference")}</Text>
+                              <TextInput
+                                onChangeText={setPaymentReference}
+                                placeholder={t("Finance.referencePlaceholder")}
+                                style={styles.input}
+                                value={paymentReference}
+                              />
+                              <Text style={[styles.inputLabel, styles.localizedText]}>{t("Finance.notes")}</Text>
+                              <TextInput
+                                multiline
+                                numberOfLines={2}
+                                onChangeText={setPaymentNotes}
+                                placeholder={t("Finance.notesPlaceholder")}
+                                style={[styles.input, { minHeight: 56 }]}
+                                value={paymentNotes}
+                              />
+                              <Pressable
+                                accessibilityRole="button"
+                                disabled={isSubmittingPayment || !paymentAmount.trim()}
+                                onPress={() => void handleSubmitPayment(account.id)}
+                                style={[styles.primaryButton, (isSubmittingPayment || !paymentAmount.trim()) && styles.disabledButton]}
+                              >
+                                <Text style={styles.primaryButtonText}>
+                                  {isSubmittingPayment ? t("Finance.submitting") : t("Finance.submitPayment")}
+                                </Text>
+                              </Pressable>
+                            </View>
+                          ) : null}
+                        </View>
+                      ) : null}
+                    </View>
+                  ))}
+                </>
+              )}
+            </View>
+
+            {/* ── Governance ───────────────────────────────────────────── */}
+            <View style={styles.panel}>
+              <View style={styles.rowBetween}>
+                <View style={styles.flexFill}>
+                  <Text style={[styles.panelLabel, styles.localizedText]}>{t("Governance.label")}</Text>
+                  <Text style={[styles.sectionTitle, styles.localizedText]}>{t("Governance.title")}</Text>
+                </View>
+                <Pressable accessibilityRole="button" onPress={() => void loadVotes()} style={styles.secondaryButton}>
+                  <Text style={styles.secondaryButtonText}>{isLoadingVotes ? t("Governance.loading") : t("Common.refresh")}</Text>
+                </Pressable>
+              </View>
+              {voteMessage ? <Text style={[styles.infoText, styles.localizedText]}>{voteMessage}</Text> : null}
+              {votes.filter((v) => v.status === "active").length === 0 ? (
+                <Text style={[styles.sectionText, styles.localizedText]}>{t("Governance.noActiveVotes")}</Text>
+              ) : (
+                votes.filter((v) => v.status === "active").map((vote) => {
+                  const eligibility = voteEligibility[vote.id];
+                  const pickedOption = selectedVoteOption[vote.id];
+                  return (
+                    <View key={vote.id} style={styles.itemCard}>
+                      <Text style={[styles.actionLabel, styles.localizedText]}>{vote.title}</Text>
+                      {vote.description ? (
+                        <Text style={[styles.sectionText, styles.localizedText]} numberOfLines={2}>{vote.description}</Text>
+                      ) : null}
+                      <Text style={[styles.sectionText, styles.localizedText]}>
+                        {vote.endsAt ? t("Governance.endsAt", { date: formatDate(vote.endsAt, announcementLocale) }) : null}
+                      </Text>
+                      {!eligibility ? (
+                        <Pressable
+                          accessibilityRole="button"
+                          onPress={() => void loadVoteEligibility(vote.id)}
+                          style={[styles.secondaryButton, { marginTop: 8 }]}
+                        >
+                          <Text style={styles.secondaryButtonText}>{t("Governance.checkEligibility")}</Text>
+                        </Pressable>
+                      ) : eligibility.hasVoted ? (
+                        <Text style={[styles.infoText, styles.localizedText]}>{t("Governance.alreadyVoted")}</Text>
+                      ) : eligibility.eligible ? (
+                        <View style={{ marginTop: 8 }}>
+                          <Text style={[styles.inputLabel, styles.localizedText]}>{t("Governance.selectOption")}</Text>
+                          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+                            {vote.options?.map((opt) => (
+                              <Pressable
+                                accessibilityRole="button"
+                                key={opt.id}
+                                onPress={() => setSelectedVoteOption((c) => ({ ...c, [vote.id]: opt.id }))}
+                                style={[styles.documentTypeChip, pickedOption === opt.id && styles.documentTypeChipSelected]}
+                              >
+                                <Text style={[styles.documentTypeText, pickedOption === opt.id && styles.documentTypeTextSelected]}>
+                                  {opt.label}
+                                </Text>
+                              </Pressable>
+                            ))}
+                          </View>
+                          <Pressable
+                            accessibilityRole="button"
+                            disabled={!pickedOption || castingVoteId === vote.id}
+                            onPress={() => pickedOption && void handleCastVote(vote.id, pickedOption)}
+                            style={[styles.primaryButton, (!pickedOption || castingVoteId === vote.id) && styles.disabledButton]}
+                          >
+                            <Text style={styles.primaryButtonText}>
+                              {castingVoteId === vote.id ? t("Governance.casting") : t("Governance.castVote")}
+                            </Text>
+                          </Pressable>
+                        </View>
+                      ) : (
+                        <Text style={[styles.infoText, styles.localizedText]}>
+                          {t("Governance.ineligible", { reason: eligibility.reason ?? "" })}
+                        </Text>
+                      )}
+                    </View>
+                  );
+                })
+              )}
+            </View>
+
             <View style={styles.grid}>
               {actionItems.map((item) => (
                 <Pressable
@@ -1870,6 +2338,143 @@ export default function App() {
                   <Text style={styles.actionDetail}>{item.detail}</Text>
                 </Pressable>
               ))}
+            </View>
+
+            <Pressable accessibilityRole="button" onPress={() => void handleSignOut()} style={styles.secondaryButton}>
+              <Text style={styles.secondaryButtonText}>{t("Auth.signOut")}</Text>
+            </Pressable>
+          </>
+        ) : null}
+
+        {/* ── Security Guard workspace ──────────────────────────────── */}
+        {isActiveSecurityGuard ? (
+          <>
+            <View style={styles.panel}>
+              <View style={styles.rowBetween}>
+                <View style={styles.flexFill}>
+                  <Text style={[styles.panelLabel, styles.localizedText]}>{t("Security.label")}</Text>
+                  <Text style={[styles.sectionTitle, styles.localizedText]}>{t("Security.title")}</Text>
+                  <Text style={[styles.sectionText, styles.localizedText]}>{t("Security.subtitle")}</Text>
+                </View>
+                <Pressable accessibilityRole="button" onPress={() => void loadSecurityVisitors()} style={styles.secondaryButton}>
+                  <Text style={styles.secondaryButtonText}>
+                    {isLoadingSecurityVisitors ? t("Common.refreshing") : t("Common.refresh")}
+                  </Text>
+                </Pressable>
+              </View>
+
+              {securityMessage ? <Text style={[styles.infoText, styles.localizedText]}>{securityMessage}</Text> : null}
+
+              {/* Validate pass token input */}
+              <View style={[styles.visitorForm, { marginTop: 12 }]}>
+                <Text style={[styles.inputLabel, styles.localizedText]}>{t("Security.tokenLabel")}</Text>
+                <TextInput
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  onChangeText={setValidatePassToken}
+                  placeholder={t("Security.tokenPlaceholder")}
+                  style={styles.input}
+                  value={validatePassToken}
+                />
+                <Pressable
+                  accessibilityRole="button"
+                  disabled={isValidating || !validatePassToken.trim()}
+                  onPress={() => void handleValidatePass()}
+                  style={[styles.primaryButton, (isValidating || !validatePassToken.trim()) && styles.disabledButton]}
+                >
+                  <Text style={styles.primaryButtonText}>
+                    {isValidating ? t("Security.validating") : t("Security.validate")}
+                  </Text>
+                </Pressable>
+              </View>
+
+              {validateResult ? (
+                <View style={[styles.itemCard, { marginTop: 8 }]}>
+                  <Text style={[styles.actionLabel, styles.localizedText]}>
+                    {t("Security.result")}: {validateResult.result}
+                  </Text>
+                  {validateResult.visitorRequest ? (
+                    <>
+                      <Text style={styles.sectionText}>{validateResult.visitorRequest.visitorName}</Text>
+                      <Text style={[styles.sectionText, styles.localizedText]}>
+                        {t("Visitors.window", {
+                          start: formatDate(validateResult.visitorRequest.visitStartsAt, announcementLocale),
+                          end: formatDate(validateResult.visitorRequest.visitEndsAt, announcementLocale),
+                        })}
+                      </Text>
+                      {validateResult.result === "valid" ? (
+                        <View style={{ flexDirection: "row", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+                          <Pressable
+                            accessibilityRole="button"
+                            disabled={processingVisitorId === validateResult.visitorRequest.id}
+                            onPress={() => void handleSecurityAction(validateResult.visitorRequest!.id, "allow")}
+                            style={[styles.primaryButton, { flex: 1 }]}
+                          >
+                            <Text style={styles.primaryButtonText}>{t("Security.allow")}</Text>
+                          </Pressable>
+                          <Pressable
+                            accessibilityRole="button"
+                            disabled={processingVisitorId === validateResult.visitorRequest.id}
+                            onPress={() => void handleSecurityAction(validateResult.visitorRequest!.id, "deny")}
+                            style={[styles.secondaryButton, { borderColor: "#dc2626" }]}
+                          >
+                            <Text style={[styles.secondaryButtonText, { color: "#dc2626" }]}>{t("Security.deny")}</Text>
+                          </Pressable>
+                        </View>
+                      ) : null}
+                    </>
+                  ) : null}
+                </View>
+              ) : null}
+
+              {/* Pending visitors list */}
+              <Text style={[styles.inputLabel, styles.localizedText, { marginTop: 16 }]}>{t("Security.pendingVisitors")}</Text>
+              {securityVisitors.length === 0 ? (
+                <Text style={[styles.sectionText, styles.localizedText]}>{t("Security.noPending")}</Text>
+              ) : (
+                securityVisitors.map((visitor) => (
+                  <View key={visitor.id} style={[styles.itemCard, { marginBottom: 4 }]}>
+                    <View style={styles.rowBetween}>
+                      <Text style={styles.actionLabel}>{visitor.visitorName}</Text>
+                      <Text style={styles.statusBadge}>
+                        {t(`Common.statuses.${visitor.status}`, { defaultValue: formatStatus(visitor.status) })}
+                      </Text>
+                    </View>
+                    <Text style={[styles.sectionText, styles.localizedText]}>
+                      {t("Visitors.window", {
+                        start: formatDate(visitor.visitStartsAt, announcementLocale),
+                        end: formatDate(visitor.visitEndsAt, announcementLocale),
+                      })}
+                    </Text>
+                    <View style={{ flexDirection: "row", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
+                      <Pressable
+                        accessibilityRole="button"
+                        disabled={processingVisitorId === visitor.id}
+                        onPress={() => void handleSecurityAction(visitor.id, "allow")}
+                        style={[styles.primaryButton, { flex: 1 }]}
+                      >
+                        <Text style={styles.primaryButtonText}>{t("Security.allow")}</Text>
+                      </Pressable>
+                      <Pressable
+                        accessibilityRole="button"
+                        disabled={processingVisitorId === visitor.id}
+                        onPress={() => void handleSecurityAction(visitor.id, "deny")}
+                        style={[styles.secondaryButton, { borderColor: "#dc2626" }]}
+                      >
+                        <Text style={[styles.secondaryButtonText, { color: "#dc2626" }]}>{t("Security.deny")}</Text>
+                      </Pressable>
+                      <Pressable
+                        accessibilityRole="button"
+                        disabled={processingVisitorId === visitor.id}
+                        onPress={() => void handleSecurityAction(visitor.id, "complete")}
+                        style={styles.secondaryButton}
+                      >
+                        <Text style={styles.secondaryButtonText}>{t("Security.complete")}</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                ))
+              )}
             </View>
 
             <Pressable accessibilityRole="button" onPress={() => void handleSignOut()} style={styles.secondaryButton}>
@@ -2057,6 +2662,14 @@ const getStyles = (isDark: boolean, isRtl: boolean) => StyleSheet.create({
     color: isDark ? "#ef4444" : "#b42318",
     fontSize: 14,
     lineHeight: 20,
+  },
+  itemCard: {
+    backgroundColor: isDark ? "#1a2535" : "#f8f9fb",
+    borderColor: isDark ? "#374151" : "#d7dce3",
+    borderRadius: 8,
+    borderWidth: 1,
+    marginTop: 8,
+    padding: 12,
   },
   primaryButton: {
     alignItems: "center",

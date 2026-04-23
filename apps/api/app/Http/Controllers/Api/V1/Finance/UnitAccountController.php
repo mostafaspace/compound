@@ -161,6 +161,21 @@ class UnitAccountController extends Controller
             ->setStatusCode(Response::HTTP_CREATED);
     }
 
+    /**
+     * Show a resident's own unit account with ledger entries (mobile-accessible route).
+     */
+    public function myShow(Request $request, UnitAccount $unitAccount): UnitAccountResource
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        abort_unless($this->financeService->userCanAccessAccount($user, $unitAccount), Response::HTTP_FORBIDDEN);
+
+        return UnitAccountResource::make(
+            $unitAccount->load(['unit.building', 'unit.compound', 'ledgerEntries', 'paymentSubmissions.submitter'])
+        );
+    }
+
     private function isResident(User $user): bool
     {
         return str_starts_with($user->role->value, 'resident_');

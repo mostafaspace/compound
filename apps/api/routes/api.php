@@ -78,6 +78,8 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
                 ->name('my.units.index');
             Route::get('/my/finance/unit-accounts', [UnitAccountController::class, 'mine'])
                 ->name('my.finance.unit-accounts.index');
+            Route::get('/my/finance/unit-accounts/{unitAccount}', [UnitAccountController::class, 'myShow'])
+                ->name('my.finance.unit-accounts.show');
             Route::get('/my/finance/payment-submissions', [PaymentSubmissionController::class, 'mine'])
                 ->name('my.finance.payment-submissions.index');
         });
