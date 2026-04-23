@@ -12,42 +12,62 @@ import {
 } from "@/lib/api";
 
 export async function resendInvitationAction(invitationId: number) {
-  await resendResidentInvitation(invitationId);
+  try {
+    await resendResidentInvitation(invitationId);
 
-  revalidatePath("/onboarding");
-  redirect("/onboarding?resent=1");
+    revalidatePath("/onboarding");
+    redirect("/onboarding?resent=1");
+  } catch {
+    redirect("/onboarding?error=resend_failed");
+  }
 }
 
 export async function revokeInvitationAction(invitationId: number) {
-  await revokeResidentInvitation(invitationId);
+  try {
+    await revokeResidentInvitation(invitationId);
 
-  revalidatePath("/onboarding");
-  redirect("/onboarding?revoked=1");
+    revalidatePath("/onboarding");
+    redirect("/onboarding?revoked=1");
+  } catch {
+    redirect("/onboarding?error=revoke_failed");
+  }
 }
 
 export async function approveVerificationRequestAction(verificationRequestId: number, formData: FormData) {
-  await approveVerificationRequest(verificationRequestId, {
-    note: String(formData.get("note") ?? "").trim() || undefined,
-  });
+  try {
+    await approveVerificationRequest(verificationRequestId, {
+      note: String(formData.get("note") ?? "").trim() || undefined,
+    });
 
-  revalidatePath("/onboarding");
-  redirect("/onboarding?approved=1");
+    revalidatePath("/onboarding");
+    redirect("/onboarding?approved=1");
+  } catch {
+    redirect("/onboarding?error=approve_failed");
+  }
 }
 
 export async function rejectVerificationRequestAction(verificationRequestId: number, formData: FormData) {
-  await rejectVerificationRequest(verificationRequestId, {
-    note: String(formData.get("note") ?? "").trim(),
-  });
+  try {
+    await rejectVerificationRequest(verificationRequestId, {
+      note: String(formData.get("note") ?? "").trim(),
+    });
 
-  revalidatePath("/onboarding");
-  redirect("/onboarding?rejected=1");
+    revalidatePath("/onboarding");
+    redirect("/onboarding?rejected=1");
+  } catch {
+    redirect("/onboarding?error=reject_failed");
+  }
 }
 
 export async function requestMoreInfoAction(verificationRequestId: number, formData: FormData) {
-  await requestMoreInfoForVerificationRequest(verificationRequestId, {
-    note: String(formData.get("note") ?? "").trim(),
-  });
+  try {
+    await requestMoreInfoForVerificationRequest(verificationRequestId, {
+      note: String(formData.get("note") ?? "").trim(),
+    });
 
-  revalidatePath("/onboarding");
-  redirect("/onboarding?moreInfo=1");
+    revalidatePath("/onboarding");
+    redirect("/onboarding?moreInfo=1");
+  } catch {
+    redirect("/onboarding?error=more_info_failed");
+  }
 }

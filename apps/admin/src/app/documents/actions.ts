@@ -7,18 +7,26 @@ import { redirect } from "next/navigation";
 import { reviewDocument, uploadDocument } from "@/lib/api";
 
 export async function uploadDocumentAction(formData: FormData) {
-  await uploadDocument(formData);
+  try {
+    await uploadDocument(formData);
 
-  revalidatePath("/documents");
-  redirect("/documents");
+    revalidatePath("/documents");
+    redirect("/documents?uploaded=1");
+  } catch {
+    redirect("/documents?error=upload_failed");
+  }
 }
 
 export async function reviewDocumentAction(documentId: number, formData: FormData) {
-  await reviewDocument(documentId, {
-    reviewNote: String(formData.get("reviewNote") ?? ""),
-    status: String(formData.get("status") ?? "under_review") as DocumentStatus,
-  });
+  try {
+    await reviewDocument(documentId, {
+      reviewNote: String(formData.get("reviewNote") ?? ""),
+      status: String(formData.get("status") ?? "under_review") as DocumentStatus,
+    });
 
-  revalidatePath("/documents");
-  redirect("/documents");
+    revalidatePath("/documents");
+    redirect("/documents?reviewed=1");
+  } catch {
+    redirect("/documents?error=review_failed");
+  }
 }

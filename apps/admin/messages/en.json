@@ -25,6 +25,15 @@
     "dark": "Dark Mode",
     "system": "System Auto"
   },
+  "Errors": {
+    "route": {
+      "eyebrow": "Workspace error",
+      "title": "This admin page could not finish loading",
+      "description": "Retry the page first. If the error keeps happening, verify the API, queues, and operator status endpoint before continuing admin work.",
+      "retry": "Retry",
+      "dashboard": "Return to dashboard"
+    }
+  },
   "Login": {
     "brand": "Compound admin",
     "heroTitle": "Operations console",
@@ -244,7 +253,18 @@
       "revoked": "Invitation revoked. The previous acceptance link can no longer be used.",
       "approved": "Verification approved. The resident account is now active and the linked membership is verified.",
       "rejected": "Verification rejected. The account was suspended and the linked membership was marked rejected.",
-      "moreInfo": "More information requested. The resident remains in pending review until an admin approves or rejects."
+      "moreInfo": "More information requested. The resident remains in pending review until an admin approves or rejects.",
+      "resendFailed": "Invitation resend failed. Check API availability and try again.",
+      "revokeFailed": "Invitation revoke failed. Check API availability and try again.",
+      "approveFailed": "Verification approval failed. Review the request details and try again.",
+      "rejectFailed": "Verification rejection failed. Review the request details and try again.",
+      "moreInfoFailed": "Requesting more information failed. Check API availability and try again."
+    },
+    "degraded": {
+      "verificationTitle": "Verification data is loading in degraded mode",
+      "verificationDescription": "The verification queue is empty while the API is degraded. Recheck the operator status endpoint before assuming there is no work.",
+      "invitationsTitle": "Invitation data is loading in degraded mode",
+      "invitationsDescription": "The invitation register is empty while the API is degraded. Recheck the operator status endpoint before assuming delivery is clear."
     },
     "verification": {
       "title": "Verification review queue",
@@ -636,9 +656,21 @@
   "Documents": {
     "title": "Verification documents",
     "subtitle": "Upload sensitive resident files to the private backend storage disk and review their compliance status.",
+    "messages": {
+      "uploaded": "Document uploaded successfully.",
+      "reviewed": "Document review saved.",
+      "uploadFailed": "Document upload failed. Check API and storage health, then try again.",
+      "reviewFailed": "Document review failed. Check API availability, then try again."
+    },
+    "degraded": {
+      "title": "Document data is loading in degraded mode",
+      "description": "The document list and type register are empty while the API is degraded. Recheck the operator status endpoint before assuming the queue is clear."
+    },
     "upload": {
       "title": "Upload document",
-      "submit": "Upload"
+      "submit": "Upload",
+      "disabled": "Document upload is temporarily unavailable until the document-type register loads again.",
+      "noDocumentTypes": "No document types available"
     },
     "fields": {
       "documentType": "Document type",
@@ -656,7 +688,8 @@
       "user": "User",
       "status": "Status",
       "review": "Review",
-      "userRow": "User {id}"
+      "userRow": "User {id}",
+      "unknownType": "Type {id}"
     },
     "statuses": {
       "under_review": "Under review",

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 
 import { LogoutButton } from "@/components/logout-button";
-import { getCurrentUser, getResidentInvitations, getVerificationRequests } from "@/lib/api";
+import { getCurrentUser, getResidentInvitations, getSystemStatus, getVerificationRequests } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
 
 import {
@@ -23,6 +23,7 @@ interface OnboardingPageProps {
     reviewStatus?: string;
     revoked?: string;
     resent?: string;
+    error?: string;
     status?: string;
   }>;
 }
@@ -103,12 +104,28 @@ export default async function OnboardingPage({ searchParams }: OnboardingPagePro
   const activeStatus = parseStatus(params.status);
   const activeReviewStatus = parseReviewStatus(params.reviewStatus);
   const query = params.q ?? "";
-  const [invitations, verificationRequests, t, locale] = await Promise.all([
+  const [invitations, verificationRequests, systemStatus, t, locale] = await Promise.all([
     getResidentInvitations({ q: query, status: activeStatus }),
     getVerificationRequests({ q: query, status: activeReviewStatus }),
+    getSystemStatus(),
     getTranslations("Onboarding"),
     getLocale(),
   ]);
+  const isDegraded = systemStatus?.status !== "ok";
+  const showVerificationWarning = isDegraded && verificationRequests.length === 0;
+  const showInvitationsWarning = isDegraded && invitations.length === 0;
+  const errorMessage =
+    params.error === "resend_failed"
+      ? t("messages.resendFailed")
+      : params.error === "revoke_failed"
+        ? t("messages.revokeFailed")
+        : params.error === "approve_failed"
+          ? t("messages.approveFailed")
+          : params.error === "reject_failed"
+            ? t("messages.rejectFailed")
+            : params.error === "more_info_failed"
+              ? t("messages.moreInfoFailed")
+              : null;
 
   const invitationStatuses: Array<{ label: string; value: InvitationStatus | "all" }> = [
     { label: t("filters.all"), value: "all" },
@@ -229,6 +246,11 @@ export default async function OnboardingPage({ searchParams }: OnboardingPagePro
             {t("messages.moreInfo")}
           </p>
         ) : null}
+        {errorMessage ? (
+          <p className="mb-4 rounded-lg bg-[#fff3f2] px-4 py-3 text-sm font-medium text-danger">
+            {errorMessage}
+          </p>
+        ) : null}
 
         <div className="mb-8">
           <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
@@ -254,6 +276,13 @@ export default async function OnboardingPage({ searchParams }: OnboardingPagePro
               ))}
             </nav>
           </div>
+
+          {showVerificationWarning ? (
+            <div className="mb-4 rounded-lg border border-[#e7d7a9] bg-[#fff8e8] px-4 py-3 text-sm text-[#7a5d1a]">
+              <p className="font-semibold">{t("degraded.verificationTitle")}</p>
+              <p className="mt-1">{t("degraded.verificationDescription")}</p>
+            </div>
+          ) : null}
 
           <div className="overflow-x-auto rounded-lg border border-line bg-panel">
             <table className="w-full min-w-[1100px] border-collapse text-left text-sm">
@@ -409,6 +438,13 @@ export default async function OnboardingPage({ searchParams }: OnboardingPagePro
             </button>
           </form>
         </div>
+
+        {showInvitationsWarning ? (
+          <div className="mb-4 rounded-lg border border-[#e7d7a9] bg-[#fff8e8] px-4 py-3 text-sm text-[#7a5d1a]">
+            <p className="font-semibold">{t("degraded.invitationsTitle")}</p>
+            <p className="mt-1">{t("degraded.invitationsDescription")}</p>
+          </div>
+        ) : null}
 
         <div className="overflow-hidden rounded-lg border border-line bg-panel">
           <table className="w-full border-collapse text-left text-sm">
