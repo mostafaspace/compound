@@ -7,6 +7,7 @@ import {
   getCurrentUser,
   getFinancePaymentSubmissions,
   getFinanceUnitAccounts,
+  getSystemStatus,
 } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
 
@@ -83,10 +84,13 @@ export default async function FinancePage({ searchParams }: FinancePageProps) {
   const t = await getTranslations("Finance");
   const params = searchParams ? await searchParams : {};
   const activeStatus = parsePaymentStatus(params.status);
-  const [accounts, payments] = await Promise.all([
+  const [accounts, payments, systemStatus] = await Promise.all([
     getFinanceUnitAccounts(),
     getFinancePaymentSubmissions({ status: activeStatus }),
+    getSystemStatus(),
   ]);
+  const isDegraded = systemStatus?.status !== "ok";
+  const showDegradedWarning = isDegraded && accounts.length === 0 && payments.length === 0;
 
   const paymentFilterHref = (status: PaymentStatus | "all") => `/finance${status === "all" ? "" : `?status=${status}`}`;
 
@@ -119,6 +123,13 @@ export default async function FinancePage({ searchParams }: FinancePageProps) {
         {params.paymentApproved ? <StatusBanner text={t("messages.paymentApproved")} /> : null}
         {params.paymentRejected ? <StatusBanner text={t("messages.paymentRejected")} /> : null}
         {params.correctionRequested ? <StatusBanner text={t("messages.correctionRequested")} /> : null}
+
+        {showDegradedWarning ? (
+          <div className="rounded-lg border border-[#e7d7a9] bg-[#fff8e8] px-4 py-3 text-sm text-[#7a5d1a]">
+            <p className="font-semibold">{t("degraded.title")}</p>
+            <p className="mt-1">{t("degraded.description")}</p>
+          </div>
+        ) : null}
 
         <div className="grid gap-5 lg:grid-cols-2">
           <form action={createFinanceUnitAccountAction} className="rounded-lg border border-line bg-panel p-5">

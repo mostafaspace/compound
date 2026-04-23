@@ -445,6 +445,10 @@
       "allocated": "Allocated",
       "refunded": "Refunded"
     },
+    "degraded": {
+      "title": "Finance data is loading in degraded mode",
+      "description": "Account balances and payment submissions are unavailable while the API is degraded. Recheck the operator status endpoint before assuming there are no pending payments."
+    },
     "reports": {
       "title": "Collections report",
       "subtitle": "Portfolio-wide collections summary, account balances, and payment method breakdown.",
@@ -581,6 +585,10 @@
       "closed": "Voting is now closed.",
       "cancelled": "Vote cancelled."
     },
+    "degraded": {
+      "title": "Governance data is loading in degraded mode",
+      "description": "Vote and poll data is unavailable while the API is degraded. Recheck the operator status endpoint before assuming no votes are active."
+    },
     "create": {
       "title": "Create vote / poll",
       "subtitle": "Set up a new poll, election, or decision vote for compound residents.",
@@ -642,7 +650,11 @@
     "unknownReporter": "Unknown",
     "systemUser": "System",
     "unitNumber": "Unit {unit}",
-    "you": "You"
+    "you": "You",
+    "degraded": {
+      "title": "Issues data is loading in degraded mode",
+      "description": "The issues list is empty while the API is degraded. Recheck the operator status endpoint before assuming there are no open issues."
+    }
   },
   "Visitors": {
     "title": "Gate operations",
@@ -651,6 +663,10 @@
     "nav": {
       "dashboard": "Control center",
       "onboarding": "Onboarding"
+    },
+    "degraded": {
+      "title": "Gate data is loading in degraded mode",
+      "description": "Visitor request data is unavailable while the API is degraded. Recheck the operator status endpoint before assuming there are no pending entries."
     }
   },
   "Documents": {
@@ -907,6 +923,10 @@
     "subtitle": "Configure module rules, defaults, and feature toggles across all compounds.",
     "back": "Dashboard",
     "updated": "Settings saved successfully.",
+    "degraded": {
+      "title": "Settings data is loading in degraded mode",
+      "description": "System settings could not be loaded from the API. Defaults are shown. Recheck the operator status endpoint before saving changes."
+    },
     "saveButton": "Save changes",
     "reasonLabel": "Reason for change (optional)",
     "reasonPlaceholder": "e.g. Approved by board on 2026-04-23",

@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 
 import { LogoutButton } from "@/components/logout-button";
 import { VisitorGateWorkspace } from "@/components/visitors/visitor-gate-workspace";
-import { getCurrentUser, getVisitorRequests } from "@/lib/api";
+import { getCurrentUser, getSystemStatus, getVisitorRequests } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
 
 export default async function VisitorsPage() {
@@ -14,7 +14,9 @@ export default async function VisitorsPage() {
     "support_agent",
     "security_guard",
   ]);
-  const visitors = await getVisitorRequests();
+  const [visitors, systemStatus] = await Promise.all([getVisitorRequests(), getSystemStatus()]);
+  const isDegraded = systemStatus?.status !== "ok";
+  const showDegradedWarning = isDegraded && visitors.length === 0;
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -46,6 +48,13 @@ export default async function VisitorsPage() {
       </header>
 
       <section className="mx-auto max-w-7xl px-5 py-6 lg:px-8">
+        {showDegradedWarning ? (
+          <div className="mb-5 rounded-lg border border-[#e7d7a9] bg-[#fff8e8] px-4 py-3 text-sm text-[#7a5d1a]">
+            <p className="font-semibold">{t("degraded.title")}</p>
+            <p className="mt-1">{t("degraded.description")}</p>
+          </div>
+        ) : null}
+
         <VisitorGateWorkspace initialVisitors={visitors} />
       </section>
     </main>

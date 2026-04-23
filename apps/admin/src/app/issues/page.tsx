@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 
 import { LogoutButton } from "@/components/logout-button";
-import { getCurrentUser, getIssues } from "@/lib/api";
+import { getCurrentUser, getIssues, getSystemStatus } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
 
 interface IssuesPageProps {
@@ -48,11 +48,14 @@ export default async function IssuesPage({ searchParams }: IssuesPageProps) {
   const activeStatus = parseStatus(params.status);
   const activeCategory = parseCategory(params.category);
 
-  const [issues, t, locale] = await Promise.all([
+  const [issues, t, locale, systemStatus] = await Promise.all([
     getIssues({ status: activeStatus, category: activeCategory }),
     getTranslations("Issues"),
     getLocale(),
+    getSystemStatus(),
   ]);
+  const isDegraded = systemStatus?.status !== "ok";
+  const showDegradedWarning = isDegraded && issues.length === 0;
 
   const statusFilters: Array<{ label: string; value: IssueStatus | "all" }> = [
     { label: t("allStatuses"), value: "all" },
@@ -126,6 +129,13 @@ export default async function IssuesPage({ searchParams }: IssuesPageProps) {
       </header>
 
       <section className="mx-auto max-w-7xl px-5 py-6 lg:px-8">
+        {showDegradedWarning ? (
+          <div className="mb-5 rounded-lg border border-[#e7d7a9] bg-[#fff8e8] px-4 py-3 text-sm text-[#7a5d1a]">
+            <p className="font-semibold">{t("degraded.title")}</p>
+            <p className="mt-1">{t("degraded.description")}</p>
+          </div>
+        ) : null}
+
         <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
             <h2 className="text-xl font-semibold">{t("status")}</h2>

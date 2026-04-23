@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 
 import { LogoutButton } from "@/components/logout-button";
-import { getCurrentUser, getVotes } from "@/lib/api";
+import { getCurrentUser, getSystemStatus, getVotes } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
 
 import { activateVoteAction, cancelVoteAction, createVoteAction } from "./actions";
@@ -33,7 +33,9 @@ export default async function GovernancePage({ searchParams }: GovernancePagePro
   const locale = await getLocale();
   const t = await getTranslations("Governance");
   const params = searchParams ? await searchParams : {};
-  const votes = await getVotes();
+  const [votes, systemStatus] = await Promise.all([getVotes(), getSystemStatus()]);
+  const isDegraded = systemStatus?.status !== "ok";
+  const showDegradedWarning = isDegraded && votes.length === 0;
 
   const typeLabel: Record<VoteType, string> = {
     poll: t("types.poll"),
@@ -78,6 +80,13 @@ export default async function GovernancePage({ searchParams }: GovernancePagePro
         ) : null}
         {params.cancelled ? (
           <p className="rounded-lg bg-[#fff3f2] px-4 py-3 text-sm font-medium text-danger">{t("messages.cancelled")}</p>
+        ) : null}
+
+        {showDegradedWarning ? (
+          <div className="rounded-lg border border-[#e7d7a9] bg-[#fff8e8] px-4 py-3 text-sm text-[#7a5d1a]">
+            <p className="font-semibold">{t("degraded.title")}</p>
+            <p className="mt-1">{t("degraded.description")}</p>
+          </div>
         ) : null}
 
         {/* Create vote form */}

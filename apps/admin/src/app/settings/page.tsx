@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
 import { LogoutButton } from "@/components/logout-button";
-import { getCurrentUser, getSettings } from "@/lib/api";
+import { getCurrentUser, getSettings, getSystemStatus } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
 
 import { updateSettingsAction } from "./actions";
@@ -69,10 +69,12 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   const nav = await getTranslations("Navigation");
   const sp = searchParams ? await searchParams : {};
 
-  // Fetch all namespace data in parallel
-  const nsData = await Promise.all(
-    NAMESPACES.map((ns) => getSettings(ns).then((d) => ({ ns, settings: d?.settings ?? {} }))),
-  );
+  // Fetch all namespace data and system status in parallel
+  const [nsData, systemStatus] = await Promise.all([
+    Promise.all(NAMESPACES.map((ns) => getSettings(ns).then((d) => ({ ns, settings: d?.settings ?? {} })))),
+    getSystemStatus(),
+  ]);
+  const isDegraded = systemStatus?.status !== "ok";
   const settingsMap = Object.fromEntries(nsData.map(({ ns, settings }) => [ns, settings])) as Record<
     Namespace,
     Record<string, unknown>
@@ -96,6 +98,13 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
       <section className="mx-auto max-w-7xl space-y-8 px-5 py-6 lg:px-8">
         {sp.updated ? (
           <p className="rounded-lg bg-[#e6f3ef] px-4 py-3 text-sm font-medium text-brand">{t("updated")}</p>
+        ) : null}
+
+        {isDegraded ? (
+          <div className="rounded-lg border border-[#e7d7a9] bg-[#fff8e8] px-4 py-3 text-sm text-[#7a5d1a]">
+            <p className="font-semibold">{t("degraded.title")}</p>
+            <p className="mt-1">{t("degraded.description")}</p>
+          </div>
         ) : null}
 
         {NAMESPACES.map((ns) => {
