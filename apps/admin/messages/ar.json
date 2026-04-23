@@ -13,6 +13,7 @@
     "announcements": "الإعلانات",
     "dues": "الرسوم والمستحقات",
     "governance": "الحوكمة",
+    "settings": "الإعدادات",
     "signOut": "تسجيل الخروج"
   },
   "Language": {
@@ -866,6 +867,52 @@
       "close": "إغلاق",
       "empty": "لم يتم تسجيل أي إقرارات بعد.",
       "unknownUser": "مستخدم غير معروف"
+    }
+  },
+  "Settings": {
+    "title": "إعدادات النظام",
+    "subtitle": "تكوين قواعد الوحدات والإعدادات الافتراضية وتفعيل الميزات عبر جميع المجمعات.",
+    "back": "لوحة التحكم",
+    "updated": "تم حفظ الإعدادات بنجاح.",
+    "saveButton": "حفظ التغييرات",
+    "reasonLabel": "سبب التغيير (اختياري)",
+    "reasonPlaceholder": "مثال: تمت الموافقة من قبل المجلس في 2026-04-23",
+    "namespaces": {
+      "documents": "المستندات",
+      "verification": "التحقق",
+      "visitors": "الزوار",
+      "issues": "البلاغات",
+      "announcements": "الإعلانات",
+      "finance": "المالية",
+      "governance": "الحوكمة",
+      "notifications": "الإشعارات"
+    },
+    "fields": {
+      "require_upload_for_onboarding": "إلزام رفع المستندات عند التسجيل",
+      "allowed_extensions": "الامتدادات المسموح بها",
+      "max_file_size_mb": "الحد الأقصى لحجم الملف (ميغابايت)",
+      "auto_approve_residents": "الموافقة التلقائية على تحقق المقيمين",
+      "checklist_items": "بنود قائمة التحقق",
+      "max_visitors_per_unit_per_day": "الحد الأقصى للزوار لكل وحدة يومياً",
+      "require_pre_approval": "إلزام الموافقة المسبقة للزوار",
+      "pass_validity_hours": "صلاحية تصريح الزيارة (ساعات)",
+      "gate_notification_enabled": "تفعيل إشعار البوابة",
+      "default_categories": "الفئات الافتراضية",
+      "auto_escalate_after_hours": "تصعيد البلاغات تلقائياً بعد (ساعات)",
+      "notify_board_on_escalation": "إشعار المجلس عند التصعيد",
+      "require_approval": "إلزام الموافقة قبل النشر",
+      "accepted_payment_methods": "طرق الدفع المقبولة",
+      "late_fee_enabled": "تفعيل غرامات التأخير",
+      "late_fee_percentage": "نسبة غرامة التأخير (%)",
+      "grace_period_days": "فترة السماح (أيام)",
+      "currency": "العملة الافتراضية",
+      "default_eligibility": "أهلية التصويت الافتراضية",
+      "require_doc_compliance": "إلزام امتثال المستندات للتصويت",
+      "min_vote_duration_hours": "الحد الأدنى لمدة التصويت (ساعات)",
+      "email_enabled": "تفعيل إشعارات البريد الإلكتروني",
+      "sms_enabled": "تفعيل إشعارات الرسائل القصيرة",
+      "push_enabled": "تفعيل الإشعارات الفورية",
+      "digest_frequency": "تردد ملخص الإشعارات"
     }
   }
 }

@@ -64,6 +64,8 @@ import type {
   VisitorPassValidationResult,
   VisitorRequest,
   VisitorRequestStatus,
+  SettingsNamespaceData,
+  UpdateSettingsInput,
 } from "@compound/contracts";
 
 import { config } from "./config";
@@ -2068,5 +2070,66 @@ export async function castVote(voteId: string, optionId: number): Promise<void> 
 
   if (!response.ok) {
     throw new Error(`Failed to cast vote: ${response.status}`);
+  }
+}
+
+// ─── Settings ────────────────────────────────────────────────────────────────
+
+export async function getSettingsNamespaces(): Promise<string[]> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/settings`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+
+    if (!response.ok) return [];
+
+    const payload = (await response.json()) as { data: string[] };
+
+    return payload.data;
+  } catch {
+    return [];
+  }
+}
+
+export async function getSettings(namespace: string, compoundId?: string): Promise<SettingsNamespaceData | null> {
+  try {
+    const params = new URLSearchParams();
+    if (compoundId) params.set("compoundId", compoundId);
+
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    const response = await fetch(`${config.apiBaseUrl}/settings/${namespace}${qs}`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+
+    if (!response.ok) return null;
+
+    const payload = (await response.json()) as { data: SettingsNamespaceData };
+
+    return payload.data;
+  } catch {
+    return null;
+  }
+}
+
+export async function updateSettings(namespace: string, input: UpdateSettingsInput): Promise<SettingsNamespaceData | null> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/settings/${namespace}`, {
+      body: JSON.stringify(input),
+      headers: {
+        ...(await apiHeaders(true)),
+        "Content-Type": "application/json",
+      },
+      method: "PATCH",
+    });
+
+    if (!response.ok) return null;
+
+    const payload = (await response.json()) as { data: SettingsNamespaceData };
+
+    return payload.data;
+  } catch {
+    return null;
   }
 }

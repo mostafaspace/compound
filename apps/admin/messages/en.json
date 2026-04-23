@@ -13,6 +13,7 @@
     "announcements": "Announcements",
     "dues": "Dues",
     "governance": "Governance",
+    "settings": "Settings",
     "signOut": "Sign Out"
   },
   "Language": {
@@ -866,6 +867,52 @@
       "close": "Close",
       "empty": "No acknowledgements have been recorded yet.",
       "unknownUser": "Unknown user"
+    }
+  },
+  "Settings": {
+    "title": "System settings",
+    "subtitle": "Configure module rules, defaults, and feature toggles across all compounds.",
+    "back": "Dashboard",
+    "updated": "Settings saved successfully.",
+    "saveButton": "Save changes",
+    "reasonLabel": "Reason for change (optional)",
+    "reasonPlaceholder": "e.g. Approved by board on 2026-04-23",
+    "namespaces": {
+      "documents": "Documents",
+      "verification": "Verification",
+      "visitors": "Visitors",
+      "issues": "Issues",
+      "announcements": "Announcements",
+      "finance": "Finance",
+      "governance": "Governance",
+      "notifications": "Notifications"
+    },
+    "fields": {
+      "require_upload_for_onboarding": "Require document upload during onboarding",
+      "allowed_extensions": "Allowed file extensions",
+      "max_file_size_mb": "Maximum file size (MB)",
+      "auto_approve_residents": "Auto-approve resident verification",
+      "checklist_items": "Verification checklist items",
+      "max_visitors_per_unit_per_day": "Max visitors per unit per day",
+      "require_pre_approval": "Require pre-approval for visitors",
+      "pass_validity_hours": "Visitor pass validity (hours)",
+      "gate_notification_enabled": "Enable gate notification",
+      "default_categories": "Default categories",
+      "auto_escalate_after_hours": "Auto-escalate issues after (hours)",
+      "notify_board_on_escalation": "Notify board on issue escalation",
+      "require_approval": "Require approval before publishing",
+      "accepted_payment_methods": "Accepted payment methods",
+      "late_fee_enabled": "Enable late fees",
+      "late_fee_percentage": "Late fee percentage (%)",
+      "grace_period_days": "Grace period (days)",
+      "currency": "Default currency",
+      "default_eligibility": "Default vote eligibility",
+      "require_doc_compliance": "Require document compliance to vote",
+      "min_vote_duration_hours": "Minimum vote duration (hours)",
+      "email_enabled": "Enable email notifications",
+      "sms_enabled": "Enable SMS notifications",
+      "push_enabled": "Enable push notifications",
+      "digest_frequency": "Notification digest frequency"
     }
   }
 }

@@ -28,6 +28,7 @@ use App\Http\Controllers\Api\V1\VisitorRequestController;
 use App\Http\Controllers\Api\V1\IssueController;
 use App\Http\Controllers\Api\V1\IssueCommentController;
 use App\Http\Controllers\Api\V1\IssueAttachmentController;
+use App\Http\Controllers\Api\V1\SettingsController;
 use Illuminate\Support\Facades\Route;
 Route::prefix('v1')->name('api.v1.')->group(function (): void {
     Route::get('/status', SystemStatusController::class)->name('status');
@@ -266,5 +267,15 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         ->group(function (): void {
             Route::get('/votes/{vote}/eligibility', [VoteController::class, 'eligibility'])->name('votes.eligibility');
             Route::post('/votes/{vote}/cast', [VoteController::class, 'cast'])->name('votes.cast');
+        });
+
+    // Settings — admin only (super_admin / compound_admin)
+    Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin'])
+        ->prefix('settings')
+        ->name('settings.')
+        ->group(function (): void {
+            Route::get('/', [SettingsController::class, 'namespaces'])->name('namespaces');
+            Route::get('/{namespace}', [SettingsController::class, 'show'])->name('show');
+            Route::patch('/{namespace}', [SettingsController::class, 'update'])->name('update');
         });
 });
