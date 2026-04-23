@@ -641,6 +641,24 @@ export async function rejectFinancePayment(paymentSubmissionId: string, input: {
   }
 }
 
+export async function requestFinancePaymentCorrection(paymentSubmissionId: string, input: { note: string }) {
+  const response = await fetch(
+    `${config.apiBaseUrl}/finance/payment-submissions/${paymentSubmissionId}/request-correction`,
+    {
+      body: JSON.stringify(input),
+      headers: {
+        ...(await apiHeaders(true)),
+        "Content-Type": "application/json",
+      },
+      method: "PATCH",
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to request correction: ${response.status}`);
+  }
+}
+
 export async function getCompounds(): Promise<CompoundSummary[]> {
   try {
     const response = await fetch(`${config.apiBaseUrl}/compounds`, {

@@ -429,6 +429,193 @@ class FinanceTest extends TestCase
         $this->assertSame('تم رفض الدفعة', $rejectNotif->metadata['titleTranslations']['ar'] ?? null);
     }
 
+    // -------------------------------------------------------------------------
+    // P13 – Payment correction, payment date, and allocation
+    // -------------------------------------------------------------------------
+
+    public function test_reviewer_can_request_correction_on_submitted_payment(): void
+    {
+        $reviewer = User::factory()->create(['role' => UserRole::FinanceReviewer->value]);
+        $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+        $account = UnitAccount::factory()->for($this->createUnit())->create(['balance' => '500.00']);
+        $payment = PaymentSubmission::factory()->for($account)->create([
+            'submitted_by' => $resident->id,
+            'amount' => '200.00',
+            'status' => PaymentStatus::Submitted->value,
+        ]);
+
+        Event::fake();
+        Sanctum::actingAs($reviewer);
+
+        $this->patchJson("/api/v1/finance/payment-submissions/{$payment->id}/request-correction", [
+            'note' => 'Please upload a clearer receipt image.',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.status', PaymentStatus::UnderReview->value)
+            ->assertJsonPath('data.correctionNote', 'Please upload a clearer receipt image.');
+
+        $this->assertDatabaseHas('payment_submissions', [
+            'id' => $payment->id,
+            'status' => PaymentStatus::UnderReview->value,
+            'correction_note' => 'Please upload a clearer receipt image.',
+        ]);
+        // Balance must remain unchanged
+        $this->assertDatabaseHas('unit_accounts', ['id' => $account->id, 'balance' => '500.00']);
+
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $resident->id,
+            'category' => NotificationCategory::Finance->value,
+        ]);
+        $this->assertDatabaseHas('audit_logs', [
+            'actor_id' => $reviewer->id,
+            'action' => 'finance.payment_correction_requested',
+        ]);
+    }
+
+    public function test_request_correction_requires_note(): void
+    {
+        $reviewer = User::factory()->create(['role' => UserRole::FinanceReviewer->value]);
+        $account = UnitAccount::factory()->for($this->createUnit())->create();
+        $payment = PaymentSubmission::factory()->for($account)->create([
+            'status' => PaymentStatus::Submitted->value,
+        ]);
+
+        Sanctum::actingAs($reviewer);
+
+        $this->patchJson("/api/v1/finance/payment-submissions/{$payment->id}/request-correction")
+            ->assertUnprocessable();
+
+        $this->patchJson("/api/v1/finance/payment-submissions/{$payment->id}/request-correction", [
+            'note' => '',
+        ])->assertUnprocessable();
+    }
+
+    public function test_can_request_correction_on_under_review_payment(): void
+    {
+        $reviewer = User::factory()->create(['role' => UserRole::FinanceReviewer->value]);
+        $account = UnitAccount::factory()->for($this->createUnit())->create(['balance' => '300.00']);
+        $payment = PaymentSubmission::factory()->for($account)->create([
+            'amount' => '100.00',
+            'status' => PaymentStatus::UnderReview->value,
+            'correction_note' => 'First correction note.',
+        ]);
+
+        Event::fake();
+        Sanctum::actingAs($reviewer);
+
+        $this->patchJson("/api/v1/finance/payment-submissions/{$payment->id}/request-correction", [
+            'note' => 'Still unclear — please resubmit.',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.status', PaymentStatus::UnderReview->value)
+            ->assertJsonPath('data.correctionNote', 'Still unclear — please resubmit.');
+    }
+
+    public function test_cannot_request_correction_on_approved_or_rejected_payment(): void
+    {
+        $reviewer = User::factory()->create(['role' => UserRole::FinanceReviewer->value]);
+        $account = UnitAccount::factory()->for($this->createUnit())->create(['balance' => '1000.00']);
+        $approvedPayment = PaymentSubmission::factory()->for($account)->create([
+            'amount' => '200.00',
+            'status' => PaymentStatus::Approved->value,
+        ]);
+        $rejectedPayment = PaymentSubmission::factory()->for($account)->create([
+            'amount' => '200.00',
+            'status' => PaymentStatus::Rejected->value,
+        ]);
+
+        Sanctum::actingAs($reviewer);
+
+        $this->patchJson("/api/v1/finance/payment-submissions/{$approvedPayment->id}/request-correction", [
+            'note' => 'Too late.',
+        ])->assertUnprocessable();
+
+        $this->patchJson("/api/v1/finance/payment-submissions/{$rejectedPayment->id}/request-correction", [
+            'note' => 'Too late.',
+        ])->assertUnprocessable();
+    }
+
+    public function test_payment_submission_stores_optional_payment_date(): void
+    {
+        $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+        $unit = $this->createUnit('C-301');
+        $account = UnitAccount::factory()->for($unit)->create();
+
+        $unit->memberships()->create([
+            'user_id' => $resident->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'verification_status' => VerificationStatus::Verified->value,
+            'is_primary' => true,
+        ]);
+
+        Sanctum::actingAs($resident);
+
+        $this->postJson("/api/v1/finance/unit-accounts/{$account->id}/payment-submissions", [
+            'amount' => 150,
+            'method' => 'bank_transfer',
+            'payment_date' => '2026-04-20',
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.paymentDate', '2026-04-20');
+
+        $this->assertDatabaseHas('payment_submissions', [
+            'unit_account_id' => $account->id,
+            'payment_date' => '2026-04-20',
+        ]);
+    }
+
+    public function test_payment_date_must_not_be_in_the_future(): void
+    {
+        $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+        $unit = $this->createUnit('D-401');
+        $account = UnitAccount::factory()->for($unit)->create();
+
+        $unit->memberships()->create([
+            'user_id' => $resident->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'verification_status' => VerificationStatus::Verified->value,
+            'is_primary' => true,
+        ]);
+
+        Sanctum::actingAs($resident);
+
+        $futureDate = now()->addDays(5)->toDateString();
+
+        $this->postJson("/api/v1/finance/unit-accounts/{$account->id}/payment-submissions", [
+            'amount' => 100,
+            'method' => 'bank_transfer',
+            'payment_date' => $futureDate,
+        ])->assertUnprocessable();
+    }
+
+    public function test_correction_notification_includes_arabic_translation(): void
+    {
+        $reviewer = User::factory()->create(['role' => UserRole::FinanceReviewer->value]);
+        $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+        $account = UnitAccount::factory()->for($this->createUnit())->create(['balance' => '400.00']);
+        $payment = PaymentSubmission::factory()->for($account)->create([
+            'submitted_by' => $resident->id,
+            'amount' => '100.00',
+            'status' => PaymentStatus::Submitted->value,
+        ]);
+
+        Event::fake();
+        Sanctum::actingAs($reviewer);
+
+        $this->patchJson("/api/v1/finance/payment-submissions/{$payment->id}/request-correction", [
+            'note' => 'Please reupload.',
+        ])->assertOk();
+
+        $notification = \App\Models\Notification::query()
+            ->where('user_id', $resident->id)
+            ->where('category', NotificationCategory::Finance->value)
+            ->latest()
+            ->first();
+
+        $this->assertNotNull($notification);
+        $this->assertNotEmpty($notification->metadata['titleTranslations']['ar'] ?? '');
+    }
+
     private function createUnit(string $unitNumber = 'A-101'): Unit
     {
         $compound = Compound::factory()->create();

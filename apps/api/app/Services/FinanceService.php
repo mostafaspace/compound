@@ -86,6 +86,7 @@ class FinanceService
         string $currency,
         string $method,
         ?string $reference = null,
+        ?string $paymentDate = null,
         ?string $notes = null,
         ?UploadedFile $proof = null,
     ): PaymentSubmission {
@@ -107,6 +108,7 @@ class FinanceService
             'currency' => strtoupper($currency),
             'method' => $method,
             'reference' => $reference,
+            'payment_date' => $paymentDate,
             'proof_path' => $path,
             'status' => PaymentStatus::Submitted->value,
             'notes' => $notes,
@@ -168,6 +170,48 @@ class FinanceService
             ])->save();
 
             $this->notifySubmitter($lockedPayment, 'rejected', $reason);
+
+            return $lockedPayment->refresh()->load(['unitAccount.unit', 'reviewer', 'submitter']);
+        });
+    }
+
+    public function requestPaymentCorrection(PaymentSubmission $payment, User $reviewer, string $note): PaymentSubmission
+    {
+        return DB::transaction(function () use ($payment, $reviewer, $note): PaymentSubmission {
+            /** @var PaymentSubmission $lockedPayment */
+            $lockedPayment = PaymentSubmission::query()->lockForUpdate()->findOrFail($payment->id);
+
+            if ($lockedPayment->status !== PaymentStatus::Submitted && $lockedPayment->status !== PaymentStatus::UnderReview) {
+                abort(422, 'Correction can only be requested for submitted or under-review payments.');
+            }
+
+            $lockedPayment->forceFill([
+                'status' => PaymentStatus::UnderReview->value,
+                'reviewed_by' => $reviewer->id,
+                'reviewed_at' => now(),
+                'correction_note' => $note,
+            ])->save();
+
+            $this->notificationService->create(
+                userId: $lockedPayment->submitted_by,
+                category: NotificationCategory::Finance,
+                title: 'Correction requested for your payment',
+                body: $note,
+                metadata: [
+                    'paymentSubmissionId' => $lockedPayment->id,
+                    'unitAccountId' => $lockedPayment->unit_account_id,
+                    'status' => $lockedPayment->status->value,
+                    'titleTranslations' => [
+                        'en' => 'Correction requested for your payment',
+                        'ar' => 'تم طلب تصحيح لدفعتك',
+                    ],
+                    'bodyTranslations' => [
+                        'en' => $note,
+                        'ar' => $note,
+                    ],
+                ],
+                priority: 'high',
+            );
 
             return $lockedPayment->refresh()->load(['unitAccount.unit', 'reviewer', 'submitter']);
         });

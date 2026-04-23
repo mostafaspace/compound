@@ -31,10 +31,12 @@ class PaymentSubmissionResource extends JsonResource
             'status' => $this->status->value,
             'notes' => $this->notes,
             'metadata' => $this->metadata ?? [],
+            'paymentDate' => $this->payment_date?->toDateString(),
             'reviewedBy' => $this->reviewed_by,
             'reviewer' => UserResource::make($this->whenLoaded('reviewer')),
             'reviewedAt' => $this->reviewed_at?->toJSON(),
             'rejectionReason' => $this->rejection_reason,
+            'correctionNote' => $this->correction_note,
             'createdAt' => $this->created_at?->toJSON(),
             'updatedAt' => $this->updated_at?->toJSON(),
         ];

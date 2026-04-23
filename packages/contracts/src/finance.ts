@@ -64,9 +64,11 @@ export interface PaymentSubmission {
   status: PaymentStatus;
   notes: string | null;
   metadata: Record<string, unknown>;
+  paymentDate: string | null;
   reviewedBy: number | null;
   reviewedAt: string | null;
   rejectionReason: string | null;
+  correctionNote: string | null;
   createdAt: string | null;
   updatedAt: string | null;
 }
@@ -90,6 +92,7 @@ export interface CreatePaymentSubmissionInput {
   method: string;
   reference?: string;
   notes?: string;
+  paymentDate?: string;
 }
 
 export type ChargeFrequency = 'monthly' | 'quarterly' | 'annual' | 'one_time';

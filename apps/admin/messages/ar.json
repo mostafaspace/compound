@@ -355,7 +355,8 @@
       "accountCreated": "تم إنشاء حساب الوحدة.",
       "ledgerCreated": "تم تسجيل قيد الدفتر.",
       "paymentApproved": "تمت الموافقة على الدفعة.",
-      "paymentRejected": "تم رفض الدفعة."
+      "paymentRejected": "تم رفض الدفعة.",
+      "correctionRequested": "تم طلب التصحيح."
     },
     "fields": {
       "accountId": "معرف الحساب",
@@ -368,7 +369,8 @@
       "reference": "المرجع",
       "type": "النوع",
       "unit": "الوحدة",
-      "unitId": "معرف الوحدة"
+      "unitId": "معرف الوحدة",
+      "paymentDate": "تاريخ الدفع"
     },
     "filters": {
       "all": "الكل"
@@ -395,8 +397,11 @@
       "hasProof": "يوجد إثبات",
       "approve": "موافقة",
       "reject": "رفض",
+      "requestCorrection": "طلب تصحيح",
       "approveNote": "ملاحظة الموافقة",
       "rejectReason": "سبب الرفض",
+      "correctionNote": "ملاحظة التصحيح",
+      "correctionNoteLabel": "ملاحظة التصحيح:",
       "reviewed": "تمت المراجعة {date}",
       "empty": "لا توجد مدفوعات تطابق الحالة المحددة."
     },

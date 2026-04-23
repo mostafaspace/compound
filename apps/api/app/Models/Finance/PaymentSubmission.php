@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PaymentSubmission extends Model
 {
@@ -20,6 +21,7 @@ class PaymentSubmission extends Model
         'currency',
         'method',
         'reference',
+        'payment_date',
         'proof_path',
         'status',
         'notes',
@@ -27,6 +29,7 @@ class PaymentSubmission extends Model
         'reviewed_by',
         'reviewed_at',
         'rejection_reason',
+        'correction_note',
     ];
 
     protected function casts(): array
@@ -34,6 +37,7 @@ class PaymentSubmission extends Model
         return [
             'amount' => 'decimal:2',
             'metadata' => 'array',
+            'payment_date' => 'date:Y-m-d',
             'reviewed_at' => 'datetime',
             'status' => PaymentStatus::class,
         ];
@@ -61,5 +65,13 @@ class PaymentSubmission extends Model
     public function reviewer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reviewed_by');
+    }
+
+    /**
+     * @return HasMany<PaymentAllocation, $this>
+     */
+    public function allocations(): HasMany
+    {
+        return $this->hasMany(PaymentAllocation::class);
     }
 }

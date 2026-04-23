@@ -15,6 +15,7 @@ import {
   createFinanceLedgerEntryAction,
   createFinanceUnitAccountAction,
   rejectFinancePaymentAction,
+  requestCorrectionPaymentAction,
 } from "./actions";
 
 interface FinancePageProps {
@@ -23,6 +24,7 @@ interface FinancePageProps {
     ledgerCreated?: string;
     paymentApproved?: string;
     paymentRejected?: string;
+    correctionRequested?: string;
     status?: string;
   }>;
 }
@@ -108,6 +110,7 @@ export default async function FinancePage({ searchParams }: FinancePageProps) {
         {params.ledgerCreated ? <StatusBanner text={t("messages.ledgerCreated")} /> : null}
         {params.paymentApproved ? <StatusBanner text={t("messages.paymentApproved")} /> : null}
         {params.paymentRejected ? <StatusBanner text={t("messages.paymentRejected")} /> : null}
+        {params.correctionRequested ? <StatusBanner text={t("messages.correctionRequested")} /> : null}
 
         <div className="grid gap-5 lg:grid-cols-2">
           <form action={createFinanceUnitAccountAction} className="rounded-lg border border-line bg-panel p-5">
@@ -249,6 +252,16 @@ export default async function FinancePage({ searchParams }: FinancePageProps) {
                     <p className="mt-1 text-sm text-muted">
                       {t("fields.reference")}: {payment.reference || "-"}
                     </p>
+                    {payment.paymentDate ? (
+                      <p className="mt-1 text-sm text-muted">
+                        {t("fields.paymentDate")}: {payment.paymentDate}
+                      </p>
+                    ) : null}
+                    {payment.status === "under_review" && payment.correctionNote ? (
+                      <p className="mt-2 rounded-lg bg-background px-3 py-2 text-sm text-muted">
+                        <span className="font-semibold">{t("payments.correctionNoteLabel")}</span> {payment.correctionNote}
+                      </p>
+                    ) : null}
                   </div>
 
                   {payment.status === "submitted" || payment.status === "under_review" ? (
@@ -263,6 +276,12 @@ export default async function FinancePage({ searchParams }: FinancePageProps) {
                         <input className="h-10 w-full rounded-lg border border-line bg-background px-3 text-sm" name="reason" placeholder={t("payments.rejectReason")} required />
                         <button className="inline-flex h-10 w-full items-center justify-center rounded-lg border border-danger px-4 text-sm font-semibold text-danger hover:bg-[#fff3f2]" type="submit">
                           {t("payments.reject")}
+                        </button>
+                      </form>
+                      <form action={requestCorrectionPaymentAction.bind(null, payment.id)} className="space-y-2">
+                        <input className="h-10 w-full rounded-lg border border-line bg-background px-3 text-sm" name="note" placeholder={t("payments.correctionNote")} required />
+                        <button className="inline-flex h-10 w-full items-center justify-center rounded-lg border border-line px-4 text-sm font-semibold text-muted hover:border-foreground hover:text-foreground" type="submit">
+                          {t("payments.requestCorrection")}
                         </button>
                       </form>
                     </div>

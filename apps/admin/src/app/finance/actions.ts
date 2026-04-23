@@ -9,6 +9,7 @@ import {
   createFinanceLedgerEntry,
   createFinanceUnitAccount,
   rejectFinancePayment,
+  requestFinancePaymentCorrection,
 } from "@/lib/api";
 
 export async function createFinanceUnitAccountAction(formData: FormData) {
@@ -62,4 +63,13 @@ export async function rejectFinancePaymentAction(paymentSubmissionId: string, fo
 
   revalidatePath("/finance");
   redirect("/finance?paymentRejected=1");
+}
+
+export async function requestCorrectionPaymentAction(paymentSubmissionId: string, formData: FormData) {
+  const note = String(formData.get("note") ?? "").trim();
+
+  await requestFinancePaymentCorrection(paymentSubmissionId, { note });
+
+  revalidatePath("/finance");
+  redirect("/finance?correctionRequested=1");
 }

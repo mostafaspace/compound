@@ -355,7 +355,8 @@
       "accountCreated": "Unit account created.",
       "ledgerCreated": "Ledger entry posted.",
       "paymentApproved": "Payment approved.",
-      "paymentRejected": "Payment rejected."
+      "paymentRejected": "Payment rejected.",
+      "correctionRequested": "Correction requested."
     },
     "fields": {
       "accountId": "Account ID",
@@ -368,7 +369,8 @@
       "reference": "Reference",
       "type": "Type",
       "unit": "Unit",
-      "unitId": "Unit ID"
+      "unitId": "Unit ID",
+      "paymentDate": "Payment date"
     },
     "filters": {
       "all": "All"
@@ -395,8 +397,11 @@
       "hasProof": "Proof attached",
       "approve": "Approve",
       "reject": "Reject",
+      "requestCorrection": "Request correction",
       "approveNote": "Approval note",
       "rejectReason": "Rejection reason",
+      "correctionNote": "Correction note",
+      "correctionNoteLabel": "Correction note:",
       "reviewed": "Reviewed {date}",
       "empty": "No payments match the selected status."
     },

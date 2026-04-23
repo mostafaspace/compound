@@ -88,4 +88,27 @@ class PaymentSubmissionController extends Controller
 
         return PaymentSubmissionResource::make($payment);
     }
+
+    public function requestCorrection(Request $request, PaymentSubmission $paymentSubmission): PaymentSubmissionResource
+    {
+        /** @var User $actor */
+        $actor = $request->user();
+
+        $validated = $request->validate([
+            'note' => ['required', 'string', 'max:1000'],
+        ]);
+
+        $payment = $this->financeService->requestPaymentCorrection(
+            payment: $paymentSubmission,
+            reviewer: $actor,
+            note: $validated['note'],
+        );
+
+        $this->auditLogger->record('finance.payment_correction_requested', actor: $actor, request: $request, metadata: [
+            'payment_submission_id' => $payment->id,
+            'unit_account_id' => $payment->unit_account_id,
+        ]);
+
+        return PaymentSubmissionResource::make($payment);
+    }
 }

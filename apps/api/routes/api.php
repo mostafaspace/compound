@@ -207,6 +207,8 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
                 ->name('payment-submissions.approve');
             Route::patch('/payment-submissions/{paymentSubmission}/reject', [PaymentSubmissionController::class, 'reject'])
                 ->name('payment-submissions.reject');
+            Route::patch('/payment-submissions/{paymentSubmission}/request-correction', [PaymentSubmissionController::class, 'requestCorrection'])
+                ->name('payment-submissions.request-correction');
 
             // Charge types
             Route::get('/charge-types', [ChargeTypeController::class, 'index'])->name('charge-types.index');

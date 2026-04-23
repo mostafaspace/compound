@@ -143,6 +143,7 @@ class UnitAccountController extends Controller
             currency: $validated['currency'] ?? $unitAccount->currency,
             method: $validated['method'],
             reference: $validated['reference'] ?? null,
+            paymentDate: $validated['payment_date'] ?? null,
             notes: $validated['notes'] ?? null,
             proof: $request->file('proof'),
         );
