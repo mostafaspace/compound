@@ -12,6 +12,7 @@
     "visitors": "Visitors",
     "announcements": "Announcements",
     "dues": "Dues",
+    "governance": "Governance",
     "signOut": "Sign Out"
   },
   "Language": {
@@ -509,6 +510,64 @@
     "noDues": "No dues configured yet",
     "noRecurringCharges": "No recurring charges yet",
     "noCampaigns": "No campaigns yet"
+  },
+  "Governance": {
+    "title": "Governance",
+    "subtitle": "Manage polls, elections, and formal decisions for the compound.",
+    "back": "Dashboard",
+    "viewResults": "View results",
+    "activate": "Open for voting",
+    "close": "Close voting",
+    "cancel": "Cancel",
+    "createVote": "Create vote",
+    "noVotes": "No votes or polls created yet.",
+    "types": {
+      "poll": "Poll",
+      "election": "Election",
+      "decision": "Decision"
+    },
+    "statuses": {
+      "draft": "Draft",
+      "active": "Active",
+      "closed": "Closed",
+      "cancelled": "Cancelled"
+    },
+    "eligibility": {
+      "owners_only": "Owners only",
+      "owners_and_residents": "Owners & residents",
+      "all_verified": "All verified"
+    },
+    "fields": {
+      "title": "Title",
+      "description": "Description",
+      "type": "Type",
+      "scope": "Scope",
+      "eligibility": "Eligibility",
+      "startsAt": "Starts at",
+      "endsAt": "Ends at",
+      "options": "Options",
+      "optionLabel": "Option {n} label",
+      "participants": "Participants",
+      "status": "Status"
+    },
+    "tally": {
+      "title": "Results",
+      "votes": "{count} votes"
+    },
+    "messages": {
+      "created": "Vote created.",
+      "activated": "Voting is now open.",
+      "closed": "Voting is now closed.",
+      "cancelled": "Vote cancelled."
+    },
+    "create": {
+      "title": "Create vote / poll",
+      "subtitle": "Set up a new poll, election, or decision vote for compound residents.",
+      "addOption": "Add option",
+      "removeOption": "Remove",
+      "submit": "Create",
+      "compoundId": "Compound ID"
+    }
   },
   "Issues": {
     "title": "Issues & complaints",

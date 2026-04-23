@@ -12,6 +12,7 @@
     "visitors": "الزوار",
     "announcements": "الإعلانات",
     "dues": "الرسوم والمستحقات",
+    "governance": "الحوكمة",
     "signOut": "تسجيل الخروج"
   },
   "Language": {
@@ -509,6 +510,64 @@
     "noDues": "لا توجد رسوم محددة بعد",
     "noRecurringCharges": "لا توجد رسوم دورية بعد",
     "noCampaigns": "لا توجد حملات بعد"
+  },
+  "Governance": {
+    "title": "الحوكمة",
+    "subtitle": "إدارة الاستطلاعات والانتخابات والقرارات الرسمية للمجمع.",
+    "back": "لوحة القيادة",
+    "viewResults": "عرض النتائج",
+    "activate": "فتح التصويت",
+    "close": "إغلاق التصويت",
+    "cancel": "إلغاء",
+    "createVote": "إنشاء تصويت",
+    "noVotes": "لم يتم إنشاء أي تصويتات أو استطلاعات بعد.",
+    "types": {
+      "poll": "استطلاع",
+      "election": "انتخاب",
+      "decision": "قرار"
+    },
+    "statuses": {
+      "draft": "مسودة",
+      "active": "نشط",
+      "closed": "مغلق",
+      "cancelled": "ملغى"
+    },
+    "eligibility": {
+      "owners_only": "الملاك فقط",
+      "owners_and_residents": "الملاك والسكان",
+      "all_verified": "جميع الموثقين"
+    },
+    "fields": {
+      "title": "العنوان",
+      "description": "الوصف",
+      "type": "النوع",
+      "scope": "النطاق",
+      "eligibility": "الأهلية",
+      "startsAt": "يبدأ في",
+      "endsAt": "ينتهي في",
+      "options": "الخيارات",
+      "optionLabel": "خيار {n}",
+      "participants": "المشاركون",
+      "status": "الحالة"
+    },
+    "tally": {
+      "title": "النتائج",
+      "votes": "{count} صوت"
+    },
+    "messages": {
+      "created": "تم إنشاء التصويت.",
+      "activated": "التصويت مفتوح الآن.",
+      "closed": "تم إغلاق التصويت.",
+      "cancelled": "تم إلغاء التصويت."
+    },
+    "create": {
+      "title": "إنشاء تصويت / استطلاع",
+      "subtitle": "إعداد استطلاع جديد أو انتخاب أو تصويت على قرار.",
+      "addOption": "إضافة خيار",
+      "removeOption": "حذف",
+      "submit": "إنشاء",
+      "compoundId": "معرف المجمع"
+    }
   },
   "Issues": {
     "title": "البلاغات والشكاوى",

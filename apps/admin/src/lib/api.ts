@@ -23,9 +23,13 @@ import type {
   CreateVisitorRequestInput,
   CreateLedgerEntryInput,
   CreateUnitAccountInput,
+  CreateVoteInput,
   FinanceReportSummary,
   FinancePaymentMethodRow,
   FinanceReportAccountsFilters,
+  Vote,
+  VoteEligibilityResult,
+  VoteFilters,
   DocumentStatus,
   DocumentType,
   FloorSummary,
@@ -1911,5 +1915,158 @@ export async function getFinancePaymentMethodBreakdown(): Promise<FinancePayment
     return payload.data;
   } catch {
     return [];
+  }
+}
+
+// ─── Governance ───────────────────────────────────────────────────────────────
+
+export async function getVotes(filters: VoteFilters = {}): Promise<Vote[]> {
+  try {
+    const params = new URLSearchParams();
+
+    if (filters.status && filters.status !== "all") {
+      params.set("status", filters.status);
+    }
+
+    if (filters.type && filters.type !== "all") {
+      params.set("type", filters.type);
+    }
+
+    if (filters.compoundId) {
+      params.set("compoundId", filters.compoundId);
+    }
+
+    const query = params.toString();
+    const response = await fetch(`${config.apiBaseUrl}/governance/votes${query ? `?${query}` : ""}`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const payload = (await response.json()) as PaginatedEnvelope<Vote>;
+
+    return payload.data;
+  } catch {
+    return [];
+  }
+}
+
+export async function getVote(voteId: string): Promise<Vote | null> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/governance/votes/${voteId}`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const payload = (await response.json()) as ApiEnvelope<Vote>;
+
+    return payload.data;
+  } catch {
+    return null;
+  }
+}
+
+export async function createVote(input: CreateVoteInput): Promise<Vote> {
+  const response = await fetch(`${config.apiBaseUrl}/governance/votes`, {
+    body: JSON.stringify(input),
+    headers: {
+      ...(await apiHeaders(true)),
+      "Content-Type": "application/json",
+    },
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to create vote: ${response.status}`);
+  }
+
+  const payload = (await response.json()) as ApiEnvelope<Vote>;
+
+  return payload.data;
+}
+
+export async function activateVote(voteId: string): Promise<Vote> {
+  const response = await fetch(`${config.apiBaseUrl}/governance/votes/${voteId}/activate`, {
+    headers: await apiHeaders(true),
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to activate vote: ${response.status}`);
+  }
+
+  const payload = (await response.json()) as ApiEnvelope<Vote>;
+
+  return payload.data;
+}
+
+export async function closeVote(voteId: string): Promise<Vote> {
+  const response = await fetch(`${config.apiBaseUrl}/governance/votes/${voteId}/close`, {
+    headers: await apiHeaders(true),
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to close vote: ${response.status}`);
+  }
+
+  const payload = (await response.json()) as ApiEnvelope<Vote>;
+
+  return payload.data;
+}
+
+export async function cancelVote(voteId: string): Promise<Vote> {
+  const response = await fetch(`${config.apiBaseUrl}/governance/votes/${voteId}/cancel`, {
+    headers: await apiHeaders(true),
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to cancel vote: ${response.status}`);
+  }
+
+  const payload = (await response.json()) as ApiEnvelope<Vote>;
+
+  return payload.data;
+}
+
+export async function getVoteEligibility(voteId: string): Promise<VoteEligibilityResult | null> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/governance/votes/${voteId}/eligibility`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const payload = (await response.json()) as ApiEnvelope<VoteEligibilityResult>;
+
+    return payload.data;
+  } catch {
+    return null;
+  }
+}
+
+export async function castVote(voteId: string, optionId: number): Promise<void> {
+  const response = await fetch(`${config.apiBaseUrl}/governance/votes/${voteId}/cast`, {
+    body: JSON.stringify({ optionId }),
+    headers: {
+      ...(await apiHeaders(true)),
+      "Content-Type": "application/json",
+    },
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to cast vote: ${response.status}`);
   }
 }

@@ -1,0 +1,420 @@
+<?php
+
+namespace Tests\Feature\Api\V1;
+
+use App\Enums\UserRole;
+use App\Enums\VoteEligibility;
+use App\Enums\VoteScope;
+use App\Enums\VoteStatus;
+use App\Enums\VoteType;
+use App\Models\Governance\Vote;
+use App\Models\Governance\VoteOption;
+use App\Models\Governance\VoteParticipation;
+use App\Models\Property\Building;
+use App\Models\Property\Compound;
+use App\Models\Property\Unit;
+use App\Models\Property\UnitMembership;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
+use Tests\TestCase;
+
+class VoteTest extends TestCase
+{
+    use RefreshDatabase;
+
+    // ─────────────────────────────────────────────────────────────────
+    // Admin CRUD
+    // ─────────────────────────────────────────────────────────────────
+
+    public function test_admin_can_create_a_poll(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
+        $compound = Compound::factory()->create();
+        Sanctum::actingAs($admin);
+
+        $response = $this->postJson('/api/v1/governance/votes', [
+            'compoundId'  => $compound->id,
+            'type'        => VoteType::Poll->value,
+            'title'       => 'Preferred park opening time',
+            'description' => 'Vote on best time to open the park.',
+            'eligibility' => VoteEligibility::AllVerified->value,
+            'options'     => [
+                ['label' => '7am – 8am'],
+                ['label' => '8am – 9am'],
+                ['label' => '9am – 10am'],
+            ],
+        ])->assertCreated();
+
+        $this->assertEquals('draft', $response->json('data.status'));
+        $this->assertCount(3, $response->json('data.options'));
+        $this->assertEquals('7am – 8am', $response->json('data.options.0.label'));
+    }
+
+    public function test_admin_can_create_an_election(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::BoardMember->value]);
+        $compound = Compound::factory()->create();
+        Sanctum::actingAs($admin);
+
+        $response = $this->postJson('/api/v1/governance/votes', [
+            'compoundId'  => $compound->id,
+            'type'        => VoteType::Election->value,
+            'title'       => 'Board president election',
+            'eligibility' => VoteEligibility::OwnersOnly->value,
+            'options'     => [
+                ['label' => 'Ahmed Kamal'],
+                ['label' => 'Sara Hassan'],
+            ],
+        ])->assertCreated();
+
+        $this->assertEquals(VoteType::Election->value, $response->json('data.type'));
+        $this->assertEquals(VoteEligibility::OwnersOnly->value, $response->json('data.eligibility'));
+    }
+
+    public function test_vote_creation_requires_at_least_two_options(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
+        $compound = Compound::factory()->create();
+        Sanctum::actingAs($admin);
+
+        $this->postJson('/api/v1/governance/votes', [
+            'compoundId'  => $compound->id,
+            'type'        => VoteType::Poll->value,
+            'title'       => 'Single option poll',
+            'eligibility' => VoteEligibility::AllVerified->value,
+            'options'     => [['label' => 'Only option']],
+        ])->assertUnprocessable();
+    }
+
+    public function test_admin_can_update_a_draft_vote(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
+        $compound = Compound::factory()->create();
+        $vote = Vote::factory()->for($compound)->create(['created_by' => $admin->id, 'title' => 'Old title']);
+        VoteOption::factory()->count(2)->create(['vote_id' => $vote->id, 'label' => 'opt']);
+
+        Sanctum::actingAs($admin);
+
+        $response = $this->patchJson("/api/v1/governance/votes/{$vote->id}", [
+            'title' => 'Updated title',
+        ])->assertOk();
+
+        $this->assertEquals('Updated title', $response->json('data.title'));
+    }
+
+    public function test_cannot_update_active_vote(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
+        $vote = Vote::factory()->active()->create(['created_by' => $admin->id]);
+
+        Sanctum::actingAs($admin);
+
+        $this->patchJson("/api/v1/governance/votes/{$vote->id}", [
+            'title' => 'Sneaky update',
+        ])->assertUnprocessable();
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // Lifecycle transitions
+    // ─────────────────────────────────────────────────────────────────
+
+    public function test_admin_can_activate_draft_vote(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
+        $vote = Vote::factory()->create(['created_by' => $admin->id]);
+        VoteOption::factory()->count(2)->create(['vote_id' => $vote->id, 'label' => 'opt']);
+
+        Sanctum::actingAs($admin);
+
+        $this->postJson("/api/v1/governance/votes/{$vote->id}/activate")
+            ->assertOk()
+            ->assertJsonPath('data.status', VoteStatus::Active->value);
+    }
+
+    public function test_cannot_activate_vote_with_fewer_than_two_options(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
+        $vote = Vote::factory()->create(['created_by' => $admin->id]);
+        VoteOption::factory()->create(['vote_id' => $vote->id, 'label' => 'Only one']);
+
+        Sanctum::actingAs($admin);
+
+        $this->postJson("/api/v1/governance/votes/{$vote->id}/activate")
+            ->assertUnprocessable();
+    }
+
+    public function test_admin_can_close_active_vote(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
+        $vote = Vote::factory()->active()->create(['created_by' => $admin->id]);
+
+        Sanctum::actingAs($admin);
+
+        $this->postJson("/api/v1/governance/votes/{$vote->id}/close")
+            ->assertOk()
+            ->assertJsonPath('data.status', VoteStatus::Closed->value);
+    }
+
+    public function test_cannot_close_draft_vote(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
+        $vote = Vote::factory()->create(['created_by' => $admin->id]);
+
+        Sanctum::actingAs($admin);
+
+        $this->postJson("/api/v1/governance/votes/{$vote->id}/close")
+            ->assertUnprocessable();
+    }
+
+    public function test_admin_can_cancel_a_vote(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
+        $vote = Vote::factory()->active()->create(['created_by' => $admin->id]);
+
+        Sanctum::actingAs($admin);
+
+        $this->postJson("/api/v1/governance/votes/{$vote->id}/cancel")
+            ->assertOk()
+            ->assertJsonPath('data.status', VoteStatus::Cancelled->value);
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // Eligibility
+    // ─────────────────────────────────────────────────────────────────
+
+    public function test_owner_is_eligible_for_owners_only_vote(): void
+    {
+        [$owner, $vote] = $this->makeActiveVoteWithOwner(VoteEligibility::OwnersOnly);
+
+        Sanctum::actingAs($owner);
+
+        $this->getJson("/api/v1/governance/votes/{$vote->id}/eligibility")
+            ->assertOk()
+            ->assertJsonPath('data.eligible', true);
+    }
+
+    public function test_tenant_is_ineligible_for_owners_only_vote(): void
+    {
+        [, $vote] = $this->makeActiveVoteWithOwner(VoteEligibility::OwnersOnly);
+        $tenant = User::factory()->create(['role' => UserRole::ResidentTenant->value]);
+
+        Sanctum::actingAs($tenant);
+
+        $data = $this->getJson("/api/v1/governance/votes/{$vote->id}/eligibility")
+            ->assertOk()
+            ->json('data');
+
+        $this->assertFalse($data['eligible']);
+        $this->assertEquals('owners_only', $data['reason']);
+    }
+
+    public function test_tenant_is_eligible_for_owners_and_residents_vote(): void
+    {
+        [, $vote] = $this->makeActiveVoteWithOwner(VoteEligibility::OwnersAndResidents);
+        $tenant = User::factory()->create(['role' => UserRole::ResidentTenant->value]);
+
+        Sanctum::actingAs($tenant);
+
+        $this->getJson("/api/v1/governance/votes/{$vote->id}/eligibility")
+            ->assertOk()
+            ->assertJsonPath('data.eligible', true);
+    }
+
+    public function test_eligibility_returns_vote_not_active_for_draft(): void
+    {
+        $vote = Vote::factory()->create();
+        VoteOption::factory()->count(2)->create(['vote_id' => $vote->id, 'label' => 'opt']);
+        $owner = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+
+        Sanctum::actingAs($owner);
+
+        $data = $this->getJson("/api/v1/governance/votes/{$vote->id}/eligibility")
+            ->assertOk()
+            ->json('data');
+
+        $this->assertFalse($data['eligible']);
+        $this->assertEquals('vote_not_active', $data['reason']);
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // Casting votes
+    // ─────────────────────────────────────────────────────────────────
+
+    public function test_eligible_owner_can_cast_vote(): void
+    {
+        [$owner, $vote, $option] = $this->makeActiveVoteWithOwner(VoteEligibility::OwnersOnly);
+
+        Sanctum::actingAs($owner);
+
+        $this->postJson("/api/v1/governance/votes/{$vote->id}/cast", [
+            'optionId' => $option->id,
+        ])->assertOk();
+
+        $this->assertDatabaseHas('vote_participations', [
+            'vote_id' => $vote->id,
+            'user_id' => $owner->id,
+            'option_id' => $option->id,
+        ]);
+    }
+
+    public function test_cannot_vote_twice(): void
+    {
+        [$owner, $vote, $option] = $this->makeActiveVoteWithOwner(VoteEligibility::OwnersOnly);
+
+        VoteParticipation::create([
+            'vote_id'              => $vote->id,
+            'user_id'              => $owner->id,
+            'option_id'            => $option->id,
+            'eligibility_snapshot' => ['role' => 'resident_owner'],
+        ]);
+
+        Sanctum::actingAs($owner);
+
+        $this->postJson("/api/v1/governance/votes/{$vote->id}/cast", [
+            'optionId' => $option->id,
+        ])->assertStatus(409);
+    }
+
+    public function test_ineligible_user_cannot_cast_vote(): void
+    {
+        [, $vote, $option] = $this->makeActiveVoteWithOwner(VoteEligibility::OwnersOnly);
+        $tenant = User::factory()->create(['role' => UserRole::ResidentTenant->value]);
+
+        Sanctum::actingAs($tenant);
+
+        $this->postJson("/api/v1/governance/votes/{$vote->id}/cast", [
+            'optionId' => $option->id,
+        ])->assertForbidden();
+    }
+
+    public function test_cannot_vote_in_closed_vote(): void
+    {
+        [$owner, $vote, $option] = $this->makeActiveVoteWithOwner(VoteEligibility::OwnersOnly);
+        $vote->update(['status' => VoteStatus::Closed->value]);
+
+        Sanctum::actingAs($owner);
+
+        $this->postJson("/api/v1/governance/votes/{$vote->id}/cast", [
+            'optionId' => $option->id,
+        ])->assertForbidden();
+    }
+
+    public function test_cannot_cast_vote_for_wrong_option(): void
+    {
+        [$owner, $vote] = $this->makeActiveVoteWithOwner(VoteEligibility::OwnersOnly);
+        $otherVote = Vote::factory()->active()->create(['created_by' => $owner->id]);
+        $foreignOption = VoteOption::factory()->create(['vote_id' => $otherVote->id, 'label' => 'Foreign']);
+
+        Sanctum::actingAs($owner);
+
+        $this->postJson("/api/v1/governance/votes/{$vote->id}/cast", [
+            'optionId' => $foreignOption->id,
+        ])->assertUnprocessable();
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // Results tally
+    // ─────────────────────────────────────────────────────────────────
+
+    public function test_show_returns_tally_after_participations(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
+        $vote = Vote::factory()->active()->create(['created_by' => $admin->id]);
+        $opt1 = VoteOption::factory()->create(['vote_id' => $vote->id, 'label' => 'Yes']);
+        $opt2 = VoteOption::factory()->create(['vote_id' => $vote->id, 'label' => 'No']);
+
+        // 3 votes for opt1, 1 for opt2
+        foreach (range(1, 3) as $i) {
+            $voter = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+            VoteParticipation::create([
+                'vote_id'              => $vote->id,
+                'user_id'              => $voter->id,
+                'option_id'            => $opt1->id,
+                'eligibility_snapshot' => ['role' => 'resident_owner'],
+            ]);
+        }
+        $voter4 = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+        VoteParticipation::create([
+            'vote_id'              => $vote->id,
+            'user_id'              => $voter4->id,
+            'option_id'            => $opt2->id,
+            'eligibility_snapshot' => ['role' => 'resident_owner'],
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $data = $this->getJson("/api/v1/governance/votes/{$vote->id}")
+            ->assertOk()
+            ->json('data');
+
+        $this->assertEquals(4, $data['participationsCount']);
+        $yesRow = collect($data['tally'])->firstWhere('optionId', $opt1->id);
+        $noRow  = collect($data['tally'])->firstWhere('optionId', $opt2->id);
+        $this->assertEquals(3, $yesRow['count']);
+        $this->assertEquals(1, $noRow['count']);
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // Authorization
+    // ─────────────────────────────────────────────────────────────────
+
+    public function test_resident_cannot_create_or_manage_votes(): void
+    {
+        $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+        $compound = Compound::factory()->create();
+        Sanctum::actingAs($resident);
+
+        $this->postJson('/api/v1/governance/votes', [
+            'compoundId' => $compound->id,
+            'type'       => VoteType::Poll->value,
+            'title'      => 'Test',
+            'options'    => [['label' => 'A'], ['label' => 'B']],
+        ])->assertForbidden();
+    }
+
+    public function test_unauthenticated_cannot_access_governance_routes(): void
+    {
+        $vote = Vote::factory()->create();
+
+        $this->getJson('/api/v1/governance/votes')->assertUnauthorized();
+        $this->postJson('/api/v1/governance/votes', [])->assertUnauthorized();
+        $this->getJson("/api/v1/governance/votes/{$vote->id}")->assertUnauthorized();
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // Helpers
+    // ─────────────────────────────────────────────────────────────────
+
+    /**
+     * Creates an active vote with one resident owner having a verified membership.
+     *
+     * @return array{0: User, 1: Vote, 2: VoteOption}
+     */
+    private function makeActiveVoteWithOwner(VoteEligibility $eligibility): array
+    {
+        $compound  = Compound::factory()->create();
+        $building  = Building::factory()->for($compound)->create();
+        $unit      = Unit::factory()->for($compound)->for($building)->create(['floor_id' => null]);
+        $owner     = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+
+        UnitMembership::factory()->create([
+            'unit_id'             => $unit->id,
+            'user_id'             => $owner->id,
+            'verification_status' => 'verified',
+            'starts_at'           => now()->subYear(),
+            'ends_at'             => null,
+        ]);
+
+        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
+        $vote  = Vote::factory()->active()->create([
+            'compound_id' => $compound->id,
+            'eligibility' => $eligibility->value,
+            'created_by'  => $admin->id,
+        ]);
+        $opt1  = VoteOption::factory()->create(['vote_id' => $vote->id, 'label' => 'Option A']);
+        VoteOption::factory()->create(['vote_id' => $vote->id, 'label' => 'Option B']);
+
+        return [$owner, $vote, $opt1];
+    }
+}

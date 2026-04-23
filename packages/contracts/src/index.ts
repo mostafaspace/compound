@@ -1,6 +1,7 @@
 export * from "./platform";
 export * from "./documents";
 export * from "./finance";
+export * from "./governance";
 export * from "./operations";
 export * from "./property";
 export * from "./issues";

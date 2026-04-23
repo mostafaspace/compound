@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\Finance\ChargeTypeController;
 use App\Http\Controllers\Api\V1\Finance\CollectionCampaignController;
 use App\Http\Controllers\Api\V1\Finance\FinanceReportController;
 use App\Http\Controllers\Api\V1\Finance\PaymentSubmissionController;
+use App\Http\Controllers\Api\V1\Governance\VoteController;
 use App\Http\Controllers\Api\V1\Finance\RecurringChargeController;
 use App\Http\Controllers\Api\V1\Finance\UnitAccountController;
 use App\Http\Controllers\Api\V1\NotificationController;
@@ -243,4 +244,27 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
     Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,board_member,finance_reviewer,support_agent,resident_owner,resident_tenant'])
         ->post('/finance/unit-accounts/{unitAccount}/payment-submissions', [UnitAccountController::class, 'submitPayment'])
         ->name('finance.unit-accounts.payment-submissions.store');
+
+    // Governance — admin management routes
+    Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,board_member'])
+        ->prefix('governance')
+        ->name('governance.')
+        ->group(function (): void {
+            Route::get('/votes', [VoteController::class, 'index'])->name('votes.index');
+            Route::post('/votes', [VoteController::class, 'store'])->name('votes.store');
+            Route::get('/votes/{vote}', [VoteController::class, 'show'])->name('votes.show');
+            Route::patch('/votes/{vote}', [VoteController::class, 'update'])->name('votes.update');
+            Route::post('/votes/{vote}/activate', [VoteController::class, 'activate'])->name('votes.activate');
+            Route::post('/votes/{vote}/close', [VoteController::class, 'close'])->name('votes.close');
+            Route::post('/votes/{vote}/cancel', [VoteController::class, 'cancel'])->name('votes.cancel');
+        });
+
+    // Governance — resident participation routes
+    Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,board_member,resident_owner,resident_tenant'])
+        ->prefix('governance')
+        ->name('governance.resident.')
+        ->group(function (): void {
+            Route::get('/votes/{vote}/eligibility', [VoteController::class, 'eligibility'])->name('votes.eligibility');
+            Route::post('/votes/{vote}/cast', [VoteController::class, 'cast'])->name('votes.cast');
+        });
 });
