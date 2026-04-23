@@ -5,6 +5,8 @@
   "scripts": {
     "start": "react-native start",
     "android": "react-native run-android",
+    "android:release": "cd android && gradlew.bat assembleRelease",
+    "android:bundle": "cd android && gradlew.bat bundleRelease",
     "ios": "react-native run-ios",
     "typecheck": "tsc --noEmit"
   },

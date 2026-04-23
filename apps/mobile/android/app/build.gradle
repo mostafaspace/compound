@@ -58,6 +58,13 @@ react {
  * Set this to true to Run Proguard on Release builds to minify the Java bytecode.
  */
 def enableProguardInReleaseBuilds = false
+def releaseStoreFile = System.getenv("ANDROID_RELEASE_STORE_FILE") ?: project.findProperty("ANDROID_RELEASE_STORE_FILE")
+def releaseStorePassword = System.getenv("ANDROID_RELEASE_STORE_PASSWORD") ?: project.findProperty("ANDROID_RELEASE_STORE_PASSWORD")
+def releaseKeyAlias = System.getenv("ANDROID_RELEASE_KEY_ALIAS") ?: project.findProperty("ANDROID_RELEASE_KEY_ALIAS")
+def releaseKeyPassword = System.getenv("ANDROID_RELEASE_KEY_PASSWORD") ?: project.findProperty("ANDROID_RELEASE_KEY_PASSWORD")
+def hasReleaseSigning = [releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword].every { value ->
+    value != null && value.toString().trim()
+}
 
 /**
  * The preferred build flavor of JavaScriptCore (JSC)
@@ -92,18 +99,44 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        if (hasReleaseSigning) {
+            release {
+                storeFile file(releaseStoreFile)
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
+    }
+}
+
+tasks.register("assertReleaseSigning") {
+    doLast {
+        if (!hasReleaseSigning) {
+            throw new GradleException(
+                "Release signing is not configured. Set ANDROID_RELEASE_STORE_FILE, ANDROID_RELEASE_STORE_PASSWORD, ANDROID_RELEASE_KEY_ALIAS, and ANDROID_RELEASE_KEY_PASSWORD before building release artifacts."
+            )
+        }
+    }
+}
+
+afterEvaluate {
+    tasks.matching { task ->
+        task.name in ["assembleRelease", "bundleRelease", "packageRelease"]
+    }.configureEach {
+        dependsOn(tasks.named("assertReleaseSigning"))
     }
 }
 

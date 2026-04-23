@@ -267,7 +267,8 @@ function formatDate(value: string | null, locale: string): string {
 ## Mobile App (`apps/mobile`)
 
 ### Tech Stack
-- React Native with Expo
+- React Native CLI
+- Native Android and iOS projects under `apps/mobile/android` and `apps/mobile/ios`
 - Shared contracts from `packages/contracts`
 
 ### API Client Pattern
@@ -288,7 +289,7 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<ApiEnve
 ```
 
 ### Auth Storage
-- Store Sanctum token in `SecureStore` (Expo SecureStore or AsyncStorage).
+- Store Sanctum token in a secure native-backed store such as `react-native-keychain`.
 - On app launch: check stored token with `GET /auth/me`. If 401, clear token and show login.
 
 ### Error Handling
