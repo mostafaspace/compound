@@ -4,8 +4,14 @@ namespace Tests\Feature\Api\V1;
 
 use App\Enums\AccountStatus;
 use App\Enums\InvitationStatus;
+use App\Enums\UnitRelationType;
 use App\Enums\UserRole;
+use App\Enums\VerificationStatus;
 use App\Models\Documents\DocumentType;
+use App\Models\Finance\UnitAccount;
+use App\Models\Property\Building;
+use App\Models\Property\Compound;
+use App\Models\Property\Unit;
 use App\Models\ResidentInvitation;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -166,5 +172,137 @@ class ApiHardeningTest extends TestCase
                 'token' => str_repeat('x', 64),
             ])
             ->assertStatus(429);
+    }
+
+    public function test_visitor_request_creation_is_rate_limited_for_verified_residents(): void
+    {
+        $ip = '203.0.113.'.random_int(20, 120);
+        [$resident, $unit] = $this->createVerifiedResidentWithUnit();
+
+        Sanctum::actingAs($resident);
+
+        for ($attempt = 0; $attempt < 10; $attempt++) {
+            $this->withServerVariables(['REMOTE_ADDR' => $ip])
+                ->postJson('/api/v1/visitor-requests', [
+                    'unitId' => $unit->id,
+                    'visitorName' => "Guest {$attempt}",
+                    'visitStartsAt' => now()->addMinutes(10 + $attempt)->toIso8601String(),
+                    'visitEndsAt' => now()->addHours(2)->toIso8601String(),
+                ])
+                ->assertCreated();
+        }
+
+        $this->withServerVariables(['REMOTE_ADDR' => $ip])
+            ->postJson('/api/v1/visitor-requests', [
+                'unitId' => $unit->id,
+                'visitorName' => 'Guest Overflow',
+                'visitStartsAt' => now()->addMinutes(30)->toIso8601String(),
+                'visitEndsAt' => now()->addHours(3)->toIso8601String(),
+            ])
+            ->assertStatus(429);
+    }
+
+    public function test_issue_creation_is_rate_limited_for_authenticated_users(): void
+    {
+        $ip = '203.0.113.'.random_int(121, 180);
+        $resident = User::factory()->create([
+            'role' => UserRole::ResidentOwner->value,
+            'status' => AccountStatus::Active->value,
+        ]);
+        $unit = $this->createUnit('C-303');
+
+        Sanctum::actingAs($resident);
+
+        for ($attempt = 0; $attempt < 8; $attempt++) {
+            $this->withServerVariables(['REMOTE_ADDR' => $ip])
+                ->postJson('/api/v1/issues', [
+                    'unitId' => $unit->id,
+                    'category' => 'maintenance',
+                    'title' => "Issue {$attempt}",
+                    'description' => 'Water leak reported from the service shaft.',
+                    'priority' => 'normal',
+                ])
+                ->assertCreated();
+        }
+
+        $this->withServerVariables(['REMOTE_ADDR' => $ip])
+            ->postJson('/api/v1/issues', [
+                'unitId' => $unit->id,
+                'category' => 'maintenance',
+                'title' => 'Issue Overflow',
+                'description' => 'Overflow issue submission should now be throttled.',
+                'priority' => 'normal',
+            ])
+            ->assertStatus(429);
+    }
+
+    public function test_payment_submission_is_rate_limited_for_residents(): void
+    {
+        $ip = '203.0.113.'.random_int(181, 220);
+        Storage::fake('local');
+        config(['filesystems.default' => 'local']);
+
+        [$resident, $unit] = $this->createVerifiedResidentWithUnit('D-404');
+        $account = UnitAccount::factory()->for($unit)->create(['balance' => '750.00']);
+
+        Sanctum::actingAs($resident);
+
+        for ($attempt = 0; $attempt < 6; $attempt++) {
+            $this->withServerVariables(['REMOTE_ADDR' => $ip])
+                ->post("/api/v1/finance/unit-accounts/{$account->id}/payment-submissions", [
+                    'amount' => 100 + $attempt,
+                    'method' => 'bank_transfer',
+                    'reference' => "TRX-{$attempt}",
+                    'proof' => UploadedFile::fake()->create("receipt-{$attempt}.pdf", 32, 'application/pdf'),
+                ])
+                ->assertCreated();
+        }
+
+        $this->withServerVariables(['REMOTE_ADDR' => $ip])
+            ->post("/api/v1/finance/unit-accounts/{$account->id}/payment-submissions", [
+                'amount' => 150,
+                'method' => 'bank_transfer',
+                'reference' => 'TRX-OVERFLOW',
+                'proof' => UploadedFile::fake()->create('receipt-overflow.pdf', 32, 'application/pdf'),
+            ])
+            ->assertStatus(429);
+    }
+
+    private function createVerifiedResidentWithUnit(string $unitNumber = 'A-101'): array
+    {
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'status' => AccountStatus::Active->value,
+        ]);
+        $resident = User::factory()->create([
+            'role' => UserRole::ResidentOwner->value,
+            'status' => AccountStatus::Active->value,
+        ]);
+        $unit = $this->createUnit($unitNumber);
+
+        $unit->memberships()->create([
+            'user_id' => $resident->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'starts_at' => now()->toDateString(),
+            'is_primary' => true,
+            'verification_status' => VerificationStatus::Verified->value,
+            'created_by' => $admin->id,
+        ]);
+
+        return [$resident, $unit];
+    }
+
+    private function createUnit(string $unitNumber = 'A-101'): Unit
+    {
+        $compound = Compound::factory()->create();
+        $building = Building::factory()->for($compound)->create();
+
+        return Unit::factory()
+            ->for($compound)
+            ->for($building)
+            ->create([
+                'floor_id' => null,
+                'unit_number' => $unitNumber,
+            ]);
     }
 }

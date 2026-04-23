@@ -43,8 +43,20 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(10)->by(($request->user()?->getAuthIdentifier() ?? 'guest').'|'.$request->ip());
         });
 
+        RateLimiter::for('visitor-request-create', function (Request $request) {
+            return Limit::perMinute(10)->by(($request->user()?->getAuthIdentifier() ?? 'guest').'|'.$request->ip());
+        });
+
         RateLimiter::for('visitor-pass-scan', function (Request $request) {
             return Limit::perMinute(60)->by(($request->user()?->getAuthIdentifier() ?? 'guest').'|'.$request->ip());
+        });
+
+        RateLimiter::for('issue-create', function (Request $request) {
+            return Limit::perMinute(8)->by(($request->user()?->getAuthIdentifier() ?? 'guest').'|'.$request->ip());
+        });
+
+        RateLimiter::for('payment-submit', function (Request $request) {
+            return Limit::perMinute(6)->by(($request->user()?->getAuthIdentifier() ?? 'guest').'|'.$request->ip());
         });
     }
 }

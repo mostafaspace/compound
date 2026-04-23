@@ -81,7 +81,10 @@ Current backend throttles that should remain enabled in production unless replac
 - `POST /api/v1/auth/login`: 5 requests per minute per email and IP
 - `POST /api/v1/resident-invitations/{token}/accept`: 10 requests per minute per invitation token and IP
 - `POST /api/v1/documents`: 10 uploads per minute per authenticated user and IP
+- `POST /api/v1/visitor-requests`: 10 requests per minute per authenticated user and IP
 - `POST /api/v1/visitor-requests/validate-pass`: 60 pass scans per minute per authenticated user and IP
+- `POST /api/v1/issues`: 8 requests per minute per authenticated user and IP
+- `POST /api/v1/finance/unit-accounts/{unitAccount}/payment-submissions`: 6 requests per minute per authenticated user and IP
 
 If API traffic is routed through a reverse proxy or WAF, preserve client IP forwarding so the application throttle keys remain meaningful.
 

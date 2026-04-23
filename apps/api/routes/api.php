@@ -94,7 +94,9 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
 
         // Issue Management for residents
         Route::get('/my/issues', [IssueController::class, 'myIssues'])->name('my.issues.index');
-        Route::post('/issues', [IssueController::class, 'store'])->name('issues.store');
+        Route::post('/issues', [IssueController::class, 'store'])
+            ->middleware('throttle:issue-create')
+            ->name('issues.store');
         Route::post('/issues/{issue}/comments', [IssueCommentController::class, 'store'])->name('issues.comments.store');
         Route::get('/my/announcements', [AnnouncementController::class, 'feed'])->name('my.announcements.index');
         Route::get('/announcements/{announcement}', [AnnouncementController::class, 'show'])->name('announcements.show');
@@ -106,7 +108,9 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::middleware('role:super_admin,compound_admin,security_guard,support_agent,resident_owner,resident_tenant')
             ->group(function (): void {
                 Route::get('/visitor-requests', [VisitorRequestController::class, 'index'])->name('visitor-requests.index');
-                Route::post('/visitor-requests', [VisitorRequestController::class, 'store'])->name('visitor-requests.store');
+                Route::post('/visitor-requests', [VisitorRequestController::class, 'store'])
+                    ->middleware('throttle:visitor-request-create')
+                    ->name('visitor-requests.store');
                 Route::post('/visitor-requests/{visitorRequest}/cancel', [VisitorRequestController::class, 'cancel'])
                     ->name('visitor-requests.cancel');
             });
@@ -255,6 +259,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
 
     Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,board_member,finance_reviewer,support_agent,resident_owner,resident_tenant'])
         ->post('/finance/unit-accounts/{unitAccount}/payment-submissions', [UnitAccountController::class, 'submitPayment'])
+        ->middleware('throttle:payment-submit')
         ->name('finance.unit-accounts.payment-submissions.store');
 
     // Governance — admin management routes

@@ -147,6 +147,7 @@ Roles: SA, CA, BM, FR, SU, RO, RT (scoped to own docs for residents).
 
 ### POST /documents
 Multipart form upload.
+Throttle: 10/min per authenticated user and IP.
 
 **Request fields**: `document_type_id` (int), `file` (binary, max 10 MB, mime: pdf/jpg/png), `expires_at` (date, optional)
 
@@ -168,6 +169,8 @@ Roles: SA, CA, SU. Status must be `pending_review`.
 ## Resident Invitations
 
 ### GET /resident-invitations/{token} *(public)*
+Throttle: 30/min per IP.
+
 Returns invitation metadata without secret fields.
 
 **Response 200**
@@ -176,6 +179,8 @@ Returns invitation metadata without secret fields.
 ```
 
 ### POST /resident-invitations/{token}/accept *(public, throttle)*
+Throttle: 10/min per invitation token and IP.
+
 **Request** `AcceptResidentInvitationInput`
 ```json
 {"name": "Ahmed", "phone": "+201000000000", "password": "secure", "password_confirmation": "secure"}
@@ -342,6 +347,7 @@ Query: `status`, `compound_id`, `date`, `page`.
 
 ### POST /visitor-requests
 Roles: SA, CA, SG, SU, RO, RT.
+Throttle: 10/min per authenticated user and IP.
 **Request** `{ "visitor_name": "Mohammed Ali", "visitor_phone": "+201...", "expected_arrival_at": "2026-04-22T14:00:00Z", "note": "optional" }`
 **Response 201** — `ApiEnvelope<VisitorRequest>`
 
@@ -373,6 +379,7 @@ Roles: SA, CA, SG, SU.
 
 ### POST /issues
 Any authenticated user.
+Throttle: 8/min per authenticated user and IP.
 **Request** `{ "title": "Water leak", "description": "...", "category": "maintenance", "priority": "normal", "unit_id": "uuid", "attachments": [file] }`
 **Response 201** — `ApiEnvelope<Issue>`
 
@@ -549,6 +556,7 @@ Roles: RO, RT. Returns own accounts.
 
 ### POST /finance/unit-accounts/{id}/payment-submissions
 Roles: SA, CA, BM, FR, SU, RO, RT.
+Throttle: 6/min per authenticated user and IP.
 Multipart: `amount`, `payment_method`, `payment_date`, `reference_number`, `file` (receipt).
 **Response 201** — `ApiEnvelope<PaymentSubmission>`
 
