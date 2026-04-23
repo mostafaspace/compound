@@ -10,6 +10,7 @@ use App\Http\Resources\RepresentativeAssignmentResource;
 use App\Models\Property\Compound;
 use App\Models\RepresentativeAssignment;
 use App\Models\User;
+use App\Services\CompoundContextService;
 use App\Support\AuditLogger;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -18,10 +19,15 @@ use Symfony\Component\HttpFoundation\Response;
 
 class RepresentativeAssignmentController extends Controller
 {
-    public function __construct(private readonly AuditLogger $auditLogger) {}
+    public function __construct(
+        private readonly AuditLogger $auditLogger,
+        private readonly CompoundContextService $compoundContext,
+    ) {}
 
     public function index(Request $request, Compound $compound): AnonymousResourceCollection
     {
+        $this->compoundContext->ensureCompoundAccess($request, $compound->id);
+
         $role = $request->string('role')->toString();
         $active = $request->query('active');
         $buildingId = $request->string('buildingId')->toString();
@@ -43,6 +49,8 @@ class RepresentativeAssignmentController extends Controller
 
     public function store(StoreRepresentativeAssignmentRequest $request, Compound $compound): RepresentativeAssignmentResource
     {
+        $this->compoundContext->ensureCompoundAccess($request, $compound->id);
+
         $validated = $request->validated();
 
         /** @var User $actor */
@@ -87,8 +95,10 @@ class RepresentativeAssignmentController extends Controller
         );
     }
 
-    public function show(RepresentativeAssignment $representativeAssignment): RepresentativeAssignmentResource
+    public function show(Request $request, RepresentativeAssignment $representativeAssignment): RepresentativeAssignmentResource
     {
+        $this->compoundContext->ensureCompoundAccess($request, $representativeAssignment->compound_id);
+
         return RepresentativeAssignmentResource::make(
             $representativeAssignment->load(['user', 'building', 'floor', 'appointedByUser'])
         );
@@ -96,6 +106,8 @@ class RepresentativeAssignmentController extends Controller
 
     public function update(UpdateRepresentativeAssignmentRequest $request, RepresentativeAssignment $representativeAssignment): RepresentativeAssignmentResource
     {
+        $this->compoundContext->ensureCompoundAccess($request, $representativeAssignment->compound_id);
+
         $validated = $request->validated();
 
         $representativeAssignment->forceFill(array_filter([
@@ -119,6 +131,8 @@ class RepresentativeAssignmentController extends Controller
 
     public function expire(Request $request, RepresentativeAssignment $representativeAssignment): RepresentativeAssignmentResource
     {
+        $this->compoundContext->ensureCompoundAccess($request, $representativeAssignment->compound_id);
+
         abort_if(
             ! $representativeAssignment->is_active,
             Response::HTTP_UNPROCESSABLE_ENTITY,

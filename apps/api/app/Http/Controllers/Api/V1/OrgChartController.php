@@ -10,13 +10,18 @@ use App\Models\Property\Compound;
 use App\Models\Property\Unit;
 use App\Models\RepresentativeAssignment;
 use App\Models\User;
+use App\Services\CompoundContextService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class OrgChartController extends Controller
 {
+    public function __construct(private readonly CompoundContextService $compoundContext) {}
+
     public function show(Request $request, Compound $compound): JsonResponse
     {
+        $this->ensureViewerCanAccessCompound($request, $compound->id);
+
         /** @var User $viewer */
         $viewer = $request->user();
 
@@ -98,6 +103,8 @@ class OrgChartController extends Controller
 
     public function responsibleParty(Request $request, Unit $unit): JsonResponse
     {
+        $this->ensureViewerCanAccessUnit($request, $unit);
+
         /** @var User $viewer */
         $viewer = $request->user();
 
@@ -165,5 +172,43 @@ class OrgChartController extends Controller
             ContactVisibility::BuildingResidents => true,
             ContactVisibility::FloorResidents => true,
         };
+    }
+
+    private function ensureViewerCanAccessCompound(Request $request, string $compoundId): void
+    {
+        /** @var User $viewer */
+        $viewer = $request->user();
+
+        if (! in_array($viewer->role, [UserRole::ResidentOwner, UserRole::ResidentTenant], true)) {
+            $this->compoundContext->ensureCompoundAccess($request, $compoundId);
+
+            return;
+        }
+
+        $hasMembership = $viewer->unitMemberships()
+            ->activeForAccess()
+            ->whereHas('unit', fn ($query) => $query->where('compound_id', $compoundId))
+            ->exists();
+
+        abort_unless($hasMembership, 403);
+    }
+
+    private function ensureViewerCanAccessUnit(Request $request, Unit $unit): void
+    {
+        /** @var User $viewer */
+        $viewer = $request->user();
+
+        if (! in_array($viewer->role, [UserRole::ResidentOwner, UserRole::ResidentTenant], true)) {
+            $this->compoundContext->ensureCompoundAccess($request, $unit->compound_id);
+
+            return;
+        }
+
+        $hasMembership = $viewer->unitMemberships()
+            ->activeForAccess()
+            ->where('unit_id', $unit->id)
+            ->exists();
+
+        abort_unless($hasMembership, 403);
     }
 }

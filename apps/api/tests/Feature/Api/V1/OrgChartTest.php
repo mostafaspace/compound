@@ -4,11 +4,14 @@ namespace Tests\Feature\Api\V1;
 
 use App\Enums\ContactVisibility;
 use App\Enums\RepresentativeRole;
+use App\Enums\UnitRelationType;
 use App\Enums\UserRole;
+use App\Enums\VerificationStatus;
 use App\Models\Property\Building;
 use App\Models\Property\Compound;
 use App\Models\Property\Floor;
 use App\Models\Property\Unit;
+use App\Models\Property\UnitMembership;
 use App\Models\RepresentativeAssignment;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -23,10 +26,13 @@ class OrgChartTest extends TestCase
 
     public function test_admin_can_assign_compound_level_president(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
+        $compound = Compound::factory()->create();
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compound->id,
+        ]);
         Sanctum::actingAs($admin);
 
-        $compound = Compound::factory()->create();
         $user = User::factory()->create();
 
         $this->postJson("/api/v1/compounds/{$compound->id}/representatives", [
@@ -42,10 +48,13 @@ class OrgChartTest extends TestCase
 
     public function test_assigning_floor_representative_requires_floor_id(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
+        $compound = Compound::factory()->create();
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compound->id,
+        ]);
         Sanctum::actingAs($admin);
 
-        $compound = Compound::factory()->create();
         $user = User::factory()->create();
 
         $this->postJson("/api/v1/compounds/{$compound->id}/representatives", [
@@ -58,10 +67,13 @@ class OrgChartTest extends TestCase
 
     public function test_assigning_building_representative_requires_building_id(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
+        $compound = Compound::factory()->create();
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compound->id,
+        ]);
         Sanctum::actingAs($admin);
 
-        $compound = Compound::factory()->create();
         $user = User::factory()->create();
 
         $this->postJson("/api/v1/compounds/{$compound->id}/representatives", [
@@ -74,10 +86,13 @@ class OrgChartTest extends TestCase
 
     public function test_singleton_role_expires_previous_assignment_on_new_store(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
+        $compound = Compound::factory()->create();
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compound->id,
+        ]);
         Sanctum::actingAs($admin);
 
-        $compound = Compound::factory()->create();
         $oldUser = User::factory()->create();
         $newUser = User::factory()->create();
 
@@ -103,10 +118,12 @@ class OrgChartTest extends TestCase
 
     public function test_non_singleton_role_allows_multiple_active_assignments(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
-        Sanctum::actingAs($admin);
-
         $compound = Compound::factory()->create();
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compound->id,
+        ]);
+        Sanctum::actingAs($admin);
 
         $this->postJson("/api/v1/compounds/{$compound->id}/representatives", [
             'userId' => User::factory()->create()->id,
@@ -125,10 +142,13 @@ class OrgChartTest extends TestCase
 
     public function test_admin_can_expire_an_assignment(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
+        $compound = Compound::factory()->create();
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compound->id,
+        ]);
         Sanctum::actingAs($admin);
 
-        $compound = Compound::factory()->create();
         $assignment = RepresentativeAssignment::factory()->create([
             'compound_id' => $compound->id,
             'is_active' => true,
@@ -147,10 +167,16 @@ class OrgChartTest extends TestCase
 
     public function test_expiring_already_expired_assignment_returns_422(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
+        $compound = Compound::factory()->create();
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compound->id,
+        ]);
         Sanctum::actingAs($admin);
 
-        $assignment = RepresentativeAssignment::factory()->expired()->create();
+        $assignment = RepresentativeAssignment::factory()->expired()->create([
+            'compound_id' => $compound->id,
+        ]);
 
         $this->postJson("/api/v1/representative-assignments/{$assignment->id}/expire")
             ->assertUnprocessable();
@@ -160,10 +186,13 @@ class OrgChartTest extends TestCase
 
     public function test_org_chart_returns_compound_and_building_representatives(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
+        $compound = Compound::factory()->create();
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compound->id,
+        ]);
         Sanctum::actingAs($admin);
 
-        $compound = Compound::factory()->create();
         $building = Building::factory()->for($compound)->create();
         $president = User::factory()->create(['name' => 'Ahmad President']);
         $buildingRep = User::factory()->create(['name' => 'Sara Building Rep']);
@@ -192,10 +221,25 @@ class OrgChartTest extends TestCase
     public function test_org_chart_excludes_admins_only_contacts_from_residents(): void
     {
         $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+        $compound = Compound::factory()->create();
         Sanctum::actingAs($resident);
 
-        $compound = Compound::factory()->create();
+        $building = Building::factory()->for($compound)->create();
+        $unit = Unit::factory()->create([
+            'compound_id' => $compound->id,
+            'building_id' => $building->id,
+            'floor_id' => null,
+        ]);
         User::factory()->create();
+
+        UnitMembership::query()->create([
+            'unit_id' => $unit->id,
+            'user_id' => $resident->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'starts_at' => now()->subDay()->toDateString(),
+            'is_primary' => true,
+            'verification_status' => VerificationStatus::Verified->value,
+        ]);
 
         RepresentativeAssignment::factory()->create([
             'compound_id' => $compound->id,
@@ -210,10 +254,12 @@ class OrgChartTest extends TestCase
 
     public function test_org_chart_shows_admins_only_contacts_to_admins(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
-        Sanctum::actingAs($admin);
-
         $compound = Compound::factory()->create();
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compound->id,
+        ]);
+        Sanctum::actingAs($admin);
 
         RepresentativeAssignment::factory()->create([
             'compound_id' => $compound->id,
@@ -231,15 +277,24 @@ class OrgChartTest extends TestCase
     public function test_responsible_party_returns_floor_building_and_association_contacts(): void
     {
         $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+        $compound = Compound::factory()->create();
         Sanctum::actingAs($resident);
 
-        $compound = Compound::factory()->create();
         $building = Building::factory()->for($compound)->create();
         $floor = Floor::factory()->for($building)->create();
         $unit = Unit::factory()->create([
             'compound_id' => $compound->id,
             'building_id' => $building->id,
             'floor_id' => $floor->id,
+        ]);
+
+        UnitMembership::query()->create([
+            'unit_id' => $unit->id,
+            'user_id' => $resident->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'starts_at' => now()->subDay()->toDateString(),
+            'is_primary' => true,
+            'verification_status' => VerificationStatus::Verified->value,
         ]);
 
         $floorRep = User::factory()->create(['name' => 'Floor Rep']);
@@ -266,14 +321,23 @@ class OrgChartTest extends TestCase
     public function test_responsible_party_returns_null_floor_representative_when_none_assigned(): void
     {
         $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+        $compound = Compound::factory()->create();
         Sanctum::actingAs($resident);
 
-        $compound = Compound::factory()->create();
         $building = Building::factory()->for($compound)->create();
         $unit = Unit::factory()->create([
             'compound_id' => $compound->id,
             'building_id' => $building->id,
             'floor_id' => null,
+        ]);
+
+        UnitMembership::query()->create([
+            'unit_id' => $unit->id,
+            'user_id' => $resident->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'starts_at' => now()->subDay()->toDateString(),
+            'is_primary' => true,
+            'verification_status' => VerificationStatus::Verified->value,
         ]);
 
         $this->getJson("/api/v1/units/{$unit->id}/responsible-party")
@@ -283,10 +347,12 @@ class OrgChartTest extends TestCase
 
     public function test_listing_representatives_filters_by_active(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
-        Sanctum::actingAs($admin);
-
         $compound = Compound::factory()->create();
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compound->id,
+        ]);
+        Sanctum::actingAs($admin);
 
         RepresentativeAssignment::factory()->create([
             'compound_id' => $compound->id,
@@ -319,5 +385,51 @@ class OrgChartTest extends TestCase
             'role' => RepresentativeRole::President->value,
             'startsAt' => '2026-04-20',
         ])->assertForbidden();
+    }
+
+    public function test_compound_admin_cannot_manage_or_view_other_compounds_representatives(): void
+    {
+        $compoundA = Compound::factory()->create();
+        $compoundB = Compound::factory()->create();
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compoundA->id,
+        ]);
+        $assignment = RepresentativeAssignment::factory()->create([
+            'compound_id' => $compoundB->id,
+        ]);
+        Sanctum::actingAs($admin);
+
+        $this->getJson("/api/v1/compounds/{$compoundB->id}/representatives")
+            ->assertForbidden();
+
+        $this->getJson("/api/v1/representative-assignments/{$assignment->id}")
+            ->assertForbidden();
+
+        $this->postJson("/api/v1/representative-assignments/{$assignment->id}/expire")
+            ->assertForbidden();
+    }
+
+    public function test_compound_admin_cannot_view_other_compounds_org_chart_or_responsible_party(): void
+    {
+        $compoundA = Compound::factory()->create();
+        $compoundB = Compound::factory()->create();
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compoundA->id,
+        ]);
+        $buildingB = Building::factory()->for($compoundB)->create();
+        $unitB = Unit::factory()->create([
+            'compound_id' => $compoundB->id,
+            'building_id' => $buildingB->id,
+            'floor_id' => null,
+        ]);
+        Sanctum::actingAs($admin);
+
+        $this->getJson("/api/v1/compounds/{$compoundB->id}/org-chart")
+            ->assertForbidden();
+
+        $this->getJson("/api/v1/units/{$unitB->id}/responsible-party")
+            ->assertForbidden();
     }
 }
