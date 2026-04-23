@@ -1,4 +1,5 @@
 import type { AuditLogEntry } from "@compound/contracts";
+import { getLocale, getTranslations } from "next-intl/server";
 import Link from "next/link";
 
 import { LogoutButton } from "@/components/logout-button";
@@ -17,27 +18,6 @@ interface AuditLogsPageProps {
 }
 
 const methodOptions = ["", "GET", "POST", "PATCH", "PUT", "DELETE"];
-
-function formatDate(value: string | null): string {
-  if (!value) {
-    return "Not set";
-  }
-
-  return new Intl.DateTimeFormat("en", {
-    dateStyle: "medium",
-    timeStyle: "medium",
-  }).format(new Date(value));
-}
-
-function metadataSummary(entry: AuditLogEntry): string {
-  const keys = Object.keys(entry.metadata);
-
-  if (keys.length === 0) {
-    return "No metadata";
-  }
-
-  return keys.slice(0, 4).join(", ");
-}
 
 function statusTone(statusCode: number | null): string {
   if (!statusCode) {
@@ -69,25 +49,47 @@ export default async function AuditLogsPage({ searchParams }: AuditLogsPageProps
     to: params.to || undefined,
   });
 
+  const t = await getTranslations("AuditLogs");
+  const locale = await getLocale();
+
+  function formatDate(value: string | null): string {
+    if (!value) {
+      return t("notSet");
+    }
+
+    return new Intl.DateTimeFormat(locale, {
+      dateStyle: "medium",
+      timeStyle: "medium",
+    }).format(new Date(value));
+  }
+
+  function metadataSummary(entry: AuditLogEntry): string {
+    const keys = Object.keys(entry.metadata);
+
+    if (keys.length === 0) {
+      return t("noMetadata");
+    }
+
+    return keys.slice(0, 4).join(", ");
+  }
+
   return (
     <main className="min-h-screen bg-background text-foreground">
       <header className="border-b border-line bg-panel">
         <div className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-6 md:flex-row md:items-center md:justify-between lg:px-8">
           <div>
             <Link className="text-sm font-semibold text-brand hover:text-brand-strong" href="/">
-              Dashboard
+              {t("back")}
             </Link>
-            <h1 className="mt-2 text-3xl font-semibold">Audit logs</h1>
-            <p className="mt-2 max-w-2xl text-sm text-muted">
-              Review sensitive API activity by actor, action, request path, status, and timestamp.
-            </p>
+            <h1 className="mt-2 text-3xl font-semibold">{t("title")}</h1>
+            <p className="mt-2 max-w-2xl text-sm text-muted">{t("subtitle")}</p>
           </div>
           <div className="flex flex-wrap gap-3">
             <Link
               className="inline-flex h-11 items-center justify-center rounded-lg border border-line bg-panel px-4 text-sm font-semibold hover:border-brand"
               href="/onboarding"
             >
-              Onboarding
+              {t("onboarding")}
             </Link>
             <LogoutButton />
           </div>
@@ -97,7 +99,7 @@ export default async function AuditLogsPage({ searchParams }: AuditLogsPageProps
       <section className="mx-auto max-w-7xl px-5 py-6 lg:px-8">
         <form className="grid gap-3 rounded-lg border border-line bg-panel p-4 md:grid-cols-[1.2fr_1fr_0.7fr_0.7fr_0.7fr_auto]">
           <label className="text-sm font-semibold">
-            Search
+            {t("search")}
             <input
               className="mt-2 h-11 w-full rounded-lg border border-line bg-background px-3 text-sm outline-none focus:border-brand"
               defaultValue={params.q ?? ""}
@@ -106,7 +108,7 @@ export default async function AuditLogsPage({ searchParams }: AuditLogsPageProps
             />
           </label>
           <label className="text-sm font-semibold">
-            Action
+            {t("action")}
             <input
               className="mt-2 h-11 w-full rounded-lg border border-line bg-background px-3 text-sm outline-none focus:border-brand"
               defaultValue={params.action ?? ""}
@@ -115,7 +117,7 @@ export default async function AuditLogsPage({ searchParams }: AuditLogsPageProps
             />
           </label>
           <label className="text-sm font-semibold">
-            Actor ID
+            {t("actorId")}
             <input
               className="mt-2 h-11 w-full rounded-lg border border-line bg-background px-3 text-sm outline-none focus:border-brand"
               defaultValue={params.actorId ?? ""}
@@ -125,7 +127,7 @@ export default async function AuditLogsPage({ searchParams }: AuditLogsPageProps
             />
           </label>
           <label className="text-sm font-semibold">
-            Method
+            {t("method")}
             <select
               className="mt-2 h-11 w-full rounded-lg border border-line bg-background px-3 text-sm outline-none focus:border-brand"
               defaultValue={params.method ?? ""}
@@ -133,13 +135,13 @@ export default async function AuditLogsPage({ searchParams }: AuditLogsPageProps
             >
               {methodOptions.map((method) => (
                 <option key={method || "all"} value={method}>
-                  {method || "All"}
+                  {method || t("all")}
                 </option>
               ))}
             </select>
           </label>
           <label className="text-sm font-semibold">
-            From
+            {t("from")}
             <input
               className="mt-2 h-11 w-full rounded-lg border border-line bg-background px-3 text-sm outline-none focus:border-brand"
               defaultValue={params.from ?? ""}
@@ -149,7 +151,7 @@ export default async function AuditLogsPage({ searchParams }: AuditLogsPageProps
           </label>
           <div className="flex items-end gap-2">
             <label className="min-w-0 flex-1 text-sm font-semibold">
-              To
+              {t("to")}
               <input
                 className="mt-2 h-11 w-full rounded-lg border border-line bg-background px-3 text-sm outline-none focus:border-brand"
                 defaultValue={params.to ?? ""}
@@ -161,7 +163,7 @@ export default async function AuditLogsPage({ searchParams }: AuditLogsPageProps
               className="inline-flex h-11 items-center justify-center rounded-lg bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"
               type="submit"
             >
-              Filter
+              {t("filter")}
             </button>
           </div>
         </form>
@@ -169,11 +171,11 @@ export default async function AuditLogsPage({ searchParams }: AuditLogsPageProps
         <div className="mt-5 overflow-hidden rounded-lg border border-line bg-panel">
           <div className="flex flex-col gap-2 border-b border-line p-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <h2 className="text-lg font-semibold">Recent activity</h2>
-              <p className="mt-1 text-sm text-muted">Showing the latest {auditLogs.length} matching audit records.</p>
+              <h2 className="text-lg font-semibold">{t("recentActivity")}</h2>
+              <p className="mt-1 text-sm text-muted">{t("showingLatest", { count: auditLogs.length })}</p>
             </div>
             <Link className="text-sm font-semibold text-brand hover:text-brand-strong" href="/audit-logs">
-              Clear filters
+              {t("clearFilters")}
             </Link>
           </div>
 
@@ -181,20 +183,20 @@ export default async function AuditLogsPage({ searchParams }: AuditLogsPageProps
             <table className="w-full min-w-[980px] border-collapse text-left text-sm">
               <thead className="bg-background text-muted">
                 <tr>
-                  <th className="px-4 py-3 font-semibold">Time</th>
-                  <th className="px-4 py-3 font-semibold">Actor</th>
-                  <th className="px-4 py-3 font-semibold">Action</th>
-                  <th className="px-4 py-3 font-semibold">Request</th>
-                  <th className="px-4 py-3 font-semibold">Subject</th>
-                  <th className="px-4 py-3 font-semibold">Status</th>
-                  <th className="px-4 py-3 font-semibold">Metadata</th>
+                  <th className="px-4 py-3 font-semibold">{t("colTime")}</th>
+                  <th className="px-4 py-3 font-semibold">{t("colActor")}</th>
+                  <th className="px-4 py-3 font-semibold">{t("action")}</th>
+                  <th className="px-4 py-3 font-semibold">{t("colRequest")}</th>
+                  <th className="px-4 py-3 font-semibold">{t("colSubject")}</th>
+                  <th className="px-4 py-3 font-semibold">{t("colStatus")}</th>
+                  <th className="px-4 py-3 font-semibold">{t("colMetadata")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
                 {auditLogs.length === 0 ? (
                   <tr>
                     <td className="px-4 py-8 text-center text-muted" colSpan={7}>
-                      No audit records match the selected filters.
+                      {t("empty")}
                     </td>
                   </tr>
                 ) : (
@@ -202,24 +204,26 @@ export default async function AuditLogsPage({ searchParams }: AuditLogsPageProps
                     <tr key={entry.id}>
                       <td className="px-4 py-4 align-top text-muted">{formatDate(entry.createdAt)}</td>
                       <td className="px-4 py-4 align-top">
-                        <div className="font-semibold">{entry.actor?.name ?? "System"}</div>
-                        <div className="text-muted">{entry.actorId ? `User ${entry.actorId}` : "No actor"}</div>
+                        <div className="font-semibold">{entry.actor?.name ?? t("system")}</div>
+                        <div className="text-muted">
+                          {entry.actorId ? t("userId", { id: entry.actorId }) : t("noActor")}
+                        </div>
                       </td>
                       <td className="px-4 py-4 align-top">
                         <code className="rounded-lg bg-background px-2 py-1 text-xs font-semibold">{entry.action}</code>
                       </td>
                       <td className="px-4 py-4 align-top">
-                        <div className="font-semibold">{entry.method ?? "N/A"}</div>
-                        <div className="max-w-xs truncate text-muted">{entry.path ?? "No path"}</div>
-                        <div className="text-muted">{entry.ipAddress ?? "No IP"}</div>
+                        <div className="font-semibold">{entry.method ?? t("na")}</div>
+                        <div className="max-w-xs truncate text-muted">{entry.path ?? t("noPath")}</div>
+                        <div className="text-muted">{entry.ipAddress ?? t("noIp")}</div>
                       </td>
                       <td className="px-4 py-4 align-top">
-                        <div className="max-w-xs truncate">{entry.auditableType ?? "No subject"}</div>
+                        <div className="max-w-xs truncate">{entry.auditableType ?? t("noSubject")}</div>
                         <div className="text-muted">{entry.auditableId ?? ""}</div>
                       </td>
                       <td className="px-4 py-4 align-top">
                         <span className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${statusTone(entry.statusCode)}`}>
-                          {entry.statusCode ?? "N/A"}
+                          {entry.statusCode ?? t("na")}
                         </span>
                       </td>
                       <td className="px-4 py-4 align-top text-muted">{metadataSummary(entry)}</td>

@@ -94,6 +94,7 @@ export {
   getCompoundOrgChart,
   getResponsibleParty,
   listRepresentativeAssignments,
+  listAllRepresentativeAssignments,
   createRepresentativeAssignment,
   getRepresentativeAssignment,
   updateRepresentativeAssignment,

@@ -521,6 +521,121 @@
     "unitNumber": "Unit {unit}",
     "you": "You"
   },
+  "Visitors": {
+    "title": "Gate operations",
+    "section": "Visitor security",
+    "subtitle": "Signed in as {name} / {role}",
+    "nav": {
+      "dashboard": "Control center",
+      "onboarding": "Onboarding"
+    }
+  },
+  "Documents": {
+    "title": "Verification documents",
+    "subtitle": "Upload sensitive resident files to the private backend storage disk and review their compliance status.",
+    "upload": {
+      "title": "Upload document",
+      "submit": "Upload"
+    },
+    "fields": {
+      "documentType": "Document type",
+      "userId": "User ID",
+      "unitId": "Unit ID",
+      "file": "File",
+      "reviewNote": "Review note"
+    },
+    "reviewQueue": {
+      "title": "Review queue",
+      "empty": "No documents submitted yet."
+    },
+    "table": {
+      "document": "Document",
+      "user": "User",
+      "status": "Status",
+      "review": "Review",
+      "userRow": "User {id}"
+    },
+    "statuses": {
+      "under_review": "Under review",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "missing": "Missing"
+    },
+    "actions": {
+      "saveReview": "Save review"
+    }
+  },
+  "AuditLogs": {
+    "title": "Audit logs",
+    "subtitle": "Review sensitive API activity by actor, action, request path, status, and timestamp.",
+    "back": "Dashboard",
+    "onboarding": "Onboarding",
+    "search": "Search",
+    "action": "Action",
+    "actorId": "Actor ID",
+    "method": "Method",
+    "from": "From",
+    "to": "To",
+    "filter": "Filter",
+    "recentActivity": "Recent activity",
+    "showingLatest": "Showing the latest {count} matching audit records.",
+    "clearFilters": "Clear filters",
+    "colTime": "Time",
+    "colActor": "Actor",
+    "colRequest": "Request",
+    "colSubject": "Subject",
+    "colStatus": "Status",
+    "colMetadata": "Metadata",
+    "notSet": "Not set",
+    "noMetadata": "No metadata",
+    "empty": "No audit records match the selected filters.",
+    "system": "System",
+    "userId": "User {id}",
+    "noActor": "No actor",
+    "na": "N/A",
+    "noPath": "No path",
+    "noIp": "No IP",
+    "noSubject": "No subject",
+    "all": "All"
+  },
+  "OrgChart": {
+    "title": "Organization Chart",
+    "subtitle": "Manage representative assignments for buildings, floors, and compound areas.",
+    "nav": {
+      "dashboard": "Dashboard"
+    },
+    "newAssignment": "New Assignment",
+    "table": {
+      "name": "Name",
+      "role": "Representative Role",
+      "scope": "Scope",
+      "status": "Status",
+      "term": "Term",
+      "actions": "Actions"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "form": {
+      "userId": "User ID",
+      "role": "Assignment Role",
+      "scopeId": "Building ID (optional)",
+      "startDate": "Start Date",
+      "endDate": "End Date (optional)",
+      "notes": "Notes (optional)",
+      "submit": "Create Assignment"
+    },
+    "action": {
+      "edit": "Edit",
+      "deactivate": "Deactivate"
+    },
+    "empty": "No representative assignments found.",
+    "messages": {
+      "created": "Assignment created successfully.",
+      "deactivated": "Assignment deactivated."
+    }
+  },
   "Announcements": {
     "back": "Dashboard",
     "title": "Announcements",

@@ -1,6 +1,6 @@
 "use server";
 
-import type { ApiEnvelope } from "@compound/contracts";
+import type { ApiEnvelope, PaginatedEnvelope } from "@compound/contracts";
 
 import { config } from "./config";
 import { getAuthToken } from "./session";
@@ -184,4 +184,72 @@ export async function expireRepresentativeAssignment(assignmentId: string): Prom
   const payload = (await response.json()) as ApiEnvelope<RepresentativeAssignment>;
 
   return payload.data;
+}
+
+export async function listAllRepresentativeAssignments(
+  filters: ListRepresentativesFilters = {},
+): Promise<RepresentativeAssignment[]> {
+  try {
+    // The API requires a compound scope; fetch the first compound's assignments.
+    // In a single-compound setup this covers all assignments.
+    const compoundsResponse = await fetch(`${config.apiBaseUrl}/compounds`, {
+      cache: "no-store",
+      headers: await apiHeaders(),
+    });
+
+    if (!compoundsResponse.ok) {
+      return [];
+    }
+
+    const compoundsPayload = (await compoundsResponse.json()) as PaginatedEnvelope<{ id: string }>;
+    const compoundIds = compoundsPayload.data.map((c) => c.id);
+
+    if (compoundIds.length === 0) {
+      return [];
+    }
+
+    const params = new URLSearchParams();
+
+    if (filters.role) {
+      params.set("role", filters.role);
+    }
+
+    if (filters.active !== undefined) {
+      params.set("active", filters.active ? "true" : "false");
+    }
+
+    if (filters.buildingId) {
+      params.set("buildingId", filters.buildingId);
+    }
+
+    if (filters.floorId) {
+      params.set("floorId", filters.floorId);
+    }
+
+    const query = params.toString();
+
+    const results = await Promise.all(
+      compoundIds.map(async (compoundId) => {
+        const response = await fetch(
+          `${config.apiBaseUrl}/compounds/${compoundId}/representatives${query ? `?${query}` : ""}`,
+          {
+            cache: "no-store",
+            headers: await apiHeaders(),
+          },
+        );
+
+        if (!response.ok) {
+          return [] as RepresentativeAssignment[];
+        }
+
+        const payload = (await response.json()) as ApiEnvelope<RepresentativeAssignment[]>;
+
+        return payload.data;
+      }),
+    );
+
+    return results.flat();
+  } catch {
+    return [];
+  }
 }
