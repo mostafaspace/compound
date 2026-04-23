@@ -442,6 +442,15 @@ class FinanceService
             abort(422, 'Charges can only be applied to active campaigns.');
         }
 
+        $matchingAccountsCount = UnitAccount::query()
+            ->whereIn('id', $unitAccountIds)
+            ->whereHas('unit', fn ($query) => $query->where('compound_id', $campaign->compound_id))
+            ->count();
+
+        if ($matchingAccountsCount !== count($unitAccountIds)) {
+            abort(422, 'All selected unit accounts must belong to the campaign compound.');
+        }
+
         $posted = 0;
 
         DB::transaction(function () use ($campaign, $unitAccountIds, $amount, $description, $actor, &$posted): void {

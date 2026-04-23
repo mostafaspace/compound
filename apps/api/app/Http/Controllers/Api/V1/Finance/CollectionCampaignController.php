@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Finance;
 
+use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Finance\ApplyCampaignChargesRequest;
 use App\Http\Requests\Finance\StoreCollectionCampaignRequest;
@@ -24,11 +25,18 @@ class CollectionCampaignController extends Controller
 
     public function index(Request $request): AnonymousResourceCollection
     {
+        /** @var User $actor */
+        $actor = $request->user();
+        $requestedCompoundId = $request->filled('compound_id') ? $request->string('compound_id')->toString() : null;
+
+        if (filled($actor->compound_id) && $requestedCompoundId !== null && $requestedCompoundId !== $actor->compound_id) {
+            abort(Response::HTTP_FORBIDDEN);
+        }
+
+        $compoundId = filled($actor->compound_id) ? $actor->compound_id : $requestedCompoundId;
+
         $campaigns = CollectionCampaign::query()
-            ->when(
-                $request->filled('compound_id'),
-                fn ($query) => $query->where('compound_id', $request->string('compound_id')->toString()),
-            )
+            ->when($compoundId, fn ($query) => $query->where('compound_id', $compoundId))
             ->when(
                 $request->filled('status'),
                 fn ($query) => $query->where('status', $request->string('status')->toString()),
@@ -43,9 +51,18 @@ class CollectionCampaignController extends Controller
     {
         /** @var User $actor */
         $actor = $request->user();
+        $validated = $request->validated();
+        $requestedCompoundId = $validated['compound_id'] ?? null;
+
+        if (filled($actor->compound_id)) {
+            abort_if($requestedCompoundId !== $actor->compound_id, Response::HTTP_FORBIDDEN);
+            $validated['compound_id'] = $actor->compound_id;
+        } else {
+            abort_if(! filled($requestedCompoundId), Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
 
         $campaign = $this->financeService->createCampaign(
-            data: $request->validated(),
+            data: $validated,
             actor: $actor,
         );
 
@@ -54,8 +71,10 @@ class CollectionCampaignController extends Controller
             ->setStatusCode(Response::HTTP_CREATED);
     }
 
-    public function show(CollectionCampaign $campaign): CollectionCampaignResource
+    public function show(Request $request, CollectionCampaign $campaign): CollectionCampaignResource
     {
+        $this->ensureFinanceCompoundAccess($request->user(), $campaign->compound_id);
+
         return CollectionCampaignResource::make($campaign);
     }
 
@@ -63,6 +82,7 @@ class CollectionCampaignController extends Controller
     {
         /** @var User $actor */
         $actor = $request->user();
+        $this->ensureFinanceCompoundAccess($actor, $campaign->compound_id);
 
         $validated = $request->validate([
             'name' => ['sometimes', 'string', 'max:160'],
@@ -86,6 +106,7 @@ class CollectionCampaignController extends Controller
     {
         /** @var User $actor */
         $actor = $request->user();
+        $this->ensureFinanceCompoundAccess($actor, $campaign->compound_id);
 
         $campaign = $this->financeService->publishCampaign(
             campaign: $campaign,
@@ -99,6 +120,7 @@ class CollectionCampaignController extends Controller
     {
         /** @var User $actor */
         $actor = $request->user();
+        $this->ensureFinanceCompoundAccess($actor, $campaign->compound_id);
 
         $campaign = $this->financeService->archiveCampaign(
             campaign: $campaign,
@@ -112,6 +134,7 @@ class CollectionCampaignController extends Controller
     {
         /** @var User $actor */
         $actor = $request->user();
+        $this->ensureFinanceCompoundAccess($actor, $campaign->compound_id);
 
         $validated = $request->validated();
 
@@ -124,5 +147,14 @@ class CollectionCampaignController extends Controller
         );
 
         return response()->json(['posted' => $count]);
+    }
+
+    private function ensureFinanceCompoundAccess(User $actor, string $compoundId): void
+    {
+        if ($actor->role === UserRole::SuperAdmin || ! filled($actor->compound_id)) {
+            return;
+        }
+
+        abort_if($actor->compound_id !== $compoundId, Response::HTTP_FORBIDDEN);
     }
 }

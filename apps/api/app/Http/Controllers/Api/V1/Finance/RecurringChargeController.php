@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Finance;
 
+use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Finance\StoreRecurringChargeRequest;
 use App\Http\Resources\Finance\RecurringChargeResource;
@@ -23,12 +24,19 @@ class RecurringChargeController extends Controller
 
     public function index(Request $request): AnonymousResourceCollection
     {
+        /** @var User $actor */
+        $actor = $request->user();
+        $requestedCompoundId = $request->filled('compound_id') ? $request->string('compound_id')->toString() : null;
+
+        if (filled($actor->compound_id) && $requestedCompoundId !== null && $requestedCompoundId !== $actor->compound_id) {
+            abort(Response::HTTP_FORBIDDEN);
+        }
+
+        $compoundId = filled($actor->compound_id) ? $actor->compound_id : $requestedCompoundId;
+
         $charges = RecurringCharge::query()
             ->with('chargeType')
-            ->when(
-                $request->filled('compound_id'),
-                fn ($query) => $query->where('compound_id', $request->string('compound_id')->toString()),
-            )
+            ->when($compoundId, fn ($query) => $query->where('compound_id', $compoundId))
             ->when(
                 $request->filled('is_active'),
                 fn ($query) => $query->where('is_active', filter_var($request->input('is_active'), FILTER_VALIDATE_BOOLEAN)),
@@ -43,9 +51,18 @@ class RecurringChargeController extends Controller
     {
         /** @var User $actor */
         $actor = $request->user();
+        $validated = $request->validated();
+        $requestedCompoundId = $validated['compound_id'] ?? null;
+
+        if (filled($actor->compound_id)) {
+            abort_if($requestedCompoundId !== $actor->compound_id, Response::HTTP_FORBIDDEN);
+            $validated['compound_id'] = $actor->compound_id;
+        } else {
+            abort_if(! filled($requestedCompoundId), Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
 
         $charge = $this->financeService->createRecurringCharge(
-            data: $request->validated(),
+            data: $validated,
             actor: $actor,
         );
 
@@ -54,8 +71,10 @@ class RecurringChargeController extends Controller
             ->setStatusCode(Response::HTTP_CREATED);
     }
 
-    public function show(RecurringCharge $recurringCharge): RecurringChargeResource
+    public function show(Request $request, RecurringCharge $recurringCharge): RecurringChargeResource
     {
+        $this->ensureFinanceCompoundAccess($request->user(), $recurringCharge->compound_id);
+
         return RecurringChargeResource::make($recurringCharge->load('chargeType'));
     }
 
@@ -63,6 +82,7 @@ class RecurringChargeController extends Controller
     {
         /** @var User $actor */
         $actor = $request->user();
+        $this->ensureFinanceCompoundAccess($actor, $recurringCharge->compound_id);
 
         $charge = $this->financeService->deactivateRecurringCharge(
             charge: $recurringCharge,
@@ -70,5 +90,14 @@ class RecurringChargeController extends Controller
         );
 
         return RecurringChargeResource::make($charge->load('chargeType'));
+    }
+
+    private function ensureFinanceCompoundAccess(User $actor, string $compoundId): void
+    {
+        if ($actor->role === UserRole::SuperAdmin || ! filled($actor->compound_id)) {
+            return;
+        }
+
+        abort_if($actor->compound_id !== $compoundId, Response::HTTP_FORBIDDEN);
     }
 }
