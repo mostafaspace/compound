@@ -37,9 +37,10 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
 
     Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:login')->name('auth.login');
     Route::get('/resident-invitations/{token}', [ResidentInvitationController::class, 'show'])
+        ->middleware('throttle:invitation-show')
         ->name('resident-invitations.show-public');
     Route::post('/resident-invitations/{token}/accept', [ResidentInvitationController::class, 'accept'])
-        ->middleware('throttle:login')
+        ->middleware('throttle:invitation-accept')
         ->name('resident-invitations.accept');
 
     Route::middleware('auth:sanctum')->group(function (): void {
@@ -70,7 +71,9 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             ->group(function (): void {
                 Route::get('/document-types', [DocumentTypeController::class, 'index'])->name('document-types.index');
                 Route::get('/documents', [UserDocumentController::class, 'index'])->name('documents.index');
-                Route::post('/documents', [UserDocumentController::class, 'store'])->name('documents.store');
+                Route::post('/documents', [UserDocumentController::class, 'store'])
+                    ->middleware('throttle:document-upload')
+                    ->name('documents.store');
                 Route::get('/documents/{userDocument}/download', [UserDocumentController::class, 'download'])
                     ->name('documents.download');
             });
@@ -111,6 +114,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::middleware('role:super_admin,compound_admin,security_guard,support_agent')
             ->group(function (): void {
                 Route::post('/visitor-requests/validate-pass', [VisitorRequestController::class, 'validatePass'])
+                    ->middleware('throttle:visitor-pass-scan')
                     ->name('visitor-requests.validate-pass');
                 Route::post('/visitor-requests/{visitorRequest}/arrive', [VisitorRequestController::class, 'arrive'])
                     ->name('visitor-requests.arrive');

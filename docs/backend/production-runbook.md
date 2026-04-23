@@ -74,6 +74,17 @@ docker compose -f infra/docker-compose.yml restart reverb
 docker compose -f infra/docker-compose.yml restart api
 ```
 
+## API Abuse Protection Defaults
+
+Current backend throttles that should remain enabled in production unless replaced by stricter edge controls:
+
+- `POST /api/v1/auth/login`: 5 requests per minute per email and IP
+- `POST /api/v1/resident-invitations/{token}/accept`: 10 requests per minute per invitation token and IP
+- `POST /api/v1/documents`: 10 uploads per minute per authenticated user and IP
+- `POST /api/v1/visitor-requests/validate-pass`: 60 pass scans per minute per authenticated user and IP
+
+If API traffic is routed through a reverse proxy or WAF, preserve client IP forwarding so the application throttle keys remain meaningful.
+
 ## Database Backup
 
 Create a database dump from Docker:
