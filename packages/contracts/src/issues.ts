@@ -31,6 +31,7 @@ export interface Issue {
   reporter?: AuthenticatedUser | null;
   assignee?: AuthenticatedUser | null;
   comments?: IssueComment[];
+  attachments?: IssueAttachment[];
 }
 
 export interface IssueComment {

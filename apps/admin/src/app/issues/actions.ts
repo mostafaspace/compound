@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { IssueStatus } from "@compound/contracts";
 
-import { createIssueComment, updateIssue } from "@/lib/api";
+import { createIssueComment, escalateIssue, updateIssue } from "@/lib/api";
 
 export async function updateIssueStatusAction(issueId: string, formData: FormData) {
   const status = formData.get("status") as string;
@@ -33,4 +33,13 @@ export async function postCommentAction(issueId: string, formData: FormData) {
 
   revalidatePath(`/issues/${issueId}`);
   redirect(`/issues/${issueId}?commented=1`);
+}
+
+export async function escalateIssueAction(issueId: string, formData: FormData) {
+  const reason = String(formData.get("reason") ?? "").trim();
+
+  await escalateIssue(issueId, reason);
+
+  revalidatePath(`/issues/${issueId}`);
+  redirect(`/issues/${issueId}?updated=1`);
 }

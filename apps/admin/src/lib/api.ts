@@ -28,6 +28,7 @@ import type {
   FloorSummary,
   InvitationStatus,
   Issue,
+  IssueAttachment,
   IssueCategory,
   IssueStatus,
   ResidentInvitation,
@@ -1457,6 +1458,37 @@ export async function createIssueComment(issueId: string, body: string, isIntern
 
   if (!response.ok) {
     throw new Error(`Failed to create comment: ${response.status}`);
+  }
+}
+
+export async function escalateIssue(issueId: string, reason: string): Promise<void> {
+  const response = await fetch(`${config.apiBaseUrl}/issues/${issueId}/escalate`, {
+    body: JSON.stringify({ reason }),
+    headers: {
+      ...(await apiHeaders(true)),
+      "Content-Type": "application/json",
+    },
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to escalate issue: ${response.status}`);
+  }
+}
+
+export async function getIssueAttachments(issueId: string): Promise<IssueAttachment[]> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/issues/${issueId}/attachments`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+
+    if (!response.ok) return [];
+
+    const payload = await response.json() as ApiEnvelope<IssueAttachment[]>;
+    return payload.data ?? [];
+  } catch {
+    return [];
   }
 }
 

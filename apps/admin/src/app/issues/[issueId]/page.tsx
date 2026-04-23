@@ -4,10 +4,10 @@ import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 
 import { LogoutButton } from "@/components/logout-button";
-import { getCurrentUser, getIssue } from "@/lib/api";
+import { getCurrentUser, getIssue, getIssueAttachments } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
 
-import { assignIssueAction, postCommentAction, updateIssueStatusAction } from "../actions";
+import { assignIssueAction, escalateIssueAction, postCommentAction, updateIssueStatusAction } from "../actions";
 
 interface IssueDetailPageProps {
   params: Promise<{ issueId: string }>;
@@ -15,6 +15,7 @@ interface IssueDetailPageProps {
     updated?: string;
     assigned?: string;
     commented?: string;
+    escalated?: string;
   }>;
 }
 
@@ -35,8 +36,9 @@ export default async function IssueDetailPage({ params, searchParams }: IssueDet
   const { issueId } = await params;
   const sp = searchParams ? await searchParams : {};
 
-  const [issue, t, locale] = await Promise.all([
+  const [issue, attachments, t, locale] = await Promise.all([
     getIssue(issueId),
+    getIssueAttachments(issueId),
     getTranslations("Issues"),
     getLocale(),
   ]);
@@ -79,6 +81,13 @@ export default async function IssueDetailPage({ params, searchParams }: IssueDet
   const nonInternalComments = issue.comments?.filter((c) => !c.isInternal) ?? [];
   const internalComments = issue.comments?.filter((c) => c.isInternal) ?? [];
   const isClosed = issue.status === "closed" || issue.status === "resolved";
+  const isEscalated = issue.status === "escalated";
+
+  function formatFileSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -291,6 +300,46 @@ export default async function IssueDetailPage({ params, searchParams }: IssueDet
                 </form>
               </div>
             ) : null}
+
+            {/* Escalate */}
+            {!isClosed && !isEscalated ? (
+              <div className="rounded-lg border border-line bg-panel p-5">
+                <h3 className="text-sm font-semibold">{t("escalate")}</h3>
+                <form action={escalateIssueAction.bind(null, issue.id)} className="mt-3 flex flex-col gap-3">
+                  <input
+                    className="h-10 w-full rounded-lg border border-line bg-background px-3 text-sm"
+                    name="reason"
+                    placeholder={t("escalateReason")}
+                    required
+                  />
+                  <button
+                    className="inline-flex h-10 items-center justify-center rounded-lg border border-danger px-4 text-sm font-semibold text-danger hover:bg-[#fff3f2]"
+                    type="submit"
+                  >
+                    {t("escalate")}
+                  </button>
+                </form>
+              </div>
+            ) : null}
+
+            {/* Attachments */}
+            <div className="rounded-lg border border-line bg-panel p-5">
+              <h3 className="text-sm font-semibold">{t("attachments")}</h3>
+              {attachments.length === 0 ? (
+                <p className="mt-3 text-sm text-muted">{t("noAttachments")}</p>
+              ) : (
+                <ul className="mt-3 divide-y divide-line">
+                  {attachments.map((att) => (
+                    <li key={att.id} className="flex items-center justify-between py-2">
+                      <div>
+                        <p className="text-sm font-medium">{att.originalName}</p>
+                        <p className="text-xs text-muted">{formatFileSize(att.size)} · {formatDate(att.createdAt, locale)}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
         </div>
       </section>
