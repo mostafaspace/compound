@@ -35,6 +35,12 @@ export default async function CompoundDetailPage({ params }: CompoundDetailPageP
           <div className="flex flex-wrap gap-3">
             <Link
               className="inline-flex h-11 items-center justify-center rounded-lg border border-line bg-panel px-4 text-sm font-semibold hover:border-brand"
+              href={`/compounds/${compound.id}/onboarding`}
+            >
+              {t("onboardingChecklist")}
+            </Link>
+            <Link
+              className="inline-flex h-11 items-center justify-center rounded-lg border border-line bg-panel px-4 text-sm font-semibold hover:border-brand"
               href={`/compounds/${compound.id}/edit`}
             >
               {t("editCompound")}

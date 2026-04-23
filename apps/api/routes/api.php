@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BuildingController;
 use App\Http\Controllers\Api\V1\CompoundController;
+use App\Http\Controllers\Api\V1\CompoundOnboardingController;
 use App\Http\Controllers\Api\V1\DocumentTypeController;
 use App\Http\Controllers\Api\V1\Finance\ChargeTypeController;
 use App\Http\Controllers\Api\V1\Finance\CollectionCampaignController;
@@ -147,6 +148,8 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             Route::apiResource('buildings.floors', FloorController::class)->shallow()->except(['destroy']);
             Route::apiResource('buildings.units', UnitController::class)->shallow()->except(['destroy']);
             Route::post('/compounds/{compound}/archive', [CompoundController::class, 'archive'])->name('compounds.archive');
+            Route::get('/compounds/{compound}/onboarding-checklist', CompoundOnboardingController::class)
+                ->name('compounds.onboarding-checklist');
             Route::post('/buildings/{building}/archive', [BuildingController::class, 'archive'])->name('buildings.archive');
             Route::post('/floors/{floor}/archive', [FloorController::class, 'archive'])->name('floors.archive');
             Route::post('/units/{unit}/archive', [UnitController::class, 'archive'])->name('units.archive');

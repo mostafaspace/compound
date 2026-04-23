@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\AccountStatus;
 use App\Enums\UserRole;
 use App\Models\Documents\UserDocument;
+use App\Models\Property\Compound;
 use App\Models\Property\Unit;
 use App\Models\Property\UnitMembership;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -12,13 +13,14 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['name', 'email', 'phone', 'role', 'status', 'password'])]
+#[Fillable(['name', 'email', 'phone', 'role', 'compound_id', 'status', 'password'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -39,6 +41,16 @@ class User extends Authenticatable
             'role' => UserRole::class,
             'status' => AccountStatus::class,
         ];
+    }
+
+    /**
+     * The compound this staff user is scoped to (null for super_admin).
+     *
+     * @return BelongsTo<Compound, $this>
+     */
+    public function compound(): BelongsTo
+    {
+        return $this->belongsTo(Compound::class);
     }
 
     /**

@@ -7,6 +7,7 @@ use App\Http\Requests\Issues\StoreIssueRequest;
 use App\Http\Requests\Issues\UpdateIssueRequest;
 use App\Http\Resources\Issues\IssueResource;
 use App\Models\Issues\Issue;
+use App\Services\CompoundContextService;
 use App\Services\IssueService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -14,12 +15,21 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class IssueController extends Controller
 {
-    public function __construct(private readonly IssueService $issueService) {}
+    public function __construct(
+        private readonly IssueService $issueService,
+        private readonly CompoundContextService $compoundContext,
+    ) {}
 
     public function index(Request $request): AnonymousResourceCollection|JsonResponse
     {
         $query = Issue::with(['reporter', 'assignee', 'unit', 'building'])
             ->latest();
+
+        // Compound isolation: scope to the resolved compound (null = super-admin sees all).
+        $compoundId = $this->compoundContext->resolve($request);
+        if ($compoundId !== null) {
+            $query->where('compound_id', $compoundId);
+        }
 
         if ($request->has('status') && $request->input('status') !== 'all') {
             $query->where('status', $request->input('status'));

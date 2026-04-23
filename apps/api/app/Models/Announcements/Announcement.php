@@ -6,6 +6,7 @@ use App\Enums\AnnouncementCategory;
 use App\Enums\AnnouncementPriority;
 use App\Enums\AnnouncementStatus;
 use App\Enums\AnnouncementTargetType;
+use App\Models\Property\Compound;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -19,6 +20,7 @@ class Announcement extends Model
     use HasUlids;
 
     protected $fillable = [
+        'compound_id',
         'created_by',
         'category',
         'priority',
@@ -59,6 +61,11 @@ class Announcement extends Model
             'target_type' => AnnouncementTargetType::class,
             'archived_at' => 'datetime',
         ];
+    }
+
+    public function compound(): BelongsTo
+    {
+        return $this->belongsTo(Compound::class);
     }
 
     public function author(): BelongsTo

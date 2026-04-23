@@ -208,7 +208,11 @@ class AnnouncementsTest extends TestCase
 
     public function test_role_targeting_and_admin_permissions(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
+        $compound = Compound::factory()->create();
+        $admin = User::factory()->create([
+            'role'        => UserRole::CompoundAdmin->value,
+            'compound_id' => $compound->id,
+        ]);
         $security = User::factory()->create(['role' => UserRole::SecurityGuard->value]);
         $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
 
@@ -338,8 +342,12 @@ class AnnouncementsTest extends TestCase
     public function test_archive_filters_by_author_building_and_dates(): void
     {
         [$admin, , , $building] = $this->buildingScenario();
-        $otherAdmin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
         $otherBuilding = Building::factory()->create();
+        // Scope otherAdmin to the compound that owns otherBuilding.
+        $otherAdmin = User::factory()->create([
+            'role'        => UserRole::CompoundAdmin->value,
+            'compound_id' => $otherBuilding->compound_id,
+        ]);
 
         Sanctum::actingAs($admin);
         $matchingId = $this->postJson('/api/v1/announcements', [
@@ -442,11 +450,16 @@ class AnnouncementsTest extends TestCase
 
     private function buildingScenario(): array
     {
-        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
+        $compound = Compound::factory()->create();
+
+        // Scope the admin to this compound so announcement store resolves compound context.
+        $admin = User::factory()->create([
+            'role'        => UserRole::CompoundAdmin->value,
+            'compound_id' => $compound->id,
+        ]);
         $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
         $otherResident = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
 
-        $compound = Compound::factory()->create();
         $building = Building::factory()->for($compound)->create();
         $otherBuilding = Building::factory()->for($compound)->create();
         $floor = Floor::factory()->for($building)->create();

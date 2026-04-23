@@ -177,6 +177,7 @@
     "createCompound": "Create compound",
     "newCompoundTitle": "New compound",
     "newCompoundDesc": "Create the operating boundary before importing buildings, floors, units, residents, finance balances, and staff.",
+    "onboardingChecklist": "Onboarding checklist",
     "editCompound": "Edit compound",
     "editCompoundDesc": "Keep legal identity, timezone, currency, and operating status accurate before downstream modules use this property.",
     "archiveCompound": "Archive compound",
@@ -967,5 +968,19 @@
       "push_enabled": "Enable push notifications",
       "digest_frequency": "Notification digest frequency"
     }
+  },
+  "CompoundContext": {
+    "viewing": "Viewing",
+    "allCompounds": "All compounds",
+    "switchLabel": "Switch compound"
+  },
+  "CompoundOnboarding": {
+    "title": "Onboarding Checklist",
+    "subtitle": "Track setup progress for {name}",
+    "progress": "{completed} of {total} steps completed",
+    "complete": "All steps complete — compound is fully configured",
+    "done": "Done",
+    "notFound": "Compound not found.",
+    "loadError": "Could not load checklist. Please try again."
   }
 }

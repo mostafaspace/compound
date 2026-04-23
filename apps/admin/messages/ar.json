@@ -177,6 +177,7 @@
     "createCompound": "إنشاء مجمع",
     "newCompoundTitle": "مجمع جديد",
     "newCompoundDesc": "أنشئ الحدود التشغيلية قبل استيراد المباني والطوابق والوحدات والسكان والأرصدة المالية والموظفين.",
+    "onboardingChecklist": "قائمة التهيئة",
     "editCompound": "تعديل المجمع",
     "editCompoundDesc": "حافظ على دقة الهوية القانونية والمنطقة الزمنية والعملة وحالة التشغيل قبل أن تستخدم الوحدات التابعة هذه الخاصية.",
     "archiveCompound": "أرشفة المجمع",
@@ -967,5 +968,19 @@
       "push_enabled": "تفعيل الإشعارات الفورية",
       "digest_frequency": "تردد ملخص الإشعارات"
     }
+  },
+  "CompoundContext": {
+    "viewing": "عرض",
+    "allCompounds": "جميع المجمعات",
+    "switchLabel": "تبديل المجمع"
+  },
+  "CompoundOnboarding": {
+    "title": "قائمة التهيئة",
+    "subtitle": "تتبع تقدم إعداد {name}",
+    "progress": "{completed} من {total} خطوات مكتملة",
+    "complete": "جميع الخطوات مكتملة — المجمع مُهيَّأ بالكامل",
+    "done": "مكتمل",
+    "notFound": "المجمع غير موجود.",
+    "loadError": "تعذّر تحميل القائمة. يرجى المحاولة مجدداً."
   }
 }

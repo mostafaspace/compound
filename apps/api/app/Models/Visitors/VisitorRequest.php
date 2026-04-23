@@ -5,6 +5,7 @@ namespace App\Models\Visitors;
 use App\Enums\VisitorRequestStatus;
 use App\Models\Property\Unit;
 use App\Models\User;
+use Database\Factories\Visitors\VisitorRequestFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -14,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class VisitorRequest extends Model
 {
+    /** @use HasFactory<VisitorRequestFactory> */
     use HasFactory, HasUlids;
 
     protected $fillable = [

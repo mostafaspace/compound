@@ -20,6 +20,7 @@ class StoreAnnouncementRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'compoundId' => ['nullable', 'string', 'exists:compounds,id'],
             'titleEn' => ['required', 'string', 'max:255'],
             'titleAr' => ['required', 'string', 'max:255'],
             'bodyEn' => ['required', 'string', 'max:10000'],
@@ -64,6 +65,7 @@ class StoreAnnouncementRequest extends FormRequest
     public function payload(): array
     {
         return [
+            'compound_id' => $this->input('compoundId'),
             'created_by' => $this->user()?->id,
             'title_en' => $this->string('titleEn')->toString(),
             'title_ar' => $this->string('titleAr')->toString(),

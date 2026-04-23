@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
+import { CompoundContextBanner } from "@/components/compound-context-banner";
 import { LogoutButton } from "@/components/logout-button";
 import { getCurrentUser, getSystemStatus } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
@@ -48,6 +49,8 @@ export default async function Home() {
   const apiOnline = status?.status === "ok";
   const role = user.role.replaceAll("_", " ");
 
+  const isSuperAdmin = user.role === "super_admin";
+
   return (
     <main className="min-h-screen bg-background text-foreground">
       <header className="border-b border-line bg-panel">
@@ -84,6 +87,8 @@ export default async function Home() {
           </div>
         </div>
       </header>
+
+      <CompoundContextBanner isSuperAdmin={isSuperAdmin} />
 
       <section className="mx-auto grid max-w-7xl gap-5 px-5 py-6 md:grid-cols-2 lg:grid-cols-4 lg:px-8">
         {workstreams.map((item) => (

@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 const authCookieName = "compound_admin_token";
+const compoundContextCookieName = "compound_ctx";
 
 export async function getAuthToken(): Promise<string | null> {
   const cookieStore = await cookies();
@@ -30,6 +31,30 @@ export async function clearAuthToken(): Promise<void> {
   const cookieStore = await cookies();
 
   cookieStore.delete(authCookieName);
+}
+
+// ─── Compound context (super-admin only) ─────────────────────────────────────
+
+export async function getCompoundContext(): Promise<string | null> {
+  const cookieStore = await cookies();
+  return cookieStore.get(compoundContextCookieName)?.value ?? null;
+}
+
+export async function setCompoundContext(compoundId: string | null): Promise<void> {
+  const cookieStore = await cookies();
+  if (compoundId) {
+    cookieStore.set({
+      httpOnly: false, // readable by client for display
+      maxAge: 60 * 60 * 24,
+      name: compoundContextCookieName,
+      path: "/",
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      value: compoundId,
+    });
+  } else {
+    cookieStore.delete(compoundContextCookieName);
+  }
 }
 
 export function canAccessAdmin(user: AuthenticatedUser, allowedRoles: UserRole[]): boolean {

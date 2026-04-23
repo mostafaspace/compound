@@ -9,19 +9,33 @@ use App\Http\Resources\Finance\UnitAccountResource;
 use App\Models\Finance\LedgerEntry;
 use App\Models\Finance\PaymentSubmission;
 use App\Models\Finance\UnitAccount;
+use App\Services\CompoundContextService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class FinanceReportController extends Controller
 {
+    public function __construct(private readonly CompoundContextService $compoundContext) {}
+
     /**
      * Collections summary: totals, rates, and pending payment counts.
+     * Scoped to the resolved compound (or all compounds for super-admin without header).
      */
-    public function summary(): JsonResponse
+    public function summary(Request $request): JsonResponse
     {
+        $compoundId = $this->compoundContext->resolve($request);
+
+        $accountScope = UnitAccount::query()
+            ->when($compoundId, fn ($q) => $q->whereHas(
+                'unit', fn ($uq) => $uq->where('compound_id', $compoundId)
+            ));
+
+        $accountIds = $accountScope->pluck('id');
+
         // Total billed = sum of all debit ledger entries (charges, penalties, positive opening balances)
         $totalBilled = (float) LedgerEntry::query()
+            ->whereIn('unit_account_id', $accountIds)
             ->whereIn('type', [
                 LedgerEntryType::Charge->value,
                 LedgerEntryType::Penalty->value,
@@ -32,22 +46,24 @@ class FinanceReportController extends Controller
 
         // Total collected = absolute sum of payment ledger entries (stored as negatives)
         $totalCollected = abs((float) LedgerEntry::query()
+            ->whereIn('unit_account_id', $accountIds)
             ->where('type', LedgerEntryType::Payment->value)
             ->sum('amount'));
 
-        $totalOutstanding = (float) UnitAccount::query()->where('balance', '>', 0)->sum('balance');
-        $totalCreditRaw = (float) UnitAccount::query()->where('balance', '<', 0)->sum('balance');
+        $totalOutstanding = (float) $accountScope->clone()->where('balance', '>', 0)->sum('balance');
+        $totalCreditRaw   = (float) $accountScope->clone()->where('balance', '<', 0)->sum('balance');
 
-        $unpaidCount = UnitAccount::query()->where('balance', '>', 0)->count();
-        $creditCount = UnitAccount::query()->where('balance', '<', 0)->count();
-        $zeroCount = UnitAccount::query()->where('balance', '=', 0)->count();
-        $totalCount = UnitAccount::query()->count();
+        $unpaidCount = $accountScope->clone()->where('balance', '>', 0)->count();
+        $creditCount = $accountScope->clone()->where('balance', '<', 0)->count();
+        $zeroCount   = $accountScope->clone()->where('balance', '=', 0)->count();
+        $totalCount  = $accountScope->count();
 
         $collectionRate = $totalBilled > 0
             ? round($totalCollected / $totalBilled * 100, 1)
             : 0.0;
 
         $pendingRow = PaymentSubmission::query()
+            ->whereIn('unit_account_id', $accountIds)
             ->whereIn('status', [PaymentStatus::Submitted->value, PaymentStatus::UnderReview->value])
             ->selectRaw('COUNT(*) as cnt, COALESCE(SUM(amount), 0) as total')
             ->first();
@@ -80,10 +96,14 @@ class FinanceReportController extends Controller
             'currency'      => ['nullable', 'string', 'max:3'],
         ]);
 
-        $status = $validated['balanceStatus'] ?? 'all';
+        $status     = $validated['balanceStatus'] ?? 'all';
+        $compoundId = $this->compoundContext->resolve($request);
 
         $accounts = UnitAccount::query()
             ->with(['unit.building', 'unit.compound'])
+            ->when($compoundId, fn ($q) => $q->whereHas(
+                'unit', fn ($uq) => $uq->where('compound_id', $compoundId)
+            ))
             ->when($status === 'positive', fn ($q) => $q->where('balance', '>', 0))
             ->when($status === 'zero',     fn ($q) => $q->where('balance', '=', 0))
             ->when($status === 'credit',   fn ($q) => $q->where('balance', '<', 0))
@@ -104,9 +124,18 @@ class FinanceReportController extends Controller
     /**
      * Approved payments grouped by payment method.
      */
-    public function paymentMethodBreakdown(): JsonResponse
+    public function paymentMethodBreakdown(Request $request): JsonResponse
     {
+        $compoundId = $this->compoundContext->resolve($request);
+
+        $accountIds = UnitAccount::query()
+            ->when($compoundId, fn ($q) => $q->whereHas(
+                'unit', fn ($uq) => $uq->where('compound_id', $compoundId)
+            ))
+            ->pluck('id');
+
         $rows = PaymentSubmission::query()
+            ->whereIn('unit_account_id', $accountIds)
             ->where('status', PaymentStatus::Approved->value)
             ->selectRaw('method, COUNT(*) as count, COALESCE(SUM(amount), 0) as total')
             ->groupBy('method')

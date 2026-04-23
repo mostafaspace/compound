@@ -15,6 +15,7 @@ use App\Models\ResidentInvitation;
 use App\Models\User;
 use App\Models\VerificationRequest;
 use App\Notifications\ResidentInvitationNotification;
+use App\Services\CompoundContextService;
 use App\Support\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -26,13 +27,17 @@ use Symfony\Component\HttpFoundation\Response;
 
 class ResidentInvitationController extends Controller
 {
-    public function __construct(private readonly AuditLogger $auditLogger) {}
+    public function __construct(
+        private readonly AuditLogger $auditLogger,
+        private readonly CompoundContextService $compoundContext,
+    ) {}
 
     public function index(): AnonymousResourceCollection
     {
         $request = request();
         $status = $request->string('status')->toString();
         $search = $request->string('q')->toString();
+        $compoundId = $this->compoundContext->resolve($request);
 
         $invitations = ResidentInvitation::query()
             ->with(['user', 'unit'])
@@ -46,6 +51,10 @@ class ResidentInvitationController extends Controller
                         ->where('name', 'like', "%{$search}%")
                         ->orWhere('email', 'like', "%{$search}%"));
             }))
+            // Compound isolation: only show invitations for this compound's units.
+            ->when($compoundId !== null, fn ($query) => $query->whereHas(
+                'unit', fn ($uq) => $uq->where('compound_id', $compoundId)
+            ))
             ->latest()
             ->paginate();
 

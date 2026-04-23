@@ -13,6 +13,7 @@ use App\Http\Resources\Finance\UnitAccountResource;
 use App\Models\Finance\UnitAccount;
 use App\Models\Property\Unit;
 use App\Models\User;
+use App\Services\CompoundContextService;
 use App\Services\FinanceService;
 use App\Support\AuditLogger;
 use Illuminate\Http\JsonResponse;
@@ -23,14 +24,20 @@ use Symfony\Component\HttpFoundation\Response;
 class UnitAccountController extends Controller
 {
     public function __construct(
+        private readonly CompoundContextService $compoundContext,
         private readonly FinanceService $financeService,
         private readonly AuditLogger $auditLogger,
     ) {}
 
     public function index(Request $request): AnonymousResourceCollection
     {
+        $compoundId = $this->compoundContext->resolve($request);
+
         $accounts = UnitAccount::query()
             ->with(['unit.building', 'unit.compound'])
+            ->when($compoundId, fn ($q) => $q->whereHas(
+                'unit', fn ($uq) => $uq->where('compound_id', $compoundId)
+            ))
             ->when($request->filled('unitId'), fn ($query) => $query->where('unit_id', $request->string('unitId')->toString()))
             ->latest()
             ->paginate();

@@ -4,6 +4,17 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { archiveCompound, createBuilding, createCompound, updateCompound } from "@/lib/api";
+import { setCompoundContext } from "@/lib/session";
+
+/**
+ * Set the active compound context cookie and revalidate all pages so they
+ * re-fetch data scoped to the new compound. Passing null clears the context
+ * (super-admin goes back to "all compounds" view).
+ */
+export async function switchCompoundAction(compoundId: string | null): Promise<void> {
+  await setCompoundContext(compoundId);
+  revalidatePath("/", "layout");
+}
 
 export async function createCompoundAction(formData: FormData) {
   await createCompound({

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { getCompoundContext } from "@/lib/session";
 import type {
   ApiEnvelope,
   Announcement,
@@ -88,6 +89,12 @@ async function apiHeaders(authenticated = false): Promise<Record<string, string>
 
     if (token) {
       headers.Authorization = `Bearer ${token}`;
+    }
+
+    // Pass the active compound context so the API scopes responses correctly.
+    const compoundId = await getCompoundContext();
+    if (compoundId) {
+      headers["X-Compound-Id"] = compoundId;
     }
   }
 
@@ -700,6 +707,42 @@ export async function getCompound(compoundId: string): Promise<CompoundDetail | 
     }
 
     const payload = (await response.json()) as ApiEnvelope<CompoundDetail>;
+
+    return payload.data;
+  } catch {
+    return null;
+  }
+}
+
+// ─── Compound onboarding checklist ───────────────────────────────────────────
+
+export interface OnboardingChecklistStep {
+  key: string;
+  label: string;
+  completed: boolean;
+}
+
+export interface OnboardingChecklist {
+  compoundId: string;
+  compoundName: string;
+  completedSteps: number;
+  totalSteps: number;
+  percentComplete: number;
+  steps: OnboardingChecklistStep[];
+}
+
+export async function getCompoundOnboardingChecklist(compoundId: string): Promise<OnboardingChecklist | null> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/compounds/${compoundId}/onboarding-checklist`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const payload = (await response.json()) as { data: OnboardingChecklist };
 
     return payload.data;
   } catch {

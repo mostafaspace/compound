@@ -15,6 +15,7 @@ use App\Http\Resources\Visitors\VisitorRequestResource;
 use App\Models\Property\UnitMembership;
 use App\Models\User;
 use App\Models\Visitors\VisitorRequest;
+use App\Services\CompoundContextService;
 use App\Services\NotificationService;
 use App\Services\VisitorPassService;
 use App\Support\AuditLogger;
@@ -28,6 +29,7 @@ class VisitorRequestController extends Controller
 {
     public function __construct(
         private readonly AuditLogger $auditLogger,
+        private readonly CompoundContextService $compoundContext,
         private readonly NotificationService $notificationService,
         private readonly VisitorPassService $visitorPassService,
     ) {}
@@ -37,11 +39,16 @@ class VisitorRequestController extends Controller
         /** @var User $user */
         $user = $request->user();
         $status = $request->string('status')->toString();
+        $compoundId = $this->compoundContext->resolve($request);
 
         $visitorRequests = VisitorRequest::query()
             ->with(['host', 'unit.building.compound', 'pass'])
             ->when(! $this->isStaff($user), fn ($query) => $query->where('host_user_id', $user->id))
             ->when($status !== '' && $status !== 'all', fn ($query) => $query->where('status', $status))
+            // Compound isolation: staff only see requests for their compound.
+            ->when($compoundId !== null, fn ($query) => $query->whereHas(
+                'unit.building', fn ($bq) => $bq->where('compound_id', $compoundId)
+            ))
             ->latest('visit_starts_at')
             ->paginate();
 

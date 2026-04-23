@@ -12,6 +12,7 @@ use App\Http\Resources\AnnouncementResource;
 use App\Models\Announcements\Announcement;
 use App\Models\Announcements\AnnouncementAttachment;
 use App\Services\AnnouncementService;
+use App\Services\CompoundContextService;
 use App\Support\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -23,6 +24,7 @@ class AnnouncementController extends Controller
     public function __construct(
         private AnnouncementService $announcementService,
         private AuditLogger $auditLogger,
+        private CompoundContextService $compoundContext,
     ) {
     }
 
@@ -31,6 +33,12 @@ class AnnouncementController extends Controller
         $this->announcementService->expireDueAnnouncements();
 
         $query = Announcement::query()->with('author')->latest();
+
+        // Compound isolation: scope to the resolved compound (null = super-admin sees all).
+        $compoundId = $this->compoundContext->resolve($request);
+        if ($compoundId !== null) {
+            $query->where('compound_id', $compoundId);
+        }
 
         if ($request->filled('status') && $request->input('status') !== 'all') {
             if ($request->input('status') === AnnouncementStatus::Expired->value) {
@@ -125,7 +133,15 @@ class AnnouncementController extends Controller
 
     public function store(StoreAnnouncementRequest $request): AnnouncementResource
     {
-        $announcement = Announcement::query()->create($request->payload());
+        // Resolve compound: prefer explicit body param, fall back to user/header context.
+        $payload = $request->payload();
+        if (empty($payload['compound_id'])) {
+            $compoundId = $this->compoundContext->resolve($request);
+            abort_unless(filled($compoundId), 422, 'A compoundId is required to create an announcement.');
+            $payload['compound_id'] = $compoundId;
+        }
+
+        $announcement = Announcement::query()->create($payload);
 
         $this->auditLogger->record(
             action: 'announcements.created',
