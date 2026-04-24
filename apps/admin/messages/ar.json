@@ -376,6 +376,7 @@
     "title": "المالية",
     "subtitle": "راجع أرصدة الوحدات وسجل الرسوم واعتمد مدفوعات السكان.",
     "advanced": "المالية المتقدمة",
+    "onlinePayments": "المدفوعات الإلكترونية",
     "messages": {
       "accountCreated": "تم إنشاء حساب الوحدة.",
       "ledgerCreated": "تم تسجيل قيد الدفتر.",
@@ -1072,6 +1073,29 @@
     "viewing": "عرض",
     "allCompounds": "جميع المجمعات",
     "switchLabel": "تبديل المجمع"
+  },
+  "OnlinePayments": {
+    "title": "المدفوعات الإلكترونية",
+    "subtitle": "مراقبة جلسات الدفع والمعاملات وإصدار المبالغ المستردة",
+    "sessions": {
+      "title": "جلسات الدفع",
+      "empty": "لا توجد جلسات دفع بعد."
+    },
+    "transactions": {
+      "title": "معاملات البوابة",
+      "empty": "لا توجد معاملات بعد.",
+      "refund": "استرداد"
+    },
+    "fields": {
+      "unit": "الوحدة",
+      "provider": "المزود",
+      "amount": "المبلغ",
+      "status": "الحالة",
+      "created": "تاريخ الإنشاء",
+      "transactionId": "معرف المعاملة",
+      "eventType": "نوع الحدث",
+      "actions": "إجراءات"
+    }
   },
   "AdvancedFinance": {
     "title": "المالية المتقدمة",

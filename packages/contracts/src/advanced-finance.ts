@@ -161,3 +161,39 @@ export interface CreateExpenseInput {
   currency?: string;
   expense_date: string;
 }
+
+// ── Online Payments ───────────────────────────────────────────────────────────
+
+export const paymentSessionStatusValues = ["pending", "confirmed", "failed", "expired", "refunded"] as const;
+export type PaymentSessionStatus = (typeof paymentSessionStatusValues)[number];
+
+export const gatewayTransactionStatusValues = ["confirmed", "failed", "refunded", "disputed"] as const;
+export type GatewayTransactionStatus = (typeof gatewayTransactionStatusValues)[number];
+
+export interface PaymentSession {
+  id: string;
+  unitAccount?: { id: string; unit?: { id: string; unit_number: string } } | null;
+  provider: string;
+  providerSessionId: string | null;
+  amount: string;
+  currency: string;
+  status: PaymentSessionStatus;
+  statusLabel: string;
+  redirectUrl: string | null;
+  expiresAt: string | null;
+  createdAt: string;
+}
+
+export interface GatewayTransaction {
+  id: string;
+  provider: string;
+  providerTransactionId: string;
+  eventType: string;
+  status: GatewayTransactionStatus;
+  statusLabel: string;
+  amount: string;
+  currency: string;
+  processed: boolean;
+  paymentSubmissionId: string | null;
+  createdAt: string;
+}

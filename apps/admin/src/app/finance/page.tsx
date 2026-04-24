@@ -108,6 +108,12 @@ export default async function FinancePage({ searchParams }: FinancePageProps) {
           <div className="flex flex-wrap items-center gap-3">
             <Link
               className="inline-flex h-10 items-center rounded-lg border border-line px-4 text-sm font-semibold hover:border-brand"
+              href="/finance/payments/online"
+            >
+              {t("onlinePayments")}
+            </Link>
+            <Link
+              className="inline-flex h-10 items-center rounded-lg border border-line px-4 text-sm font-semibold hover:border-brand"
               href="/finance/advanced"
             >
               {t("advanced")}

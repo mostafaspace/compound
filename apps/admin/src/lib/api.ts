@@ -11,6 +11,8 @@ import type {
   Vendor,
   Budget,
   Expense,
+  PaymentSession,
+  GatewayTransaction,
   AnnouncementAcknowledgement,
   AnnouncementAcknowledgementSummary,
   AnnouncementFilters,
@@ -2345,5 +2347,37 @@ export async function getExpense(id: string): Promise<Expense | null> {
     return payload.data;
   } catch {
     return null;
+  }
+}
+
+// ── Online Payments ───────────────────────────────────────────────────────────
+
+export async function getPaymentSessions(status?: string): Promise<PaymentSession[]> {
+  try {
+    const params = new URLSearchParams({ per_page: "50" });
+    if (status) params.set("status", status);
+    const response = await fetch(`${config.apiBaseUrl}/finance/payment-sessions?${params}`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+    if (!response.ok) return [];
+    const payload = (await response.json()) as PaginatedEnvelope<PaymentSession>;
+    return payload.data ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export async function getGatewayTransactions(): Promise<GatewayTransaction[]> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/finance/gateway-transactions?per_page=50`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+    if (!response.ok) return [];
+    const payload = (await response.json()) as PaginatedEnvelope<GatewayTransaction>;
+    return payload.data ?? [];
+  } catch {
+    return [];
   }
 }

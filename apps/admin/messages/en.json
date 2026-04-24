@@ -376,6 +376,7 @@
     "title": "Finance",
     "subtitle": "Review unit balances, post charges, and approve resident payment submissions.",
     "advanced": "Advanced Finance",
+    "onlinePayments": "Online Payments",
     "messages": {
       "accountCreated": "Unit account created.",
       "ledgerCreated": "Ledger entry posted.",
@@ -1072,6 +1073,29 @@
     "viewing": "Viewing",
     "allCompounds": "All compounds",
     "switchLabel": "Switch compound"
+  },
+  "OnlinePayments": {
+    "title": "Online Payments",
+    "subtitle": "Monitor payment sessions, gateway transactions, and issue refunds",
+    "sessions": {
+      "title": "Payment Sessions",
+      "empty": "No payment sessions yet."
+    },
+    "transactions": {
+      "title": "Gateway Transactions",
+      "empty": "No gateway transactions yet.",
+      "refund": "Refund"
+    },
+    "fields": {
+      "unit": "Unit",
+      "provider": "Provider",
+      "amount": "Amount",
+      "status": "Status",
+      "created": "Created",
+      "transactionId": "Transaction ID",
+      "eventType": "Event",
+      "actions": "Actions"
+    }
   },
   "AdvancedFinance": {
     "title": "Advanced Finance",

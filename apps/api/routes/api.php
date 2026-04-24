@@ -13,7 +13,9 @@ use App\Http\Controllers\Api\V1\Finance\ChargeTypeController;
 use App\Http\Controllers\Api\V1\Finance\CollectionCampaignController;
 use App\Http\Controllers\Api\V1\Finance\ExpenseController;
 use App\Http\Controllers\Api\V1\Finance\FinanceReportController;
+use App\Http\Controllers\Api\V1\Finance\PaymentSessionController;
 use App\Http\Controllers\Api\V1\Finance\PaymentSubmissionController;
+use App\Http\Controllers\Api\V1\Finance\PaymentWebhookController;
 use App\Http\Controllers\Api\V1\Finance\RecurringChargeController;
 use App\Http\Controllers\Api\V1\Finance\ReserveFundController;
 use App\Http\Controllers\Api\V1\Finance\UnitAccountController;
@@ -312,6 +314,26 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         ->post('/finance/unit-accounts/{unitAccount}/payment-submissions', [UnitAccountController::class, 'submitPayment'])
         ->middleware('throttle:payment-submit')
         ->name('finance.unit-accounts.payment-submissions.store');
+
+    // Online payments — admin views
+    Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,board_member,finance_reviewer'])
+        ->prefix('finance')
+        ->name('finance.')
+        ->group(function (): void {
+            Route::get('/payment-sessions', [PaymentSessionController::class, 'index'])->name('payment-sessions.index');
+            Route::get('/gateway-transactions', [PaymentSessionController::class, 'transactions'])->name('gateway-transactions.index');
+            Route::post('/gateway-transactions/{gatewayTransaction}/refund', [PaymentSessionController::class, 'refund'])->name('gateway-transactions.refund');
+        });
+
+    // Online payments — resident: initiate a session
+    Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,board_member,finance_reviewer,support_agent,resident_owner,resident_tenant'])
+        ->post('/finance/payment-sessions', [PaymentSessionController::class, 'store'])
+        ->middleware('throttle:payment-submit')
+        ->name('finance.payment-sessions.store');
+
+    // Webhooks — no auth, provider signs requests
+    Route::post('/webhooks/payments/{provider}', [PaymentWebhookController::class, 'handle'])
+        ->name('webhooks.payments');
 
     // Governance — admin management routes
     Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,board_member'])
