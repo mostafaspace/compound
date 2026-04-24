@@ -13,6 +13,7 @@ use App\Models\Property\UnitMembership;
 use App\Models\User;
 use App\Models\VerificationRequest;
 use App\Notifications\VerificationDecisionNotification;
+use App\Services\CompoundContextService;
 use App\Services\NotificationService;
 use App\Support\AuditLogger;
 use Illuminate\Http\Request;
@@ -24,6 +25,7 @@ class VerificationRequestController extends Controller
 {
     public function __construct(
         private readonly AuditLogger $auditLogger,
+        private readonly CompoundContextService $compoundContext,
         private readonly NotificationService $notificationService,
     ) {}
 
@@ -34,6 +36,7 @@ class VerificationRequestController extends Controller
 
         $verificationRequests = VerificationRequest::query()
             ->with(['residentInvitation', 'reviewer', 'unit', 'user'])
+            ->when($this->compoundContext->resolve($request) !== null, fn ($query) => $this->scopeVerificationRequests($query, $request))
             ->when($status !== '' && $status !== 'all', fn ($query) => $query->where('status', $status))
             ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search): void {
                 $query->where('requested_role', 'like', "%{$search}%")
@@ -69,6 +72,7 @@ class VerificationRequestController extends Controller
     public function approve(VerificationDecisionRequest $request, VerificationRequest $verificationRequest): VerificationRequestResource
     {
         $this->abortIfClosed($verificationRequest);
+        $this->ensureCanManageVerificationRequest($request, $verificationRequest);
 
         /** @var User $actor */
         $actor = $request->user();
@@ -103,6 +107,7 @@ class VerificationRequestController extends Controller
     public function reject(VerificationDecisionRequest $request, VerificationRequest $verificationRequest): VerificationRequestResource
     {
         $this->abortIfClosed($verificationRequest);
+        $this->ensureCanManageVerificationRequest($request, $verificationRequest);
 
         /** @var User $actor */
         $actor = $request->user();
@@ -137,6 +142,7 @@ class VerificationRequestController extends Controller
     public function requestMoreInfo(VerificationDecisionRequest $request, VerificationRequest $verificationRequest): VerificationRequestResource
     {
         $this->abortIfClosed($verificationRequest);
+        $this->ensureCanManageVerificationRequest($request, $verificationRequest);
 
         /** @var User $actor */
         $actor = $request->user();
@@ -178,6 +184,54 @@ class VerificationRequestController extends Controller
             Response::HTTP_UNPROCESSABLE_ENTITY,
             'Verification request is already closed.',
         );
+    }
+
+    private function scopeVerificationRequests(mixed $query, Request $request): mixed
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        if (! filled($user->compound_id)) {
+            return $query;
+        }
+
+        return $query->where(function ($scoped) use ($user): void {
+            $scoped
+                ->whereHas('unit', fn ($unitQuery) => $unitQuery->where('compound_id', $user->compound_id))
+                ->orWhereHas('residentInvitation.unit', fn ($unitQuery) => $unitQuery->where('compound_id', $user->compound_id))
+                ->orWhereHas('user.unitMemberships.unit', fn ($unitQuery) => $unitQuery->where('compound_id', $user->compound_id));
+        });
+    }
+
+    private function ensureCanManageVerificationRequest(Request $request, VerificationRequest $verificationRequest): void
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        if (! filled($user->compound_id)) {
+            return;
+        }
+
+        abort_unless(
+            $this->verificationRequestBelongsToCompound($verificationRequest, $user->compound_id),
+            Response::HTTP_FORBIDDEN,
+        );
+    }
+
+    private function verificationRequestBelongsToCompound(VerificationRequest $verificationRequest, string $compoundId): bool
+    {
+        $verificationRequest->loadMissing(['residentInvitation.unit', 'unit', 'user.unitMemberships.unit']);
+
+        if ($verificationRequest->unit?->compound_id === $compoundId) {
+            return true;
+        }
+
+        if ($verificationRequest->residentInvitation?->unit?->compound_id === $compoundId) {
+            return true;
+        }
+
+        return $verificationRequest->user?->unitMemberships
+            ->contains(fn ($membership): bool => $membership->unit?->compound_id === $compoundId) ?? false;
     }
 
     private function updateMembershipVerification(VerificationRequest $verificationRequest, VerificationStatus $status): void

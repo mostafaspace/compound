@@ -9,6 +9,7 @@ use App\Enums\VerificationStatus;
 use App\Enums\VisitorPassStatus;
 use App\Enums\VisitorRequestStatus;
 use App\Enums\VisitorScanResult;
+use App\Models\Notification;
 use App\Models\Property\Building;
 use App\Models\Property\Compound;
 use App\Models\Property\Unit;
@@ -71,6 +72,50 @@ class VisitorRequestsTest extends TestCase
             'category' => 'visitors',
             'title' => 'Visitor pass issued',
         ]);
+    }
+
+    public function test_visitor_request_notifications_are_limited_to_request_compound_security(): void
+    {
+        $compoundA = Compound::factory()->create();
+        $compoundB = Compound::factory()->create();
+        User::factory()->create([
+            'role' => UserRole::SecurityGuard->value,
+            'compound_id' => $compoundA->id,
+            'status' => AccountStatus::Active->value,
+        ]);
+        $securityB = User::factory()->create([
+            'role' => UserRole::SecurityGuard->value,
+            'compound_id' => $compoundB->id,
+            'status' => AccountStatus::Active->value,
+        ]);
+        $resident = User::factory()->create([
+            'role' => UserRole::ResidentOwner->value,
+            'status' => AccountStatus::Active->value,
+        ]);
+        $buildingB = Building::factory()->for($compoundB)->create();
+        $unitB = Unit::factory()->for($compoundB)->for($buildingB)->create(['floor_id' => null]);
+        $unitB->memberships()->create([
+            'user_id' => $resident->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'starts_at' => now()->toDateString(),
+            'verification_status' => VerificationStatus::Verified->value,
+        ]);
+
+        Sanctum::actingAs($resident);
+
+        $this->postJson('/api/v1/visitor-requests', [
+            'unitId' => $unitB->id,
+            'visitorName' => 'Scoped Guest',
+            'visitStartsAt' => now()->addMinutes(10)->toIso8601String(),
+            'visitEndsAt' => now()->addHours(2)->toIso8601String(),
+        ])->assertCreated();
+
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $securityB->id,
+            'category' => 'visitors',
+            'title' => 'Visitor pass issued',
+        ]);
+        $this->assertSame(1, Notification::query()->where('category', 'visitors')->where('title', 'Visitor pass issued')->count());
     }
 
     public function test_resident_cannot_create_visitor_request_for_unverified_unit(): void
@@ -153,6 +198,44 @@ class VisitorRequestsTest extends TestCase
             'user_id' => $resident->id,
             'category' => 'visitors',
             'title' => 'Visitor allowed',
+        ]);
+    }
+
+    public function test_scoped_security_cannot_scan_or_process_other_compound_visitor_request(): void
+    {
+        $compoundA = Compound::factory()->create();
+        $compoundB = Compound::factory()->create();
+        $securityA = User::factory()->create([
+            'role' => UserRole::SecurityGuard->value,
+            'compound_id' => $compoundA->id,
+            'status' => AccountStatus::Active->value,
+        ]);
+        $resident = User::factory()->create([
+            'role' => UserRole::ResidentOwner->value,
+            'status' => AccountStatus::Active->value,
+        ]);
+        $buildingB = Building::factory()->for($compoundB)->create();
+        $unitB = Unit::factory()->for($compoundB)->for($buildingB)->create(['floor_id' => null]);
+        $unitB->memberships()->create([
+            'user_id' => $resident->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'starts_at' => now()->toDateString(),
+            'verification_status' => VerificationStatus::Verified->value,
+        ]);
+        $token = $this->createVisitorPassFor($resident, $unitB);
+        $visitorRequest = VisitorRequest::query()->firstOrFail();
+
+        Sanctum::actingAs($securityA);
+
+        $this->postJson('/api/v1/visitor-requests/validate-pass', ['token' => $token])->assertForbidden();
+        $this->postJson("/api/v1/visitor-requests/{$visitorRequest->id}/arrive")->assertForbidden();
+        $this->postJson("/api/v1/visitor-requests/{$visitorRequest->id}/deny", [
+            'reason' => 'Should not be allowed cross-compound.',
+        ])->assertForbidden();
+
+        $this->assertDatabaseHas('visitor_requests', [
+            'id' => $visitorRequest->id,
+            'status' => VisitorRequestStatus::QrIssued->value,
         ]);
     }
 

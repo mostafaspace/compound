@@ -283,6 +283,71 @@ class OnboardingAndDocumentsTest extends TestCase
         ]);
     }
 
+    public function test_scoped_admin_cannot_list_review_or_download_other_compound_documents(): void
+    {
+        Storage::fake('local');
+        config(['filesystems.default' => 'local']);
+
+        $compoundA = Compound::factory()->create();
+        $compoundB = Compound::factory()->create();
+        $buildingA = Building::factory()->for($compoundA)->create();
+        $buildingB = Building::factory()->for($compoundB)->create();
+        $unitA = Unit::factory()->for($compoundA)->for($buildingA)->create(['floor_id' => null]);
+        $unitB = Unit::factory()->for($compoundB)->for($buildingB)->create(['floor_id' => null]);
+        $adminA = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compoundA->id,
+        ]);
+        $residentA = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+        $residentB = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+        $documentType = DocumentType::query()->create([
+            'key' => 'national_id',
+            'name' => 'National ID',
+            'is_required_default' => true,
+            'allowed_mime_types' => ['application/pdf'],
+            'max_file_size_kb' => 10240,
+            'is_active' => true,
+        ]);
+
+        $documentA = UserDocument::query()->create([
+            'document_type_id' => $documentType->id,
+            'user_id' => $residentA->id,
+            'unit_id' => $unitA->id,
+            'status' => DocumentStatus::Submitted->value,
+            'storage_disk' => 'local',
+            'storage_path' => 'verification-documents/a.pdf',
+            'original_name' => 'a.pdf',
+            'mime_type' => 'application/pdf',
+            'size_bytes' => 100,
+            'checksum_sha256' => str_repeat('a', 64),
+        ]);
+        $documentB = UserDocument::query()->create([
+            'document_type_id' => $documentType->id,
+            'user_id' => $residentB->id,
+            'unit_id' => $unitB->id,
+            'status' => DocumentStatus::Submitted->value,
+            'storage_disk' => 'local',
+            'storage_path' => 'verification-documents/b.pdf',
+            'original_name' => 'b.pdf',
+            'mime_type' => 'application/pdf',
+            'size_bytes' => 100,
+            'checksum_sha256' => str_repeat('b', 64),
+        ]);
+
+        Sanctum::actingAs($adminA);
+
+        $this->getJson('/api/v1/documents')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $documentA->id);
+
+        $this->patchJson("/api/v1/documents/{$documentB->id}/review", [
+            'status' => DocumentStatus::Approved->value,
+        ])->assertForbidden();
+
+        $this->getJson("/api/v1/documents/{$documentB->id}/download")->assertForbidden();
+    }
+
     public function test_admin_can_approve_accepted_resident_verification_request(): void
     {
         Notification::fake();
@@ -352,6 +417,64 @@ class OnboardingAndDocumentsTest extends TestCase
                     && str_contains($rendered, 'ملاحظة المراجع');
             },
         );
+    }
+
+    public function test_scoped_admin_cannot_list_or_decide_other_compound_verification_requests(): void
+    {
+        Notification::fake();
+
+        $compoundA = Compound::factory()->create();
+        $compoundB = Compound::factory()->create();
+        $buildingA = Building::factory()->for($compoundA)->create();
+        $buildingB = Building::factory()->for($compoundB)->create();
+        $unitA = Unit::factory()->for($compoundA)->for($buildingA)->create(['floor_id' => null]);
+        $unitB = Unit::factory()->for($compoundB)->for($buildingB)->create(['floor_id' => null]);
+        $adminA = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compoundA->id,
+        ]);
+        $residentA = User::factory()->create([
+            'role' => UserRole::ResidentOwner->value,
+            'status' => AccountStatus::PendingReview->value,
+        ]);
+        $residentB = User::factory()->create([
+            'role' => UserRole::ResidentOwner->value,
+            'status' => AccountStatus::PendingReview->value,
+        ]);
+
+        $requestA = VerificationRequest::query()->create([
+            'user_id' => $residentA->id,
+            'unit_id' => $unitA->id,
+            'requested_role' => UserRole::ResidentOwner->value,
+            'relation_type' => UnitRelationType::Owner->value,
+            'status' => VerificationRequestStatus::PendingReview->value,
+            'submitted_at' => now(),
+        ]);
+        $requestB = VerificationRequest::query()->create([
+            'user_id' => $residentB->id,
+            'unit_id' => $unitB->id,
+            'requested_role' => UserRole::ResidentOwner->value,
+            'relation_type' => UnitRelationType::Owner->value,
+            'status' => VerificationRequestStatus::PendingReview->value,
+            'submitted_at' => now(),
+        ]);
+
+        Sanctum::actingAs($adminA);
+
+        $this->getJson('/api/v1/verification-requests')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $requestA->id);
+
+        $this->patchJson("/api/v1/verification-requests/{$requestB->id}/approve", [
+            'note' => 'Foreign request should not be reviewable.',
+        ])->assertForbidden();
+
+        $this->assertDatabaseHas('verification_requests', [
+            'id' => $requestB->id,
+            'status' => VerificationRequestStatus::PendingReview->value,
+            'reviewed_by' => null,
+        ]);
     }
 
     public function test_admin_can_request_more_info_and_reject_verification_request(): void

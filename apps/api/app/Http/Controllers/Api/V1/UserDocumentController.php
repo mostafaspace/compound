@@ -10,7 +10,9 @@ use App\Http\Requests\Documents\ReviewUserDocumentRequest;
 use App\Http\Requests\Documents\StoreUserDocumentRequest;
 use App\Http\Resources\Documents\UserDocumentResource;
 use App\Models\Documents\UserDocument;
+use App\Models\Property\Unit;
 use App\Models\User;
+use App\Services\CompoundContextService;
 use App\Services\NotificationService;
 use App\Support\AuditLogger;
 use Illuminate\Http\JsonResponse;
@@ -24,6 +26,7 @@ class UserDocumentController extends Controller
 {
     public function __construct(
         private readonly AuditLogger $auditLogger,
+        private readonly CompoundContextService $compoundContext,
         private readonly NotificationService $notificationService,
     ) {}
 
@@ -35,6 +38,7 @@ class UserDocumentController extends Controller
         $documents = UserDocument::query()
             ->with(['documentType', 'user', 'unit'])
             ->when(! $this->isReviewer($user), fn ($query) => $query->where('user_id', $user->id))
+            ->when($this->isReviewer($user), fn ($query) => $this->scopeReviewerDocuments($query, $user))
             ->when($request->string('status')->isNotEmpty(), fn ($query) => $query->where('status', $request->string('status')->toString()))
             ->latest()
             ->paginate();
@@ -48,6 +52,7 @@ class UserDocumentController extends Controller
         $actor = $request->user();
         $validated = $request->validated();
         $targetUserId = $this->isReviewer($actor) ? ($validated['userId'] ?? $actor->id) : $actor->id;
+        $this->ensureCanStoreDocument($request, $actor, $targetUserId, $validated['unitId'] ?? null);
         $file = $request->file('file');
         abort_unless($file !== null, Response::HTTP_UNPROCESSABLE_ENTITY, 'File is required.');
 
@@ -88,6 +93,7 @@ class UserDocumentController extends Controller
         /** @var User $user */
         $user = $request->user();
         abort_unless($this->isReviewer($user), Response::HTTP_FORBIDDEN);
+        $this->ensureCanAccessDocument($request, $userDocument);
 
         $validated = $request->validated();
 
@@ -136,7 +142,7 @@ class UserDocumentController extends Controller
     {
         /** @var User $user */
         $user = $request->user();
-        abort_unless($this->isReviewer($user) || $user->id === $userDocument->user_id, Response::HTTP_FORBIDDEN);
+        $this->ensureCanAccessDocument($request, $userDocument);
 
         $this->auditLogger->record('documents.user_document_downloaded', actor: $user, request: $request, metadata: [
             'document_id' => $userDocument->id,
@@ -154,5 +160,100 @@ class UserDocumentController extends Controller
             UserRole::FinanceReviewer,
             UserRole::SupportAgent,
         ], strict: true);
+    }
+
+    private function scopeReviewerDocuments(mixed $query, User $user): mixed
+    {
+        if (! filled($user->compound_id)) {
+            return $query;
+        }
+
+        return $query->where(function ($scoped) use ($user): void {
+            $scoped
+                ->whereHas('unit', fn ($unitQuery) => $unitQuery->where('compound_id', $user->compound_id))
+                ->orWhereHas('user.unitMemberships.unit', fn ($unitQuery) => $unitQuery->where('compound_id', $user->compound_id));
+        });
+    }
+
+    private function ensureCanStoreDocument(Request $request, User $actor, int $targetUserId, ?string $unitId): void
+    {
+        if ($unitId !== null) {
+            $unit = Unit::query()->findOrFail($unitId);
+
+            if ($this->isReviewer($actor)) {
+                $this->ensureScopedUserCanAccessCompound($request, $unit->compound_id);
+
+                return;
+            }
+
+            abort_unless($this->userHasUnitMembership($actor->id, $unitId), Response::HTTP_FORBIDDEN);
+
+            return;
+        }
+
+        if ($this->isReviewer($actor) && filled($actor->compound_id)) {
+            abort_unless($this->userHasCompoundMembership($targetUserId, $actor->compound_id), Response::HTTP_FORBIDDEN);
+        }
+    }
+
+    private function ensureCanAccessDocument(Request $request, UserDocument $userDocument): void
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        if (! $this->isReviewer($user)) {
+            abort_unless($user->id === $userDocument->user_id, Response::HTTP_FORBIDDEN);
+
+            return;
+        }
+
+        if (! filled($user->compound_id)) {
+            return;
+        }
+
+        abort_unless(
+            $this->documentBelongsToCompound($userDocument, $user->compound_id),
+            Response::HTTP_FORBIDDEN,
+        );
+    }
+
+    private function ensureScopedUserCanAccessCompound(Request $request, string $compoundId): void
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        if (! filled($user->compound_id)) {
+            return;
+        }
+
+        $this->compoundContext->ensureCompoundAccess($request, $compoundId);
+    }
+
+    private function documentBelongsToCompound(UserDocument $userDocument, string $compoundId): bool
+    {
+        $userDocument->loadMissing(['unit', 'user.unitMemberships.unit']);
+
+        if ($userDocument->unit?->compound_id === $compoundId) {
+            return true;
+        }
+
+        return $userDocument->user?->unitMemberships
+            ->contains(fn ($membership): bool => $membership->unit?->compound_id === $compoundId) ?? false;
+    }
+
+    private function userHasUnitMembership(int $userId, string $unitId): bool
+    {
+        return User::query()
+            ->whereKey($userId)
+            ->whereHas('unitMemberships', fn ($query) => $query->where('unit_id', $unitId))
+            ->exists();
+    }
+
+    private function userHasCompoundMembership(int $userId, string $compoundId): bool
+    {
+        return User::query()
+            ->whereKey($userId)
+            ->whereHas('unitMemberships.unit', fn ($query) => $query->where('compound_id', $compoundId))
+            ->exists();
     }
 }

@@ -9,17 +9,25 @@ use App\Http\Requests\Property\UpdateUnitMembershipRequest;
 use App\Http\Resources\UnitMembershipResource;
 use App\Models\Property\Unit;
 use App\Models\Property\UnitMembership;
+use App\Models\User;
+use App\Services\CompoundContextService;
 use App\Support\AuditLogger;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Symfony\Component\HttpFoundation\Response;
 
 class UnitMembershipController extends Controller
 {
-    public function __construct(private readonly AuditLogger $auditLogger) {}
+    public function __construct(
+        private readonly AuditLogger $auditLogger,
+        private readonly CompoundContextService $compoundContext,
+    ) {}
 
-    public function index(Unit $unit): AnonymousResourceCollection
+    public function index(Request $request, Unit $unit): AnonymousResourceCollection
     {
+        $this->ensureCanAccessUnit($request, $unit);
+
         $memberships = $unit->memberships()
             ->with('user')
             ->orderByRaw('ends_at is null desc')
@@ -31,6 +39,8 @@ class UnitMembershipController extends Controller
 
     public function store(StoreUnitMembershipRequest $request, Unit $unit): JsonResponse
     {
+        $this->ensureCanAccessUnit($request, $unit);
+
         $validated = $request->validated();
 
         $duplicate = $unit->memberships()
@@ -68,6 +78,8 @@ class UnitMembershipController extends Controller
 
     public function update(UpdateUnitMembershipRequest $request, UnitMembership $unitMembership): UnitMembershipResource
     {
+        $this->ensureCanAccessMembership($request, $unitMembership);
+
         $validated = $request->validated();
 
         if (($validated['isPrimary'] ?? false) === true) {
@@ -93,17 +105,37 @@ class UnitMembershipController extends Controller
         return UnitMembershipResource::make($unitMembership->refresh()->load('user'));
     }
 
-    public function end(UnitMembership $unitMembership): UnitMembershipResource
+    public function end(Request $request, UnitMembership $unitMembership): UnitMembershipResource
     {
+        $this->ensureCanAccessMembership($request, $unitMembership);
+
         $unitMembership->forceFill([
             'ends_at' => now()->toDateString(),
             'verification_status' => VerificationStatus::Expired->value,
         ])->save();
 
-        $this->auditLogger->record('property.unit_membership_ended', actor: request()->user(), request: request(), metadata: [
+        $this->auditLogger->record('property.unit_membership_ended', actor: $request->user(), request: $request, metadata: [
             'membership_id' => $unitMembership->id,
         ]);
 
         return UnitMembershipResource::make($unitMembership->refresh()->load('user'));
+    }
+
+    private function ensureCanAccessMembership(Request $request, UnitMembership $unitMembership): void
+    {
+        $unitMembership->loadMissing('unit');
+        $this->ensureCanAccessUnit($request, $unitMembership->unit);
+    }
+
+    private function ensureCanAccessUnit(Request $request, Unit $unit): void
+    {
+        /** @var User|null $user */
+        $user = $request->user();
+
+        if ($user === null || ! filled($user->compound_id)) {
+            return;
+        }
+
+        $this->compoundContext->ensureCompoundAccess($request, $unit->compound_id);
     }
 }

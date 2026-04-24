@@ -103,6 +103,9 @@ class VisitorRequestController extends Controller
         $result = $this->visitorPassService->validateToken($validated['token'], $actor, 'validated');
 
         $visitorRequest = $result['visitorRequest'];
+        if ($visitorRequest instanceof VisitorRequest) {
+            $this->ensureStaffCanAccessVisitorRequest($request, $visitorRequest);
+        }
 
         $this->auditLogger->record('visitors.pass_validated', actor: $actor, request: $request, metadata: [
             'result' => $result['result']->value,
@@ -119,6 +122,7 @@ class VisitorRequestController extends Controller
 
     public function arrive(VisitorDecisionRequest $request, VisitorRequest $visitorRequest): VisitorRequestResource
     {
+        $this->ensureStaffCanAccessVisitorRequest($request, $visitorRequest);
         $this->abortUnlessActionable($visitorRequest);
         $this->abortUnlessInStatus($visitorRequest, [VisitorRequestStatus::Pending, VisitorRequestStatus::QrIssued], 'Visitor cannot be marked arrived from its current status.');
 
@@ -134,6 +138,7 @@ class VisitorRequestController extends Controller
 
     public function allow(VisitorDecisionRequest $request, VisitorRequest $visitorRequest): VisitorRequestResource
     {
+        $this->ensureStaffCanAccessVisitorRequest($request, $visitorRequest);
         $this->abortUnlessActionable($visitorRequest);
         $this->abortUnlessInStatus($visitorRequest, [VisitorRequestStatus::Pending, VisitorRequestStatus::QrIssued, VisitorRequestStatus::Arrived], 'Visitor cannot be allowed from its current status.');
         $pass = $visitorRequest->pass;
@@ -155,6 +160,7 @@ class VisitorRequestController extends Controller
 
     public function deny(VisitorDecisionRequest $request, VisitorRequest $visitorRequest): VisitorRequestResource
     {
+        $this->ensureStaffCanAccessVisitorRequest($request, $visitorRequest);
         $this->abortUnlessActionable($visitorRequest);
         $this->abortUnlessInStatus($visitorRequest, [VisitorRequestStatus::Pending, VisitorRequestStatus::QrIssued, VisitorRequestStatus::Arrived], 'Visitor cannot be denied from its current status.');
 
@@ -171,6 +177,7 @@ class VisitorRequestController extends Controller
 
     public function complete(VisitorDecisionRequest $request, VisitorRequest $visitorRequest): VisitorRequestResource
     {
+        $this->ensureStaffCanAccessVisitorRequest($request, $visitorRequest);
         $this->abortUnlessActionable($visitorRequest);
         $this->abortUnlessInStatus($visitorRequest, [VisitorRequestStatus::Allowed], 'Only allowed visits can be completed.');
 
@@ -190,6 +197,9 @@ class VisitorRequestController extends Controller
         $actor = $request->user();
 
         abort_unless($this->isStaff($actor) || $visitorRequest->host_user_id === $actor->id, Response::HTTP_FORBIDDEN);
+        if ($this->isStaff($actor) && $visitorRequest->host_user_id !== $actor->id) {
+            $this->ensureStaffCanAccessVisitorRequest($request, $visitorRequest);
+        }
         $this->abortUnlessActionable($visitorRequest);
         $this->abortUnlessInStatus($visitorRequest, [VisitorRequestStatus::Pending, VisitorRequestStatus::QrIssued, VisitorRequestStatus::Arrived], 'Visitor cannot be cancelled from its current status.');
 
@@ -204,6 +214,13 @@ class VisitorRequestController extends Controller
     private function canHostUnit(User $user, string $unitId): bool
     {
         if ($this->isStaff($user)) {
+            if (filled($user->compound_id)) {
+                return Unit::query()
+                    ->whereKey($unitId)
+                    ->where('compound_id', $user->compound_id)
+                    ->exists();
+            }
+
             return true;
         }
 
@@ -273,9 +290,17 @@ class VisitorRequestController extends Controller
 
     private function notifySecurity(VisitorRequest $visitorRequest): void
     {
+        $visitorRequest->loadMissing('unit');
+        $compoundId = $visitorRequest->unit?->compound_id;
+
         User::query()
             ->whereIn('role', [UserRole::SecurityGuard->value, UserRole::CompoundAdmin->value])
             ->where('status', 'active')
+            ->when($compoundId !== null, fn ($query) => $query->where(function ($scoped) use ($compoundId): void {
+                $scoped
+                    ->where('compound_id', $compoundId)
+                    ->orWhereNull('compound_id');
+            }))
             ->each(function (User $user) use ($visitorRequest): void {
                 $this->notificationService->create(
                     userId: $user->id,
@@ -290,5 +315,19 @@ class VisitorRequestController extends Controller
                     priority: 'normal',
                 );
             });
+    }
+
+    private function ensureStaffCanAccessVisitorRequest(Request $request, VisitorRequest $visitorRequest): void
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        if (! filled($user->compound_id)) {
+            return;
+        }
+
+        $visitorRequest->loadMissing('unit');
+
+        abort_unless($visitorRequest->unit?->compound_id === $user->compound_id, Response::HTTP_FORBIDDEN);
     }
 }

@@ -5,6 +5,7 @@ namespace Tests\Feature\Api\V1;
 use App\Enums\AccountStatus;
 use App\Enums\UserRole;
 use App\Models\AuditLog;
+use App\Models\Property\Compound;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -66,5 +67,68 @@ class AuditLogTest extends TestCase
         Sanctum::actingAs($resident);
 
         $this->getJson('/api/v1/audit-logs')->assertForbidden();
+    }
+
+    public function test_scoped_admin_only_sees_audit_logs_for_own_compound(): void
+    {
+        $compoundA = Compound::factory()->create();
+        $compoundB = Compound::factory()->create();
+        $adminA = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compoundA->id,
+            'status' => AccountStatus::Active->value,
+        ]);
+        $actorA = User::factory()->create([
+            'role' => UserRole::SupportAgent->value,
+            'compound_id' => $compoundA->id,
+            'status' => AccountStatus::Active->value,
+        ]);
+        $actorB = User::factory()->create([
+            'role' => UserRole::SupportAgent->value,
+            'compound_id' => $compoundB->id,
+            'status' => AccountStatus::Active->value,
+        ]);
+
+        AuditLog::query()->create([
+            'actor_id' => $actorA->id,
+            'action' => 'own.actor',
+            'method' => 'PATCH',
+            'path' => 'api/v1/own',
+            'status_code' => 200,
+            'metadata' => [],
+        ]);
+        AuditLog::query()->create([
+            'actor_id' => $actorB->id,
+            'action' => 'foreign.actor',
+            'method' => 'PATCH',
+            'path' => 'api/v1/foreign',
+            'status_code' => 200,
+            'metadata' => [],
+        ]);
+        AuditLog::query()->create([
+            'actor_id' => null,
+            'action' => 'own.metadata',
+            'method' => 'POST',
+            'path' => 'api/v1/own-metadata',
+            'status_code' => 201,
+            'metadata' => ['compound_id' => $compoundA->id],
+        ]);
+        AuditLog::query()->create([
+            'actor_id' => null,
+            'action' => 'foreign.metadata',
+            'method' => 'POST',
+            'path' => 'api/v1/foreign-metadata',
+            'status_code' => 201,
+            'metadata' => ['compound_id' => $compoundB->id],
+        ]);
+
+        Sanctum::actingAs($adminA);
+
+        $response = $this->getJson('/api/v1/audit-logs')->assertOk();
+
+        $this->assertEqualsCanonicalizing(
+            ['own.actor', 'own.metadata'],
+            collect($response->json('data'))->pluck('action')->all(),
+        );
     }
 }

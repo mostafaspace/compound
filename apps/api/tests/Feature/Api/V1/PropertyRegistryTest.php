@@ -228,6 +228,44 @@ class PropertyRegistryTest extends TestCase
             ->assertJsonPath('data.endsAt', now()->toDateString());
     }
 
+    public function test_scoped_admin_cannot_manage_other_compound_unit_memberships(): void
+    {
+        $compoundA = Compound::factory()->create();
+        $compoundB = Compound::factory()->create();
+        $adminA = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compoundA->id,
+        ]);
+        $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+        $buildingB = Building::factory()->for($compoundB)->create();
+        $unitB = Unit::factory()->for($compoundB)->for($buildingB)->create(['floor_id' => null]);
+        $membership = UnitMembership::query()->create([
+            'unit_id' => $unitB->id,
+            'user_id' => $resident->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'starts_at' => now()->toDateString(),
+            'verification_status' => VerificationStatus::Verified->value,
+        ]);
+
+        Sanctum::actingAs($adminA);
+
+        $this->getJson("/api/v1/units/{$unitB->id}/memberships")->assertForbidden();
+        $this->postJson("/api/v1/units/{$unitB->id}/memberships", [
+            'userId' => $resident->id,
+            'relationType' => UnitRelationType::Tenant->value,
+        ])->assertForbidden();
+        $this->patchJson("/api/v1/unit-memberships/{$membership->id}", [
+            'verificationStatus' => VerificationStatus::Rejected->value,
+        ])->assertForbidden();
+        $this->postJson("/api/v1/unit-memberships/{$membership->id}/end")->assertForbidden();
+
+        $this->assertDatabaseHas('unit_memberships', [
+            'id' => $membership->id,
+            'verification_status' => VerificationStatus::Verified->value,
+            'ends_at' => null,
+        ]);
+    }
+
     public function test_admin_can_search_and_filter_unit_registry_lookup(): void
     {
         $resident = User::factory()->create([
