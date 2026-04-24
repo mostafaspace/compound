@@ -756,6 +756,14 @@
   "OrgChart": {
     "title": "الهيكل التنظيمي",
     "subtitle": "إدارة تعيينات الممثلين للمباني والطوابق ومناطق المجمع.",
+    "scopeLabel": "النطاق الحالي",
+    "scope": {
+      "allCompounds": "جميع المجمعات",
+      "noCompound": "لا يوجد مجمع محدد",
+      "compound": "المجمع",
+      "building": "المبنى {id}...",
+      "floor": "الطابق {id}..."
+    },
     "nav": {
       "dashboard": "لوحة التحكم"
     },
@@ -774,12 +782,25 @@
     },
     "form": {
       "userId": "معرف المستخدم",
+      "userIdPlaceholder": "مثال: 42",
       "role": "دور التعيين",
       "scopeId": "معرف المبنى (اختياري)",
+      "scopeIdPlaceholder": "معرف المبنى (اختياري)",
       "startDate": "تاريخ البداية",
       "endDate": "تاريخ الانتهاء (اختياري)",
       "notes": "ملاحظات (اختياري)",
+      "notesPlaceholder": "ملاحظات اختيارية",
+      "selectPlaceholder": "اختر",
       "submit": "إنشاء التعيين"
+    },
+    "roles": {
+      "floor_representative": "ممثل الطابق",
+      "building_representative": "ممثل المبنى",
+      "association_member": "عضو الاتحاد",
+      "president": "الرئيس",
+      "treasurer": "أمين الصندوق",
+      "security_contact": "مسؤول الأمن",
+      "admin_contact": "مسؤول الإدارة"
     },
     "action": {
       "edit": "تعديل",

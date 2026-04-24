@@ -36,6 +36,7 @@ export interface CreateRepresentativeAssignmentInput {
   buildingId?: string;
   floorId?: string;
   startsAt: string;
+  endsAt?: string;
   contactVisibility?: ContactVisibility;
   notes?: string;
 }

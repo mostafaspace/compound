@@ -756,6 +756,14 @@
   "OrgChart": {
     "title": "Organization Chart",
     "subtitle": "Manage representative assignments for buildings, floors, and compound areas.",
+    "scopeLabel": "Current scope",
+    "scope": {
+      "allCompounds": "All compounds",
+      "noCompound": "No compound selected",
+      "compound": "Compound",
+      "building": "Building {id}...",
+      "floor": "Floor {id}..."
+    },
     "nav": {
       "dashboard": "Dashboard"
     },
@@ -774,12 +782,25 @@
     },
     "form": {
       "userId": "User ID",
+      "userIdPlaceholder": "e.g. 42",
       "role": "Assignment Role",
       "scopeId": "Building ID (optional)",
+      "scopeIdPlaceholder": "Building UUID (optional)",
       "startDate": "Start Date",
       "endDate": "End Date (optional)",
       "notes": "Notes (optional)",
+      "notesPlaceholder": "Optional notes",
+      "selectPlaceholder": "Select",
       "submit": "Create Assignment"
+    },
+    "roles": {
+      "floor_representative": "Floor Representative",
+      "building_representative": "Building Representative",
+      "association_member": "Association Member",
+      "president": "President",
+      "treasurer": "Treasurer",
+      "security_contact": "Security Contact",
+      "admin_contact": "Admin Contact"
     },
     "action": {
       "edit": "Edit",

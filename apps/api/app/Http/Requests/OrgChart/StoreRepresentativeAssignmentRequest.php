@@ -25,6 +25,7 @@ class StoreRepresentativeAssignmentRequest extends FormRequest
             'buildingId' => ['nullable', 'string', 'exists:buildings,id'],
             'floorId' => ['nullable', 'string', 'exists:floors,id'],
             'startsAt' => ['required', 'date'],
+            'endsAt' => ['nullable', 'date', 'after_or_equal:startsAt'],
             'contactVisibility' => ['nullable', 'string', new Enum(ContactVisibility::class)],
             'notes' => ['nullable', 'string', 'max:1000'],
         ];

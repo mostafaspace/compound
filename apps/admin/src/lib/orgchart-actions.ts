@@ -3,7 +3,7 @@
 import type { ApiEnvelope, PaginatedEnvelope } from "@compound/contracts";
 
 import { config } from "./config";
-import { getAuthToken } from "./session";
+import { getAuthToken, getCompoundContext } from "./session";
 import type {
   RepresentativeAssignment,
   CreateRepresentativeAssignmentInput,
@@ -23,6 +23,11 @@ async function apiHeaders(authenticated = true): Promise<Record<string, string>>
 
     if (token) {
       headers.Authorization = `Bearer ${token}`;
+    }
+
+    const compoundId = await getCompoundContext();
+    if (compoundId) {
+      headers["X-Compound-Id"] = compoundId;
     }
   }
 
@@ -190,8 +195,6 @@ export async function listAllRepresentativeAssignments(
   filters: ListRepresentativesFilters = {},
 ): Promise<RepresentativeAssignment[]> {
   try {
-    // The API requires a compound scope; fetch the first compound's assignments.
-    // In a single-compound setup this covers all assignments.
     const compoundsResponse = await fetch(`${config.apiBaseUrl}/compounds`, {
       cache: "no-store",
       headers: await apiHeaders(),

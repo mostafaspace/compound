@@ -9,6 +9,7 @@ import {
   expireRepresentativeAssignment,
 } from "@/lib/orgchart";
 import type { RepresentativeRole } from "@/lib/orgchart";
+import { getCompoundContext } from "@/lib/session";
 
 export async function createRepresentativeAssignmentAction(formData: FormData) {
   const compoundId = String(formData.get("compound_id") ?? "").trim();
@@ -19,29 +20,30 @@ export async function createRepresentativeAssignmentAction(formData: FormData) {
   const startsAt = String(formData.get("starts_at") ?? "").trim();
   const endsAt = String(formData.get("ends_at") ?? "").trim();
   const notes = String(formData.get("notes") ?? "").trim();
+  const resolvedCompoundId = compoundId || (await getCompoundContext());
 
-  if (!compoundId) {
-    // Fall back to first compound
+  if (!resolvedCompoundId) {
     const compounds = await getCompounds();
     if (compounds.length === 0) {
       throw new Error("No compounds found.");
     }
-    const firstCompoundId = compounds[0].id;
-    await createRepresentativeAssignment(firstCompoundId, {
+    await createRepresentativeAssignment(compounds[0].id, {
       userId: Number(userIdRaw),
       role,
       buildingId: buildingId || undefined,
       floorId: floorId || undefined,
       startsAt: startsAt || new Date().toISOString().split("T")[0],
+      endsAt: endsAt || undefined,
       notes: notes || undefined,
     });
   } else {
-    await createRepresentativeAssignment(compoundId, {
+    await createRepresentativeAssignment(resolvedCompoundId, {
       userId: Number(userIdRaw),
       role,
       buildingId: buildingId || undefined,
       floorId: floorId || undefined,
       startsAt: startsAt || new Date().toISOString().split("T")[0],
+      endsAt: endsAt || undefined,
       notes: notes || undefined,
     });
   }

@@ -74,6 +74,7 @@ class RepresentativeAssignmentController extends Controller
                 'user_id' => $validated['userId'],
                 'role' => $role->value,
                 'starts_at' => $validated['startsAt'],
+                'ends_at' => $validated['endsAt'] ?? null,
                 'is_active' => true,
                 'contact_visibility' => $validated['contactVisibility'] ?? 'all_residents',
                 'appointed_by' => $actor->id,

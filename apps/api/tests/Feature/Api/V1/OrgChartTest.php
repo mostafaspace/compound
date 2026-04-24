@@ -39,10 +39,12 @@ class OrgChartTest extends TestCase
             'userId' => $user->id,
             'role' => RepresentativeRole::President->value,
             'startsAt' => '2026-04-20',
+            'endsAt' => '2026-12-31',
         ])
             ->assertCreated()
             ->assertJsonPath('data.role', 'president')
             ->assertJsonPath('data.isActive', true)
+            ->assertJsonPath('data.endsAt', '2026-12-31')
             ->assertJsonPath('data.userId', $user->id);
     }
 

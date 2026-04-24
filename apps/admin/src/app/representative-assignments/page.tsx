@@ -4,7 +4,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { LogoutButton } from "@/components/logout-button";
 import { getCurrentUser, getCompounds } from "@/lib/api";
 import { listAllRepresentativeAssignments } from "@/lib/orgchart";
-import { requireAdminUser } from "@/lib/session";
+import { getCompoundContext, requireAdminUser } from "@/lib/session";
 
 import {
   createRepresentativeAssignmentAction,
@@ -19,54 +19,61 @@ interface OrgChartPageProps {
 }
 
 const REPRESENTATIVE_ROLES = [
-  { value: "floor_representative", label: "Floor Representative" },
-  { value: "building_representative", label: "Building Representative" },
-  { value: "association_member", label: "Association Member" },
-  { value: "president", label: "President" },
-  { value: "treasurer", label: "Treasurer" },
-  { value: "security_contact", label: "Security Contact" },
-  { value: "admin_contact", label: "Admin Contact" },
+  "floor_representative",
+  "building_representative",
+  "association_member",
+  "president",
+  "treasurer",
+  "security_contact",
+  "admin_contact",
 ] as const;
+
+interface ScopeLabels {
+  compound: string;
+  building: (id: string) => string;
+  floor: (id: string) => string;
+}
 
 function formatDate(value: string | null, locale: string): string {
   if (!value) return "-";
   return new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(new Date(value));
 }
 
-function formatRoleLabel(role: string): string {
-  return role
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-}
-
 function formatScope(assignment: {
   scopeLevel: string;
   buildingId: string | null;
   floorId: string | null;
-}): string {
-  if (assignment.scopeLevel === "compound") return "Compound";
+}, labels: ScopeLabels): string {
+  if (assignment.scopeLevel === "compound") return labels.compound;
   if (assignment.scopeLevel === "building" && assignment.buildingId) {
-    return `Building ${assignment.buildingId.substring(0, 8)}…`;
+    return labels.building(assignment.buildingId.substring(0, 8));
   }
   if (assignment.scopeLevel === "floor" && assignment.floorId) {
-    return `Floor ${assignment.floorId.substring(0, 8)}…`;
+    return labels.floor(assignment.floorId.substring(0, 8));
   }
   return assignment.scopeLevel;
 }
 
 export default async function OrgChartPage({ searchParams }: OrgChartPageProps) {
-  await requireAdminUser(getCurrentUser);
+  const currentUser = await requireAdminUser(getCurrentUser);
   const locale = await getLocale();
   const t = await getTranslations("OrgChart");
   const params = searchParams ? await searchParams : {};
+  const isSuperAdmin = currentUser.role === "super_admin";
 
-  const [assignments, compounds] = await Promise.all([
+  const [assignments, compounds, activeCompoundId] = await Promise.all([
     listAllRepresentativeAssignments(),
     getCompounds(),
+    getCompoundContext(),
   ]);
 
-  const defaultCompoundId = compounds[0]?.id ?? "";
+  const defaultCompoundId = activeCompoundId ?? compounds[0]?.id ?? "";
+  const activeCompound = compounds.find((compound) => compound.id === defaultCompoundId) ?? compounds[0] ?? null;
+  const scopeLabels: ScopeLabels = {
+    compound: t("scope.compound"),
+    building: (id) => t("scope.building", { id }),
+    floor: (id) => t("scope.floor", { id }),
+  };
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -86,6 +93,13 @@ export default async function OrgChartPage({ searchParams }: OrgChartPageProps) 
       <section className="mx-auto max-w-7xl space-y-8 px-5 py-6 lg:px-8">
         {params.created ? <StatusBanner text={t("messages.created")} /> : null}
         {params.deactivated ? <StatusBanner text={t("messages.deactivated")} /> : null}
+
+        <div className="rounded-lg border border-line bg-panel px-4 py-3 text-sm">
+          <span className="font-semibold text-muted">{t("scopeLabel")}</span>{" "}
+          <span className="font-semibold text-foreground">
+            {activeCompound ? activeCompound.name : isSuperAdmin ? t("scope.allCompounds") : t("scope.noCompound")}
+          </span>
+        </div>
 
         {/* Assignments table */}
         <section className="space-y-4">
@@ -111,10 +125,10 @@ export default async function OrgChartPage({ searchParams }: OrgChartPageProps) 
                         <td className="px-4 py-3 font-medium">{a.user?.name ?? "—"}</td>
                         <td className="px-4 py-3">
                           <span className="rounded-lg bg-brand/10 px-2 py-0.5 text-xs font-semibold text-brand">
-                            {formatRoleLabel(a.role)}
+                            {t(`roles.${a.role}`)}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-muted">{formatScope(a)}</td>
+                        <td className="px-4 py-3 text-muted">{formatScope(a, scopeLabels)}</td>
                         <td className="px-4 py-3">
                           {a.isActive ? (
                             <span className="rounded-lg bg-[#e6f3ef] px-2 py-0.5 text-xs font-semibold text-brand">
@@ -177,7 +191,7 @@ export default async function OrgChartPage({ searchParams }: OrgChartPageProps) 
                 <input
                   className="mt-1 h-10 w-full rounded-lg border border-line bg-background px-3 text-sm"
                   name="user_id"
-                  placeholder="e.g. 42"
+                  placeholder={t("form.userIdPlaceholder")}
                   required
                   type="number"
                 />
@@ -190,10 +204,10 @@ export default async function OrgChartPage({ searchParams }: OrgChartPageProps) 
                   name="role"
                   required
                 >
-                  <option value="">—</option>
-                  {REPRESENTATIVE_ROLES.map((r) => (
-                    <option key={r.value} value={r.value}>
-                      {r.label}
+                  <option value="">{t("form.selectPlaceholder")}</option>
+                  {REPRESENTATIVE_ROLES.map((role) => (
+                    <option key={role} value={role}>
+                      {t(`roles.${role}`)}
                     </option>
                   ))}
                 </select>
@@ -204,7 +218,7 @@ export default async function OrgChartPage({ searchParams }: OrgChartPageProps) 
                 <input
                   className="mt-1 h-10 w-full rounded-lg border border-line bg-background px-3 text-sm"
                   name="building_id"
-                  placeholder="Building UUID (optional)"
+                  placeholder={t("form.scopeIdPlaceholder")}
                 />
               </label>
 
@@ -232,7 +246,7 @@ export default async function OrgChartPage({ searchParams }: OrgChartPageProps) 
                 <input
                   className="mt-1 h-10 w-full rounded-lg border border-line bg-background px-3 text-sm"
                   name="notes"
-                  placeholder="Optional notes"
+                  placeholder={t("form.notesPlaceholder")}
                 />
               </label>
             </div>
