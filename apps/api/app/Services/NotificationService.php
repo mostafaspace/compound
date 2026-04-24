@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\NotificationCategory;
 use App\Events\NotificationCreatedEvent;
+use App\Jobs\DispatchExternalNotificationsJob;
 use App\Models\Notification;
 use App\Models\NotificationPreference;
 use App\Models\User;
@@ -37,6 +38,9 @@ class NotificationService
         ]);
 
         event(new NotificationCreatedEvent($notification));
+
+        // Dispatch external channels (push / email / SMS) asynchronously
+        DispatchExternalNotificationsJob::dispatch($notification->id);
 
         return $notification;
     }

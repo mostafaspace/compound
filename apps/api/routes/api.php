@@ -25,8 +25,11 @@ use App\Http\Controllers\Api\V1\Governance\VoteController;
 use App\Http\Controllers\Api\V1\IssueAttachmentController;
 use App\Http\Controllers\Api\V1\IssueCommentController;
 use App\Http\Controllers\Api\V1\IssueController;
+use App\Http\Controllers\Api\V1\DeviceTokenController;
 use App\Http\Controllers\Api\V1\NotificationController;
+use App\Http\Controllers\Api\V1\NotificationDeliveryLogController;
 use App\Http\Controllers\Api\V1\NotificationPreferenceController;
+use App\Http\Controllers\Api\V1\NotificationTemplateController;
 use App\Http\Controllers\Api\V1\OperationalStatusController;
 use App\Http\Controllers\Api\V1\OrgChartController;
 use App\Http\Controllers\Api\V1\RepresentativeAssignmentController;
@@ -356,6 +359,28 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         ->group(function (): void {
             Route::get('/votes/{vote}/eligibility', [VoteController::class, 'eligibility'])->name('votes.eligibility');
             Route::post('/votes/{vote}/cast', [VoteController::class, 'cast'])->name('votes.cast');
+        });
+
+    // Notification channels — admin: templates + delivery logs
+    Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,board_member,finance_reviewer,support_agent'])
+        ->name('notifications.')
+        ->group(function (): void {
+            Route::get('/notification-templates', [NotificationTemplateController::class, 'index'])->name('templates.index');
+            Route::post('/notification-templates', [NotificationTemplateController::class, 'store'])->name('templates.store');
+            Route::patch('/notification-templates/{notificationTemplate}', [NotificationTemplateController::class, 'update'])->name('templates.update');
+            Route::delete('/notification-templates/{notificationTemplate}', [NotificationTemplateController::class, 'destroy'])->name('templates.destroy');
+
+            Route::get('/notification-delivery-logs', [NotificationDeliveryLogController::class, 'index'])->name('delivery-logs.index');
+            Route::post('/notification-delivery-logs/{notificationDeliveryLog}/retry', [NotificationDeliveryLogController::class, 'retry'])->name('delivery-logs.retry');
+        });
+
+    // Notification channels — resident/user: device token management
+    Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,board_member,finance_reviewer,support_agent,resident_owner,resident_tenant'])
+        ->name('device-tokens.')
+        ->group(function (): void {
+            Route::get('/device-tokens', [DeviceTokenController::class, 'index'])->name('index');
+            Route::post('/device-tokens', [DeviceTokenController::class, 'store'])->name('store');
+            Route::delete('/device-tokens/{deviceToken}', [DeviceTokenController::class, 'destroy'])->name('destroy');
         });
 
     // Settings — admin only (super_admin / compound_admin)

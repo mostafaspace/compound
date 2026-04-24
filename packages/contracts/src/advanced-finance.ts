@@ -197,3 +197,42 @@ export interface GatewayTransaction {
   paymentSubmissionId: string | null;
   createdAt: string;
 }
+
+// ── External Notification Channels ───────────────────────────────────────────
+
+export const notificationChannelValues = ["push", "email", "sms"] as const;
+export type NotificationChannel = (typeof notificationChannelValues)[number];
+
+export const deliveryStatusValues = ["queued", "sent", "failed", "retried", "skipped"] as const;
+export type DeliveryStatus = (typeof deliveryStatusValues)[number];
+
+export const devicePlatformValues = ["fcm", "apns"] as const;
+export type DevicePlatform = (typeof devicePlatformValues)[number];
+
+export interface NotificationTemplate {
+  id: string;
+  compoundId: string | null;
+  category: string;
+  channel: NotificationChannel;
+  locale: string;
+  subject: string | null;
+  titleTemplate: string;
+  bodyTemplate: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NotificationDeliveryLog {
+  id: string;
+  notificationId: string;
+  channel: NotificationChannel;
+  status: DeliveryStatus;
+  statusLabel: string;
+  recipient: string | null;
+  provider: string;
+  providerResponse: Record<string, unknown> | null;
+  errorMessage: string | null;
+  attemptNumber: number;
+  createdAt: string;
+}

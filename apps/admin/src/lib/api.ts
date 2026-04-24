@@ -13,6 +13,8 @@ import type {
   Expense,
   PaymentSession,
   GatewayTransaction,
+  NotificationTemplate,
+  NotificationDeliveryLog,
   AnnouncementAcknowledgement,
   AnnouncementAcknowledgementSummary,
   AnnouncementFilters,
@@ -2376,6 +2378,38 @@ export async function getGatewayTransactions(): Promise<GatewayTransaction[]> {
     });
     if (!response.ok) return [];
     const payload = (await response.json()) as PaginatedEnvelope<GatewayTransaction>;
+    return payload.data ?? [];
+  } catch {
+    return [];
+  }
+}
+
+// ── Notification Channels ─────────────────────────────────────────────────────
+
+export async function getNotificationTemplates(): Promise<NotificationTemplate[]> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/notification-templates`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+    if (!response.ok) return [];
+    const payload = (await response.json()) as { data: NotificationTemplate[] };
+    return payload.data ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export async function getNotificationDeliveryLogs(status?: string): Promise<NotificationDeliveryLog[]> {
+  try {
+    const params = new URLSearchParams({ per_page: "50" });
+    if (status) params.set("status", status);
+    const response = await fetch(`${config.apiBaseUrl}/notification-delivery-logs?${params}`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+    if (!response.ok) return [];
+    const payload = (await response.json()) as PaginatedEnvelope<NotificationDeliveryLog>;
     return payload.data ?? [];
   } catch {
     return [];

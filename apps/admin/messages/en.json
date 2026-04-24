@@ -14,6 +14,7 @@
     "dues": "Dues",
     "governance": "Governance",
     "settings": "Settings",
+    "notificationChannels": "Notification channels",
     "imports": "Data import",
     "signOut": "Sign Out"
   },
@@ -138,6 +139,107 @@
       "timezone": "Timezone",
       "timezonePlaceholder": "Africa/Cairo",
       "mutedCategories": "Muted categories"
+    }
+  },
+  "NotificationChannels": {
+    "title": "External notification channels",
+    "subtitle": "Review privacy-safe templates and monitor push, email, and SMS delivery attempts without leaving the admin workspace.",
+    "messages": {
+      "templateCreated": "Notification template created.",
+      "templateUpdated": "Notification template updated.",
+      "templateStatusUpdated": "Template delivery status updated.",
+      "deliveryRetried": "Failed delivery retried."
+    },
+    "scopeWarning": {
+      "title": "Compound scope is not selected",
+      "description": "Select a compound to review scoped templates and delivery logs. Without a selected scope, new templates will be treated as global fallbacks."
+    },
+    "metrics": {
+      "templates": "Loaded templates",
+      "activeTemplates": "Active templates",
+      "failedDeliveries": "Failed deliveries",
+      "retryable": "Retryable now"
+    },
+    "filters": {
+      "title": "Review filters",
+      "subtitle": "Filter templates and delivery attempts by channel, language, category, and status.",
+      "channel": "Channel",
+      "locale": "Language",
+      "category": "Category",
+      "status": "Delivery status",
+      "all": "All",
+      "apply": "Apply filters",
+      "clear": "Clear"
+    },
+    "channels": {
+      "push": "Push",
+      "email": "Email",
+      "sms": "SMS"
+    },
+    "locales": {
+      "en": "English",
+      "ar": "Arabic"
+    },
+    "statuses": {
+      "queued": "Queued",
+      "sent": "Sent",
+      "failed": "Failed",
+      "retried": "Retried",
+      "skipped": "Skipped"
+    },
+    "templates": {
+      "title": "Template library",
+      "subtitle": "Templates are grouped by category, channel, and language. Keep message bodies privacy-safe and action-oriented.",
+      "new": "New template",
+      "edit": "Edit",
+      "activate": "Activate",
+      "deactivate": "Deactivate",
+      "active": "Active",
+      "inactive": "Inactive",
+      "noSubject": "No subject",
+      "empty": "No templates match the selected filters."
+    },
+    "editor": {
+      "createTitle": "Create template",
+      "editTitle": "Edit template",
+      "subtitle": "Templates should announce that there is an update, then drive the resident back into the authenticated app.",
+      "category": "Category",
+      "channel": "Channel",
+      "locale": "Language",
+      "subject": "Subject",
+      "subjectPlaceholder": "Visible to email recipients only",
+      "titleTemplate": "Title template",
+      "titlePlaceholder": "Example: Payment update for {{unit_number}}",
+      "bodyTemplate": "Body template",
+      "bodyPlaceholder": "Example: There is a finance update for {{compound_name}}. Open the app to review it.",
+      "activeToggle": "Template is active and can be used for delivery attempts",
+      "create": "Create template",
+      "save": "Save changes",
+      "cancel": "Cancel"
+    },
+    "preview": {
+      "title": "Preview",
+      "titleFallback": "Select a template to preview the rendered title.",
+      "bodyFallback": "Select a template to preview the rendered body.",
+      "variables": "Preview variables"
+    },
+    "delivery": {
+      "title": "Delivery attempts",
+      "subtitle": "Every external send remains linked to the in-app notification record. Retry only failed attempts that are safe to resend.",
+      "summary": "{sent} sent, {queued} queued, {failed} failed",
+      "retry": "Retry",
+      "details": "Details",
+      "notAvailable": "Not available",
+      "empty": "No delivery attempts match the selected filter.",
+      "columns": {
+        "channel": "Channel",
+        "status": "Status",
+        "recipient": "Recipient",
+        "provider": "Provider",
+        "attempt": "Attempt",
+        "createdAt": "Created",
+        "actions": "Actions"
+      }
     }
   },
   "Registry": {
