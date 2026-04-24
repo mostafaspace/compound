@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\AuditSeverity;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\AuditLogResource;
 use App\Models\AuditLog;
@@ -9,6 +10,7 @@ use App\Models\User;
 use App\Services\CompoundContextService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AuditLogController extends Controller
 {
@@ -17,20 +19,137 @@ class AuditLogController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $validated = $request->validate([
-            'action' => ['nullable', 'string', 'max:160'],
-            'actorId' => ['nullable', 'integer', 'min:1'],
-            'from' => ['nullable', 'date'],
-            'method' => ['nullable', 'string', 'max:10'],
-            'perPage' => ['nullable', 'integer', 'min:1', 'max:100'],
-            'q' => ['nullable', 'string', 'max:160'],
-            'to' => ['nullable', 'date', 'after_or_equal:from'],
+            'action'        => ['nullable', 'string', 'max:160'],
+            'actorId'       => ['nullable', 'integer', 'min:1'],
+            'from'          => ['nullable', 'date'],
+            'method'        => ['nullable', 'string', 'max:10'],
+            'module'        => ['nullable', 'string', 'max:80'],
+            'severity'      => ['nullable', 'string', 'in:info,warning,critical'],
+            'auditableType' => ['nullable', 'string', 'max:200'],
+            'auditableId'   => ['nullable', 'string', 'max:200'],
+            'perPage'       => ['nullable', 'integer', 'min:1', 'max:100'],
+            'q'             => ['nullable', 'string', 'max:160'],
+            'to'            => ['nullable', 'date', 'after_or_equal:from'],
         ]);
+
+        $query = $this->buildBaseQuery($request, $validated);
+
+        return AuditLogResource::collection($query->paginate(
+            perPage: $validated['perPage'] ?? 25,
+        ));
+    }
+
+    /**
+     * Investigation timeline: all events related to a specific entity (auditable_type + auditable_id).
+     */
+    public function timeline(Request $request): AnonymousResourceCollection
+    {
+        $validated = $request->validate([
+            'entity_type' => ['required', 'string', 'max:200'],
+            'entity_id'   => ['required', 'string', 'max:200'],
+        ]);
+
+        $compoundId = $this->compoundContext->resolve($request);
 
         $query = AuditLog::query()
             ->with('actor')
-            ->when($this->compoundContext->resolve($request) !== null, function ($builder) use ($request): void {
+            ->where('auditable_type', $validated['entity_type'])
+            ->where('auditable_id', $validated['entity_id'])
+            ->when($compoundId !== null, function ($builder) use ($request): void {
                 /** @var User $user */
                 $user = $request->user();
+
+                $builder->where(function ($scoped) use ($user): void {
+                    $scoped
+                        ->whereHas('actor', fn ($q) => $q->where('compound_id', $user->compound_id))
+                        ->orWhere('metadata->compound_id', $user->compound_id)
+                        ->orWhere('metadata->compoundId', $user->compound_id);
+                });
+            })
+            ->oldest();
+
+        return AuditLogResource::collection($query->paginate(100));
+    }
+
+    /**
+     * Export audit logs as a CSV download.
+     */
+    public function export(Request $request): StreamedResponse
+    {
+        $validated = $request->validate([
+            'action'        => ['nullable', 'string', 'max:160'],
+            'actorId'       => ['nullable', 'integer', 'min:1'],
+            'from'          => ['nullable', 'date'],
+            'method'        => ['nullable', 'string', 'max:10'],
+            'module'        => ['nullable', 'string', 'max:80'],
+            'severity'      => ['nullable', 'string', 'in:info,warning,critical'],
+            'auditableType' => ['nullable', 'string', 'max:200'],
+            'auditableId'   => ['nullable', 'string', 'max:200'],
+            'q'             => ['nullable', 'string', 'max:160'],
+            'to'            => ['nullable', 'date', 'after_or_equal:from'],
+        ]);
+
+        /** @var User $reviewer */
+        $reviewer    = $request->user();
+        $generatedAt = now()->toIso8601String();
+        $filename    = 'audit-export-'.now()->format('Y-m-d-His').'.csv';
+
+        $query = $this->buildBaseQuery($request, $validated);
+
+        return response()->streamDownload(function () use ($query, $reviewer, $generatedAt): void {
+            $handle = fopen('php://output', 'w');
+
+            // Export metadata header rows (tamper-evident audit trail of the export itself)
+            fputcsv($handle, ['# Audit Log Export']);
+            fputcsv($handle, ['# Generated', $generatedAt]);
+            fputcsv($handle, ['# Reviewer', $reviewer->name]);
+            fputcsv($handle, ['# Reviewer ID', $reviewer->id]);
+            fputcsv($handle, []);
+
+            // Column headers
+            fputcsv($handle, [
+                'ID', 'Timestamp', 'Actor ID', 'Actor Name', 'Action',
+                'Severity', 'Reason', 'Auditable Type', 'Auditable ID',
+                'Method', 'Path', 'IP Address', 'Status Code', 'Metadata',
+            ]);
+
+            $query->chunk(500, function ($logs) use ($handle): void {
+                foreach ($logs as $log) {
+                    fputcsv($handle, [
+                        $log->id,
+                        $log->created_at?->toIso8601String(),
+                        $log->actor_id ?? '',
+                        $log->actor?->name ?? '',
+                        $log->action,
+                        $log->severity?->value ?? 'info',
+                        $log->reason ?? '',
+                        $log->auditable_type ?? '',
+                        $log->auditable_id ?? '',
+                        $log->method ?? '',
+                        $log->path ?? '',
+                        $log->ip_address ?? '',
+                        $log->status_code ?? '',
+                        json_encode($log->metadata ?? []),
+                    ]);
+                }
+            });
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     */
+    private function buildBaseQuery(Request $request, array $validated): \Illuminate\Database\Eloquent\Builder
+    {
+        return AuditLog::query()
+            ->with('actor')
+            ->when($this->compoundContext->resolve($request) !== null, function ($builder) use ($request): void {
+                /** @var User $user */
+                $user       = $request->user();
                 $compoundId = $user->compound_id;
 
                 $builder->where(function ($scoped) use ($compoundId): void {
@@ -40,11 +159,15 @@ class AuditLogController extends Controller
                         ->orWhere('metadata->compoundId', $compoundId);
                 });
             })
-            ->when($validated['action'] ?? null, fn ($builder, string $action) => $builder->where('action', $action))
-            ->when($validated['actorId'] ?? null, fn ($builder, int $actorId) => $builder->where('actor_id', $actorId))
-            ->when($validated['method'] ?? null, fn ($builder, string $method) => $builder->where('method', $method))
-            ->when($validated['from'] ?? null, fn ($builder, string $from) => $builder->whereDate('created_at', '>=', $from))
-            ->when($validated['to'] ?? null, fn ($builder, string $to) => $builder->whereDate('created_at', '<=', $to))
+            ->when($validated['action'] ?? null, fn ($b, string $v) => $b->where('action', $v))
+            ->when($validated['actorId'] ?? null, fn ($b, int $v) => $b->where('actor_id', $v))
+            ->when($validated['method'] ?? null, fn ($b, string $v) => $b->where('method', $v))
+            ->when($validated['severity'] ?? null, fn ($b, string $v) => $b->where('severity', $v))
+            ->when($validated['module'] ?? null, fn ($b, string $v) => $b->where('action', 'like', $v.'.%'))
+            ->when($validated['auditableType'] ?? null, fn ($b, string $v) => $b->where('auditable_type', $v))
+            ->when($validated['auditableId'] ?? null, fn ($b, string $v) => $b->where('auditable_id', $v))
+            ->when($validated['from'] ?? null, fn ($b, string $v) => $b->whereDate('created_at', '>=', $v))
+            ->when($validated['to'] ?? null, fn ($b, string $v) => $b->whereDate('created_at', '<=', $v))
             ->when($validated['q'] ?? null, function ($builder, string $search): void {
                 $term = '%'.$search.'%';
 
@@ -54,13 +177,10 @@ class AuditLogController extends Controller
                         ->orWhere('path', 'like', $term)
                         ->orWhere('auditable_type', 'like', $term)
                         ->orWhere('auditable_id', 'like', $term)
-                        ->orWhere('ip_address', 'like', $term);
+                        ->orWhere('ip_address', 'like', $term)
+                        ->orWhere('reason', 'like', $term);
                 });
             })
             ->latest();
-
-        return AuditLogResource::collection($query->paginate(
-            perPage: $validated['perPage'] ?? 25,
-        ));
     }
 }

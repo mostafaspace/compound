@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\AuditSeverity;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -17,14 +18,17 @@ class AuditLog extends Model
         'method',
         'path',
         'status_code',
+        'severity',
+        'reason',
         'metadata',
     ];
 
     protected function casts(): array
     {
         return [
-            'metadata' => 'array',
+            'metadata'    => 'array',
             'status_code' => 'integer',
+            'severity'    => AuditSeverity::class,
         ];
     }
 

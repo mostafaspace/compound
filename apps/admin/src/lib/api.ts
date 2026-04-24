@@ -135,33 +135,17 @@ export async function getAuditLogs(input: AuditLogFilters = {}): Promise<AuditLo
   try {
     const params = new URLSearchParams();
 
-    if (input.action) {
-      params.set("action", input.action);
-    }
-
-    if (input.actorId) {
-      params.set("actorId", String(input.actorId));
-    }
-
-    if (input.from) {
-      params.set("from", input.from);
-    }
-
-    if (input.method) {
-      params.set("method", input.method);
-    }
-
-    if (input.perPage) {
-      params.set("perPage", String(input.perPage));
-    }
-
-    if (input.q) {
-      params.set("q", input.q);
-    }
-
-    if (input.to) {
-      params.set("to", input.to);
-    }
+    if (input.action) params.set("action", input.action);
+    if (input.actorId) params.set("actorId", String(input.actorId));
+    if (input.auditableType) params.set("auditableType", input.auditableType);
+    if (input.auditableId) params.set("auditableId", input.auditableId);
+    if (input.from) params.set("from", input.from);
+    if (input.method) params.set("method", input.method);
+    if (input.module) params.set("module", input.module);
+    if (input.perPage) params.set("perPage", String(input.perPage));
+    if (input.q) params.set("q", input.q);
+    if (input.severity) params.set("severity", input.severity);
+    if (input.to) params.set("to", input.to);
 
     const query = params.toString();
     const response = await fetch(`${config.apiBaseUrl}/audit-logs${query ? `?${query}` : ""}`, {
@@ -179,6 +163,45 @@ export async function getAuditLogs(input: AuditLogFilters = {}): Promise<AuditLo
   } catch {
     return [];
   }
+}
+
+export async function getAuditTimeline(entityType: string, entityId: string): Promise<AuditLogEntry[]> {
+  try {
+    const params = new URLSearchParams({ entity_type: entityType, entity_id: entityId });
+    const response = await fetch(`${config.apiBaseUrl}/audit-logs/timeline?${params.toString()}`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const payload = (await response.json()) as PaginatedEnvelope<AuditLogEntry>;
+
+    return payload.data;
+  } catch {
+    return [];
+  }
+}
+
+export function auditExportUrl(input: AuditLogFilters = {}): string {
+  const params = new URLSearchParams();
+
+  if (input.action) params.set("action", input.action);
+  if (input.actorId) params.set("actorId", String(input.actorId));
+  if (input.auditableType) params.set("auditableType", input.auditableType);
+  if (input.auditableId) params.set("auditableId", input.auditableId);
+  if (input.from) params.set("from", input.from);
+  if (input.method) params.set("method", input.method);
+  if (input.module) params.set("module", input.module);
+  if (input.q) params.set("q", input.q);
+  if (input.severity) params.set("severity", input.severity);
+  if (input.to) params.set("to", input.to);
+
+  const query = params.toString();
+
+  return `${config.apiBaseUrl}/audit-logs/export${query ? `?${query}` : ""}`;
 }
 
 export async function login(input: LoginInput): Promise<LoginResult> {

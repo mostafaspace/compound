@@ -1,4 +1,4 @@
-import type { AuditLogEntry } from "@compound/contracts";
+import type { AuditLogEntry, AuditSeverity } from "@compound/contracts";
 import { getLocale, getTranslations } from "next-intl/server";
 import Link from "next/link";
 
@@ -12,12 +12,20 @@ interface AuditLogsPageProps {
     actorId?: string;
     from?: string;
     method?: string;
+    module?: string;
     q?: string;
+    severity?: string;
     to?: string;
   }>;
 }
 
 const methodOptions = ["", "GET", "POST", "PATCH", "PUT", "DELETE"];
+const severityOptions: Array<{ value: string; labelKey: string }> = [
+  { value: "", labelKey: "all" },
+  { value: "info", labelKey: "severityInfo" },
+  { value: "warning", labelKey: "severityWarning" },
+  { value: "critical", labelKey: "severityCritical" },
+];
 
 function statusTone(statusCode: number | null): string {
   if (!statusCode) {
@@ -35,22 +43,50 @@ function statusTone(statusCode: number | null): string {
   return "bg-[#e6f3ef] text-brand";
 }
 
+function severityTone(severity: AuditSeverity): string {
+  switch (severity) {
+    case "critical":
+      return "bg-[#fde8e5] text-danger";
+    case "warning":
+      return "bg-[#fff5e5] text-[#8a520c]";
+    default:
+      return "bg-[#e6f3ef] text-muted";
+  }
+}
+
 export default async function AuditLogsPage({ searchParams }: AuditLogsPageProps) {
   await requireAdminUser(getCurrentUser, ["super_admin", "compound_admin", "support_agent"]);
   const params = searchParams ? await searchParams : {};
   const actorId = params.actorId && Number.isInteger(Number(params.actorId)) ? Number(params.actorId) : undefined;
+  const validSeverities: AuditSeverity[] = ["info", "warning", "critical"];
+  const severity = validSeverities.includes(params.severity as AuditSeverity) ? (params.severity as AuditSeverity) : undefined;
+
   const auditLogs = await getAuditLogs({
     action: params.action?.trim() || undefined,
     actorId,
     from: params.from || undefined,
     method: params.method || undefined,
+    module: params.module?.trim() || undefined,
     perPage: 50,
     q: params.q?.trim() || undefined,
+    severity,
     to: params.to || undefined,
   });
 
   const t = await getTranslations("AuditLogs");
   const locale = await getLocale();
+
+  // Build export URL that mirrors current filters (served via Next.js proxy route)
+  const exportParams = new URLSearchParams();
+  if (params.action?.trim()) exportParams.set("action", params.action.trim());
+  if (actorId) exportParams.set("actorId", String(actorId));
+  if (params.from) exportParams.set("from", params.from);
+  if (params.method) exportParams.set("method", params.method);
+  if (params.module?.trim()) exportParams.set("module", params.module.trim());
+  if (params.q?.trim()) exportParams.set("q", params.q.trim());
+  if (severity) exportParams.set("severity", severity);
+  if (params.to) exportParams.set("to", params.to);
+  const exportHref = `/api/audit-export${exportParams.toString() ? `?${exportParams.toString()}` : ""}`;
 
   function formatDate(value: string | null): string {
     if (!value) {
@@ -73,6 +109,17 @@ export default async function AuditLogsPage({ searchParams }: AuditLogsPageProps
     return keys.slice(0, 4).join(", ");
   }
 
+  function severityLabel(s: AuditSeverity): string {
+    switch (s) {
+      case "critical":
+        return t("severityCritical");
+      case "warning":
+        return t("severityWarning");
+      default:
+        return t("severityInfo");
+    }
+  }
+
   return (
     <main className="min-h-screen bg-background text-foreground">
       <header className="border-b border-line bg-panel">
@@ -85,6 +132,13 @@ export default async function AuditLogsPage({ searchParams }: AuditLogsPageProps
             <p className="mt-2 max-w-2xl text-sm text-muted">{t("subtitle")}</p>
           </div>
           <div className="flex flex-wrap gap-3">
+            <a
+              className="inline-flex h-11 items-center justify-center rounded-lg border border-line bg-panel px-4 text-sm font-semibold hover:border-brand"
+              download
+              href={exportHref}
+            >
+              {t("exportCsv")}
+            </a>
             <Link
               className="inline-flex h-11 items-center justify-center rounded-lg border border-line bg-panel px-4 text-sm font-semibold hover:border-brand"
               href="/onboarding"
@@ -97,14 +151,15 @@ export default async function AuditLogsPage({ searchParams }: AuditLogsPageProps
       </header>
 
       <section className="mx-auto max-w-7xl px-5 py-6 lg:px-8">
-        <form className="grid gap-3 rounded-lg border border-line bg-panel p-4 md:grid-cols-[1.2fr_1fr_0.7fr_0.7fr_0.7fr_auto]">
+        {/* Filter bar — 3 rows on mobile, 1 wide row on desktop */}
+        <form className="grid gap-3 rounded-lg border border-line bg-panel p-4 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_0.7fr_0.7fr_0.7fr_0.7fr_0.7fr_auto]">
           <label className="text-sm font-semibold">
             {t("search")}
             <input
               className="mt-2 h-11 w-full rounded-lg border border-line bg-background px-3 text-sm outline-none focus:border-brand"
               defaultValue={params.q ?? ""}
               name="q"
-              placeholder="Action, path, subject, IP"
+              placeholder="Action, path, subject, IP, reason"
             />
           </label>
           <label className="text-sm font-semibold">
@@ -117,14 +172,27 @@ export default async function AuditLogsPage({ searchParams }: AuditLogsPageProps
             />
           </label>
           <label className="text-sm font-semibold">
-            {t("actorId")}
+            {t("module")}
             <input
               className="mt-2 h-11 w-full rounded-lg border border-line bg-background px-3 text-sm outline-none focus:border-brand"
-              defaultValue={params.actorId ?? ""}
-              min={1}
-              name="actorId"
-              type="number"
+              defaultValue={params.module ?? ""}
+              name="module"
+              placeholder="finance"
             />
+          </label>
+          <label className="text-sm font-semibold">
+            {t("severity")}
+            <select
+              className="mt-2 h-11 w-full rounded-lg border border-line bg-background px-3 text-sm outline-none focus:border-brand"
+              defaultValue={params.severity ?? ""}
+              name="severity"
+            >
+              {severityOptions.map((opt) => (
+                <option key={opt.value || "all"} value={opt.value}>
+                  {t(opt.labelKey as Parameters<typeof t>[0])}
+                </option>
+              ))}
+            </select>
           </label>
           <label className="text-sm font-semibold">
             {t("method")}
@@ -149,7 +217,7 @@ export default async function AuditLogsPage({ searchParams }: AuditLogsPageProps
               type="date"
             />
           </label>
-          <div className="flex items-end gap-2">
+          <div className="flex items-end gap-2 sm:col-span-2 lg:col-span-1">
             <label className="min-w-0 flex-1 text-sm font-semibold">
               {t("to")}
               <input
@@ -166,6 +234,16 @@ export default async function AuditLogsPage({ searchParams }: AuditLogsPageProps
               {t("filter")}
             </button>
           </div>
+          <label className="text-sm font-semibold lg:hidden">
+            {t("actorId")}
+            <input
+              className="mt-2 h-11 w-full rounded-lg border border-line bg-background px-3 text-sm outline-none focus:border-brand"
+              defaultValue={params.actorId ?? ""}
+              min={1}
+              name="actorId"
+              type="number"
+            />
+          </label>
         </form>
 
         <div className="mt-5 overflow-hidden rounded-lg border border-line bg-panel">
@@ -180,12 +258,14 @@ export default async function AuditLogsPage({ searchParams }: AuditLogsPageProps
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[980px] border-collapse text-left text-sm">
+            <table className="w-full min-w-[1100px] border-collapse text-left text-sm">
               <thead className="bg-background text-muted">
                 <tr>
                   <th className="px-4 py-3 font-semibold">{t("colTime")}</th>
                   <th className="px-4 py-3 font-semibold">{t("colActor")}</th>
                   <th className="px-4 py-3 font-semibold">{t("action")}</th>
+                  <th className="px-4 py-3 font-semibold">{t("colSeverity")}</th>
+                  <th className="px-4 py-3 font-semibold">{t("colReason")}</th>
                   <th className="px-4 py-3 font-semibold">{t("colRequest")}</th>
                   <th className="px-4 py-3 font-semibold">{t("colSubject")}</th>
                   <th className="px-4 py-3 font-semibold">{t("colStatus")}</th>
@@ -195,7 +275,7 @@ export default async function AuditLogsPage({ searchParams }: AuditLogsPageProps
               <tbody className="divide-y divide-line">
                 {auditLogs.length === 0 ? (
                   <tr>
-                    <td className="px-4 py-8 text-center text-muted" colSpan={7}>
+                    <td className="px-4 py-8 text-center text-muted" colSpan={9}>
                       {t("empty")}
                     </td>
                   </tr>
@@ -213,13 +293,31 @@ export default async function AuditLogsPage({ searchParams }: AuditLogsPageProps
                         <code className="rounded-lg bg-background px-2 py-1 text-xs font-semibold">{entry.action}</code>
                       </td>
                       <td className="px-4 py-4 align-top">
+                        <span
+                          className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${severityTone(entry.severity)}`}
+                        >
+                          {severityLabel(entry.severity)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 align-top text-muted">{entry.reason ?? t("noReason")}</td>
+                      <td className="px-4 py-4 align-top">
                         <div className="font-semibold">{entry.method ?? t("na")}</div>
                         <div className="max-w-xs truncate text-muted">{entry.path ?? t("noPath")}</div>
                         <div className="text-muted">{entry.ipAddress ?? t("noIp")}</div>
                       </td>
                       <td className="px-4 py-4 align-top">
-                        <div className="max-w-xs truncate">{entry.auditableType ?? t("noSubject")}</div>
-                        <div className="text-muted">{entry.auditableId ?? ""}</div>
+                        {entry.auditableType && entry.auditableId ? (
+                          <Link
+                            className="text-xs font-semibold text-brand hover:text-brand-strong"
+                            href={`/audit-logs/timeline/${encodeURIComponent(entry.auditableType)}/${encodeURIComponent(entry.auditableId)}`}
+                          >
+                            {entry.auditableType}
+                            <br />
+                            <span className="text-muted">#{entry.auditableId}</span>
+                          </Link>
+                        ) : (
+                          <span className="text-muted">{t("noSubject")}</span>
+                        )}
                       </td>
                       <td className="px-4 py-4 align-top">
                         <span className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${statusTone(entry.statusCode)}`}>

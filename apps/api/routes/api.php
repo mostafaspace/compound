@@ -190,9 +190,11 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
                 ->name('verification-requests.request-more-info');
             Route::patch('/documents/{userDocument}/review', [UserDocumentController::class, 'review'])->name('documents.review');
 
-            Route::middleware('role:super_admin,compound_admin,support_agent')
-                ->get('/audit-logs', [AuditLogController::class, 'index'])
-                ->name('audit-logs.index');
+            Route::middleware('role:super_admin,compound_admin,support_agent')->group(function (): void {
+                Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
+                Route::get('/audit-logs/timeline', [AuditLogController::class, 'timeline'])->name('audit-logs.timeline');
+                Route::get('/audit-logs/export', [AuditLogController::class, 'export'])->name('audit-logs.export');
+            });
 
             // Data import
             Route::middleware('role:super_admin,compound_admin')->group(function (): void {

@@ -190,6 +190,9 @@ export interface UpdateNotificationPreferenceInput {
   mutedCategories?: NotificationCategory[];
 }
 
+export const auditSeverityValues = ["info", "warning", "critical"] as const;
+export type AuditSeverity = (typeof auditSeverityValues)[number];
+
 export interface AuditLogEntry {
   id: number;
   actorId: number | null;
@@ -202,6 +205,8 @@ export interface AuditLogEntry {
   method: string | null;
   path: string | null;
   statusCode: number | null;
+  severity: AuditSeverity;
+  reason: string | null;
   metadata: Record<string, unknown>;
   createdAt: string | null;
   updatedAt: string | null;
@@ -210,9 +215,13 @@ export interface AuditLogEntry {
 export interface AuditLogFilters {
   action?: string;
   actorId?: number;
+  auditableType?: string;
+  auditableId?: string;
   from?: string;
   method?: string;
+  module?: string;
   perPage?: number;
   q?: string;
+  severity?: AuditSeverity;
   to?: string;
 }
