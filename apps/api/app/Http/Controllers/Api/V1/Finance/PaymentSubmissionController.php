@@ -7,6 +7,7 @@ use App\Http\Requests\Finance\ReviewPaymentSubmissionRequest;
 use App\Http\Resources\Finance\PaymentSubmissionResource;
 use App\Models\Finance\PaymentSubmission;
 use App\Models\User;
+use App\Services\CompoundContextService;
 use App\Services\FinanceService;
 use App\Support\AuditLogger;
 use Illuminate\Http\Request;
@@ -17,13 +18,20 @@ class PaymentSubmissionController extends Controller
 {
     public function __construct(
         private readonly FinanceService $financeService,
+        private readonly CompoundContextService $compoundContext,
         private readonly AuditLogger $auditLogger,
     ) {}
 
     public function index(Request $request): AnonymousResourceCollection
     {
+        $compoundId = $this->compoundContext->resolve($request);
+
         $payments = PaymentSubmission::query()
             ->with(['unitAccount.unit.building', 'submitter', 'reviewer'])
+            ->when($compoundId, fn ($query) => $query->whereHas(
+                'unitAccount.unit',
+                fn ($unitQuery) => $unitQuery->where('compound_id', $compoundId),
+            ))
             ->when($request->filled('status'), fn ($query) => $query->where('status', $request->string('status')->toString()))
             ->latest()
             ->paginate();
@@ -50,6 +58,7 @@ class PaymentSubmissionController extends Controller
         /** @var User $actor */
         $actor = $request->user();
         $validated = $request->validated();
+        $this->ensurePaymentCompoundAccess($request, $paymentSubmission);
 
         $payment = $this->financeService->approvePayment(
             payment: $paymentSubmission,
@@ -71,6 +80,7 @@ class PaymentSubmissionController extends Controller
         /** @var User $actor */
         $actor = $request->user();
         $validated = $request->validated();
+        $this->ensurePaymentCompoundAccess($request, $paymentSubmission);
 
         abort_unless(filled($validated['reason'] ?? null), Response::HTTP_UNPROCESSABLE_ENTITY, 'A rejection reason is required.');
 
@@ -93,6 +103,7 @@ class PaymentSubmissionController extends Controller
     {
         /** @var User $actor */
         $actor = $request->user();
+        $this->ensurePaymentCompoundAccess($request, $paymentSubmission);
 
         $validated = $request->validate([
             'note' => ['required', 'string', 'max:1000'],
@@ -110,5 +121,20 @@ class PaymentSubmissionController extends Controller
         ]);
 
         return PaymentSubmissionResource::make($payment);
+    }
+
+    private function ensurePaymentCompoundAccess(Request $request, PaymentSubmission $payment): void
+    {
+        $payment->loadMissing('unitAccount.unit');
+
+        if ($payment->unitAccount?->unit?->compound_id === null) {
+            abort(Response::HTTP_FORBIDDEN);
+        }
+
+        $compoundId = $this->compoundContext->resolve($request);
+
+        if ($compoundId !== null) {
+            abort_unless($payment->unitAccount->unit->compound_id === $compoundId, Response::HTTP_FORBIDDEN);
+        }
     }
 }

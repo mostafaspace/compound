@@ -384,6 +384,96 @@ class FinanceTest extends TestCase
             ->assertJsonCount(1, 'data');
     }
 
+    public function test_scoped_finance_reviewer_cannot_access_or_mutate_other_compound_unit_account(): void
+    {
+        $compoundA = Compound::factory()->create();
+        $compoundB = Compound::factory()->create();
+
+        $reviewer = User::factory()->create([
+            'role' => UserRole::FinanceReviewer->value,
+            'compound_id' => $compoundA->id,
+        ]);
+
+        $unitA = $this->createUnitForCompound($compoundA, 'A-101');
+        $unitB = $this->createUnitForCompound($compoundB, 'B-101');
+        $unbilledUnitB = $this->createUnitForCompound($compoundB, 'B-102');
+        $accountA = UnitAccount::factory()->for($unitA)->create();
+        $accountB = UnitAccount::factory()->for($unitB)->create();
+
+        Sanctum::actingAs($reviewer);
+
+        $this->getJson('/api/v1/finance/unit-accounts')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $accountA->id);
+
+        $this->getJson("/api/v1/finance/unit-accounts/{$accountB->id}")
+            ->assertForbidden();
+
+        $this->postJson("/api/v1/finance/unit-accounts/{$accountB->id}/ledger-entries", [
+            'type' => LedgerEntryType::Charge->value,
+            'amount' => 350,
+            'description' => 'Cross-compound charge must be blocked.',
+        ])->assertForbidden();
+
+        $this->postJson('/api/v1/finance/unit-accounts', [
+            'unitId' => $unbilledUnitB->id,
+            'currency' => 'EGP',
+        ])->assertForbidden();
+    }
+
+    public function test_scoped_finance_reviewer_cannot_access_or_review_other_compound_payment_submission(): void
+    {
+        $compoundA = Compound::factory()->create();
+        $compoundB = Compound::factory()->create();
+
+        $reviewer = User::factory()->create([
+            'role' => UserRole::FinanceReviewer->value,
+            'compound_id' => $compoundA->id,
+        ]);
+
+        $accountA = UnitAccount::factory()
+            ->for($this->createUnitForCompound($compoundA, 'A-201'))
+            ->create(['balance' => '500.00']);
+        $accountB = UnitAccount::factory()
+            ->for($this->createUnitForCompound($compoundB, 'B-201'))
+            ->create(['balance' => '700.00']);
+
+        $paymentA = PaymentSubmission::factory()->for($accountA)->create([
+            'status' => PaymentStatus::Submitted->value,
+        ]);
+        $paymentB = PaymentSubmission::factory()->for($accountB)->create([
+            'status' => PaymentStatus::Submitted->value,
+            'amount' => '200.00',
+        ]);
+
+        Sanctum::actingAs($reviewer);
+
+        $this->getJson('/api/v1/finance/payment-submissions')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $paymentA->id);
+
+        $this->patchJson("/api/v1/finance/payment-submissions/{$paymentB->id}/approve")
+            ->assertForbidden();
+        $this->patchJson("/api/v1/finance/payment-submissions/{$paymentB->id}/reject", [
+            'reason' => 'Cross-compound review must be blocked.',
+        ])->assertForbidden();
+        $this->patchJson("/api/v1/finance/payment-submissions/{$paymentB->id}/request-correction", [
+            'note' => 'Cross-compound correction must be blocked.',
+        ])->assertForbidden();
+
+        $this->assertDatabaseHas('payment_submissions', [
+            'id' => $paymentB->id,
+            'status' => PaymentStatus::Submitted->value,
+            'reviewed_by' => null,
+        ]);
+        $this->assertDatabaseHas('unit_accounts', [
+            'id' => $accountB->id,
+            'balance' => '700.00',
+        ]);
+    }
+
     public function test_unauthenticated_requests_are_rejected(): void
     {
         $this->getJson('/api/v1/finance/unit-accounts')->assertUnauthorized();
@@ -619,6 +709,16 @@ class FinanceTest extends TestCase
     private function createUnit(string $unitNumber = 'A-101'): Unit
     {
         $compound = Compound::factory()->create();
+        $building = Building::factory()->for($compound)->create();
+
+        return Unit::factory()
+            ->for($compound)
+            ->for($building)
+            ->create(['floor_id' => null, 'unit_number' => $unitNumber]);
+    }
+
+    private function createUnitForCompound(Compound $compound, string $unitNumber): Unit
+    {
         $building = Building::factory()->for($compound)->create();
 
         return Unit::factory()

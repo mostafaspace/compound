@@ -71,6 +71,7 @@ class UnitAccountController extends Controller
         $actor = $request->user();
         $validated = $request->validated();
         $unit = Unit::query()->findOrFail($validated['unitId']);
+        $this->ensureUnitCompoundAccess($request, $unit);
 
         $account = $this->financeService->createAccount(
             unit: $unit,
@@ -98,6 +99,8 @@ class UnitAccountController extends Controller
 
         if ($this->isResident($user)) {
             abort_unless($this->financeService->userCanAccessAccount($user, $unitAccount), Response::HTTP_FORBIDDEN);
+        } else {
+            $this->ensureAccountCompoundAccess($request, $unitAccount);
         }
 
         return UnitAccountResource::make(
@@ -110,6 +113,7 @@ class UnitAccountController extends Controller
         /** @var User $actor */
         $actor = $request->user();
         $validated = $request->validated();
+        $this->ensureAccountCompoundAccess($request, $unitAccount);
 
         abort_if($validated['type'] === LedgerEntryType::Payment->value, Response::HTTP_UNPROCESSABLE_ENTITY, 'Use payment approval to post payment entries.');
 
@@ -140,6 +144,8 @@ class UnitAccountController extends Controller
 
         if ($this->isResident($actor)) {
             abort_unless($this->financeService->userCanAccessAccount($actor, $unitAccount), Response::HTTP_FORBIDDEN);
+        } else {
+            $this->ensureAccountCompoundAccess($request, $unitAccount);
         }
 
         $validated = $request->validated();
@@ -186,5 +192,29 @@ class UnitAccountController extends Controller
     private function isResident(User $user): bool
     {
         return str_starts_with($user->role->value, 'resident_');
+    }
+
+    private function ensureAccountCompoundAccess(Request $request, UnitAccount $account): void
+    {
+        $account->loadMissing('unit');
+
+        if ($account->unit?->compound_id === null) {
+            abort(Response::HTTP_FORBIDDEN);
+        }
+
+        $compoundId = $this->compoundContext->resolve($request);
+
+        if ($compoundId !== null) {
+            abort_unless($account->unit->compound_id === $compoundId, Response::HTTP_FORBIDDEN);
+        }
+    }
+
+    private function ensureUnitCompoundAccess(Request $request, Unit $unit): void
+    {
+        $compoundId = $this->compoundContext->resolve($request);
+
+        if ($compoundId !== null) {
+            abort_unless($unit->compound_id === $compoundId, Response::HTTP_FORBIDDEN);
+        }
     }
 }
