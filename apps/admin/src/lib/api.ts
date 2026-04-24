@@ -6,6 +6,11 @@ import type {
   Announcement,
   ImportBatch,
   ImportBatchType,
+  ReserveFund,
+  ReserveFundMovement,
+  Vendor,
+  Budget,
+  Expense,
   AnnouncementAcknowledgement,
   AnnouncementAcknowledgementSummary,
   AnnouncementFilters,
@@ -2219,4 +2224,126 @@ export async function getImportBatch(id: string): Promise<ImportBatch | null> {
 
 export function getImportTemplateUrl(type: ImportBatchType): string {
   return `${config.apiBaseUrl}/imports/templates/${type}`;
+}
+
+// ── Advanced Finance: Reserve Funds ──────────────────────────────────────────
+
+export async function getReserveFunds(): Promise<ReserveFund[]> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/finance/reserve-funds?per_page=50`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+    if (!response.ok) return [];
+    const payload = (await response.json()) as PaginatedEnvelope<ReserveFund>;
+    return payload.data ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export async function getReserveFund(id: string): Promise<ReserveFund | null> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/finance/reserve-funds/${id}`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+    if (!response.ok) return null;
+    const payload = (await response.json()) as ApiEnvelope<ReserveFund>;
+    return payload.data;
+  } catch {
+    return null;
+  }
+}
+
+export async function getReserveFundMovements(id: string): Promise<ReserveFundMovement[]> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/finance/reserve-funds/${id}/movements?per_page=50`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+    if (!response.ok) return [];
+    const payload = (await response.json()) as PaginatedEnvelope<ReserveFundMovement>;
+    return payload.data ?? [];
+  } catch {
+    return [];
+  }
+}
+
+// ── Advanced Finance: Vendors ─────────────────────────────────────────────────
+
+export async function getVendors(): Promise<Vendor[]> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/finance/vendors?per_page=50`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+    if (!response.ok) return [];
+    const payload = (await response.json()) as PaginatedEnvelope<Vendor>;
+    return payload.data ?? [];
+  } catch {
+    return [];
+  }
+}
+
+// ── Advanced Finance: Budgets ─────────────────────────────────────────────────
+
+export async function getBudgets(): Promise<Budget[]> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/finance/budgets?per_page=50`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+    if (!response.ok) return [];
+    const payload = (await response.json()) as PaginatedEnvelope<Budget>;
+    return payload.data ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export async function getBudget(id: string): Promise<Budget | null> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/finance/budgets/${id}`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+    if (!response.ok) return null;
+    const payload = (await response.json()) as ApiEnvelope<Budget>;
+    return payload.data;
+  } catch {
+    return null;
+  }
+}
+
+// ── Advanced Finance: Expenses ────────────────────────────────────────────────
+
+export async function getExpenses(status?: string): Promise<Expense[]> {
+  try {
+    const params = new URLSearchParams({ per_page: "50" });
+    if (status && status !== "all") params.set("status", status);
+    const response = await fetch(`${config.apiBaseUrl}/finance/expenses?${params}`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+    if (!response.ok) return [];
+    const payload = (await response.json()) as PaginatedEnvelope<Expense>;
+    return payload.data ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export async function getExpense(id: string): Promise<Expense | null> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/finance/expenses/${id}`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+    if (!response.ok) return null;
+    const payload = (await response.json()) as ApiEnvelope<Expense>;
+    return payload.data;
+  } catch {
+    return null;
+  }
 }

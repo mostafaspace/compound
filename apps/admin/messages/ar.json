@@ -375,6 +375,7 @@
     "back": "لوحة القيادة",
     "title": "المالية",
     "subtitle": "راجع أرصدة الوحدات وسجل الرسوم واعتمد مدفوعات السكان.",
+    "advanced": "المالية المتقدمة",
     "messages": {
       "accountCreated": "تم إنشاء حساب الوحدة.",
       "ledgerCreated": "تم تسجيل قيد الدفتر.",
@@ -1071,6 +1072,83 @@
     "viewing": "عرض",
     "allCompounds": "جميع المجمعات",
     "switchLabel": "تبديل المجمع"
+  },
+  "AdvancedFinance": {
+    "title": "المالية المتقدمة",
+    "subtitle": "إدارة صناديق الاحتياطي والموردين والميزانيات والمصروفات",
+    "reserveFunds": {
+      "title": "صناديق الاحتياطي",
+      "create": "إنشاء صندوق احتياطي",
+      "createBtn": "إنشاء الصندوق",
+      "list": "صناديق الاحتياطي",
+      "empty": "لا توجد صناديق احتياطي بعد.",
+      "movementType": "النوع",
+      "addMovement": "إضافة حركة"
+    },
+    "vendors": {
+      "title": "الموردون",
+      "create": "إضافة مورد",
+      "createBtn": "إضافة مورد",
+      "list": "الموردون",
+      "empty": "لا يوجد موردون بعد."
+    },
+    "budgets": {
+      "title": "الميزانيات",
+      "create": "إنشاء ميزانية",
+      "createBtn": "إنشاء ميزانية",
+      "list": "الميزانيات",
+      "empty": "لا توجد ميزانيات بعد.",
+      "planned": "المخطط",
+      "actual": "الفعلي",
+      "activate": "تفعيل",
+      "close": "إغلاق",
+      "addCategory": "إضافة فئة",
+      "categoryName": "اسم الفئة"
+    },
+    "expenses": {
+      "title": "المصروفات",
+      "create": "تقديم مصروف",
+      "createBtn": "تقديم",
+      "pending": "بانتظار الموافقة",
+      "approved": "المصروفات المعتمدة",
+      "noPending": "لا توجد مصروفات معلقة.",
+      "noVendor": "— بدون مورد —",
+      "approve": "اعتماد",
+      "reject": "رفض",
+      "rejectReason": "سبب الرفض"
+    },
+    "fields": {
+      "name": "الاسم",
+      "description": "الوصف",
+      "currency": "العملة",
+      "amount": "المبلغ",
+      "type": "النوع",
+      "contactName": "اسم جهة الاتصال",
+      "phone": "الهاتف",
+      "email": "البريد الإلكتروني",
+      "periodType": "نوع الفترة",
+      "periodYear": "السنة",
+      "title": "العنوان",
+      "expenseDate": "تاريخ المصروف",
+      "vendor": "المورد",
+      "status": "الحالة"
+    },
+    "movementTypes": {
+      "deposit": "إيداع",
+      "withdrawal": "سحب",
+      "transfer": "تحويل"
+    },
+    "vendorTypes": {
+      "contractor": "مقاول",
+      "supplier": "مورد",
+      "service_provider": "مزود خدمة",
+      "legal_advisor": "مستشار قانوني",
+      "other": "أخرى"
+    },
+    "periodTypes": {
+      "annual": "سنوي",
+      "monthly": "شهري"
+    }
   },
   "CompoundOnboarding": {
     "title": "قائمة التهيئة",

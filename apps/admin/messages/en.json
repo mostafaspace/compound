@@ -375,6 +375,7 @@
     "back": "Dashboard",
     "title": "Finance",
     "subtitle": "Review unit balances, post charges, and approve resident payment submissions.",
+    "advanced": "Advanced Finance",
     "messages": {
       "accountCreated": "Unit account created.",
       "ledgerCreated": "Ledger entry posted.",
@@ -1071,6 +1072,83 @@
     "viewing": "Viewing",
     "allCompounds": "All compounds",
     "switchLabel": "Switch compound"
+  },
+  "AdvancedFinance": {
+    "title": "Advanced Finance",
+    "subtitle": "Manage reserve funds, vendors, budgets, and expenses",
+    "reserveFunds": {
+      "title": "Reserve Funds",
+      "create": "Create Reserve Fund",
+      "createBtn": "Create Fund",
+      "list": "Reserve Funds",
+      "empty": "No reserve funds yet.",
+      "movementType": "Type",
+      "addMovement": "Add Movement"
+    },
+    "vendors": {
+      "title": "Vendors",
+      "create": "Add Vendor",
+      "createBtn": "Add Vendor",
+      "list": "Vendors",
+      "empty": "No vendors yet."
+    },
+    "budgets": {
+      "title": "Budgets",
+      "create": "Create Budget",
+      "createBtn": "Create Budget",
+      "list": "Budgets",
+      "empty": "No budgets yet.",
+      "planned": "Planned",
+      "actual": "Actual",
+      "activate": "Activate",
+      "close": "Close",
+      "addCategory": "Add Category",
+      "categoryName": "Category name"
+    },
+    "expenses": {
+      "title": "Expenses",
+      "create": "Submit Expense",
+      "createBtn": "Submit",
+      "pending": "Pending Approval",
+      "approved": "Approved Expenses",
+      "noPending": "No pending expenses.",
+      "noVendor": "— No vendor —",
+      "approve": "Approve",
+      "reject": "Reject",
+      "rejectReason": "Reason for rejection"
+    },
+    "fields": {
+      "name": "Name",
+      "description": "Description",
+      "currency": "Currency",
+      "amount": "Amount",
+      "type": "Type",
+      "contactName": "Contact Name",
+      "phone": "Phone",
+      "email": "Email",
+      "periodType": "Period Type",
+      "periodYear": "Year",
+      "title": "Title",
+      "expenseDate": "Expense Date",
+      "vendor": "Vendor",
+      "status": "Status"
+    },
+    "movementTypes": {
+      "deposit": "Deposit",
+      "withdrawal": "Withdrawal",
+      "transfer": "Transfer"
+    },
+    "vendorTypes": {
+      "contractor": "Contractor",
+      "supplier": "Supplier",
+      "service_provider": "Service Provider",
+      "legal_advisor": "Legal Advisor",
+      "other": "Other"
+    },
+    "periodTypes": {
+      "annual": "Annual",
+      "monthly": "Monthly"
+    }
   },
   "CompoundOnboarding": {
     "title": "Onboarding Checklist",

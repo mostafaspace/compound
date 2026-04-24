@@ -8,3 +8,4 @@ export * from "./issues";
 export * from "./announcements";
 export * from "./settings";
 export * from "./imports";
+export * from "./advanced-finance";

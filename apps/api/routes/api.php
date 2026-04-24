@@ -8,12 +8,16 @@ use App\Http\Controllers\Api\V1\BuildingController;
 use App\Http\Controllers\Api\V1\CompoundController;
 use App\Http\Controllers\Api\V1\CompoundOnboardingController;
 use App\Http\Controllers\Api\V1\DocumentTypeController;
+use App\Http\Controllers\Api\V1\Finance\BudgetController;
 use App\Http\Controllers\Api\V1\Finance\ChargeTypeController;
 use App\Http\Controllers\Api\V1\Finance\CollectionCampaignController;
+use App\Http\Controllers\Api\V1\Finance\ExpenseController;
 use App\Http\Controllers\Api\V1\Finance\FinanceReportController;
 use App\Http\Controllers\Api\V1\Finance\PaymentSubmissionController;
 use App\Http\Controllers\Api\V1\Finance\RecurringChargeController;
+use App\Http\Controllers\Api\V1\Finance\ReserveFundController;
 use App\Http\Controllers\Api\V1\Finance\UnitAccountController;
+use App\Http\Controllers\Api\V1\Finance\VendorController;
 use App\Http\Controllers\Api\V1\FloorController;
 use App\Http\Controllers\Api\V1\Governance\VoteController;
 use App\Http\Controllers\Api\V1\IssueAttachmentController;
@@ -93,6 +97,11 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             Route::get('/my/finance/payment-submissions', [PaymentSubmissionController::class, 'mine'])
                 ->name('my.finance.payment-submissions.index');
         });
+
+        // Resident transparency: approved spending summary — accessible to all authenticated roles
+        Route::middleware('role:super_admin,compound_admin,board_member,finance_reviewer,support_agent,resident_owner,resident_tenant')
+            ->get('/finance/expenses/public-summary', [ExpenseController::class, 'publicSummary'])
+            ->name('finance.expenses.public-summary');
 
         // Issue Management for residents
         Route::get('/my/issues', [IssueController::class, 'myIssues'])->name('my.issues.index');
@@ -267,6 +276,36 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
                 Route::get('/accounts', [FinanceReportController::class, 'accounts'])->name('accounts');
                 Route::get('/payment-methods', [FinanceReportController::class, 'paymentMethodBreakdown'])->name('payment-methods');
             });
+
+            // Reserve funds
+            Route::get('/reserve-funds', [ReserveFundController::class, 'index'])->name('reserve-funds.index');
+            Route::post('/reserve-funds', [ReserveFundController::class, 'store'])->name('reserve-funds.store');
+            Route::get('/reserve-funds/{reserveFund}', [ReserveFundController::class, 'show'])->name('reserve-funds.show');
+            Route::patch('/reserve-funds/{reserveFund}', [ReserveFundController::class, 'update'])->name('reserve-funds.update');
+            Route::get('/reserve-funds/{reserveFund}/movements', [ReserveFundController::class, 'movements'])->name('reserve-funds.movements');
+            Route::post('/reserve-funds/{reserveFund}/movements', [ReserveFundController::class, 'storeMovement'])->name('reserve-funds.movements.store');
+
+            // Vendors
+            Route::get('/vendors', [VendorController::class, 'index'])->name('vendors.index');
+            Route::post('/vendors', [VendorController::class, 'store'])->name('vendors.store');
+            Route::get('/vendors/{vendor}', [VendorController::class, 'show'])->name('vendors.show');
+            Route::patch('/vendors/{vendor}', [VendorController::class, 'update'])->name('vendors.update');
+
+            // Budgets
+            Route::get('/budgets', [BudgetController::class, 'index'])->name('budgets.index');
+            Route::post('/budgets', [BudgetController::class, 'store'])->name('budgets.store');
+            Route::get('/budgets/{budget}', [BudgetController::class, 'show'])->name('budgets.show');
+            Route::patch('/budgets/{budget}', [BudgetController::class, 'update'])->name('budgets.update');
+            Route::post('/budgets/{budget}/activate', [BudgetController::class, 'activate'])->name('budgets.activate');
+            Route::post('/budgets/{budget}/close', [BudgetController::class, 'close'])->name('budgets.close');
+            Route::post('/budgets/{budget}/categories', [BudgetController::class, 'storeCategory'])->name('budgets.categories.store');
+            Route::patch('/budgets/{budget}/categories/{category}', [BudgetController::class, 'updateCategory'])->name('budgets.categories.update');
+
+            Route::get('/expenses', [ExpenseController::class, 'index'])->name('expenses.index');
+            Route::post('/expenses', [ExpenseController::class, 'store'])->name('expenses.store');
+            Route::get('/expenses/{expense}', [ExpenseController::class, 'show'])->name('expenses.show');
+            Route::post('/expenses/{expense}/approve', [ExpenseController::class, 'approve'])->name('expenses.approve');
+            Route::post('/expenses/{expense}/reject', [ExpenseController::class, 'reject'])->name('expenses.reject');
         });
 
     Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,board_member,finance_reviewer,support_agent,resident_owner,resident_tenant'])
