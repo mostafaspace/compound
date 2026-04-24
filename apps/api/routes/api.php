@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AnnouncementController;
+use App\Http\Controllers\Api\V1\ImportBatchController;
 use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BuildingController;
@@ -178,6 +179,14 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             Route::middleware('role:super_admin,compound_admin,support_agent')
                 ->get('/audit-logs', [AuditLogController::class, 'index'])
                 ->name('audit-logs.index');
+
+            // Data import
+            Route::middleware('role:super_admin,compound_admin')->group(function (): void {
+                Route::get('/imports', [ImportBatchController::class, 'index'])->name('imports.index');
+                Route::post('/imports', [ImportBatchController::class, 'store'])->name('imports.store');
+                Route::get('/imports/templates/{type}', [ImportBatchController::class, 'template'])->name('imports.template');
+                Route::get('/imports/{importBatch}', [ImportBatchController::class, 'show'])->name('imports.show');
+            });
 
             // Representative assignments (admin-only mutations)
             Route::get('/compounds/{compound}/representatives', [RepresentativeAssignmentController::class, 'index'])

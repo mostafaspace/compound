@@ -42,6 +42,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             DocumentTypeSeeder::class,
             NextPointSeeder::class,
+            BaselineSeeder::class,
         ]);
     }
 }

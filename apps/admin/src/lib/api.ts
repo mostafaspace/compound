@@ -4,6 +4,8 @@ import { getCompoundContext } from "@/lib/session";
 import type {
   ApiEnvelope,
   Announcement,
+  ImportBatch,
+  ImportBatchType,
   AnnouncementAcknowledgement,
   AnnouncementAcknowledgementSummary,
   AnnouncementFilters,
@@ -2175,4 +2177,46 @@ export async function updateSettings(namespace: string, input: UpdateSettingsInp
   } catch {
     return null;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Data Import
+// ---------------------------------------------------------------------------
+
+export async function getImportBatches(): Promise<ImportBatch[]> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/imports`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+
+    if (!response.ok) return [];
+
+    const payload = (await response.json()) as { data: ImportBatch[] };
+
+    return payload.data;
+  } catch {
+    return [];
+  }
+}
+
+export async function getImportBatch(id: string): Promise<ImportBatch | null> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/imports/${id}`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+
+    if (!response.ok) return null;
+
+    const payload = (await response.json()) as ApiEnvelope<ImportBatch>;
+
+    return payload.data;
+  } catch {
+    return null;
+  }
+}
+
+export function getImportTemplateUrl(type: ImportBatchType): string {
+  return `${config.apiBaseUrl}/imports/templates/${type}`;
 }

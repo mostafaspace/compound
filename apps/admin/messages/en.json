@@ -14,6 +14,7 @@
     "dues": "Dues",
     "governance": "Governance",
     "settings": "Settings",
+    "imports": "Data import",
     "signOut": "Sign Out"
   },
   "Language": {
@@ -998,6 +999,73 @@
     "enabled": "Enabled",
     "disabled": "Disabled",
     "arrayPlaceholder": "comma-separated values"
+  },
+  "Import": {
+    "title": "Data import",
+    "subtitle": "Upload CSV files to import units, users, or opening balances into a compound.",
+    "back": "Dashboard",
+    "newImport": "New import",
+    "downloadTemplate": "Download template",
+    "startImport": "Start import",
+    "runImport": "Run import",
+    "dryRunLabel": "Dry run (validate only, no changes)",
+    "dryRunNote": "Dry run validates your file and shows errors without writing any records.",
+    "compoundLabel": "Compound",
+    "typeLabel": "Import type",
+    "fileLabel": "CSV file",
+    "types": {
+      "units": "Units",
+      "users": "Users",
+      "opening_balances": "Opening balances"
+    },
+    "statuses": {
+      "pending": "Pending",
+      "processing": "Processing",
+      "completed": "Completed",
+      "failed": "Failed"
+    },
+    "result": {
+      "title": "Import result",
+      "created": "Created",
+      "updated": "Updated",
+      "skipped": "Skipped",
+      "errors": "Errors",
+      "totalRows": "Total rows",
+      "dryRun": "Dry run",
+      "yes": "Yes",
+      "no": "No"
+    },
+    "errors": {
+      "title": "Row errors",
+      "row": "Row",
+      "field": "Field",
+      "message": "Error",
+      "none": "No errors"
+    },
+    "history": {
+      "title": "Import history",
+      "empty": "No imports have been run yet.",
+      "filename": "File",
+      "type": "Type",
+      "status": "Status",
+      "dryRun": "Dry run",
+      "rows": "Rows",
+      "created": "Created by",
+      "startedAt": "Started",
+      "view": "View"
+    },
+    "messages": {
+      "success": "Import completed successfully.",
+      "dryRunSuccess": "Dry run completed. Review the results before running the real import.",
+      "failed": "Import failed. Check the error details below."
+    },
+    "templates": {
+      "title": "CSV templates",
+      "subtitle": "Download the correct template for the data you want to import.",
+      "units": "Units template",
+      "users": "Users template",
+      "opening_balances": "Opening balances template"
+    }
   },
   "CompoundContext": {
     "viewing": "Viewing",
