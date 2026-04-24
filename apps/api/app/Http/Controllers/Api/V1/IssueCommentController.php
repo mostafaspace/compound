@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Issues\StoreIssueCommentRequest;
 use App\Http\Resources\Issues\IssueCommentResource;
 use App\Models\Issues\Issue;
+use App\Models\User;
 use App\Services\IssueService;
 use Illuminate\Http\JsonResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 class IssueCommentController extends Controller
 {
@@ -15,8 +17,9 @@ class IssueCommentController extends Controller
 
     public function store(StoreIssueCommentRequest $request, Issue $issue): JsonResponse
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = $request->user();
+        abort_unless($this->issueService->userCanAccessIssue($user, $issue), Response::HTTP_FORBIDDEN);
 
         $comment = $this->issueService->addComment(
             issue: $issue,

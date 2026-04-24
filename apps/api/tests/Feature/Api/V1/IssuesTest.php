@@ -9,7 +9,7 @@ use App\Enums\UserRole;
 use App\Enums\VerificationStatus;
 use App\Models\Issues\Issue;
 use App\Models\Issues\IssueAttachment;
-use App\Models\Issues\IssueComment;
+use App\Models\Notification;
 use App\Models\Property\Building;
 use App\Models\Property\Compound;
 use App\Models\Property\Unit;
@@ -518,7 +518,7 @@ class IssuesTest extends TestCase
         // Update status → notification to reporter
         $this->patchJson("/api/v1/issues/{$issue->id}", ['status' => 'in_progress'])->assertOk();
 
-        $notification = \App\Models\Notification::query()
+        $notification = Notification::query()
             ->where('user_id', $resident->id)
             ->where('category', NotificationCategory::Issues->value)
             ->where('title', 'Your issue status changed')
@@ -532,7 +532,7 @@ class IssuesTest extends TestCase
             'reason' => 'Vendor SLA breach',
         ])->assertOk();
 
-        $escalateNotif = \App\Models\Notification::query()
+        $escalateNotif = Notification::query()
             ->where('user_id', $resident->id)
             ->where('title', 'Issue escalated')
             ->first();
@@ -544,6 +544,79 @@ class IssuesTest extends TestCase
     // ──────────────────────────────────────────────────────────
     // Helpers
     // ──────────────────────────────────────────────────────────
+
+    public function test_scoped_admin_cannot_access_or_mutate_other_compound_issue(): void
+    {
+        $compoundA = Compound::factory()->create();
+        $compoundB = Compound::factory()->create();
+        $buildingB = Building::factory()->for($compoundB)->create();
+
+        $scopedAdmin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compoundA->id,
+        ]);
+        $reporter = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+
+        $issue = Issue::factory()->create([
+            'compound_id' => $compoundB->id,
+            'building_id' => $buildingB->id,
+            'reported_by' => $reporter->id,
+            'status' => 'in_progress',
+        ]);
+
+        Sanctum::actingAs($scopedAdmin);
+
+        $this->getJson("/api/v1/issues/{$issue->id}")->assertForbidden();
+        $this->patchJson("/api/v1/issues/{$issue->id}", ['status' => 'resolved'])->assertForbidden();
+        $this->postJson("/api/v1/issues/{$issue->id}/escalate", [
+            'reason' => 'Cross-compound escalation should be blocked.',
+        ])->assertForbidden();
+    }
+
+    public function test_scoped_admin_cannot_comment_or_manage_attachments_for_other_compound_issue(): void
+    {
+        Storage::fake('local');
+        config(['filesystems.default' => 'local']);
+
+        $compoundA = Compound::factory()->create();
+        $compoundB = Compound::factory()->create();
+        $buildingB = Building::factory()->for($compoundB)->create();
+
+        $scopedAdmin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compoundA->id,
+        ]);
+        $reporter = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+
+        $issue = Issue::factory()->create([
+            'compound_id' => $compoundB->id,
+            'building_id' => $buildingB->id,
+            'reported_by' => $reporter->id,
+        ]);
+
+        IssueAttachment::create([
+            'issue_id' => $issue->id,
+            'uploaded_by' => $reporter->id,
+            'disk' => 'local',
+            'path' => 'issue-attachments/test/cross-compound.jpg',
+            'original_name' => 'cross-compound.jpg',
+            'mime_type' => 'image/jpeg',
+            'size' => 2048,
+        ]);
+
+        Sanctum::actingAs($scopedAdmin);
+
+        $this->postJson("/api/v1/issues/{$issue->id}/comments", [
+            'body' => 'This should be forbidden.',
+        ])->assertForbidden();
+        $this->getJson("/api/v1/issues/{$issue->id}/attachments")->assertForbidden();
+        $this->post("/api/v1/issues/{$issue->id}/attachments", [
+            'file' => UploadedFile::fake()->create('blocked.jpg', 64, 'image/jpeg'),
+        ])->assertForbidden();
+
+        $this->assertDatabaseCount('issue_comments', 0);
+        $this->assertDatabaseCount('issue_attachments', 1);
+    }
 
     /**
      * @return array{0: User, 1: Unit}

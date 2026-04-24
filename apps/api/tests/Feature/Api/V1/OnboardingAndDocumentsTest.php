@@ -168,6 +168,75 @@ class OnboardingAndDocumentsTest extends TestCase
         ])->assertGone();
     }
 
+    public function test_scoped_admin_cannot_create_unitless_or_cross_compound_invitation(): void
+    {
+        $compoundA = Compound::factory()->create();
+        $compoundB = Compound::factory()->create();
+        $buildingB = Building::factory()->for($compoundB)->create();
+        $unitB = Unit::factory()->for($compoundB)->for($buildingB)->create(['floor_id' => null]);
+
+        $scopedAdmin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compoundA->id,
+        ]);
+
+        Sanctum::actingAs($scopedAdmin);
+
+        $this->postJson('/api/v1/resident-invitations', [
+            'name' => 'Unitless Invite',
+            'email' => 'unitless@example.com',
+            'role' => UserRole::ResidentTenant->value,
+        ])->assertUnprocessable();
+
+        $this->postJson('/api/v1/resident-invitations', [
+            'name' => 'Foreign Unit Invite',
+            'email' => 'foreign@example.com',
+            'role' => UserRole::ResidentOwner->value,
+            'unitId' => $unitB->id,
+            'relationType' => UnitRelationType::Owner->value,
+        ])->assertForbidden();
+    }
+
+    public function test_scoped_admin_cannot_resend_or_revoke_other_compound_invitation(): void
+    {
+        Notification::fake();
+
+        $compoundA = Compound::factory()->create();
+        $compoundB = Compound::factory()->create();
+        $buildingB = Building::factory()->for($compoundB)->create();
+        $unitB = Unit::factory()->for($compoundB)->for($buildingB)->create(['floor_id' => null]);
+
+        $adminA = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compoundA->id,
+        ]);
+        $adminB = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compoundB->id,
+        ]);
+
+        Sanctum::actingAs($adminB);
+        $this->postJson('/api/v1/resident-invitations', [
+            'name' => 'Scoped Resident',
+            'email' => 'scoped.resident@example.com',
+            'role' => UserRole::ResidentOwner->value,
+            'unitId' => $unitB->id,
+            'relationType' => UnitRelationType::Owner->value,
+            'isPrimary' => true,
+        ])->assertCreated();
+
+        $invitation = ResidentInvitation::query()->where('email', 'scoped.resident@example.com')->firstOrFail();
+
+        Sanctum::actingAs($adminA);
+        $this->postJson("/api/v1/resident-invitations/{$invitation->id}/resend")->assertForbidden();
+        $this->postJson("/api/v1/resident-invitations/{$invitation->id}/revoke")->assertForbidden();
+
+        $this->assertDatabaseHas('resident_invitations', [
+            'id' => $invitation->id,
+            'status' => InvitationStatus::Pending->value,
+        ]);
+    }
+
     public function test_admin_can_upload_and_review_verification_document(): void
     {
         Storage::fake('local');

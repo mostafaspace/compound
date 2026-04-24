@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Api\V1;
 
-use App\Enums\AccountStatus;
 use App\Enums\AnnouncementCategory;
 use App\Enums\AnnouncementPriority;
 use App\Enums\AnnouncementStatus;
@@ -210,7 +209,7 @@ class AnnouncementsTest extends TestCase
     {
         $compound = Compound::factory()->create();
         $admin = User::factory()->create([
-            'role'        => UserRole::CompoundAdmin->value,
+            'role' => UserRole::CompoundAdmin->value,
             'compound_id' => $compound->id,
         ]);
         $security = User::factory()->create(['role' => UserRole::SecurityGuard->value]);
@@ -345,7 +344,7 @@ class AnnouncementsTest extends TestCase
         $otherBuilding = Building::factory()->create();
         // Scope otherAdmin to the compound that owns otherBuilding.
         $otherAdmin = User::factory()->create([
-            'role'        => UserRole::CompoundAdmin->value,
+            'role' => UserRole::CompoundAdmin->value,
             'compound_id' => $otherBuilding->compound_id,
         ]);
 
@@ -448,13 +447,95 @@ class AnnouncementsTest extends TestCase
             ->assertDownload('notice.txt');
     }
 
+    public function test_scoped_admin_cannot_create_announcement_for_another_compound_or_target_foreign_property(): void
+    {
+        $compoundA = Compound::factory()->create();
+        $compoundB = Compound::factory()->create();
+        $buildingB = Building::factory()->for($compoundB)->create();
+
+        $adminA = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compoundA->id,
+        ]);
+
+        Sanctum::actingAs($adminA);
+
+        $this->postJson('/api/v1/announcements', [
+            'compoundId' => $compoundB->id,
+            'titleEn' => 'Wrong compound',
+            'titleAr' => 'مجمع خاطئ',
+            'bodyEn' => 'This should not be allowed.',
+            'bodyAr' => 'يجب عدم السماح بهذا.',
+            'category' => AnnouncementCategory::General->value,
+            'targetType' => AnnouncementTargetType::Building->value,
+            'targetIds' => [$buildingB->id],
+        ])->assertForbidden();
+
+        $this->postJson('/api/v1/announcements', [
+            'titleEn' => 'Foreign building target',
+            'titleAr' => 'استهداف مبنى خارجي',
+            'bodyEn' => 'This should fail validation.',
+            'bodyAr' => 'يجب أن يفشل التحقق.',
+            'category' => AnnouncementCategory::General->value,
+            'targetType' => AnnouncementTargetType::Building->value,
+            'targetIds' => [$buildingB->id],
+        ])->assertUnprocessable();
+
+        $this->assertDatabaseMissing('announcements', [
+            'title_en' => 'Wrong compound',
+        ]);
+        $this->assertDatabaseMissing('announcements', [
+            'title_en' => 'Foreign building target',
+        ]);
+    }
+
+    public function test_scoped_admin_cannot_manage_other_compound_announcements(): void
+    {
+        Storage::fake(config('filesystems.default', 'local'));
+
+        $compoundA = Compound::factory()->create();
+        $compoundB = Compound::factory()->create();
+        $buildingB = Building::factory()->for($compoundB)->create();
+
+        $adminA = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compoundA->id,
+        ]);
+        $adminB = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compoundB->id,
+        ]);
+
+        Sanctum::actingAs($adminB);
+        $announcementId = $this->postJson('/api/v1/announcements', [
+            'titleEn' => 'Compound B notice',
+            'titleAr' => 'إعلان المجمع ب',
+            'bodyEn' => 'Only compound B should manage this.',
+            'bodyAr' => 'يجب أن يدير هذا مجمع ب فقط.',
+            'category' => AnnouncementCategory::General->value,
+            'targetType' => AnnouncementTargetType::Building->value,
+            'targetIds' => [$buildingB->id],
+        ])->assertCreated()->json('data.id');
+
+        Sanctum::actingAs($adminA);
+        $this->getJson("/api/v1/announcements/{$announcementId}")->assertForbidden();
+        $this->patchJson("/api/v1/announcements/{$announcementId}", [
+            'titleEn' => 'Hijacked title',
+        ])->assertForbidden();
+        $this->postJson("/api/v1/announcements/{$announcementId}/publish")->assertForbidden();
+        $this->post("/api/v1/announcements/{$announcementId}/attachments", [
+            'file' => UploadedFile::fake()->createWithContent('cross-compound.txt', 'forbidden'),
+        ])->assertForbidden();
+        $this->getJson("/api/v1/announcements/{$announcementId}/acknowledgements")->assertForbidden();
+    }
+
     private function buildingScenario(): array
     {
         $compound = Compound::factory()->create();
 
         // Scope the admin to this compound so announcement store resolves compound context.
         $admin = User::factory()->create([
-            'role'        => UserRole::CompoundAdmin->value,
+            'role' => UserRole::CompoundAdmin->value,
             'compound_id' => $compound->id,
         ]);
         $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value]);

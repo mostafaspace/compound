@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\AnnouncementStatus;
+use App\Enums\AnnouncementTargetType;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Announcements\StoreAnnouncementAttachmentRequest;
@@ -11,6 +12,9 @@ use App\Http\Requests\Announcements\UpdateAnnouncementRequest;
 use App\Http\Resources\AnnouncementResource;
 use App\Models\Announcements\Announcement;
 use App\Models\Announcements\AnnouncementAttachment;
+use App\Models\Property\Building;
+use App\Models\Property\Floor;
+use App\Models\Property\Unit;
 use App\Services\AnnouncementService;
 use App\Services\CompoundContextService;
 use App\Support\AuditLogger;
@@ -18,6 +22,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\Response;
 
 class AnnouncementController extends Controller
 {
@@ -25,8 +30,7 @@ class AnnouncementController extends Controller
         private AnnouncementService $announcementService,
         private AuditLogger $auditLogger,
         private CompoundContextService $compoundContext,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request): AnonymousResourceCollection
     {
@@ -133,13 +137,22 @@ class AnnouncementController extends Controller
 
     public function store(StoreAnnouncementRequest $request): AnnouncementResource
     {
-        // Resolve compound: prefer explicit body param, fall back to user/header context.
         $payload = $request->payload();
-        if (empty($payload['compound_id'])) {
-            $compoundId = $this->compoundContext->resolve($request);
-            abort_unless(filled($compoundId), 422, 'A compoundId is required to create an announcement.');
-            $payload['compound_id'] = $compoundId;
-        }
+        $requestedCompoundId = $payload['compound_id'] ?: $this->compoundContext->resolve($request);
+
+        abort_unless(filled($requestedCompoundId), 422, 'A compoundId is required to create an announcement.');
+
+        $payload['compound_id'] = $this->compoundContext->resolveManagedCompound(
+            $request,
+            $requestedCompoundId,
+            false,
+        );
+
+        $this->validateAnnouncementTargets(
+            $payload['compound_id'],
+            $payload['target_type'],
+            $payload['target_ids'] ?? [],
+        );
 
         $announcement = Announcement::query()->create($payload);
 
@@ -158,10 +171,7 @@ class AnnouncementController extends Controller
 
     public function show(Request $request, Announcement $announcement): AnnouncementResource
     {
-        abort_unless(
-            $this->isAnnouncementAdmin($request) || $this->announcementService->canUserView($announcement, $request->user()),
-            403
-        );
+        abort_unless($this->canAccessAnnouncement($request, $announcement), Response::HTTP_FORBIDDEN);
 
         return new AnnouncementResource($announcement->load([
             'author',
@@ -172,9 +182,15 @@ class AnnouncementController extends Controller
 
     public function update(UpdateAnnouncementRequest $request, Announcement $announcement): AnnouncementResource
     {
+        $this->ensureAnnouncementAdminAccess($request, $announcement->compound_id);
         abort_if($announcement->status === AnnouncementStatus::Archived, 422, 'Archived announcements cannot be edited.');
 
         $payload = $request->payload();
+        $this->validateAnnouncementTargets(
+            $announcement->compound_id,
+            $payload['target_type'] ?? $announcement->target_type->value,
+            $payload['target_ids'] ?? $announcement->target_ids ?? [],
+        );
         $contentFields = ['title_en', 'title_ar', 'body_en', 'body_ar'];
         $contentChanged = count(array_intersect(array_keys($payload), $contentFields)) > 0;
 
@@ -216,6 +232,7 @@ class AnnouncementController extends Controller
 
     public function publish(Request $request, Announcement $announcement): AnnouncementResource
     {
+        $this->ensureAnnouncementAdminAccess($request, $announcement->compound_id);
         abort_if($announcement->status === AnnouncementStatus::Archived, 422, 'Archived announcements cannot be published.');
 
         $announcement = $this->announcementService->publish($announcement);
@@ -234,6 +251,7 @@ class AnnouncementController extends Controller
 
     public function archive(Request $request, Announcement $announcement): AnnouncementResource
     {
+        $this->ensureAnnouncementAdminAccess($request, $announcement->compound_id);
         $announcement = $this->announcementService->archive($announcement);
 
         $this->auditLogger->record(
@@ -251,6 +269,8 @@ class AnnouncementController extends Controller
         StoreAnnouncementAttachmentRequest $request,
         Announcement $announcement
     ): JsonResponse {
+        $this->ensureAnnouncementAdminAccess($request, $announcement->compound_id);
+
         $file = $request->file('file');
         $disk = config('filesystems.default', 'local');
         $path = $file->store("announcements/{$announcement->id}", $disk);
@@ -285,10 +305,7 @@ class AnnouncementController extends Controller
         AnnouncementAttachment $attachment
     ) {
         abort_unless($attachment->announcement_id === $announcement->id, 404);
-        abort_unless(
-            $this->isAnnouncementAdmin($request) || $this->announcementService->canUserView($announcement, $request->user()),
-            403
-        );
+        abort_unless($this->canAccessAnnouncement($request, $announcement), Response::HTTP_FORBIDDEN);
 
         $this->auditLogger->record(
             action: 'announcements.attachment_downloaded',
@@ -304,7 +321,7 @@ class AnnouncementController extends Controller
 
     public function acknowledge(Request $request, Announcement $announcement): JsonResponse
     {
-        abort_unless($this->announcementService->canUserView($announcement, $request->user()), 403);
+        abort_unless($this->announcementService->canUserView($announcement, $request->user()), Response::HTTP_FORBIDDEN);
         abort_unless($announcement->requires_acknowledgement, 422, 'This announcement does not require acknowledgement.');
 
         $acknowledgement = $this->announcementService->acknowledge($announcement, $request->user());
@@ -326,8 +343,9 @@ class AnnouncementController extends Controller
         ]);
     }
 
-    public function acknowledgements(Announcement $announcement): JsonResponse
+    public function acknowledgements(Request $request, Announcement $announcement): JsonResponse
     {
+        $this->ensureAnnouncementAdminAccess($request, $announcement->compound_id);
         $announcement->load('acknowledgements.user');
 
         return response()->json([
@@ -361,5 +379,80 @@ class AnnouncementController extends Controller
             UserRole::FinanceReviewer,
             UserRole::SupportAgent,
         ], true);
+    }
+
+    private function canAccessAnnouncement(Request $request, Announcement $announcement): bool
+    {
+        if ($this->isAnnouncementAdmin($request)) {
+            return $this->canAdminAccessAnnouncement($request, $announcement);
+        }
+
+        return $this->announcementService->canUserView($announcement, $request->user());
+    }
+
+    private function canAdminAccessAnnouncement(Request $request, Announcement $announcement): bool
+    {
+        $user = $request->user();
+
+        if ($user === null || ! $this->isAnnouncementAdmin($request)) {
+            return false;
+        }
+
+        if ($user->role === UserRole::SuperAdmin || ! filled($user->compound_id)) {
+            return true;
+        }
+
+        return $user->compound_id === $announcement->compound_id;
+    }
+
+    private function ensureAnnouncementAdminAccess(Request $request, string $compoundId): void
+    {
+        abort_unless($this->isAnnouncementAdmin($request), Response::HTTP_FORBIDDEN);
+
+        $user = $request->user();
+
+        if ($user === null || $user->role === UserRole::SuperAdmin || ! filled($user->compound_id)) {
+            return;
+        }
+
+        abort_if($user->compound_id !== $compoundId, Response::HTTP_FORBIDDEN);
+    }
+
+    /**
+     * @param  list<string>  $targetIds
+     */
+    private function validateAnnouncementTargets(string $compoundId, string $targetType, array $targetIds): void
+    {
+        $targetIds = array_values(array_unique(array_filter(
+            $targetIds,
+            static fn (mixed $value): bool => filled($value),
+        )));
+
+        if ($targetIds === []) {
+            return;
+        }
+
+        $matchesCompound = match ($targetType) {
+            AnnouncementTargetType::Compound->value => count($targetIds) === 1 && $targetIds[0] === $compoundId,
+            AnnouncementTargetType::Building->value => Building::query()
+                ->where('compound_id', $compoundId)
+                ->whereIn('id', $targetIds)
+                ->count() === count($targetIds),
+            AnnouncementTargetType::Floor->value => Floor::query()
+                ->whereIn('id', $targetIds)
+                ->whereHas('building', fn ($query) => $query->where('compound_id', $compoundId))
+                ->count() === count($targetIds),
+            AnnouncementTargetType::Unit->value => Unit::query()
+                ->where('compound_id', $compoundId)
+                ->whereIn('id', $targetIds)
+                ->count() === count($targetIds),
+            default => true,
+        };
+
+        abort_unless(
+            $matchesCompound,
+            Response::HTTP_UNPROCESSABLE_ENTITY,
+            'Announcement targets must belong to the selected compound.'
+        );
     }
 }

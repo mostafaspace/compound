@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\NotificationCategory;
+use App\Enums\UserRole;
 use App\Models\Issues\Issue;
 use App\Models\Issues\IssueAttachment;
 use App\Models\Issues\IssueComment;
@@ -295,5 +296,24 @@ class IssueService
         );
 
         return $attachment;
+    }
+
+    public function userCanAccessIssue(User $user, Issue $issue): bool
+    {
+        if (in_array($user->role, [
+            UserRole::SuperAdmin,
+            UserRole::CompoundAdmin,
+            UserRole::BoardMember,
+            UserRole::FinanceReviewer,
+            UserRole::SupportAgent,
+        ], true)) {
+            if ($user->role === UserRole::SuperAdmin || ! filled($user->compound_id)) {
+                return true;
+            }
+
+            return $user->compound_id === $issue->compound_id;
+        }
+
+        return $issue->reported_by === $user->id;
     }
 }

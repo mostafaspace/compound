@@ -6,16 +6,21 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Issues\StoreIssueAttachmentRequest;
 use App\Http\Resources\Issues\IssueAttachmentResource;
 use App\Models\Issues\Issue;
+use App\Models\User;
 use App\Services\IssueService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Symfony\Component\HttpFoundation\Response;
 
 class IssueAttachmentController extends Controller
 {
     public function __construct(private readonly IssueService $issueService) {}
 
-    public function index(Issue $issue): AnonymousResourceCollection
+    public function index(Request $request, Issue $issue): AnonymousResourceCollection
     {
+        abort_unless($this->issueService->userCanAccessIssue($request->user(), $issue), Response::HTTP_FORBIDDEN);
+
         return IssueAttachmentResource::collection(
             $issue->attachments()->latest()->get()
         );
@@ -23,8 +28,9 @@ class IssueAttachmentController extends Controller
 
     public function store(StoreIssueAttachmentRequest $request, Issue $issue): JsonResponse
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = $request->user();
+        abort_unless($this->issueService->userCanAccessIssue($user, $issue), Response::HTTP_FORBIDDEN);
 
         $attachment = $this->issueService->addAttachment(
             issue: $issue,

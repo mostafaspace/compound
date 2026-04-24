@@ -7,11 +7,13 @@ use App\Http\Requests\Issues\StoreIssueRequest;
 use App\Http\Requests\Issues\UpdateIssueRequest;
 use App\Http\Resources\Issues\IssueResource;
 use App\Models\Issues\Issue;
+use App\Models\User;
 use App\Services\CompoundContextService;
 use App\Services\IssueService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Symfony\Component\HttpFoundation\Response;
 
 class IssueController extends Controller
 {
@@ -63,7 +65,7 @@ class IssueController extends Controller
     {
         $location = $request->resolveLocationAndQueue();
 
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = $request->user();
 
         $issue = $this->issueService->createIssue(
@@ -83,8 +85,10 @@ class IssueController extends Controller
             ->setStatusCode(201);
     }
 
-    public function show(Issue $issue): JsonResponse
+    public function show(Request $request, Issue $issue): JsonResponse
     {
+        abort_unless($this->issueService->userCanAccessIssue($request->user(), $issue), Response::HTTP_FORBIDDEN);
+
         return IssueResource::make(
             $issue->load(['reporter', 'assignee', 'unit', 'building', 'comments.user', 'attachments'])
         )->response();
@@ -92,7 +96,9 @@ class IssueController extends Controller
 
     public function update(UpdateIssueRequest $request, Issue $issue): JsonResponse
     {
-        /** @var \App\Models\User $user */
+        abort_unless($this->issueService->userCanAccessIssue($request->user(), $issue), Response::HTTP_FORBIDDEN);
+
+        /** @var User $user */
         $user = $request->user();
 
         $changes = [];
@@ -120,11 +126,13 @@ class IssueController extends Controller
 
     public function escalate(Request $request, Issue $issue): JsonResponse
     {
+        abort_unless($this->issueService->userCanAccessIssue($request->user(), $issue), Response::HTTP_FORBIDDEN);
+
         $request->validate([
             'reason' => ['required', 'string', 'max:1000'],
         ]);
 
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = $request->user();
 
         $issue = $this->issueService->escalateIssue($issue, $user, $request->input('reason'));

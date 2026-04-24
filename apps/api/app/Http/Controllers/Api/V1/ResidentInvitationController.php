@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\AccountStatus;
 use App\Enums\InvitationStatus;
+use App\Enums\UserRole;
 use App\Enums\VerificationRequestStatus;
 use App\Enums\VerificationStatus;
 use App\Http\Controllers\Controller;
@@ -65,8 +66,9 @@ class ResidentInvitationController extends Controller
     {
         $validated = $request->validated();
         $plainToken = Str::random(48);
+        $unit = $this->resolveManagedUnit($request, $validated['unitId'] ?? null);
 
-        $invitation = DB::transaction(function () use ($request, $validated, $plainToken): ResidentInvitation {
+        $invitation = DB::transaction(function () use ($request, $validated, $plainToken, $unit): ResidentInvitation {
             $user = User::query()->create([
                 'name' => $validated['name'],
                 'email' => $validated['email'],
@@ -78,7 +80,7 @@ class ResidentInvitationController extends Controller
 
             $invitation = ResidentInvitation::query()->create([
                 'user_id' => $user->id,
-                'unit_id' => $validated['unitId'] ?? null,
+                'unit_id' => $unit?->id,
                 'token_hash' => hash('sha256', $plainToken),
                 'email' => $user->email,
                 'role' => $validated['role'],
@@ -88,9 +90,7 @@ class ResidentInvitationController extends Controller
                 'created_by' => $request->user()?->id,
             ]);
 
-            if (($validated['unitId'] ?? null) && ($validated['relationType'] ?? null)) {
-                /** @var Unit $unit */
-                $unit = Unit::query()->findOrFail($validated['unitId']);
+            if ($unit !== null && ($validated['relationType'] ?? null)) {
                 $unit->memberships()->create([
                     'user_id' => $user->id,
                     'relation_type' => $validated['relationType'],
@@ -172,6 +172,7 @@ class ResidentInvitationController extends Controller
 
     public function revoke(Request $request, ResidentInvitation $residentInvitation): ResidentInvitationResource
     {
+        $this->ensureInvitationAccess($request, $residentInvitation);
         abort_if($residentInvitation->status === InvitationStatus::Accepted, Response::HTTP_UNPROCESSABLE_ENTITY, 'Accepted invitations cannot be revoked.');
 
         $residentInvitation->forceFill([
@@ -188,6 +189,7 @@ class ResidentInvitationController extends Controller
 
     public function resend(Request $request, ResidentInvitation $residentInvitation): JsonResponse
     {
+        $this->ensureInvitationAccess($request, $residentInvitation);
         abort_if($residentInvitation->status === InvitationStatus::Accepted, Response::HTTP_UNPROCESSABLE_ENTITY, 'Accepted invitations cannot be resent.');
 
         $plainToken = Str::random(48);
@@ -236,5 +238,34 @@ class ResidentInvitationController extends Controller
 
         $invitation->forceFill(['last_sent_at' => now()])->save();
         $invitation->increment('delivery_count');
+    }
+
+    private function resolveManagedUnit(Request $request, ?string $unitId): ?Unit
+    {
+        $user = $request->user();
+
+        if (! filled($user?->compound_id)) {
+            return $unitId !== null ? Unit::query()->findOrFail($unitId) : null;
+        }
+
+        abort_unless($unitId !== null, Response::HTTP_UNPROCESSABLE_ENTITY, 'A unitId is required for compound-scoped invitations.');
+
+        $unit = Unit::query()->findOrFail($unitId);
+        abort_if($unit->compound_id !== $user->compound_id, Response::HTTP_FORBIDDEN);
+
+        return $unit;
+    }
+
+    private function ensureInvitationAccess(Request $request, ResidentInvitation $residentInvitation): void
+    {
+        $user = $request->user();
+
+        if ($user === null || $user->role === UserRole::SuperAdmin || ! filled($user->compound_id)) {
+            return;
+        }
+
+        $residentInvitation->loadMissing('unit');
+        abort_unless($residentInvitation->unit !== null, Response::HTTP_FORBIDDEN);
+        abort_if($residentInvitation->unit->compound_id !== $user->compound_id, Response::HTTP_FORBIDDEN);
     }
 }
