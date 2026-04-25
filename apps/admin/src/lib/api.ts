@@ -83,6 +83,11 @@ import type {
   UserSupportView,
   UserListFilters,
   AccountMerge,
+  SecurityGate,
+  SecurityShift,
+  SecurityDevice,
+  SecurityIncident,
+  ManualVisitorEntry,
 } from "@compound/contracts";
 
 import { config } from "./config";
@@ -2519,6 +2524,108 @@ export async function getAccountMerge(mergeId: number): Promise<AccountMerge | n
     return payload.data;
   } catch {
     return null;
+  }
+}
+
+// ─── Security operations (CM-81) ─────────────────────────────────────────────
+
+export async function getSecurityGates(): Promise<SecurityGate[]> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/security/gates`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+    if (!response.ok) return [];
+    const payload = (await response.json()) as { data: SecurityGate[] };
+    return payload.data;
+  } catch {
+    return [];
+  }
+}
+
+export async function getSecurityShifts(params: { status?: string } = {}): Promise<SecurityShift[]> {
+  try {
+    const qs = new URLSearchParams();
+    if (params.status) qs.set("status", params.status);
+    const query = qs.toString();
+    const response = await fetch(`${config.apiBaseUrl}/security/shifts${query ? `?${query}` : ""}`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+    if (!response.ok) return [];
+    // shifts are paginated; data is nested one level deeper
+    const payload = (await response.json()) as { data: { data: SecurityShift[] } };
+    return payload.data.data;
+  } catch {
+    return [];
+  }
+}
+
+export async function getSecurityDevices(): Promise<SecurityDevice[]> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/security/devices`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+    if (!response.ok) return [];
+    const payload = (await response.json()) as { data: SecurityDevice[] };
+    return payload.data;
+  } catch {
+    return [];
+  }
+}
+
+export async function getSecurityIncidents(params: {
+  shiftId?: string;
+  gateId?: string;
+  type?: string;
+  from?: string;
+  to?: string;
+} = {}): Promise<SecurityIncident[]> {
+  try {
+    const qs = new URLSearchParams();
+    if (params.shiftId) qs.set("shift_id", params.shiftId);
+    if (params.gateId) qs.set("gate_id", params.gateId);
+    if (params.type) qs.set("type", params.type);
+    if (params.from) qs.set("from", params.from);
+    if (params.to) qs.set("to", params.to);
+    const query = qs.toString();
+    const response = await fetch(`${config.apiBaseUrl}/security/incidents${query ? `?${query}` : ""}`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+    if (!response.ok) return [];
+    const payload = (await response.json()) as { data: { data: SecurityIncident[] } };
+    return payload.data.data;
+  } catch {
+    return [];
+  }
+}
+
+export async function getManualVisitorEntries(params: {
+  shiftId?: string;
+  gateId?: string;
+  status?: string;
+  from?: string;
+  to?: string;
+} = {}): Promise<ManualVisitorEntry[]> {
+  try {
+    const qs = new URLSearchParams();
+    if (params.shiftId) qs.set("shift_id", params.shiftId);
+    if (params.gateId) qs.set("gate_id", params.gateId);
+    if (params.status) qs.set("status", params.status);
+    if (params.from) qs.set("from", params.from);
+    if (params.to) qs.set("to", params.to);
+    const query = qs.toString();
+    const response = await fetch(`${config.apiBaseUrl}/security/manual-entries${query ? `?${query}` : ""}`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+    if (!response.ok) return [];
+    const payload = (await response.json()) as { data: { data: ManualVisitorEntry[] } };
+    return payload.data.data;
+  } catch {
+    return [];
   }
 }
 

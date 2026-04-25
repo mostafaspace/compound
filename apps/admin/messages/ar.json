@@ -17,7 +17,8 @@
     "notificationChannels": "قنوات الإشعارات",
     "imports": "استيراد البيانات",
     "signOut": "تسجيل الخروج",
-    "analytics": "التحليلات"
+    "analytics": "التحليلات",
+    "security": "الأمن"
   },
   "Language": {
     "toggle": "تغيير اللغة",
@@ -1490,6 +1491,128 @@
       "closed": "مغلق",
       "cancelled": "ملغى",
       "participations": "إجمالي المشاركات"
+    }
+  },
+  "Security": {
+    "back": "← العودة إلى لوحة التحكم",
+    "title": "العمليات الأمنية",
+    "subtitle": "مراقبة البوابات والورديات وأجهزة المسح والحوادث ومداخل الزوار اليدوية.",
+    "filterFrom": "من",
+    "filterTo": "إلى",
+    "filterApply": "تطبيق",
+    "filterClear": "مسح",
+    "nav": {
+      "gates": "البوابات",
+      "shifts": "الورديات",
+      "devices": "الأجهزة",
+      "incidents": "الحوادث",
+      "manualEntries": "مداخل يدوية"
+    },
+    "stats": {
+      "gates": "البوابات النشطة",
+      "activeShift": "الوردية النشطة",
+      "devices": "الأجهزة النشطة",
+      "unresolvedIncidents": "الحوادث المفتوحة",
+      "manualEntries": "المداخل اليدوية",
+      "none": "—",
+      "activeOf": "من أصل {total}",
+      "shiftActive": "نشطة حالياً",
+      "noActiveShift": "لا توجد وردية جارية"
+    },
+    "activeShift": {
+      "title": "الوردية النشطة",
+      "startedAt": "بدأت في",
+      "viewAll": "عرض جميع الورديات"
+    },
+    "recentIncidents": {
+      "title": "الحوادث الأخيرة",
+      "viewAll": "عرض الكل",
+      "resolved": "تم الحل",
+      "open": "مفتوح"
+    },
+    "recentEntries": {
+      "title": "آخر المداخل اليدوية",
+      "viewAll": "عرض الكل"
+    },
+    "gates": {
+      "title": "البوابات الأمنية",
+      "subtitle": "نقاط الدخول المُعدَّة للمجمع.",
+      "empty": "لم يتم تكوين أي بوابات.",
+      "active": "نشط",
+      "inactive": "غير نشط",
+      "cols": {
+        "name": "البوابة",
+        "zone": "المنطقة",
+        "building": "المبنى",
+        "status": "الحالة"
+      }
+    },
+    "shifts": {
+      "title": "الورديات الأمنية",
+      "subtitle": "جدول الورديات وتعيينات الحراس وملاحظات التسليم.",
+      "empty": "لم يتم العثور على ورديات.",
+      "createdBy": "أنشأها",
+      "startedAt": "بدأت",
+      "endedAt": "انتهت",
+      "closedBy": "أُغلقت بواسطة",
+      "handoverNotes": "ملاحظات التسليم",
+      "status": {
+        "all": "الكل",
+        "draft": "مسودة",
+        "active": "نشطة",
+        "closed": "مغلقة"
+      }
+    },
+    "devices": {
+      "title": "أجهزة المسح",
+      "subtitle": "{active} نشط · {revoked} مُلغى",
+      "empty": "لم يتم تسجيل أي أجهزة.",
+      "cols": {
+        "name": "الجهاز",
+        "status": "الحالة",
+        "appVersion": "إصدار التطبيق",
+        "lastSeen": "آخر ظهور",
+        "registeredBy": "سُجِّل بواسطة"
+      }
+    },
+    "incidents": {
+      "title": "الحوادث الأمنية",
+      "subtitle": "سجل جميع الحوادث الأمنية المُبلَّغ عنها.",
+      "empty": "لم يتم العثور على حوادث.",
+      "filterType": "النوع",
+      "filterGate": "البوابة",
+      "allGates": "جميع البوابات",
+      "reporter": "المُبلِّغ",
+      "shift": "الوردية",
+      "resolved": "تم الحل",
+      "unresolved": "غير محلول",
+      "types": {
+        "all": "جميع الأنواع",
+        "denied_entry": "رفض الدخول",
+        "suspicious_activity": "نشاط مشبوه",
+        "emergency": "طوارئ",
+        "vehicle_issue": "مشكلة مركبة",
+        "operational_handover": "تسليم تشغيلي",
+        "other": "أخرى"
+      }
+    },
+    "manualEntries": {
+      "title": "مداخل الزوار اليدوية",
+      "subtitle": "مداخل الزوار التي تمت معالجتها يدوياً (بدون رمز QR / بدون تطبيق).",
+      "empty": "لم يتم العثور على مداخل يدوية.",
+      "filterStatus": "الحالة",
+      "filterGate": "البوابة",
+      "allStatuses": "جميع الحالات",
+      "statusAllowed": "مسموح",
+      "statusDenied": "مرفوض",
+      "cols": {
+        "visitor": "الزائر",
+        "reason": "السبب",
+        "host": "المضيف",
+        "gate": "البوابة",
+        "status": "الحالة",
+        "time": "الوقت"
+      }
     }
   }
 }

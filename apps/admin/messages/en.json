@@ -17,7 +17,8 @@
     "notificationChannels": "Notification channels",
     "imports": "Data import",
     "signOut": "Sign Out",
-    "analytics": "Analytics"
+    "analytics": "Analytics",
+    "security": "Security"
   },
   "Language": {
     "toggle": "Toggle language",
@@ -1490,6 +1491,128 @@
       "closed": "Closed",
       "cancelled": "Cancelled",
       "participations": "Total participations"
+    }
+  },
+  "Security": {
+    "back": "← Back to dashboard",
+    "title": "Security Operations",
+    "subtitle": "Monitor gates, shifts, scanner devices, incidents, and manual visitor entries.",
+    "filterFrom": "From",
+    "filterTo": "To",
+    "filterApply": "Apply",
+    "filterClear": "Clear",
+    "nav": {
+      "gates": "Gates",
+      "shifts": "Shifts",
+      "devices": "Devices",
+      "incidents": "Incidents",
+      "manualEntries": "Manual entries"
+    },
+    "stats": {
+      "gates": "Active gates",
+      "activeShift": "Active shift",
+      "devices": "Active devices",
+      "unresolvedIncidents": "Open incidents",
+      "manualEntries": "Manual entries",
+      "none": "—",
+      "activeOf": "{total} total",
+      "shiftActive": "Currently active",
+      "noActiveShift": "No shift in progress"
+    },
+    "activeShift": {
+      "title": "Active shift",
+      "startedAt": "Started at",
+      "viewAll": "View all shifts"
+    },
+    "recentIncidents": {
+      "title": "Recent incidents",
+      "viewAll": "View all",
+      "resolved": "Resolved",
+      "open": "Open"
+    },
+    "recentEntries": {
+      "title": "Recent manual entries",
+      "viewAll": "View all"
+    },
+    "gates": {
+      "title": "Security Gates",
+      "subtitle": "Entry points configured for this compound.",
+      "empty": "No gates configured.",
+      "active": "Active",
+      "inactive": "Inactive",
+      "cols": {
+        "name": "Gate",
+        "zone": "Zone",
+        "building": "Building",
+        "status": "Status"
+      }
+    },
+    "shifts": {
+      "title": "Security Shifts",
+      "subtitle": "Shift schedule, guard assignments, and handover notes.",
+      "empty": "No shifts found.",
+      "createdBy": "Created by",
+      "startedAt": "Started",
+      "endedAt": "Ended",
+      "closedBy": "Closed by",
+      "handoverNotes": "Handover notes",
+      "status": {
+        "all": "All",
+        "draft": "Draft",
+        "active": "Active",
+        "closed": "Closed"
+      }
+    },
+    "devices": {
+      "title": "Scanner Devices",
+      "subtitle": "{active} active · {revoked} revoked",
+      "empty": "No devices registered.",
+      "cols": {
+        "name": "Device",
+        "status": "Status",
+        "appVersion": "App version",
+        "lastSeen": "Last seen",
+        "registeredBy": "Registered by"
+      }
+    },
+    "incidents": {
+      "title": "Security Incidents",
+      "subtitle": "Log of all reported security incidents.",
+      "empty": "No incidents found.",
+      "filterType": "Type",
+      "filterGate": "Gate",
+      "allGates": "All gates",
+      "reporter": "Reporter",
+      "shift": "Shift",
+      "resolved": "Resolved",
+      "unresolved": "Unresolved",
+      "types": {
+        "all": "All types",
+        "denied_entry": "Denied entry",
+        "suspicious_activity": "Suspicious activity",
+        "emergency": "Emergency",
+        "vehicle_issue": "Vehicle issue",
+        "operational_handover": "Operational handover",
+        "other": "Other"
+      }
+    },
+    "manualEntries": {
+      "title": "Manual Visitor Entries",
+      "subtitle": "Visitor entries processed manually (no QR / no app).",
+      "empty": "No manual entries found.",
+      "filterStatus": "Status",
+      "filterGate": "Gate",
+      "allStatuses": "All statuses",
+      "statusAllowed": "Allowed",
+      "statusDenied": "Denied",
+      "cols": {
+        "visitor": "Visitor",
+        "reason": "Reason",
+        "host": "Host",
+        "gate": "Gate",
+        "status": "Status",
+        "time": "Time"
+      }
     }
   }
 }

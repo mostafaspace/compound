@@ -29,6 +29,7 @@ const navLinks = [
   { href: "/onboarding", key: "onboarding" },
   { href: "/audit-logs", key: "auditLogs" },
   { href: "/analytics/operational", key: "analytics" },
+  { href: "/security", key: "security" },
 ];
 
 function CheckIcon() {

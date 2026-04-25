@@ -45,6 +45,11 @@ use App\Http\Controllers\Api\V1\UserLifecycleController;
 use App\Http\Controllers\Api\V1\UserSupportViewController;
 use App\Http\Controllers\Api\V1\VerificationRequestController;
 use App\Http\Controllers\Api\V1\VisitorRequestController;
+use App\Http\Controllers\Api\V1\SecurityGateController;
+use App\Http\Controllers\Api\V1\SecurityShiftController;
+use App\Http\Controllers\Api\V1\SecurityDeviceController;
+use App\Http\Controllers\Api\V1\SecurityIncidentController;
+use App\Http\Controllers\Api\V1\ManualVisitorEntryController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->name('api.v1.')->group(function (): void {
@@ -424,5 +429,50 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             Route::get('/', [SettingsController::class, 'namespaces'])->name('namespaces');
             Route::get('/{namespace}', [SettingsController::class, 'show'])->name('show');
             Route::patch('/{namespace}', [SettingsController::class, 'update'])->name('update');
+        });
+
+    // ─── Security operations (CM-81) ─────────────────────────────────────────
+
+    // Gates — admin read/write; guard read-only
+    Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,support_agent'])
+        ->prefix('security')
+        ->name('security.')
+        ->group(function (): void {
+            Route::get('/gates', [SecurityGateController::class, 'index'])->name('gates.index');
+            Route::post('/gates', [SecurityGateController::class, 'store'])->name('gates.store');
+            Route::get('/gates/{securityGate}', [SecurityGateController::class, 'show'])->name('gates.show');
+            Route::patch('/gates/{securityGate}', [SecurityGateController::class, 'update'])->name('gates.update');
+
+            Route::get('/shifts', [SecurityShiftController::class, 'index'])->name('shifts.index');
+            Route::post('/shifts', [SecurityShiftController::class, 'store'])->name('shifts.store');
+            Route::get('/shifts/{securityShift}', [SecurityShiftController::class, 'show'])->name('shifts.show');
+            Route::patch('/shifts/{securityShift}', [SecurityShiftController::class, 'update'])->name('shifts.update');
+            Route::post('/shifts/{securityShift}/activate', [SecurityShiftController::class, 'activate'])->name('shifts.activate');
+            Route::post('/shifts/{securityShift}/close', [SecurityShiftController::class, 'close'])->name('shifts.close');
+            Route::post('/shifts/{securityShift}/assignments', [SecurityShiftController::class, 'assign'])->name('shifts.assign');
+            Route::post('/shifts/{securityShift}/assignments/{assignment}/checkin', [SecurityShiftController::class, 'checkin'])->name('shifts.checkin');
+            Route::post('/shifts/{securityShift}/assignments/{assignment}/checkout', [SecurityShiftController::class, 'checkout'])->name('shifts.checkout');
+
+            Route::get('/devices', [SecurityDeviceController::class, 'index'])->name('devices.index');
+            Route::post('/devices', [SecurityDeviceController::class, 'store'])->name('devices.store');
+            Route::get('/devices/{securityDevice}', [SecurityDeviceController::class, 'show'])->name('devices.show');
+            Route::post('/devices/{securityDevice}/revoke', [SecurityDeviceController::class, 'revoke'])->name('devices.revoke');
+
+            Route::get('/incidents', [SecurityIncidentController::class, 'index'])->name('incidents.index');
+            Route::get('/incidents/{securityIncident}', [SecurityIncidentController::class, 'show'])->name('incidents.show');
+            Route::post('/incidents/{securityIncident}/resolve', [SecurityIncidentController::class, 'resolve'])->name('incidents.resolve');
+
+            Route::get('/manual-entries', [ManualVisitorEntryController::class, 'index'])->name('manual-entries.index');
+            Route::get('/manual-entries/{manualVisitorEntry}', [ManualVisitorEntryController::class, 'show'])->name('manual-entries.show');
+        });
+
+    // Security operations — guard: create incidents + manual entries, heartbeat devices
+    Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,support_agent,security_guard'])
+        ->prefix('security')
+        ->name('security.guard.')
+        ->group(function (): void {
+            Route::post('/incidents', [SecurityIncidentController::class, 'store'])->name('incidents.store');
+            Route::post('/manual-entries', [ManualVisitorEntryController::class, 'store'])->name('manual-entries.store');
+            Route::post('/devices/{securityDevice}/heartbeat', [SecurityDeviceController::class, 'heartbeat'])->name('devices.heartbeat');
         });
 });

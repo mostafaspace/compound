@@ -373,3 +373,118 @@ export interface OperationalAnalyticsFilters {
   from?: string;
   to?: string;
 }
+
+// ─── Security operations (CM-81) ─────────────────────────────────────────────
+
+export type SecurityIncidentType =
+  | "denied_entry"
+  | "suspicious_activity"
+  | "emergency"
+  | "vehicle_issue"
+  | "operational_handover"
+  | "other";
+
+export type SecurityShiftStatus = "draft" | "active" | "closed";
+export type SecurityDeviceStatus = "active" | "revoked";
+
+export interface SecurityGate {
+  id: string;
+  compoundId: string;
+  buildingId: string | null;
+  name: string;
+  zone: string | null;
+  description: string | null;
+  isActive: boolean;
+  building?: { id: string; name: string } | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SecurityShiftAssignment {
+  id: number;
+  shiftId: string;
+  gateId: string | null;
+  guardUserId: number;
+  checkedInAt: string | null;
+  checkedOutAt: string | null;
+  isActive: boolean;
+  guardUser?: { id: number; name: string } | null;
+  gate?: { id: string; name: string } | null;
+}
+
+export interface SecurityShift {
+  id: string;
+  compoundId: string;
+  name: string;
+  status: SecurityShiftStatus;
+  handoverNotes: string | null;
+  startedAt: string | null;
+  endedAt: string | null;
+  createdBy: number;
+  closedBy: number | null;
+  creator?: { id: number; name: string } | null;
+  closer?: { id: number; name: string } | null;
+  assignments?: SecurityShiftAssignment[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SecurityDevice {
+  id: string;
+  compoundId: string;
+  name: string;
+  deviceIdentifier: string;
+  appVersion: string | null;
+  lastSeenAt: string | null;
+  status: SecurityDeviceStatus;
+  registeredBy: number;
+  revokedBy: number | null;
+  revokedAt: string | null;
+  registeredByUser?: { id: number; name: string } | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SecurityIncident {
+  id: string;
+  compoundId: string;
+  gateId: string | null;
+  shiftId: string | null;
+  reportedBy: number;
+  type: SecurityIncidentType;
+  title: string;
+  description: string;
+  notes: string | null;
+  metadata: Record<string, unknown> | null;
+  occurredAt: string;
+  resolvedAt: string | null;
+  gate?: { id: string; name: string } | null;
+  shift?: { id: string; name: string } | null;
+  reporter?: { id: number; name: string } | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ManualVisitorEntry {
+  id: string;
+  compoundId: string;
+  gateId: string | null;
+  shiftId: string | null;
+  processedBy: number;
+  visitorName: string;
+  visitorPhone: string | null;
+  vehiclePlate: string | null;
+  hostUserId: number | null;
+  hostUnitId: string | null;
+  reason: string;
+  notes: string | null;
+  status: "allowed" | "denied";
+  occurredAt: string;
+  gate?: { id: string; name: string } | null;
+  shift?: { id: string; name: string } | null;
+  processedByUser?: { id: number; name: string } | null;
+  host?: { id: number; name: string } | null;
+  hostUnit?: { id: string; unitNumber: string } | null;
+  createdAt: string;
+  updatedAt: string;
+}
