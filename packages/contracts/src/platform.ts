@@ -225,3 +225,63 @@ export interface AuditLogFilters {
   severity?: AuditSeverity;
   to?: string;
 }
+
+// ─── User lifecycle (CM-79) ───────────────────────────────────────────────────
+
+export const accountMergeStatusValues = ["pending", "completed", "cancelled"] as const;
+export type AccountMergeStatus = (typeof accountMergeStatusValues)[number];
+
+export interface AccountMergeUser {
+  id: number;
+  name: string;
+  email: string;
+  status: string;
+}
+
+export interface AccountMerge {
+  id: number;
+  sourceUser: AccountMergeUser | null;
+  targetUser: AccountMergeUser | null;
+  initiator: { id: number; name: string } | null;
+  status: AccountMergeStatus;
+  notes: string | null;
+  mergeAnalysis: Record<string, unknown> | null;
+  completedAt: string | null;
+  cancelledAt: string | null;
+  createdAt: string | null;
+}
+
+export interface UserMembershipSummary {
+  id: number;
+  unitId: string;
+  unitName: string | null;
+  unitNumber: string | null;
+  relationType: string | null;
+  startsAt: string | null;
+  endsAt: string | null;
+  isPrimary: boolean;
+  verificationStatus: string | null;
+}
+
+export interface UserSupportView {
+  user: AuthenticatedUser;
+  memberships: UserMembershipSummary[];
+  documentCounts: Record<string, number>;
+  verificationStatus: string | null;
+  recentAuditEvents: AuditLogEntry[];
+  activeMerges: Array<{
+    id: number;
+    sourceUserId: number;
+    targetUserId: number;
+    status: AccountMergeStatus;
+    notes: string | null;
+    createdAt: string | null;
+  }>;
+}
+
+export interface UserListFilters {
+  q?: string;
+  status?: string;
+  role?: string;
+  perPage?: number;
+}

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\AnnouncementController;
 use App\Http\Controllers\Api\V1\ImportBatchController;
+use App\Http\Controllers\Api\V1\AccountMergeController;
 use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BuildingController;
@@ -39,6 +40,8 @@ use App\Http\Controllers\Api\V1\SystemStatusController;
 use App\Http\Controllers\Api\V1\UnitController;
 use App\Http\Controllers\Api\V1\UnitMembershipController;
 use App\Http\Controllers\Api\V1\UserDocumentController;
+use App\Http\Controllers\Api\V1\UserLifecycleController;
+use App\Http\Controllers\Api\V1\UserSupportViewController;
 use App\Http\Controllers\Api\V1\VerificationRequestController;
 use App\Http\Controllers\Api\V1\VisitorRequestController;
 use Illuminate\Support\Facades\Route;
@@ -383,6 +386,28 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             Route::get('/device-tokens', [DeviceTokenController::class, 'index'])->name('index');
             Route::post('/device-tokens', [DeviceTokenController::class, 'store'])->name('store');
             Route::delete('/device-tokens/{deviceToken}', [DeviceTokenController::class, 'destroy'])->name('destroy');
+        });
+
+    // User support console + lifecycle actions
+    Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,support_agent'])
+        ->group(function (): void {
+            Route::get('/users', [UserSupportViewController::class, 'index'])->name('users.index');
+            Route::get('/users/{user}/support-view', [UserSupportViewController::class, 'show'])->name('users.support-view');
+            Route::get('/users/{user}/duplicates', [UserSupportViewController::class, 'duplicates'])->name('users.duplicates');
+        });
+
+    Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin'])
+        ->group(function (): void {
+            Route::post('/users/{user}/suspend', [UserLifecycleController::class, 'suspend'])->name('users.suspend');
+            Route::post('/users/{user}/reactivate', [UserLifecycleController::class, 'reactivate'])->name('users.reactivate');
+            Route::post('/users/{user}/move-out', [UserLifecycleController::class, 'moveOut'])->name('users.move-out');
+            Route::post('/users/{user}/recover', [UserLifecycleController::class, 'recover'])->name('users.recover');
+
+            Route::get('/account-merges', [AccountMergeController::class, 'index'])->name('account-merges.index');
+            Route::post('/account-merges', [AccountMergeController::class, 'initiate'])->name('account-merges.initiate');
+            Route::get('/account-merges/{accountMerge}', [AccountMergeController::class, 'show'])->name('account-merges.show');
+            Route::post('/account-merges/{accountMerge}/confirm', [AccountMergeController::class, 'confirm'])->name('account-merges.confirm');
+            Route::post('/account-merges/{accountMerge}/cancel', [AccountMergeController::class, 'cancel'])->name('account-merges.cancel');
         });
 
     // Settings — admin only (super_admin / compound_admin)

@@ -78,6 +78,9 @@ import type {
   VisitorRequestStatus,
   SettingsNamespaceData,
   UpdateSettingsInput,
+  UserSupportView,
+  UserListFilters,
+  AccountMerge,
 } from "@compound/contracts";
 
 import { config } from "./config";
@@ -2436,5 +2439,83 @@ export async function getNotificationDeliveryLogs(status?: string): Promise<Noti
     return payload.data ?? [];
   } catch {
     return [];
+  }
+}
+
+// ─── User support console (CM-79) ─────────────────────────────────────────────
+
+export async function getUsers(filters: UserListFilters = {}): Promise<AuthenticatedUser[]> {
+  try {
+    const params = new URLSearchParams();
+    if (filters.q) params.set("q", filters.q);
+    if (filters.status) params.set("status", filters.status);
+    if (filters.role) params.set("role", filters.role);
+    if (filters.perPage) params.set("perPage", String(filters.perPage));
+
+    const query = params.toString();
+    const response = await fetch(`${config.apiBaseUrl}/users${query ? `?${query}` : ""}`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+    if (!response.ok) return [];
+    const payload = (await response.json()) as PaginatedEnvelope<AuthenticatedUser>;
+    return payload.data ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export async function getUserSupportView(userId: number): Promise<UserSupportView | null> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/users/${userId}/support-view`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+    if (!response.ok) return null;
+    return (await response.json()) as UserSupportView;
+  } catch {
+    return null;
+  }
+}
+
+export async function getUserDuplicates(userId: number): Promise<AuthenticatedUser[]> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/users/${userId}/duplicates`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+    if (!response.ok) return [];
+    const payload = (await response.json()) as { candidates: AuthenticatedUser[] };
+    return payload.candidates ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export async function getAccountMerges(): Promise<AccountMerge[]> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/account-merges`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+    if (!response.ok) return [];
+    const payload = (await response.json()) as PaginatedEnvelope<AccountMerge>;
+    return payload.data ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export async function getAccountMerge(mergeId: number): Promise<AccountMerge | null> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/account-merges/${mergeId}`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+    if (!response.ok) return null;
+    const payload = (await response.json()) as { data: AccountMerge };
+    return payload.data;
+  } catch {
+    return null;
   }
 }
