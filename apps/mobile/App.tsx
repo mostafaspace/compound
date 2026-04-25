@@ -7,6 +7,8 @@ import type {
   Issue,
   LedgerEntry,
   LoginResult,
+  NotificationCategory,
+  NotificationPreference,
   PaginatedEnvelope,
   PaymentSubmission,
   UnitAccount,
@@ -18,13 +20,17 @@ import type {
   VisitorRequest,
 } from "@compound/contracts";
 import DateTimePicker, { type DateTimePickerEvent } from "@react-native-community/datetimepicker";
+import messaging, { type FirebaseMessagingTypes } from "@react-native-firebase/messaging";
 import { errorCodes, isErrorWithCode, pick, types } from "@react-native-documents/picker";
 import * as Keychain from "react-native-keychain";
 import { useTranslation } from "react-i18next";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "react-native-qrcode-svg";
 import {
   ActivityIndicator,
+  type LayoutChangeEvent,
+  Linking,
+  PermissionsAndroid,
   useColorScheme,
   Platform,
   Pressable,
@@ -32,6 +38,7 @@ import {
   ScrollView,
   StyleSheet,
   StatusBar,
+  Switch,
   Text,
   TextInput,
   View,
@@ -100,6 +107,21 @@ interface AnnouncementAcknowledgementResponse {
   acknowledgedAt: string;
 }
 
+interface DeviceTokenRecord {
+  id: string;
+  platform: "fcm" | "apns";
+  deviceName: string | null;
+  lastSeenAt: string | null;
+  createdAt: string;
+}
+
+interface StoredDeviceRegistration {
+  id: string;
+  platform: "fcm" | "apns";
+  token: string;
+  userId: number;
+}
+
 const defaultApiBaseUrl = Platform.select({
   android: "http://10.0.2.2:8000/api/v1",
   ios: "http://localhost:8000/api/v1",
@@ -108,12 +130,24 @@ const defaultApiBaseUrl = Platform.select({
 
 const authTokenService = "compound.mobile.authToken";
 const visitorTokenService = "compound.mobile.visitorPassTokens";
+const deviceRegistrationService = "compound.mobile.deviceRegistration";
 
 type VisitPickerTarget = "starts" | "ends";
 type VisitPickerMode = "date" | "time" | "datetime";
 type IssueCategory = CreateIssueInput["category"];
+type AppSectionKey =
+  | "verification"
+  | "property"
+  | "notifications"
+  | "announcements"
+  | "finance"
+  | "governance"
+  | "visitors"
+  | "issues"
+  | "security";
 
 const issueCategories: IssueCategory[] = ["maintenance", "security", "cleaning", "noise", "other"];
+const notificationCategories: NotificationCategory[] = ["documents", "visitors", "issues", "announcements", "finance", "system"];
 
 function formatStatus(value: string): string {
   return value.replaceAll("_", " ");
@@ -217,6 +251,118 @@ function formatUnitLocation(membership: UnitMembership, t: (key: string, options
   ];
 
   return parts.filter(Boolean).join(" / ");
+}
+
+function emptyNotificationPreferences(userId: number | null): NotificationPreference {
+  const now = new Date().toISOString();
+
+  return {
+    id: `local-${userId ?? "guest"}`,
+    userId: userId ?? 0,
+    emailEnabled: true,
+    inAppEnabled: true,
+    pushEnabled: true,
+    quietHoursStart: null,
+    quietHoursEnd: null,
+    quietHoursTimezone: null,
+    mutedCategories: [],
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+function extractMetadataString(metadata: Record<string, unknown>, ...keys: string[]): string | null {
+  for (const key of keys) {
+    const value = metadata[key];
+
+    if (typeof value === "string" && value.trim().length > 0) {
+      return value.trim();
+    }
+  }
+
+  return null;
+}
+
+function notificationActionUrl(notification: UserNotification): string | null {
+  return extractMetadataString(notification.metadata, "actionUrl", "action_url");
+}
+
+function resolveSectionFromActionUrl(actionUrl: string | null | undefined): AppSectionKey {
+  const normalized = actionUrl?.toLowerCase() ?? "";
+
+  if (normalized.includes("verification") || normalized.includes("document")) {
+    return "verification";
+  }
+
+  if (normalized.includes("visitor")) {
+    return "visitors";
+  }
+
+  if (normalized.includes("announcement")) {
+    return "announcements";
+  }
+
+  if (normalized.includes("finance") || normalized.includes("payment") || normalized.includes("budget") || normalized.includes("reserve")) {
+    return "finance";
+  }
+
+  if (normalized.includes("vote") || normalized.includes("governance")) {
+    return "governance";
+  }
+
+  if (normalized.includes("issue")) {
+    return "issues";
+  }
+
+  return "notifications";
+}
+
+function parseDeepLink(url: string): { notificationId: string | null; section: AppSectionKey } | null {
+  try {
+    const parsed = new URL(url);
+    const notificationId = parsed.searchParams.get("notificationId") ?? parsed.searchParams.get("notification_id");
+    const explicitTarget = parsed.searchParams.get("target");
+    const actionUrl = parsed.searchParams.get("actionUrl") ?? parsed.searchParams.get("action_url");
+    const route = [parsed.host, parsed.pathname.replace(/^\/+/, "")]
+      .filter(Boolean)
+      .join("/")
+      .toLowerCase();
+
+    if (explicitTarget) {
+      return {
+        notificationId,
+        section: resolveSectionFromActionUrl(explicitTarget),
+      };
+    }
+
+    if (actionUrl) {
+      return {
+        notificationId,
+        section: resolveSectionFromActionUrl(actionUrl),
+      };
+    }
+
+    return {
+      notificationId,
+      section: resolveSectionFromActionUrl(route),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function remoteMessageLink(remoteMessage: FirebaseMessagingTypes.RemoteMessage | null): string | null {
+  const data = remoteMessage?.data;
+
+  if (!data) {
+    return null;
+  }
+
+  return data.deepLink
+    ?? data.deep_link
+    ?? data.url
+    ?? (data.actionUrl ? `compound://notifications?actionUrl=${encodeURIComponent(data.actionUrl)}` : null)
+    ?? (data.action_url ? `compound://notifications?actionUrl=${encodeURIComponent(data.action_url)}` : null);
 }
 
 export default function App() {
