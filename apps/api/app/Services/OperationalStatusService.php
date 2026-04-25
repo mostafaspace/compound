@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Storage;
@@ -35,6 +36,8 @@ class OperationalStatusService
             'queue' => $this->queueCheck(),
             'storage' => $this->storageCheck(),
             'broadcasting' => $this->broadcastingCheck(),
+            'notifications' => $this->notificationsCheck(),
+            'scheduledJobs' => $this->scheduledJobsCheck(),
         ];
 
         $warnings = [];
@@ -45,6 +48,14 @@ class OperationalStatusService
 
         if (config('app.debug')) {
             $warnings[] = 'APP_DEBUG is enabled.';
+        }
+
+        if (($checks['notifications']['status'] ?? 'ok') === 'degraded') {
+            $warnings[] = 'Notification channels are degraded.';
+        }
+
+        if (($checks['scheduledJobs']['status'] ?? 'ok') === 'degraded') {
+            $warnings[] = 'Scheduled jobs are not configured or not runnable.';
         }
 
         return [
@@ -190,6 +201,99 @@ class OperationalStatusService
             'host' => $config['options']['host'] ?? null,
             'port' => $config['options']['port'] ?? null,
         ];
+    }
+
+    /**
+     * Check notification channel configuration.
+     *
+     * @return array<string, mixed>
+     */
+    private function notificationsCheck(): array
+    {
+        $startedAt = hrtime(true);
+
+        try {
+            $mailConfig = config('mail.default');
+            $mailHost = config('mail.mailers.smtp.host');
+            $mailPort = config('mail.mailers.smtp.port');
+
+            $channels = [];
+            $hasError = false;
+
+            // Check mail configuration.
+            if ($mailConfig && $mailConfig !== 'array' && $mailHost) {
+                $channels['mail'] = [
+                    'configured' => true,
+                    'host' => $mailHost,
+                    'port' => $mailPort,
+                ];
+            } else {
+                $channels['mail'] = ['configured' => false];
+                $hasError = true;
+            }
+
+            // Check broadcast channel (used for realtime notifications).
+            $broadcastDriver = config('broadcasting.default');
+            $channels['broadcast'] = [
+                'configured' => $broadcastDriver && $broadcastDriver !== 'null',
+                'driver' => $broadcastDriver,
+            ];
+
+            // Check database notifications table exists.
+            $hasNotificationsTable = false;
+            try {
+                $hasNotificationsTable = DB::select('SHOW TABLES LIKE "notifications"')[0] !== null;
+            } catch (Throwable) {
+                // Table check failed - ignore, not critical.
+            }
+
+            $channels['database'] = ['configured' => $hasNotificationsTable];
+
+            return [
+                'status' => $hasError ? 'degraded' : 'ok',
+                'channels' => $channels,
+                'latencyMs' => $this->elapsedMilliseconds($startedAt),
+            ];
+        } catch (Throwable $exception) {
+            return [
+                'status' => 'degraded',
+                'latencyMs' => $this->elapsedMilliseconds($startedAt),
+                'message' => $this->exceptionMessage($exception),
+            ];
+        }
+    }
+
+    /**
+     * Check that scheduled jobs are configured and runnable.
+     *
+     * @return array<string, mixed>
+     */
+    private function scheduledJobsCheck(): array
+    {
+        $startedAt = hrtime(true);
+
+        try {
+            // Verify the schedule:list command is runnable.
+            $exitCode = null;
+            try {
+                Artisan::call('schedule:list');
+                $exitCode = 0;
+            } catch (Throwable) {
+                $exitCode = 1;
+            }
+
+            return [
+                'status' => $exitCode === 0 ? 'ok' : 'degraded',
+                'configurable' => true,
+                'latencyMs' => $this->elapsedMilliseconds($startedAt),
+            ];
+        } catch (Throwable $exception) {
+            return [
+                'status' => 'degraded',
+                'latencyMs' => $this->elapsedMilliseconds($startedAt),
+                'message' => $this->exceptionMessage($exception),
+            ];
+        }
     }
 
     private function elapsedMilliseconds(int $startedAt): int

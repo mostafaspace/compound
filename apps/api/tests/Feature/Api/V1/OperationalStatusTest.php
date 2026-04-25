@@ -49,10 +49,16 @@ class OperationalStatusTest extends TestCase
                         'queue' => ['status', 'connection', 'failedJobs', 'latencyMs'],
                         'storage' => ['status', 'disk', 'driver', 'latencyMs'],
                         'broadcasting' => ['status', 'connection', 'driver'],
+                        'notifications' => ['status', 'channels', 'latencyMs'],
+                        'scheduledJobs' => ['status', 'configurable', 'latencyMs'],
                     ],
                     'warnings',
                 ],
             ]);
+
+        // Verify new checks are present.
+        $this->assertArrayHasKey('notifications', $response->json('data.checks'));
+        $this->assertArrayHasKey('scheduledJobs', $response->json('data.checks'));
 
         $this->assertDatabaseHas('audit_logs', [
             'actor_id' => $admin->id,

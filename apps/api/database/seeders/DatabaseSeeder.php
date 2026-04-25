@@ -43,6 +43,7 @@ class DatabaseSeeder extends Seeder
             DocumentTypeSeeder::class,
             NextPointSeeder::class,
             BaselineSeeder::class,
+            UatPersonaSeeder::class,
         ]);
     }
 }
