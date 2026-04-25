@@ -597,6 +597,18 @@ export interface DataExportRequest {
   updatedAt: string;
 }
 
+// ─── Localization ─────────────────────────────────────────────────────────────
+
+export interface LocaleSettings {
+  compoundId: string | null;
+  locale: string;
+  timezone: string;
+  currency: string;
+  currencySymbol: string;
+  dateFormat: string;
+  phoneCountryCode: string;
+}
+
 // ─── Maintenance Work Orders ──────────────────────────────────────────────────
 
 export type WorkOrderStatus = "draft" | "requested" | "quoted" | "approved" | "scheduled" | "in_progress" | "completed" | "rejected" | "cancelled";

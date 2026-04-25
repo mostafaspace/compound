@@ -1185,7 +1185,8 @@
       "announcements": "الإعلانات",
       "finance": "المالية",
       "governance": "الحوكمة",
-      "notifications": "الإشعارات"
+      "notifications": "الإشعارات",
+      "localization": "التوطين"
     },
     "fields": {
       "require_upload_for_onboarding": "إلزام رفع المستندات عند التسجيل",
@@ -1212,7 +1213,12 @@
       "email_enabled": "تفعيل إشعارات البريد الإلكتروني",
       "sms_enabled": "تفعيل إشعارات الرسائل القصيرة",
       "push_enabled": "تفعيل الإشعارات الفورية",
-      "digest_frequency": "تردد ملخص الإشعارات"
+      "digest_frequency": "تردد ملخص الإشعارات",
+      "locale": "رمز اللغة",
+      "timezone": "المنطقة الزمنية",
+      "currency_symbol": "رمز العملة",
+      "date_format": "تنسيق التاريخ",
+      "phone_country_code": "رمز الدولة للهاتف"
     },
     "subtitleGlobal": "تكوين قواعد الوحدات والإعدادات الافتراضية وتفعيل الميزات عبر جميع المجمعات.",
     "subtitleCompound": "تكوين قواعد الوحدات والإعدادات الافتراضية للمجمع {name}.",

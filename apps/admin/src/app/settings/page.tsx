@@ -20,6 +20,7 @@ const NAMESPACES = [
   "finance",
   "governance",
   "notifications",
+  "localization",
 ] as const;
 
 type Namespace = (typeof NAMESPACES)[number];
@@ -55,6 +56,12 @@ const FIELD_META: Record<string, FieldMeta> = {
   sms_enabled: { type: "toggle" },
   push_enabled: { type: "toggle" },
   digest_frequency: { type: "text" },
+  // Localization
+  locale: { type: "text" },
+  timezone: { type: "text" },
+  currency_symbol: { type: "text" },
+  date_format: { type: "text" },
+  phone_country_code: { type: "text" },
 };
 
 function renderValue(key: string, value: unknown): string {

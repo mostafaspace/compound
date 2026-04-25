@@ -92,6 +92,7 @@ import type {
   MeetingActionItem,
   WorkOrder,
   DataExportRequest,
+  LocaleSettings,
 } from "@compound/contracts";
 
 import { config } from "./config";
@@ -2769,5 +2770,21 @@ export async function getDataExportRequests(): Promise<DataExportRequest[]> {
     return payload.data.data;
   } catch {
     return [];
+  }
+}
+
+// ─── Localization (CM-85) ─────────────────────────────────────────────────────
+
+export async function getLocaleSettings(): Promise<LocaleSettings | null> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/locale`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+    if (!response.ok) return null;
+    const payload = (await response.json()) as { data: LocaleSettings };
+    return payload.data;
+  } catch {
+    return null;
   }
 }

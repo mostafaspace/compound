@@ -1185,7 +1185,8 @@
       "announcements": "Announcements",
       "finance": "Finance",
       "governance": "Governance",
-      "notifications": "Notifications"
+      "notifications": "Notifications",
+      "localization": "Localization"
     },
     "fields": {
       "require_upload_for_onboarding": "Require document upload during onboarding",
@@ -1212,7 +1213,12 @@
       "email_enabled": "Enable email notifications",
       "sms_enabled": "Enable SMS notifications",
       "push_enabled": "Enable push notifications",
-      "digest_frequency": "Notification digest frequency"
+      "digest_frequency": "Notification digest frequency",
+      "locale": "Locale (language code)",
+      "timezone": "Timezone",
+      "currency_symbol": "Currency symbol",
+      "date_format": "Date format",
+      "phone_country_code": "Phone country code"
     },
     "subtitleGlobal": "Configure module rules, defaults, and feature toggles across all compounds.",
     "subtitleCompound": "Configure module rules and defaults for {name}.",

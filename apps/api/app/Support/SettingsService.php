@@ -57,6 +57,14 @@ class SettingsService
         'notifications.sms_enabled'               => false,
         'notifications.push_enabled'              => true,
         'notifications.digest_frequency'          => 'realtime',
+
+        // Localization
+        'localization.locale'                     => 'ar',
+        'localization.timezone'                   => 'Africa/Cairo',
+        'localization.currency'                   => 'EGP',
+        'localization.currency_symbol'            => 'ج.م',
+        'localization.date_format'                => 'DD/MM/YYYY',
+        'localization.phone_country_code'         => '+20',
     ];
 
     /**

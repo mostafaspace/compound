@@ -62,6 +62,7 @@ use App\Http\Controllers\Api\V1\Maintenance\WorkOrderEstimateController;
 use App\Http\Controllers\Api\V1\Privacy\PolicyConsentController;
 use App\Http\Controllers\Api\V1\Privacy\DataExportController;
 use App\Http\Controllers\Api\V1\Privacy\AnonymizationController;
+use App\Http\Controllers\Api\V1\LocaleController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->name('api.v1.')->group(function (): void {
@@ -78,6 +79,11 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
     Route::middleware('auth:sanctum')->group(function (): void {
         Route::get('/auth/me', [AuthController::class, 'me'])->name('auth.me');
         Route::post('/auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
+
+        // ─── Localization (CM-85) ─────────────────────────────────────────
+        // Returns effective locale settings for the current compound.
+        // Accessible to all authenticated roles (needed for client-side formatting).
+        Route::get('/locale', LocaleController::class)->name('locale');
         Route::get('/system/ops-status', OperationalStatusController::class)
             ->middleware('role:super_admin,compound_admin,support_agent')
             ->name('system.ops-status');
