@@ -18,7 +18,8 @@
     "imports": "استيراد البيانات",
     "signOut": "تسجيل الخروج",
     "analytics": "التحليلات",
-    "security": "الأمن"
+    "security": "الأمن",
+    "meetings": "الاجتماعات"
   },
   "Language": {
     "toggle": "تغيير اللغة",
@@ -1612,6 +1613,80 @@
         "gate": "البوابة",
         "status": "الحالة",
         "time": "الوقت"
+      }
+    }
+  },
+  "Meetings": {
+    "back": "→ العودة إلى لوحة التحكم",
+    "title": "اجتماعات الحوكمة",
+    "subtitle": "إدارة اجتماعات الجمعية واللجان، والجداول الزمنية، ومحاضر الاجتماعات، وبنود العمل.",
+    "empty": "لا توجد اجتماعات.",
+    "nav": {
+      "actionItems": "بنود العمل"
+    },
+    "stats": {
+      "draft": "مسودة",
+      "scheduled": "مجدولة",
+      "inProgress": "جارية",
+      "openActionItems": "بنود عمل مفتوحة"
+    },
+    "filters": {
+      "status": "الحالة",
+      "scope": "النطاق",
+      "all": "جميع الحالات",
+      "allScopes": "جميع النطاقات",
+      "apply": "تطبيق"
+    },
+    "status": {
+      "draft": "مسودة",
+      "scheduled": "مجدول",
+      "inProgress": "جارٍ",
+      "completed": "مكتمل",
+      "cancelled": "ملغى"
+    },
+    "scope": {
+      "association": "الجمعية",
+      "building": "المبنى",
+      "floor": "الطابق",
+      "committee": "اللجنة"
+    },
+    "fields": {
+      "scheduledAt": "موعد الاجتماع",
+      "location": "الموقع",
+      "createdBy": "أنشأ بواسطة",
+      "participants": "المشاركون",
+      "description": "الوصف"
+    },
+    "detail": {
+      "back": "→ العودة إلى الاجتماعات",
+      "minutes": "محضر الاجتماع",
+      "agenda": "جدول الأعمال",
+      "participants": "المشاركون",
+      "decisions": "القرارات",
+      "actionItems": "بنود العمل",
+      "author": "الكاتب",
+      "published": "منشور",
+      "draft": "مسودة",
+      "attended": "حضر",
+      "recordedBy": "سُجِّل بواسطة",
+      "assignedTo": "مُسند إلى",
+      "dueDate": "تاريخ الاستحقاق"
+    },
+    "actionItems": {
+      "title": "بنود العمل",
+      "subtitle": "تتبع بنود العمل عبر جميع الاجتماعات.",
+      "empty": "لا توجد بنود عمل.",
+      "completedAt": "اكتمل في",
+      "stats": {
+        "open": "مفتوح",
+        "inProgress": "جارٍ",
+        "done": "منجز"
+      },
+      "status": {
+        "open": "مفتوح",
+        "inProgress": "جارٍ",
+        "done": "منجز",
+        "cancelled": "ملغى"
       }
     }
   }

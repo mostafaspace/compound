@@ -488,3 +488,101 @@ export interface ManualVisitorEntry {
   createdAt: string;
   updatedAt: string;
 }
+
+// ─── Meetings ────────────────────────────────────────────────────────────────
+
+export type MeetingStatus = "draft" | "scheduled" | "in_progress" | "completed" | "cancelled";
+export type MeetingScope = "association" | "building" | "floor" | "committee";
+export type MeetingActionItemStatus = "open" | "in_progress" | "done" | "cancelled";
+export type RsvpStatus = "pending" | "accepted" | "declined" | "tentative";
+
+export interface MeetingAgendaItem {
+  id: string;
+  meetingId: string;
+  title: string;
+  description: string | null;
+  position: number;
+  durationMinutes: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MeetingParticipant {
+  id: string;
+  meetingId: string;
+  userId: number;
+  rsvpStatus: RsvpStatus;
+  invitedAt: string;
+  attended: boolean;
+  user?: { id: number; name: string; email: string } | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MeetingMinutes {
+  id: string;
+  meetingId: string;
+  body: string;
+  publishedAt: string | null;
+  createdBy: number;
+  updatedBy: number | null;
+  author?: { id: number; name: string } | null;
+  lastEditor?: { id: number; name: string } | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MeetingDecision {
+  id: string;
+  meetingId: string;
+  title: string;
+  description: string | null;
+  linkedType: string | null;
+  linkedId: string | null;
+  createdBy: number;
+  creator?: { id: number; name: string } | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MeetingActionItem {
+  id: string;
+  meetingId: string;
+  title: string;
+  description: string | null;
+  assignedTo: number | null;
+  dueDate: string | null;
+  status: MeetingActionItemStatus;
+  completedAt: string | null;
+  createdBy: number;
+  assignee?: { id: number; name: string } | null;
+  creator?: { id: number; name: string } | null;
+  meeting?: { id: string; title: string } | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Meeting {
+  id: string;
+  compoundId: string;
+  title: string;
+  scope: MeetingScope;
+  status: MeetingStatus;
+  description: string | null;
+  location: string | null;
+  scheduledAt: string | null;
+  startedAt: string | null;
+  endedAt: string | null;
+  cancelledAt: string | null;
+  cancelledBy: number | null;
+  createdBy: number;
+  creator?: { id: number; name: string } | null;
+  cancelledByUser?: { id: number; name: string } | null;
+  agendaItems?: MeetingAgendaItem[];
+  participants?: MeetingParticipant[];
+  minutes?: MeetingMinutes | null;
+  decisions?: MeetingDecision[];
+  actionItems?: MeetingActionItem[];
+  createdAt: string;
+  updatedAt: string;
+}

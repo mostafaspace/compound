@@ -88,6 +88,8 @@ import type {
   SecurityDevice,
   SecurityIncident,
   ManualVisitorEntry,
+  Meeting,
+  MeetingActionItem,
 } from "@compound/contracts";
 
 import { config } from "./config";
@@ -2648,5 +2650,67 @@ export async function getOperationalAnalytics(filters: OperationalAnalyticsFilte
     return payload.data;
   } catch {
     return null;
+  }
+}
+
+// ─── Meetings (CM-82) ─────────────────────────────────────────────────────────
+
+export async function getMeetings(params: {
+  status?: string;
+  scope?: string;
+  from?: string;
+  to?: string;
+} = {}): Promise<Meeting[]> {
+  try {
+    const qs = new URLSearchParams();
+    if (params.status && params.status !== "all") qs.set("status", params.status);
+    if (params.scope) qs.set("scope", params.scope);
+    if (params.from) qs.set("from", params.from);
+    if (params.to) qs.set("to", params.to);
+    const query = qs.toString();
+    const response = await fetch(`${config.apiBaseUrl}/meetings${query ? `?${query}` : ""}`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+    if (!response.ok) return [];
+    const payload = (await response.json()) as { data: { data: Meeting[] } };
+    return payload.data.data;
+  } catch {
+    return [];
+  }
+}
+
+export async function getMeeting(id: string): Promise<Meeting | null> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/meetings/${id}`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+    if (!response.ok) return null;
+    const payload = (await response.json()) as { data: Meeting };
+    return payload.data;
+  } catch {
+    return null;
+  }
+}
+
+export async function getMeetingActionItems(params: {
+  status?: string;
+  assignedTo?: string;
+} = {}): Promise<MeetingActionItem[]> {
+  try {
+    const qs = new URLSearchParams();
+    if (params.status && params.status !== "all") qs.set("status", params.status);
+    if (params.assignedTo) qs.set("assigned_to", params.assignedTo);
+    const query = qs.toString();
+    const response = await fetch(`${config.apiBaseUrl}/meetings/action-items${query ? `?${query}` : ""}`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+    if (!response.ok) return [];
+    const payload = (await response.json()) as { data: { data: MeetingActionItem[] } };
+    return payload.data.data;
+  } catch {
+    return [];
   }
 }

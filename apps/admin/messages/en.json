@@ -18,7 +18,8 @@
     "imports": "Data import",
     "signOut": "Sign Out",
     "analytics": "Analytics",
-    "security": "Security"
+    "security": "Security",
+    "meetings": "Meetings"
   },
   "Language": {
     "toggle": "Toggle language",
@@ -1612,6 +1613,80 @@
         "gate": "Gate",
         "status": "Status",
         "time": "Time"
+      }
+    }
+  },
+  "Meetings": {
+    "back": "← Back to dashboard",
+    "title": "Governance Meetings",
+    "subtitle": "Manage association and committee meetings, agendas, minutes, and action items.",
+    "empty": "No meetings found.",
+    "nav": {
+      "actionItems": "Action Items"
+    },
+    "stats": {
+      "draft": "Draft",
+      "scheduled": "Scheduled",
+      "inProgress": "In Progress",
+      "openActionItems": "Open Action Items"
+    },
+    "filters": {
+      "status": "Status",
+      "scope": "Scope",
+      "all": "All statuses",
+      "allScopes": "All scopes",
+      "apply": "Apply"
+    },
+    "status": {
+      "draft": "Draft",
+      "scheduled": "Scheduled",
+      "inProgress": "In Progress",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "scope": {
+      "association": "Association",
+      "building": "Building",
+      "floor": "Floor",
+      "committee": "Committee"
+    },
+    "fields": {
+      "scheduledAt": "Scheduled at",
+      "location": "Location",
+      "createdBy": "Created by",
+      "participants": "Participants",
+      "description": "Description"
+    },
+    "detail": {
+      "back": "← Back to meetings",
+      "minutes": "Meeting Minutes",
+      "agenda": "Agenda",
+      "participants": "Participants",
+      "decisions": "Decisions",
+      "actionItems": "Action Items",
+      "author": "Author",
+      "published": "Published",
+      "draft": "Draft",
+      "attended": "Attended",
+      "recordedBy": "Recorded by",
+      "assignedTo": "Assigned to",
+      "dueDate": "Due date"
+    },
+    "actionItems": {
+      "title": "Action Items",
+      "subtitle": "Track action items across all meetings.",
+      "empty": "No action items found.",
+      "completedAt": "Completed",
+      "stats": {
+        "open": "Open",
+        "inProgress": "In Progress",
+        "done": "Done"
+      },
+      "status": {
+        "open": "Open",
+        "inProgress": "In Progress",
+        "done": "Done",
+        "cancelled": "Cancelled"
       }
     }
   }

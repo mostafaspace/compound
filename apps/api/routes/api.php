@@ -50,6 +50,12 @@ use App\Http\Controllers\Api\V1\SecurityShiftController;
 use App\Http\Controllers\Api\V1\SecurityDeviceController;
 use App\Http\Controllers\Api\V1\SecurityIncidentController;
 use App\Http\Controllers\Api\V1\ManualVisitorEntryController;
+use App\Http\Controllers\Api\V1\Meetings\MeetingController;
+use App\Http\Controllers\Api\V1\Meetings\MeetingAgendaController;
+use App\Http\Controllers\Api\V1\Meetings\MeetingParticipantController;
+use App\Http\Controllers\Api\V1\Meetings\MeetingMinutesController;
+use App\Http\Controllers\Api\V1\Meetings\MeetingDecisionController;
+use App\Http\Controllers\Api\V1\Meetings\MeetingActionItemController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->name('api.v1.')->group(function (): void {
@@ -474,5 +480,52 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             Route::post('/incidents', [SecurityIncidentController::class, 'store'])->name('incidents.store');
             Route::post('/manual-entries', [ManualVisitorEntryController::class, 'store'])->name('manual-entries.store');
             Route::post('/devices/{securityDevice}/heartbeat', [SecurityDeviceController::class, 'heartbeat'])->name('devices.heartbeat');
+        });
+
+    // ─── Governance meetings (CM-82) ─────────────────────────────────────────
+
+    // Admin routes: full CRUD for meetings, agenda, participants, minutes, decisions, action items
+    Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,board_member'])
+        ->prefix('meetings')
+        ->name('meetings.')
+        ->group(function (): void {
+            Route::get('/', [MeetingController::class, 'index'])->name('index');
+            Route::post('/', [MeetingController::class, 'store'])->name('store');
+            Route::get('/{meeting}', [MeetingController::class, 'show'])->name('show');
+            Route::patch('/{meeting}', [MeetingController::class, 'update'])->name('update');
+            Route::post('/{meeting}/cancel', [MeetingController::class, 'cancel'])->name('cancel');
+
+            // Agenda
+            Route::post('/{meeting}/agenda', [MeetingAgendaController::class, 'store'])->name('agenda.store');
+            Route::patch('/{meeting}/agenda/{agendaItem}', [MeetingAgendaController::class, 'update'])->name('agenda.update');
+            Route::delete('/{meeting}/agenda/{agendaItem}', [MeetingAgendaController::class, 'destroy'])->name('agenda.destroy');
+
+            // Participants
+            Route::get('/{meeting}/participants', [MeetingParticipantController::class, 'index'])->name('participants.index');
+            Route::post('/{meeting}/participants', [MeetingParticipantController::class, 'store'])->name('participants.store');
+            Route::post('/{meeting}/participants/{participant}/confirm-attendance', [MeetingParticipantController::class, 'confirmAttendance'])->name('participants.confirm-attendance');
+
+            // Minutes
+            Route::get('/{meeting}/minutes', [MeetingMinutesController::class, 'show'])->name('minutes.show');
+            Route::post('/{meeting}/minutes', [MeetingMinutesController::class, 'store'])->name('minutes.store');
+            Route::patch('/{meeting}/minutes', [MeetingMinutesController::class, 'update'])->name('minutes.update');
+            Route::post('/{meeting}/minutes/publish', [MeetingMinutesController::class, 'publish'])->name('minutes.publish');
+
+            // Decisions
+            Route::post('/{meeting}/decisions', [MeetingDecisionController::class, 'store'])->name('decisions.store');
+            Route::delete('/{meeting}/decisions/{decision}', [MeetingDecisionController::class, 'destroy'])->name('decisions.destroy');
+
+            // Action items
+            Route::get('/action-items', [MeetingActionItemController::class, 'index'])->name('action-items.index');
+            Route::post('/{meeting}/action-items', [MeetingActionItemController::class, 'store'])->name('action-items.store');
+            Route::patch('/{meeting}/action-items/{actionItem}', [MeetingActionItemController::class, 'update'])->name('action-items.update');
+        });
+
+    // Resident: RSVP + view published minutes
+    Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,board_member,resident_owner,resident_tenant,support_agent'])
+        ->prefix('meetings')
+        ->name('meetings.resident.')
+        ->group(function (): void {
+            Route::post('/{meeting}/rsvp', [MeetingParticipantController::class, 'rsvp'])->name('rsvp');
         });
 });
