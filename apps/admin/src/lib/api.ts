@@ -91,6 +91,7 @@ import type {
   Meeting,
   MeetingActionItem,
   WorkOrder,
+  DataExportRequest,
 } from "@compound/contracts";
 
 import { config } from "./config";
@@ -2752,5 +2753,21 @@ export async function getWorkOrder(id: string): Promise<WorkOrder | null> {
     return payload.data;
   } catch {
     return null;
+  }
+}
+
+// ─── Privacy (CM-84) ──────────────────────────────────────────────────────────
+
+export async function getDataExportRequests(): Promise<DataExportRequest[]> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/privacy/export-requests`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+    if (!response.ok) return [];
+    const payload = (await response.json()) as { data: { data: DataExportRequest[] } };
+    return payload.data.data;
+  } catch {
+    return [];
   }
 }

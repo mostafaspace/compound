@@ -562,6 +562,41 @@ export interface MeetingActionItem {
   updatedAt: string;
 }
 
+// ─── Privacy ─────────────────────────────────────────────────────────────────
+
+export type PolicyType = "privacy_policy" | "terms_of_service" | "data_processing";
+export type ExportRequestStatus = "pending" | "processing" | "ready" | "failed" | "expired";
+
+export interface UserPolicyConsent {
+  id: number;
+  userId: number;
+  policyType: PolicyType;
+  policyVersion: string;
+  acceptedAt: string;
+  ipAddress: string | null;
+  revokedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DataExportRequest {
+  id: string;
+  requestedBy: number;
+  userId: number;
+  status: ExportRequestStatus;
+  modules: string[] | null;
+  packagePath: string | null;
+  expiresAt: string | null;
+  processedAt: string | null;
+  processedBy: number | null;
+  notes: string | null;
+  requester?: { id: number; name: string } | null;
+  subject?: { id: number; name: string; email: string } | null;
+  processor?: { id: number; name: string } | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // ─── Maintenance Work Orders ──────────────────────────────────────────────────
 
 export type WorkOrderStatus = "draft" | "requested" | "quoted" | "approved" | "scheduled" | "in_progress" | "completed" | "rejected" | "cancelled";

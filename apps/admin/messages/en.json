@@ -20,7 +20,8 @@
     "analytics": "Analytics",
     "security": "Security",
     "meetings": "Meetings",
-    "workOrders": "Work Orders"
+    "workOrders": "Work Orders",
+    "privacy": "Privacy & Data"
   },
   "Language": {
     "toggle": "Toggle language",
@@ -1615,6 +1616,45 @@
         "status": "Status",
         "time": "Time"
       }
+    }
+  },
+  "Privacy": {
+    "back": "← Back to dashboard",
+    "title": "Privacy & Data Controls",
+    "subtitle": "Manage policy consent, data export requests, legal hold, and user anonymization.",
+    "overview": {
+      "consent": "Policy Consent",
+      "consentDesc": "Users acknowledge privacy policy, terms of service, and data processing agreements during onboarding or first login.",
+      "apiNote": "Consent records are created via the API when users accept policies.",
+      "exportRequests": "Data Export Requests",
+      "pendingExports": "pending",
+      "readyExports": "ready for download",
+      "legalHold": "Legal Hold",
+      "legalHoldDesc": "Users under legal hold cannot be anonymized or deleted until the hold is lifted.",
+      "manageViaSupport": "Set via Admin API: POST /privacy/users/{id}/legal-hold"
+    },
+    "policies": {
+      "title": "Policy Types",
+      "privacyPolicy": "Privacy Policy",
+      "privacyPolicyDesc": "Covers collection, use, and protection of personal data.",
+      "termsOfService": "Terms of Service",
+      "termsDesc": "Platform usage terms, acceptable use, and liability.",
+      "dataProcessing": "Data Processing Agreement",
+      "dataProcessingDesc": "GDPR-style processing agreement for data subjects."
+    },
+    "exportRequests": {
+      "title": "Data Export Requests",
+      "empty": "No export requests.",
+      "requestedBy": "Requested by",
+      "modules": "Modules",
+      "processedAt": "Processed",
+      "expires": "Expires"
+    },
+    "retention": {
+      "title": "Retention & Anonymization Policy",
+      "desc1": "Financial records, vote tallies, audit logs, and governance decisions are retained indefinitely and are NOT deleted during user anonymization.",
+      "desc2": "Visitor logs, notifications, and non-financial personal data may be purged according to compound-level retention settings.",
+      "desc3": "Anonymization scrubs name, email, and phone; the user record is archived and all device sessions are revoked."
     }
   },
   "WorkOrders": {

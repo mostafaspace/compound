@@ -59,6 +59,9 @@ use App\Http\Controllers\Api\V1\Meetings\MeetingActionItemController;
 use App\Http\Controllers\Api\V1\Maintenance\WorkOrderController;
 use App\Http\Controllers\Api\V1\Maintenance\WorkOrderStatusController;
 use App\Http\Controllers\Api\V1\Maintenance\WorkOrderEstimateController;
+use App\Http\Controllers\Api\V1\Privacy\PolicyConsentController;
+use App\Http\Controllers\Api\V1\Privacy\DataExportController;
+use App\Http\Controllers\Api\V1\Privacy\AnonymizationController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->name('api.v1.')->group(function (): void {
@@ -554,5 +557,30 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             // Estimates
             Route::post('/{workOrder}/estimates', [WorkOrderEstimateController::class, 'store'])->name('estimates.store');
             Route::post('/{workOrder}/estimates/{estimate}/review', [WorkOrderEstimateController::class, 'review'])->name('estimates.review');
+        });
+
+    // ─── Privacy & consent (CM-84) ────────────────────────────────────────────
+
+    // Self-service: any authenticated user can manage their own consents + request export
+    Route::middleware(['auth:sanctum'])
+        ->prefix('privacy')
+        ->name('privacy.')
+        ->group(function (): void {
+            Route::get('/consents', [PolicyConsentController::class, 'index'])->name('consents.index');
+            Route::post('/consents', [PolicyConsentController::class, 'store'])->name('consents.store');
+            Route::post('/export-requests', [DataExportController::class, 'store'])->name('export-requests.store');
+            Route::get('/export-requests/{dataExportRequest}', [DataExportController::class, 'show'])->name('export-requests.show');
+        });
+
+    // Admin-only: manage consents for any user, process exports, anonymize, legal hold
+    Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin'])
+        ->prefix('privacy')
+        ->name('privacy.admin.')
+        ->group(function (): void {
+            Route::get('/export-requests', [DataExportController::class, 'index'])->name('export-requests.index');
+            Route::post('/export-requests/{dataExportRequest}/process', [DataExportController::class, 'process'])->name('export-requests.process');
+            Route::get('/users/{user}/consents', [PolicyConsentController::class, 'forUser'])->name('users.consents');
+            Route::post('/users/{user}/legal-hold', [AnonymizationController::class, 'legalHold'])->name('users.legal-hold');
+            Route::post('/users/{user}/anonymize', [AnonymizationController::class, 'anonymize'])->name('users.anonymize');
         });
 });

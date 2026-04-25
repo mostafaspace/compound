@@ -24,7 +24,9 @@ class UserResource extends JsonResource
             'role' => $this->role->value,
             'status' => $this->status->value,
             'emailVerifiedAt' => $this->email_verified_at?->toJSON(),
-            'lastLoginAt' => $this->last_login_at?->toJSON(),
+            'lastLoginAt'     => $this->last_login_at?->toJSON(),
+            'legal_hold'      => $this->legal_hold ?? false,
+            'anonymized_at'   => $this->anonymized_at?->toJSON(),
         ];
     }
 }
