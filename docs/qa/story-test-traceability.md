@@ -132,6 +132,19 @@ Legend:
 
 ---
 
+## UAT, Launch & Handover (P32)
+
+| Story | Jira | Deliverable | Status |
+|-------|------|-------------|--------|
+| P32 UAT Persona Seeder | CM-127 | `UatPersonaSeeder.php` — 8 persona accounts | ✅ |
+| P32 Ops Status Checks | CM-127 | `OperationalStatusService.php` — notifications + scheduledJobs checks | ✅ |
+| P32 UAT Checklist | CM-128 | `docs/qa/cm-86-uat-checklist.md` — 50+ scenarios across 8 personas | ✅ |
+| P32 Launch Readiness | CM-128 | `docs/qa/cm-86-launch-readiness.md` — infrastructure, data, security checks | ✅ |
+| P32 Training Guide | CM-128 | `docs/qa/cm-86-training-guide.md` — admin, treasurer, security, resident guides | ✅ |
+| P32 QA Sign-off | CM-129 | `docs/qa/cm-86-uat-checklist.md` sign-off section | 🔬 (human review) |
+
+---
+
 ## Stories Without Automated Test Coverage (Gaps)
 
 The following areas need tests if/when implementation is added:
@@ -169,7 +182,7 @@ php artisan migrate:fresh --env=testing
 php artisan test
 ```
 
-Expected: all tests pass (119+ tests as of 2026-04-22).
+Expected: all tests pass (420 tests as of 2026-04-25).
 
 To run a specific file:
 ```bash
