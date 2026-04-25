@@ -63,6 +63,7 @@ class OperationalStatusTest extends TestCase
 
     public function test_queue_failures_mark_ops_status_as_degraded(): void
     {
+        DB::table('failed_jobs')->delete();
         config(['filesystems.default' => 'local']);
         Storage::fake('local');
 
