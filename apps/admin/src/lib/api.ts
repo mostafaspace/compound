@@ -4,6 +4,8 @@ import { getCompoundContext } from "@/lib/session";
 import type {
   ApiEnvelope,
   Announcement,
+  OperationalAnalytics,
+  OperationalAnalyticsFilters,
   ImportBatch,
   ImportBatchType,
   ReserveFund,
@@ -2514,6 +2516,28 @@ export async function getAccountMerge(mergeId: number): Promise<AccountMerge | n
     });
     if (!response.ok) return null;
     const payload = (await response.json()) as { data: AccountMerge };
+    return payload.data;
+  } catch {
+    return null;
+  }
+}
+
+// ─── Operational analytics (CM-80) ────────────────────────────────────────────
+
+export async function getOperationalAnalytics(filters: OperationalAnalyticsFilters = {}): Promise<OperationalAnalytics | null> {
+  try {
+    const params = new URLSearchParams();
+    if (filters.buildingId) params.set("buildingId", filters.buildingId);
+    if (filters.from) params.set("from", filters.from);
+    if (filters.to) params.set("to", filters.to);
+
+    const query = params.toString();
+    const response = await fetch(`${config.apiBaseUrl}/analytics/operational${query ? `?${query}` : ""}`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+    if (!response.ok) return null;
+    const payload = (await response.json()) as { data: OperationalAnalytics };
     return payload.data;
   } catch {
     return null;

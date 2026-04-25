@@ -16,7 +16,8 @@
     "settings": "Settings",
     "notificationChannels": "Notification channels",
     "imports": "Data import",
-    "signOut": "Sign Out"
+    "signOut": "Sign Out",
+    "analytics": "Analytics"
   },
   "Language": {
     "toggle": "Toggle language",
@@ -1407,6 +1408,88 @@
       "first_resident_verified": "First resident verified",
       "first_finance_account": "First unit finance account created",
       "first_announcement": "First announcement published"
+    }
+  },
+  "OperationalAnalytics": {
+    "title": "Operational Analytics",
+    "subtitle": "Compound-wide metrics across residents, visitors, issues, announcements, and governance.",
+    "back": "← Back to dashboard",
+    "filterBuilding": "Building",
+    "filterFrom": "From",
+    "filterTo": "To",
+    "filterApply": "Apply",
+    "filterClear": "Clear",
+    "allBuildings": "All buildings",
+    "generatedAt": "Data as of {time}",
+    "sections": {
+      "users": "Residents & Users",
+      "invitations": "Invitations",
+      "verifications": "Verifications",
+      "documents": "Documents",
+      "visitors": "Visitors",
+      "issues": "Issues",
+      "announcements": "Announcements",
+      "votes": "Votes"
+    },
+    "users": {
+      "total": "Total users",
+      "active": "Active",
+      "invited": "Invited",
+      "pendingReview": "Pending review",
+      "suspended": "Suspended",
+      "archived": "Archived"
+    },
+    "invitations": {
+      "total": "Total invitations",
+      "pending": "Pending",
+      "accepted": "Accepted",
+      "revoked": "Revoked",
+      "expired": "Expired"
+    },
+    "verifications": {
+      "total": "Total requests",
+      "pendingReview": "Pending review",
+      "moreInfoRequested": "More info requested",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "documents": {
+      "total": "Total documents",
+      "submitted": "Submitted",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "visitors": {
+      "total": "Total requests",
+      "pending": "Pending",
+      "allowed": "Allowed",
+      "denied": "Denied",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "issues": {
+      "total": "Total issues",
+      "new": "New",
+      "inProgress": "In progress",
+      "escalated": "Escalated",
+      "resolved": "Resolved",
+      "closed": "Closed"
+    },
+    "announcements": {
+      "total": "Total announcements",
+      "draft": "Draft",
+      "published": "Published",
+      "archived": "Archived",
+      "requiresAckCount": "Requiring acknowledgement",
+      "ackCount": "Acknowledgements received"
+    },
+    "votes": {
+      "total": "Total votes",
+      "draft": "Draft",
+      "active": "Active",
+      "closed": "Closed",
+      "cancelled": "Cancelled",
+      "participations": "Total participations"
     }
   }
 }

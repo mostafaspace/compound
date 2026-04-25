@@ -16,7 +16,8 @@
     "settings": "الإعدادات",
     "notificationChannels": "قنوات الإشعارات",
     "imports": "استيراد البيانات",
-    "signOut": "تسجيل الخروج"
+    "signOut": "تسجيل الخروج",
+    "analytics": "التحليلات"
   },
   "Language": {
     "toggle": "تغيير اللغة",
@@ -1407,6 +1408,88 @@
       "first_resident_verified": "تم التحقق من أول مقيم",
       "first_finance_account": "تم إنشاء أول حساب مالي للوحدة",
       "first_announcement": "تم نشر أول إعلان"
+    }
+  },
+  "OperationalAnalytics": {
+    "title": "التحليلات التشغيلية",
+    "subtitle": "مقاييس شاملة للمجمع تشمل السكان والزوار والبلاغات والإعلانات والحوكمة.",
+    "back": "← العودة إلى لوحة التحكم",
+    "filterBuilding": "المبنى",
+    "filterFrom": "من",
+    "filterTo": "إلى",
+    "filterApply": "تطبيق",
+    "filterClear": "إلغاء",
+    "allBuildings": "جميع المباني",
+    "generatedAt": "البيانات حتى {time}",
+    "sections": {
+      "users": "السكان والمستخدمون",
+      "invitations": "الدعوات",
+      "verifications": "التحققات",
+      "documents": "المستندات",
+      "visitors": "الزوار",
+      "issues": "البلاغات",
+      "announcements": "الإعلانات",
+      "votes": "التصويتات"
+    },
+    "users": {
+      "total": "إجمالي المستخدمين",
+      "active": "نشط",
+      "invited": "مدعو",
+      "pendingReview": "قيد المراجعة",
+      "suspended": "موقوف",
+      "archived": "مؤرشف"
+    },
+    "invitations": {
+      "total": "إجمالي الدعوات",
+      "pending": "معلقة",
+      "accepted": "مقبولة",
+      "revoked": "ملغاة",
+      "expired": "منتهية"
+    },
+    "verifications": {
+      "total": "إجمالي الطلبات",
+      "pendingReview": "قيد المراجعة",
+      "moreInfoRequested": "طُلبت معلومات إضافية",
+      "approved": "موافق عليها",
+      "rejected": "مرفوضة"
+    },
+    "documents": {
+      "total": "إجمالي المستندات",
+      "submitted": "مُقدَّمة",
+      "approved": "موافق عليها",
+      "rejected": "مرفوضة"
+    },
+    "visitors": {
+      "total": "إجمالي الطلبات",
+      "pending": "معلقة",
+      "allowed": "مسموح به",
+      "denied": "مرفوض",
+      "completed": "مكتملة",
+      "cancelled": "ملغاة"
+    },
+    "issues": {
+      "total": "إجمالي البلاغات",
+      "new": "جديد",
+      "inProgress": "قيد التنفيذ",
+      "escalated": "متصاعد",
+      "resolved": "محلول",
+      "closed": "مغلق"
+    },
+    "announcements": {
+      "total": "إجمالي الإعلانات",
+      "draft": "مسودة",
+      "published": "منشور",
+      "archived": "مؤرشف",
+      "requiresAckCount": "تتطلب تأكيداً",
+      "ackCount": "تأكيدات مستلمة"
+    },
+    "votes": {
+      "total": "إجمالي التصويتات",
+      "draft": "مسودة",
+      "active": "نشط",
+      "closed": "مغلق",
+      "cancelled": "ملغى",
+      "participations": "إجمالي المشاركات"
     }
   }
 }

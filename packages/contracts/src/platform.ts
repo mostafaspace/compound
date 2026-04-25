@@ -285,3 +285,91 @@ export interface UserListFilters {
   role?: string;
   perPage?: number;
 }
+
+// ─── Operational analytics (CM-80) ────────────────────────────────────────────
+
+export interface OperationalAnalyticsUserMetrics {
+  total: number;
+  active: number;
+  invited: number;
+  pendingReview: number;
+  suspended: number;
+  archived: number;
+}
+
+export interface OperationalAnalyticsInvitationMetrics {
+  total: number;
+  pending: number;
+  accepted: number;
+  revoked: number;
+  expired: number;
+}
+
+export interface OperationalAnalyticsVerificationMetrics {
+  total: number;
+  pendingReview: number;
+  moreInfoRequested: number;
+  approved: number;
+  rejected: number;
+}
+
+export interface OperationalAnalyticsDocumentMetrics {
+  total: number;
+  submitted: number;
+  approved: number;
+  rejected: number;
+}
+
+export interface OperationalAnalyticsVisitorMetrics {
+  total: number;
+  pending: number;
+  allowed: number;
+  denied: number;
+  completed: number;
+  cancelled: number;
+}
+
+export interface OperationalAnalyticsIssueMetrics {
+  total: number;
+  new: number;
+  inProgress: number;
+  escalated: number;
+  resolved: number;
+  closed: number;
+}
+
+export interface OperationalAnalyticsAnnouncementMetrics {
+  total: number;
+  draft: number;
+  published: number;
+  archived: number;
+  requiresAckCount: number;
+  ackCount: number;
+}
+
+export interface OperationalAnalyticsVoteMetrics {
+  total: number;
+  draft: number;
+  active: number;
+  closed: number;
+  cancelled: number;
+  participations: number;
+}
+
+export interface OperationalAnalytics {
+  users: OperationalAnalyticsUserMetrics;
+  invitations: OperationalAnalyticsInvitationMetrics;
+  verifications: OperationalAnalyticsVerificationMetrics;
+  documents: OperationalAnalyticsDocumentMetrics;
+  visitors: OperationalAnalyticsVisitorMetrics;
+  issues: OperationalAnalyticsIssueMetrics;
+  announcements: OperationalAnalyticsAnnouncementMetrics;
+  votes: OperationalAnalyticsVoteMetrics;
+  generatedAt: string;
+}
+
+export interface OperationalAnalyticsFilters {
+  buildingId?: string;
+  from?: string;
+  to?: string;
+}

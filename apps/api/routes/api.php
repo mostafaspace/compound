@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\AnnouncementController;
 use App\Http\Controllers\Api\V1\ImportBatchController;
 use App\Http\Controllers\Api\V1\AccountMergeController;
 use App\Http\Controllers\Api\V1\AuditLogController;
+use App\Http\Controllers\Api\V1\OperationalAnalyticsController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BuildingController;
 use App\Http\Controllers\Api\V1\CompoundController;
@@ -387,6 +388,11 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             Route::post('/device-tokens', [DeviceTokenController::class, 'store'])->name('store');
             Route::delete('/device-tokens/{deviceToken}', [DeviceTokenController::class, 'destroy'])->name('destroy');
         });
+
+    // Operational analytics — read-only metrics dashboard (CM-109)
+    Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,support_agent'])
+        ->get('/analytics/operational', OperationalAnalyticsController::class)
+        ->name('analytics.operational');
 
     // User support console + lifecycle actions
     Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,support_agent'])

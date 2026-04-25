@@ -28,6 +28,7 @@ const navLinks = [
   { href: "/notifications/channels", key: "notificationChannels" },
   { href: "/onboarding", key: "onboarding" },
   { href: "/audit-logs", key: "auditLogs" },
+  { href: "/analytics/operational", key: "analytics" },
 ];
 
 function CheckIcon() {
