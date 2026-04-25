@@ -562,6 +562,70 @@ export interface MeetingActionItem {
   updatedAt: string;
 }
 
+// ─── Maintenance Work Orders ──────────────────────────────────────────────────
+
+export type WorkOrderStatus = "draft" | "requested" | "quoted" | "approved" | "scheduled" | "in_progress" | "completed" | "rejected" | "cancelled";
+export type WorkOrderPriority = "low" | "medium" | "high" | "urgent";
+export type WorkOrderCategory = "plumbing" | "electrical" | "hvac" | "painting" | "cleaning" | "landscaping" | "security" | "general" | "other";
+export type EstimateStatus = "pending" | "approved" | "rejected";
+
+export interface WorkOrderEstimate {
+  id: string;
+  workOrderId: string;
+  vendorId: string | null;
+  amount: string;
+  notes: string | null;
+  status: EstimateStatus;
+  submittedBy: number;
+  reviewedBy: number | null;
+  reviewedAt: string | null;
+  reviewNotes: string | null;
+  vendor?: { id: string; name: string } | null;
+  submitter?: { id: number; name: string } | null;
+  reviewer?: { id: number; name: string } | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WorkOrder {
+  id: string;
+  compoundId: string;
+  issueId: string | null;
+  vendorId: string | null;
+  buildingId: string | null;
+  unitId: string | null;
+  title: string;
+  description: string | null;
+  category: WorkOrderCategory;
+  priority: WorkOrderPriority;
+  status: WorkOrderStatus;
+  estimatedCost: string | null;
+  approvedCost: string | null;
+  actualCost: string | null;
+  expenseId: string | null;
+  createdBy: number;
+  assignedTo: number | null;
+  approvedBy: number | null;
+  cancelledBy: number | null;
+  targetCompletionAt: string | null;
+  scheduledAt: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  approvedAt: string | null;
+  cancelledAt: string | null;
+  completionNotes: string | null;
+  rejectionReason: string | null;
+  creator?: { id: number; name: string } | null;
+  assignee?: { id: number; name: string } | null;
+  approver?: { id: number; name: string } | null;
+  vendor?: { id: string; name: string } | null;
+  building?: { id: string; name: string } | null;
+  issue?: { id: string; title: string } | null;
+  estimates?: WorkOrderEstimate[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Meeting {
   id: string;
   compoundId: string;

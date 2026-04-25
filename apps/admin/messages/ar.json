@@ -19,7 +19,8 @@
     "signOut": "تسجيل الخروج",
     "analytics": "التحليلات",
     "security": "الأمن",
-    "meetings": "الاجتماعات"
+    "meetings": "الاجتماعات",
+    "workOrders": "أوامر العمل"
   },
   "Language": {
     "toggle": "تغيير اللغة",
@@ -1614,6 +1615,76 @@
         "status": "الحالة",
         "time": "الوقت"
       }
+    }
+  },
+  "WorkOrders": {
+    "back": "→ العودة إلى لوحة التحكم",
+    "title": "أوامر صيانة العمل",
+    "subtitle": "تتبع أوامر الإصلاح والصيانة، وعروض أسعار الموردين، والموافقات، والإنجاز.",
+    "empty": "لا توجد أوامر عمل.",
+    "stats": {
+      "open": "مفتوح",
+      "inProgress": "جارٍ",
+      "completed": "منجز",
+      "urgent": "عاجل"
+    },
+    "filters": {
+      "status": "الحالة",
+      "priority": "الأولوية",
+      "category": "الفئة",
+      "allStatuses": "جميع الحالات",
+      "allPriorities": "جميع الأولويات",
+      "allCategories": "جميع الفئات",
+      "apply": "تطبيق"
+    },
+    "status": {
+      "draft": "مسودة",
+      "requested": "مطلوب",
+      "quoted": "تم تقديم عرض السعر",
+      "approved": "موافق عليه",
+      "scheduled": "مجدول",
+      "inProgress": "جارٍ",
+      "completed": "منجز",
+      "rejected": "مرفوض",
+      "cancelled": "ملغى"
+    },
+    "priority": {
+      "low": "منخفض",
+      "medium": "متوسط",
+      "high": "مرتفع",
+      "urgent": "عاجل"
+    },
+    "category": {
+      "plumbing": "سباكة",
+      "electrical": "كهرباء",
+      "hvac": "تكييف وتهوية",
+      "painting": "دهانات",
+      "cleaning": "نظافة",
+      "landscaping": "تنسيق حدائق",
+      "security": "أمن",
+      "general": "عام",
+      "other": "أخرى"
+    },
+    "fields": {
+      "vendor": "المورد",
+      "estimatedCost": "التكلفة التقديرية",
+      "approvedCost": "التكلفة المعتمدة",
+      "actualCost": "التكلفة الفعلية",
+      "createdBy": "أنشأ بواسطة",
+      "assignee": "المكلف",
+      "targetCompletion": "الموعد المستهدف",
+      "completedAt": "تاريخ الإنجاز",
+      "description": "الوصف"
+    },
+    "detail": {
+      "back": "→ العودة إلى أوامر العمل",
+      "linkedIssue": "البلاغ المرتبط",
+      "rejectionReason": "سبب الرفض",
+      "completionNotes": "ملاحظات الإنجاز",
+      "estimates": "عروض أسعار الموردين",
+      "unknownVendor": "مورد غير معروف",
+      "submittedBy": "قُدِّم بواسطة",
+      "reviewedBy": "راجعه"
     }
   },
   "Meetings": {

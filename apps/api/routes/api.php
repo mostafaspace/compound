@@ -56,6 +56,9 @@ use App\Http\Controllers\Api\V1\Meetings\MeetingParticipantController;
 use App\Http\Controllers\Api\V1\Meetings\MeetingMinutesController;
 use App\Http\Controllers\Api\V1\Meetings\MeetingDecisionController;
 use App\Http\Controllers\Api\V1\Meetings\MeetingActionItemController;
+use App\Http\Controllers\Api\V1\Maintenance\WorkOrderController;
+use App\Http\Controllers\Api\V1\Maintenance\WorkOrderStatusController;
+use App\Http\Controllers\Api\V1\Maintenance\WorkOrderEstimateController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->name('api.v1.')->group(function (): void {
@@ -527,5 +530,29 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         ->name('meetings.resident.')
         ->group(function (): void {
             Route::post('/{meeting}/rsvp', [MeetingParticipantController::class, 'rsvp'])->name('rsvp');
+        });
+
+    // ─── Maintenance work orders (CM-83) ─────────────────────────────────────
+
+    Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,support_agent'])
+        ->prefix('work-orders')
+        ->name('work-orders.')
+        ->group(function (): void {
+            Route::get('/', [WorkOrderController::class, 'index'])->name('index');
+            Route::post('/', [WorkOrderController::class, 'store'])->name('store');
+            Route::get('/{workOrder}', [WorkOrderController::class, 'show'])->name('show');
+            Route::patch('/{workOrder}', [WorkOrderController::class, 'update'])->name('update');
+
+            // Status lifecycle
+            Route::post('/{workOrder}/submit', [WorkOrderStatusController::class, 'submit'])->name('submit');
+            Route::post('/{workOrder}/approve', [WorkOrderStatusController::class, 'approve'])->name('approve');
+            Route::post('/{workOrder}/reject', [WorkOrderStatusController::class, 'reject'])->name('reject');
+            Route::post('/{workOrder}/start', [WorkOrderStatusController::class, 'start'])->name('start');
+            Route::post('/{workOrder}/complete', [WorkOrderStatusController::class, 'complete'])->name('complete');
+            Route::post('/{workOrder}/cancel', [WorkOrderStatusController::class, 'cancel'])->name('cancel');
+
+            // Estimates
+            Route::post('/{workOrder}/estimates', [WorkOrderEstimateController::class, 'store'])->name('estimates.store');
+            Route::post('/{workOrder}/estimates/{estimate}/review', [WorkOrderEstimateController::class, 'review'])->name('estimates.review');
         });
 });

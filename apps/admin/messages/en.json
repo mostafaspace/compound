@@ -19,7 +19,8 @@
     "signOut": "Sign Out",
     "analytics": "Analytics",
     "security": "Security",
-    "meetings": "Meetings"
+    "meetings": "Meetings",
+    "workOrders": "Work Orders"
   },
   "Language": {
     "toggle": "Toggle language",
@@ -1614,6 +1615,76 @@
         "status": "Status",
         "time": "Time"
       }
+    }
+  },
+  "WorkOrders": {
+    "back": "← Back to dashboard",
+    "title": "Maintenance Work Orders",
+    "subtitle": "Track repair and maintenance work orders, vendor estimates, approvals, and completion.",
+    "empty": "No work orders found.",
+    "stats": {
+      "open": "Open",
+      "inProgress": "In Progress",
+      "completed": "Completed",
+      "urgent": "Urgent"
+    },
+    "filters": {
+      "status": "Status",
+      "priority": "Priority",
+      "category": "Category",
+      "allStatuses": "All statuses",
+      "allPriorities": "All priorities",
+      "allCategories": "All categories",
+      "apply": "Apply"
+    },
+    "status": {
+      "draft": "Draft",
+      "requested": "Requested",
+      "quoted": "Quoted",
+      "approved": "Approved",
+      "scheduled": "Scheduled",
+      "inProgress": "In Progress",
+      "completed": "Completed",
+      "rejected": "Rejected",
+      "cancelled": "Cancelled"
+    },
+    "priority": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "urgent": "Urgent"
+    },
+    "category": {
+      "plumbing": "Plumbing",
+      "electrical": "Electrical",
+      "hvac": "HVAC",
+      "painting": "Painting",
+      "cleaning": "Cleaning",
+      "landscaping": "Landscaping",
+      "security": "Security",
+      "general": "General",
+      "other": "Other"
+    },
+    "fields": {
+      "vendor": "Vendor",
+      "estimatedCost": "Estimated Cost",
+      "approvedCost": "Approved Cost",
+      "actualCost": "Actual Cost",
+      "createdBy": "Created by",
+      "assignee": "Assignee",
+      "targetCompletion": "Target Completion",
+      "completedAt": "Completed at",
+      "description": "Description"
+    },
+    "detail": {
+      "back": "← Back to work orders",
+      "linkedIssue": "Linked Issue",
+      "rejectionReason": "Rejection Reason",
+      "completionNotes": "Completion Notes",
+      "estimates": "Vendor Estimates",
+      "unknownVendor": "Unknown Vendor",
+      "submittedBy": "Submitted by",
+      "reviewedBy": "Reviewed by"
     }
   },
   "Meetings": {

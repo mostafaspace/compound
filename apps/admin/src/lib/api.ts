@@ -90,6 +90,7 @@ import type {
   ManualVisitorEntry,
   Meeting,
   MeetingActionItem,
+  WorkOrder,
 } from "@compound/contracts";
 
 import { config } from "./config";
@@ -2712,5 +2713,44 @@ export async function getMeetingActionItems(params: {
     return payload.data.data;
   } catch {
     return [];
+  }
+}
+
+// ─── Work Orders (CM-83) ──────────────────────────────────────────────────────
+
+export async function getWorkOrders(params: {
+  status?: string;
+  priority?: string;
+  category?: string;
+} = {}): Promise<WorkOrder[]> {
+  try {
+    const qs = new URLSearchParams();
+    if (params.status && params.status !== "all") qs.set("status", params.status);
+    if (params.priority) qs.set("priority", params.priority);
+    if (params.category) qs.set("category", params.category);
+    const query = qs.toString();
+    const response = await fetch(`${config.apiBaseUrl}/work-orders${query ? `?${query}` : ""}`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+    if (!response.ok) return [];
+    const payload = (await response.json()) as { data: { data: WorkOrder[] } };
+    return payload.data.data;
+  } catch {
+    return [];
+  }
+}
+
+export async function getWorkOrder(id: string): Promise<WorkOrder | null> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/work-orders/${id}`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+    if (!response.ok) return null;
+    const payload = (await response.json()) as { data: WorkOrder };
+    return payload.data;
+  } catch {
+    return null;
   }
 }
