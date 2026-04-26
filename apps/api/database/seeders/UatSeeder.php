@@ -3,12 +3,15 @@
 namespace Database\Seeders;
 
 use App\Enums\AccountStatus;
+use App\Enums\ContactVisibility;
+use App\Enums\RepresentativeRole;
 use App\Enums\UserRole;
 use App\Models\Finance\UnitAccount;
 use App\Models\Property\Building;
 use App\Models\Property\Compound;
 use App\Models\Property\Floor;
 use App\Models\Property\Unit;
+use App\Models\RepresentativeAssignment;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -31,13 +34,14 @@ class UatSeeder extends Seeder
 
     public function run(): void
     {
-        $compound = $this->seedCompound();
-        $building = $this->seedBuilding($compound);
-        $floor    = $this->seedFloor($building);
-        $units    = $this->seedUnits($building, $floor);
+        $compound  = $this->seedCompound();
+        $building  = $this->seedBuilding($compound);
+        $floor     = $this->seedFloor($building);
+        $units     = $this->seedUnits($building, $floor);
         $this->seedPersonas($compound, $units);
         $this->seedChargeTypes();
         $this->seedUnitAccounts($units);
+        $this->seedOrgChart($compound, $building, $floor);
     }
 
     // ─── Compound / property ──────────────────────────────────────────────────
@@ -168,6 +172,154 @@ class UatSeeder extends Seeder
                 array_merge($attrs, [
                     'status'   => AccountStatus::Active->value,
                     'password' => $password,
+                ]),
+            );
+        }
+    }
+
+    // ─── Org chart demo data ──────────────────────────────────────────────────
+
+    private function seedOrgChart(Compound $compound, Building $buildingA, Floor $groundFloor): void
+    {
+        $password = Hash::make(self::PASSWORD);
+
+        // ── Extra buildings ───────────────────────────────────────────────────
+        $buildingB = Building::query()->firstOrCreate(
+            ['compound_id' => $compound->id, 'name' => 'Building B'],
+            ['code' => 'BLD-B'],
+        );
+        $buildingC = Building::query()->firstOrCreate(
+            ['compound_id' => $compound->id, 'name' => 'Building C'],
+            ['code' => 'BLD-C'],
+        );
+
+        // ── Extra floors ──────────────────────────────────────────────────────
+        $floorA1 = Floor::query()->firstOrCreate(
+            ['building_id' => $buildingA->id, 'level_number' => 2],
+            ['label' => 'Floor 1'],
+        );
+
+        $floorB0 = Floor::query()->firstOrCreate(
+            ['building_id' => $buildingB->id, 'level_number' => 1],
+            ['label' => 'Ground Floor'],
+        );
+        $floorB1 = Floor::query()->firstOrCreate(
+            ['building_id' => $buildingB->id, 'level_number' => 2],
+            ['label' => 'Floor 1'],
+        );
+
+        $floorC0 = Floor::query()->firstOrCreate(
+            ['building_id' => $buildingC->id, 'level_number' => 1],
+            ['label' => 'Ground Floor'],
+        );
+
+        // ── Org chart users ───────────────────────────────────────────────────
+        $orgUsers = [
+            'ahmed.hassan@uat.compound.local'   => ['name' => 'Ahmed Hassan',   'phone' => '+201100000020'],
+            'sara.mohamed@uat.compound.local'    => ['name' => 'Sara Mohamed',   'phone' => '+201100000021'],
+            'omar.khalil@uat.compound.local'     => ['name' => 'Omar Khalil',    'phone' => '+201100000022'],
+            'nour.eldin@uat.compound.local'      => ['name' => 'Nour El-Din',    'phone' => '+201100000023'],
+            'fatima.ibrahim@uat.compound.local'  => ['name' => 'Fatima Ibrahim', 'phone' => '+201100000024'],
+        ];
+
+        $users = [];
+        foreach ($orgUsers as $email => $attrs) {
+            $users[$email] = User::query()->firstOrCreate(
+                ['email' => $email],
+                array_merge($attrs, [
+                    'role'        => UserRole::ResidentOwner->value,
+                    'compound_id' => $compound->id,
+                    'status'      => AccountStatus::Active->value,
+                    'password'    => $password,
+                ]),
+            );
+        }
+
+        // Reuse existing UAT personas for leadership roles
+        $boardMember    = User::query()->where('email', 'board-member@uat.compound.local')->first();
+        $financeReviewer = User::query()->where('email', 'finance-reviewer@uat.compound.local')->first();
+
+        // ── Representative assignments ─────────────────────────────────────────
+        $assignments = [];
+
+        if ($boardMember) {
+            $assignments[] = [
+                'compound_id'        => $compound->id,
+                'building_id'        => null,
+                'floor_id'           => null,
+                'user_id'            => $boardMember->id,
+                'role'               => RepresentativeRole::President->value,
+                'contact_visibility' => ContactVisibility::AllResidents->value,
+            ];
+        }
+
+        if ($financeReviewer) {
+            $assignments[] = [
+                'compound_id'        => $compound->id,
+                'building_id'        => null,
+                'floor_id'           => null,
+                'user_id'            => $financeReviewer->id,
+                'role'               => RepresentativeRole::Treasurer->value,
+                'contact_visibility' => ContactVisibility::AllResidents->value,
+            ];
+        }
+
+        // Building representatives
+        $assignments[] = [
+            'compound_id'        => $compound->id,
+            'building_id'        => $buildingA->id,
+            'floor_id'           => null,
+            'user_id'            => $users['ahmed.hassan@uat.compound.local']->id,
+            'role'               => RepresentativeRole::BuildingRepresentative->value,
+            'contact_visibility' => ContactVisibility::BuildingResidents->value,
+        ];
+        $assignments[] = [
+            'compound_id'        => $compound->id,
+            'building_id'        => $buildingB->id,
+            'floor_id'           => null,
+            'user_id'            => $users['sara.mohamed@uat.compound.local']->id,
+            'role'               => RepresentativeRole::BuildingRepresentative->value,
+            'contact_visibility' => ContactVisibility::BuildingResidents->value,
+        ];
+
+        // Floor representatives
+        $assignments[] = [
+            'compound_id'        => $compound->id,
+            'building_id'        => $buildingA->id,
+            'floor_id'           => $groundFloor->id,
+            'user_id'            => $users['omar.khalil@uat.compound.local']->id,
+            'role'               => RepresentativeRole::FloorRepresentative->value,
+            'contact_visibility' => ContactVisibility::FloorResidents->value,
+        ];
+        $assignments[] = [
+            'compound_id'        => $compound->id,
+            'building_id'        => $buildingB->id,
+            'floor_id'           => $floorB0->id,
+            'user_id'            => $users['nour.eldin@uat.compound.local']->id,
+            'role'               => RepresentativeRole::FloorRepresentative->value,
+            'contact_visibility' => ContactVisibility::FloorResidents->value,
+        ];
+        $assignments[] = [
+            'compound_id'        => $compound->id,
+            'building_id'        => $buildingB->id,
+            'floor_id'           => $floorB1->id,
+            'user_id'            => $users['fatima.ibrahim@uat.compound.local']->id,
+            'role'               => RepresentativeRole::FloorRepresentative->value,
+            'contact_visibility' => ContactVisibility::FloorResidents->value,
+        ];
+
+        foreach ($assignments as $attrs) {
+            RepresentativeAssignment::query()->firstOrCreate(
+                [
+                    'compound_id' => $attrs['compound_id'],
+                    'building_id' => $attrs['building_id'],
+                    'floor_id'    => $attrs['floor_id'],
+                    'user_id'     => $attrs['user_id'],
+                    'role'        => $attrs['role'],
+                ],
+                array_merge($attrs, [
+                    'starts_at' => now()->startOfYear()->toDateString(),
+                    'is_active' => true,
                 ]),
             );
         }

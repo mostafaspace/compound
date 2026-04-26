@@ -1,7 +1,8 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 
-import { LogoutButton } from "@/components/logout-button";
+import { SiteNav } from "@/components/site-nav";
 import { getCompounds, getCurrentUser } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
 
@@ -14,27 +15,33 @@ function BuildingIcon() {
 }
 
 export default async function CompoundsPage() {
-  await requireAdminUser(getCurrentUser);
+  const user = await requireAdminUser(getCurrentUser);
+
+  // Compound admins are scoped to their own compound — skip the list entirely
+  if (user.role === "compound_admin" && user.compoundId) {
+    redirect(`/compounds/${user.compoundId}`);
+  }
+
   const [compounds, t] = await Promise.all([getCompounds(), getTranslations("Registry")]);
 
   return (
     <main className="min-h-screen bg-background text-foreground">
+      <SiteNav breadcrumb={[{ label: t("propertyRegistry") }]} />
+
       <header className="border-b border-line bg-panel">
         <div className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-6 md:flex-row md:items-center md:justify-between lg:px-8">
           <div>
-            <Link className="text-sm font-semibold text-brand hover:text-brand-strong" href="/">
-              {t("dashboard")}
-            </Link>
-            <h1 className="mt-2 text-3xl font-semibold">{t("propertyRegistry")}</h1>
+            <h1 className="text-3xl font-semibold">{t("propertyRegistry")}</h1>
             <p className="mt-2 max-w-2xl text-sm text-muted">{t("propertyRegistryDesc")}</p>
           </div>
-          <Link
-            className="inline-flex h-11 items-center justify-center rounded-lg bg-brand px-4 text-sm font-semibold text-white transition hover:bg-brand-strong"
-            href="/compounds/new"
-          >
-            {t("newCompound")}
-          </Link>
-          <LogoutButton />
+          {user.role === "super_admin" && (
+            <Link
+              className="inline-flex h-11 items-center justify-center rounded-lg bg-brand px-4 text-sm font-semibold text-white transition hover:bg-brand-strong"
+              href="/compounds/new"
+            >
+              {t("newCompound")}
+            </Link>
+          )}
         </div>
       </header>
 

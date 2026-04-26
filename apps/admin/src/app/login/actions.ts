@@ -3,9 +3,11 @@
 import { redirect } from "next/navigation";
 
 import { login } from "@/lib/api";
-import { setAuthToken } from "@/lib/session";
+import { setAuthToken, setCompoundContext } from "@/lib/session";
 
 export async function loginAction(formData: FormData) {
+  let destination = "/";
+
   try {
     const result = await login({
       deviceName: "Compound admin web",
@@ -14,9 +16,16 @@ export async function loginAction(formData: FormData) {
     });
 
     await setAuthToken(result.token);
+
+    // Compound admins are scoped to a single compound — pre-set context so
+    // every subsequent API call sends the correct X-Compound-Id header.
+    if (result.user.role === "compound_admin" && result.user.compoundId) {
+      await setCompoundContext(result.user.compoundId);
+      destination = `/compounds/${result.user.compoundId}`;
+    }
   } catch {
     redirect("/login?error=invalid");
   }
 
-  redirect("/");
+  redirect(destination);
 }

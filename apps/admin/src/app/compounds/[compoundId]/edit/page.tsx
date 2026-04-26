@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 
-import { LogoutButton } from "@/components/logout-button";
+import { SiteNav } from "@/components/site-nav";
 import { getCompound, getCurrentUser } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
 
@@ -21,16 +21,16 @@ export default async function EditCompoundPage({ params }: EditCompoundPageProps
 
   return (
     <main className="min-h-screen bg-background text-foreground">
+      <SiteNav breadcrumb={[
+        { label: t("propertyRegistry"), href: "/compounds" },
+        { label: compound.name, href: `/compounds/${compound.id}` },
+        { label: t("editCompound") },
+      ]} />
+
       <header className="border-b border-line bg-panel">
-        <div className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-6 md:flex-row md:items-center md:justify-between lg:px-8">
-          <div>
-            <Link className="text-sm font-semibold text-brand hover:text-brand-strong" href={`/compounds/${compound.id}`}>
-              {t("backToCompound")}
-            </Link>
-            <h1 className="mt-2 text-3xl font-semibold">{t("editCompound")} — {compound.name}</h1>
-            <p className="mt-2 max-w-2xl text-sm text-muted">{t("editCompoundDesc")}</p>
-          </div>
-          <LogoutButton />
+        <div className="mx-auto max-w-7xl px-5 py-6 lg:px-8">
+          <h1 className="text-3xl font-semibold">{t("editCompound")} — {compound.name}</h1>
+          <p className="mt-2 max-w-2xl text-sm text-muted">{t("editCompoundDesc")}</p>
         </div>
       </header>
 

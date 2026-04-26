@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { NewAssignmentForm } from "@/components/new-assignment-form";
+import { SiteNav } from "@/components/site-nav";
 import { getCompound } from "@/lib/api";
 
 interface NewRepresentativePageProps {
@@ -20,14 +20,16 @@ export default async function NewRepresentativePage({ params }: NewRepresentativ
 
   return (
     <main className="min-h-screen bg-background text-foreground">
+      <SiteNav breadcrumb={[
+        { label: "Compounds", href: "/compounds" },
+        { label: compound.name, href: `/compounds/${compound.id}` },
+        { label: "Representatives", href: `/compounds/${compound.id}/representatives` },
+        { label: "New Assignment" },
+      ]} />
+
       <header className="border-b border-line bg-panel">
-        <div className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-6 md:flex-row md:items-center md:justify-between lg:px-8">
-          <div>
-            <Link className="text-sm font-semibold text-brand hover:text-brand-strong" href={`/compounds/${compound.id}/representatives`}>
-              Representative Assignments
-            </Link>
-            <h1 className="mt-2 text-3xl font-semibold">Assign New Representative</h1>
-          </div>
+        <div className="mx-auto max-w-2xl px-5 py-6 lg:px-8">
+          <h1 className="text-3xl font-semibold">Assign New Representative</h1>
         </div>
       </header>
 

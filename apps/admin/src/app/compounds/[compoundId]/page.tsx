@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 
-import { LogoutButton } from "@/components/logout-button";
+import { SiteNav } from "@/components/site-nav";
 import { getCompound, getCurrentUser } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
 
@@ -21,13 +21,12 @@ export default async function CompoundDetailPage({ params }: CompoundDetailPageP
 
   return (
     <main className="min-h-screen bg-background text-foreground">
+      <SiteNav breadcrumb={[{ label: t("propertyRegistry"), href: "/compounds" }, { label: compound.name }]} />
+
       <header className="border-b border-line bg-panel">
         <div className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-6 md:flex-row md:items-center md:justify-between lg:px-8">
           <div>
-            <Link className="text-sm font-semibold text-brand hover:text-brand-strong" href="/compounds">
-              {t("propertyRegistry")}
-            </Link>
-            <h1 className="mt-2 text-3xl font-semibold">{compound.name}</h1>
+            <h1 className="text-3xl font-semibold">{compound.name}</h1>
             <p className="mt-2 text-sm text-muted">
               {compound.code} / {compound.currency} / {compound.timezone}
             </p>
@@ -51,7 +50,6 @@ export default async function CompoundDetailPage({ params }: CompoundDetailPageP
             >
               {t("newBuilding")}
             </Link>
-            <LogoutButton />
           </div>
         </div>
       </header>

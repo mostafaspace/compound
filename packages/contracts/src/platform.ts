@@ -62,6 +62,7 @@ export interface AuthenticatedUser {
   name: string;
   email: string;
   phone: string | null;
+  compoundId: string | null;
   role: UserRole;
   status: "invited" | "pending_review" | "active" | "suspended" | "archived";
   emailVerifiedAt: string | null;

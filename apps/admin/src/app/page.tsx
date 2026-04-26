@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
 import { CompoundContextBanner } from "@/components/compound-context-banner";
-import { LogoutButton } from "@/components/logout-button";
+import { SiteNav } from "@/components/site-nav";
 import { getCurrentUser, getSystemStatus } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
 
@@ -15,21 +15,22 @@ const workstreams = [
 
 const priorityQueue = ["ownerOnboarding", "bankReceipts", "vendorEstimate", "boardActions"];
 
-const navLinks = [
-  { href: "/compounds", key: "compounds" },
-  { href: "/documents", key: "documents" },
-  { href: "/visitors", key: "visitors" },
-  { href: "/issues", key: "issues" },
-  { href: "/announcements", key: "announcements" },
-  { href: "/finance", key: "finance" },
-  { href: "/dues", key: "dues" },
-  { href: "/governance", key: "governance" },
-  { href: "/settings", key: "settings" },
-  { href: "/notifications/channels", key: "notificationChannels" },
-  { href: "/onboarding", key: "onboarding" },
-  { href: "/audit-logs", key: "auditLogs" },
-  { href: "/analytics/operational", key: "analytics" },
-  { href: "/security", key: "security" },
+// Module cards replace the old inline nav buttons
+const modules = [
+  { href: "/compounds",             key: "compounds",           icon: "🏛️" },
+  { href: "/visitors",              key: "visitors",            icon: "🚗" },
+  { href: "/issues",                key: "issues",              icon: "🔧" },
+  { href: "/announcements",         key: "announcements",       icon: "📢" },
+  { href: "/finance",               key: "finance",             icon: "💳" },
+  { href: "/dues",                  key: "dues",                icon: "📄" },
+  { href: "/governance",            key: "governance",          icon: "⚖️" },
+  { href: "/documents",             key: "documents",           icon: "📁" },
+  { href: "/security",              key: "security",            icon: "🔒" },
+  { href: "/meetings",              key: "meetings",            icon: "🤝" },
+  { href: "/notifications/channels",key: "notificationChannels",icon: "🔔" },
+  { href: "/audit-logs",            key: "auditLogs",           icon: "📋" },
+  { href: "/analytics/operational", key: "analytics",           icon: "📊" },
+  { href: "/settings",              key: "settings",            icon: "⚙️" },
 ];
 
 function CheckIcon() {
@@ -51,17 +52,18 @@ export default async function Home() {
   const status = await getSystemStatus();
   const apiOnline = status?.status === "ok";
   const role = user.role.replaceAll("_", " ");
-
   const isSuperAdmin = user.role === "super_admin";
 
   return (
     <main className="min-h-screen bg-background text-foreground">
+      <SiteNav />
+
       <header className="border-b border-line bg-panel">
-        <div className="mx-auto flex max-w-7xl flex-col gap-6 px-5 py-6 md:flex-row md:items-center md:justify-between lg:px-8">
+        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-5 py-6 md:flex-row md:items-center md:justify-between lg:px-8">
           <div>
             <p className="text-sm font-semibold uppercase text-brand">{t("eyebrow")}</p>
-            <h1 className="mt-2 text-3xl font-semibold md:text-4xl">{t("title")}</h1>
-            <p className="mt-2 text-sm text-muted">{t("signedInAs", { name: user.name, role })}</p>
+            <h1 className="mt-1 text-3xl font-semibold md:text-4xl">{t("title")}</h1>
+            <p className="mt-1 text-sm text-muted">{t("signedInAs", { name: user.name, role })}</p>
           </div>
           <div className="flex flex-wrap gap-3">
             <a
@@ -77,22 +79,13 @@ export default async function Home() {
             >
               {t("actions.systemStatus")}
             </a>
-            {navLinks.map((link) => (
-              <Link
-                className="inline-flex h-11 items-center rounded-lg border border-line bg-panel px-4 text-sm font-semibold text-foreground transition hover:border-brand"
-                href={link.href}
-                key={link.href}
-              >
-                {nav(link.key)}
-              </Link>
-            ))}
-            <LogoutButton />
           </div>
         </div>
       </header>
 
       <CompoundContextBanner isSuperAdmin={isSuperAdmin} />
 
+      {/* KPI cards */}
       <section className="mx-auto grid max-w-7xl gap-5 px-5 py-6 md:grid-cols-2 lg:grid-cols-4 lg:px-8">
         {workstreams.map((item) => (
           <article className="rounded-lg border border-line bg-panel p-5" key={item.key}>
@@ -103,6 +96,24 @@ export default async function Home() {
         ))}
       </section>
 
+      {/* Module grid — replaces the old inline button nav */}
+      <section className="mx-auto max-w-7xl px-5 pb-6 lg:px-8">
+        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted">{t("modules", { defaultValue: "Modules" })}</h2>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7">
+          {modules.map((m) => (
+            <Link
+              key={m.href}
+              href={m.href}
+              className="flex flex-col items-center gap-2 rounded-xl border border-line bg-panel px-3 py-4 text-center transition hover:border-brand hover:bg-background"
+            >
+              <span className="text-2xl" aria-hidden="true">{m.icon}</span>
+              <span className="text-xs font-medium text-foreground leading-tight">{nav(m.key)}</span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* Priority queue + system status */}
       <section className="mx-auto grid max-w-7xl gap-5 px-5 pb-8 md:grid-cols-[1.4fr_0.9fr] lg:px-8">
         <div id="priority-queue" className="rounded-lg border border-line bg-panel p-5">
           <div className="flex items-center justify-between gap-4 border-b border-line pb-4">
