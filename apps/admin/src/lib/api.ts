@@ -2773,6 +2773,36 @@ export async function getDataExportRequests(): Promise<DataExportRequest[]> {
   }
 }
 
+// ─── Launch readiness (CM-127) ────────────────────────────────────────────────
+
+export interface LaunchCheck {
+  status: "pass" | "fail" | "warn";
+  [key: string]: unknown;
+}
+
+export interface LaunchReadiness {
+  overall: "ready" | "not_ready";
+  timestamp: string;
+  environment: string;
+  infrastructure: Record<string, LaunchCheck>;
+  launch: Record<string, LaunchCheck>;
+  warnings: string[];
+}
+
+export async function getLaunchReadiness(): Promise<LaunchReadiness | null> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/system/launch-readiness`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+    if (!response.ok) return null;
+    const payload = (await response.json()) as { data: LaunchReadiness };
+    return payload.data;
+  } catch {
+    return null;
+  }
+}
+
 // ─── Localization (CM-85) ─────────────────────────────────────────────────────
 
 export async function getLocaleSettings(): Promise<LocaleSettings | null> {

@@ -63,6 +63,7 @@ use App\Http\Controllers\Api\V1\Privacy\PolicyConsentController;
 use App\Http\Controllers\Api\V1\Privacy\DataExportController;
 use App\Http\Controllers\Api\V1\Privacy\AnonymizationController;
 use App\Http\Controllers\Api\V1\LocaleController;
+use App\Http\Controllers\Api\V1\LaunchReadinessController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->name('api.v1.')->group(function (): void {
@@ -416,6 +417,12 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
     Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,support_agent'])
         ->get('/analytics/operational', OperationalAnalyticsController::class)
         ->name('analytics.operational');
+
+    // ─── Launch readiness (CM-127) ────────────────────────────────────────────
+    // Comprehensive pre-launch health gate — super_admin only.
+    Route::middleware(['auth:sanctum', 'role:super_admin'])
+        ->get('/system/launch-readiness', LaunchReadinessController::class)
+        ->name('system.launch-readiness');
 
     // User support console + lifecycle actions
     Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,support_agent'])

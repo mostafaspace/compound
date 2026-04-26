@@ -21,7 +21,8 @@
     "security": "Security",
     "meetings": "Meetings",
     "workOrders": "Work Orders",
-    "privacy": "Privacy & Data"
+    "privacy": "Privacy & Data",
+    "launch": "Launch Readiness"
   },
   "Language": {
     "toggle": "Toggle language",
@@ -1805,6 +1806,42 @@
         "done": "Done",
         "cancelled": "Cancelled"
       }
+    }
+  },
+  "Launch": {
+    "back": "< Dashboard",
+    "title": "Launch Readiness",
+    "subtitle": "Pre-launch health gates, UAT personas, pilot rollout plan, and handover artifacts.",
+    "unavailable": "Launch readiness data unavailable. Check API connectivity.",
+    "warningsTitle": "Warnings — resolve before launch",
+    "infra": {
+      "title": "Infrastructure Checks"
+    },
+    "launch": {
+      "title": "Launch Gate Checks"
+    },
+    "uat": {
+      "title": "UAT Personas",
+      "passwordNote": "All UAT accounts use password: uat-password-2026"
+    },
+    "pilot": {
+      "title": "Pilot Rollout Waves"
+    },
+    "handover": {
+      "title": "Handover Artifacts",
+      "runbook": "Backend Runbook",
+      "uatScenarios": "UAT Scenarios",
+      "trainingGuide": "Training Guide",
+      "launchChecklist": "Launch Checklist",
+      "qaMatrix": "QA Test Matrix"
+    },
+    "support": {
+      "title": "Support Contacts & Escalation",
+      "techLead": "Technical Lead",
+      "productOwner": "Product Owner",
+      "dba": "Database Admin",
+      "supportLead": "Support Lead",
+      "escalationPath": "Escalation path: Support Agent → Support Lead → Compound Admin → Technical Lead → Product Owner"
     }
   }
 }
