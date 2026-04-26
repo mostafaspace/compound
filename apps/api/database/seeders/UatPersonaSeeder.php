@@ -29,8 +29,8 @@ class UatPersonaSeeder extends Seeder
     {
         // Create personas linked to the first compound (for compound-scoped roles).
         $compoundId = null;
-        if (\App\Models\Compound::isNotEmpty()) {
-            $compoundId = \App\Models\Compound::first()->id;
+        if (\App\Models\Property\Compound::exists()) {
+            $compoundId = \App\Models\Property\Compound::first()->id;
         }
 
         $this->command->info('Seeding UAT persona accounts...');
@@ -52,7 +52,7 @@ class UatPersonaSeeder extends Seeder
     /**
      * @return array<int, array<string, mixed>>
      */
-    private function getPersonas(?int $compoundId): array
+    private function getPersonas(?string $compoundId): array
     {
         return [
             // Super Admin — platform-wide access, no compound binding.

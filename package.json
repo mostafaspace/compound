@@ -24,6 +24,14 @@
     "test": "npm run test --workspaces --if-present",
     "format": "npm run format --workspaces --if-present",
     "infra:up": "docker compose -f infra/docker-compose.yml up -d",
-    "infra:down": "docker compose -f infra/docker-compose.yml down"
+    "infra:down": "docker compose -f infra/docker-compose.yml down",
+    "prepare": "husky"
+  },
+  "overrides": {
+    "react": "19.2.3",
+    "@types/react": "19.2.3"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7"
   }
 }

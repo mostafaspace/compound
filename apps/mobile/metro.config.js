@@ -11,6 +11,12 @@ const config = {
       path.resolve(projectRoot, "node_modules"),
       path.resolve(workspaceRoot, "node_modules"),
     ],
+    extraNodeModules: {
+      react: path.resolve(workspaceRoot, "node_modules/react"),
+      "react-native": path.resolve(workspaceRoot, "node_modules/react-native"),
+      scheduler: path.resolve(workspaceRoot, "node_modules/scheduler"),
+      "react-is": path.resolve(workspaceRoot, "node_modules/react-is"),
+    },
   },
   watchFolders: [workspaceRoot],
 };

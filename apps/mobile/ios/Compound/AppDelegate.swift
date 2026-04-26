@@ -3,7 +3,7 @@ import FirebaseCore
 import React
 import React_RCTAppDelegate
 import ReactAppDependencyProvider
-import React_RCTLinking
+import RCTLinking
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -16,7 +16,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
   ) -> Bool {
-    FirebaseApp.configure()
+    // FirebaseApp.configure()
 
     let delegate = ReactNativeDelegate()
     let factory = RCTReactNativeFactory(delegate: delegate)
