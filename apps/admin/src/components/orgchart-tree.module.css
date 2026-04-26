@@ -1,0 +1,75 @@
+/* Root level — no connector above root */
+.treeRoot {
+  display: table;
+  list-style: none;
+  margin: 0 auto;
+  padding: 0;
+}
+
+/* Nested children container */
+.treeChildren {
+  display: table;
+  list-style: none;
+  margin: 0 auto;
+  padding: 32px 0 0;
+  position: relative;
+}
+
+/* Vertical connector from parent card down to the horizontal bar */
+.treeChildren::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  border-left: 2px solid var(--line, #d7dce3);
+  width: 0;
+  height: 32px;
+}
+
+/* Each node wrapper */
+.treeItem {
+  float: left;
+  text-align: center;
+  list-style-type: none;
+  position: relative;
+  padding: 32px 16px 0;
+}
+
+/* Left half of horizontal connector */
+.treeItem::before,
+.treeItem::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 50%;
+  border-top: 2px solid var(--line, #d7dce3);
+  width: 50%;
+  height: 32px;
+}
+
+/* Right half of horizontal connector + vertical stem to node */
+.treeItem::after {
+  right: auto;
+  left: 50%;
+  border-left: 2px solid var(--line, #d7dce3);
+}
+
+/* Only child: just a vertical stem, no horizontal */
+.treeItem:only-child::before {
+  display: none;
+}
+.treeItem:only-child::after {
+  border-top: none;
+  width: 0;
+}
+
+/* Cap the right end of the horizontal bar at the last child's center */
+.treeItem:last-child::before {
+  border-right: 2px solid var(--line, #d7dce3);
+  border-radius: 0 4px 0 0;
+}
+
+/* Round the top-left corner of the first child's connector */
+.treeItem:first-child::after {
+  border-radius: 4px 0 0 0;
+}

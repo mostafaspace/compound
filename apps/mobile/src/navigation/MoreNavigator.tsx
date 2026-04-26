@@ -6,6 +6,7 @@ import { MoreScreen } from '../features/more/screens/MoreScreen';
 import { NotificationsScreen } from '../features/notifications/screens/NotificationsScreen';
 import { AnnouncementsScreen } from '../features/announcements/screens/AnnouncementsScreen';
 import { PropertyScreen } from '../features/property/screens/PropertyScreen';
+import { OrgChartScreen } from '../features/orgchart/screens/OrgChartScreen';
 import { colors } from '../theme';
 
 const Stack = createStackNavigator();
@@ -39,10 +40,15 @@ export const MoreNavigator = () => {
         component={AnnouncementsScreen}
         options={{ title: t("Announcements.label") }}
       />
-      <Stack.Screen 
-        name="Property" 
+      <Stack.Screen
+        name="Property"
         component={PropertyScreen}
         options={{ title: t("Property.label") }}
+      />
+      <Stack.Screen
+        name="OrgChart"
+        component={OrgChartScreen}
+        options={{ title: t("OrgChart.label", { defaultValue: "Org Chart" }) }}
       />
       {/* Settings screen etc can be added here */}
     </Stack.Navigator>

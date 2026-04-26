@@ -64,6 +64,7 @@ use App\Http\Controllers\Api\V1\Privacy\DataExportController;
 use App\Http\Controllers\Api\V1\Privacy\AnonymizationController;
 use App\Http\Controllers\Api\V1\LocaleController;
 use App\Http\Controllers\Api\V1\LaunchReadinessController;
+use App\Http\Controllers\Api\V1\UserPhotoController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->name('api.v1.')->group(function (): void {
@@ -430,6 +431,13 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             Route::get('/users', [UserSupportViewController::class, 'index'])->name('users.index');
             Route::get('/users/{user}/support-view', [UserSupportViewController::class, 'show'])->name('users.support-view');
             Route::get('/users/{user}/duplicates', [UserSupportViewController::class, 'duplicates'])->name('users.duplicates');
+        });
+
+    // User photo upload — any authenticated admin
+    Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin'])
+        ->group(function (): void {
+            Route::post('/users/{user}/photo', [UserPhotoController::class, 'update'])->name('users.photo.update');
+            Route::delete('/users/{user}/photo', [UserPhotoController::class, 'destroy'])->name('users.photo.destroy');
         });
 
     Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin'])

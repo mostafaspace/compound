@@ -355,5 +355,14 @@
       "high": "High",
       "critical": "Critical"
     }
+  },
+  "OrgChart": {
+    "label": "Org Chart",
+    "title": "Association Hierarchy",
+    "leadership": "Association Leadership",
+    "buildings": "Buildings",
+    "noRep": "No representative assigned",
+    "floors_one": "{{count}} floor",
+    "floors_other": "{{count}} floors"
   }
 }

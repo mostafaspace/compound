@@ -50,11 +50,18 @@ export interface UpdateRepresentativeAssignmentInput {
 export interface OrgChartRepresentative {
   id: string;
   userId: number;
-  user: { id: number; name: string };
+  user: { id: number; name: string; photoUrl?: string | null };
   role: RepresentativeRole;
   scopeLevel: "compound" | "building" | "floor";
   contactVisibility: ContactVisibility;
   isActive: boolean;
+}
+
+export interface OrgChartFloor {
+  id: string;
+  label: string;
+  levelNumber: number;
+  representatives: OrgChartRepresentative[];
 }
 
 export interface OrgChartBuilding {
@@ -62,6 +69,7 @@ export interface OrgChartBuilding {
   name: string;
   code: string;
   representatives: OrgChartRepresentative[];
+  floors: OrgChartFloor[];
 }
 
 export interface OrgChartCompound {

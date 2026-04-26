@@ -340,5 +340,14 @@
       "high": "مرتفعة",
       "critical": "حرجة"
     }
+  },
+  "OrgChart": {
+    "label": "الهيكل التنظيمي",
+    "title": "هيكل الاتحاد",
+    "leadership": "قيادة الاتحاد",
+    "buildings": "المباني",
+    "noRep": "لم يتم تعيين ممثل",
+    "floors_one": "طابق واحد",
+    "floors_other": "{{count}} طوابق"
   }
 }

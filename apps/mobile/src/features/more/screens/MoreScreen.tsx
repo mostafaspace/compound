@@ -10,29 +10,35 @@ export const MoreScreen = ({ navigation }: { navigation: any }) => {
   const isDark = useColorScheme() === 'dark';
 
   const menuItems = [
-    { 
-      id: 'property', 
-      label: t("Property.label"), 
-      icon: '🏠', 
-      screen: 'Property' 
+    {
+      id: 'property',
+      label: t("Property.label"),
+      icon: '🏠',
+      screen: 'Property',
     },
-    { 
-      id: 'notifications', 
-      label: t("Notifications.label"), 
-      icon: '🔔', 
-      screen: 'Notifications' 
+    {
+      id: 'notifications',
+      label: t("Notifications.label"),
+      icon: '🔔',
+      screen: 'Notifications',
     },
-    { 
-      id: 'announcements', 
-      label: t("Announcements.label"), 
-      icon: '📢', 
-      screen: 'Announcements' 
+    {
+      id: 'announcements',
+      label: t("Announcements.label"),
+      icon: '📢',
+      screen: 'Announcements',
     },
-    { 
-      id: 'settings', 
-      label: t("Common.settings", { defaultValue: "Settings" }), 
-      icon: '⚙️', 
-      screen: 'Settings' 
+    {
+      id: 'orgchart',
+      label: t("OrgChart.label", { defaultValue: "Org Chart" }),
+      icon: '🏛️',
+      screen: 'OrgChart',
+    },
+    {
+      id: 'settings',
+      label: t("Common.settings", { defaultValue: "Settings" }),
+      icon: '⚙️',
+      screen: 'Settings',
     },
   ];
 
