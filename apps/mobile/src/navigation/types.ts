@@ -16,7 +16,16 @@ export type MainTabParamList = {
   Property: undefined;
   Visitors: undefined;
   Finance: undefined;
+  Governance: undefined;
   More: undefined;
+};
+
+export type MoreStackParamList = {
+  MoreHome: undefined;
+  Notifications: undefined;
+  Announcements: undefined;
+  Property: undefined;
+  OrgChart: undefined;
 };
 
 export type GuardStackParamList = {

@@ -8,7 +8,7 @@ import { VisitorsScreen } from '../features/visitors/screens/VisitorsScreen';
 import { AccountsScreen } from '../features/finance/screens/AccountsScreen';
 import { VotesScreen } from '../features/governance/screens/VotesScreen';
 import { MoreNavigator } from './MoreNavigator';
-import { colors } from '../theme';
+import { colors, spacing } from '../theme';
 
 // Placeholder for other screens
 import { View, Text } from 'react-native';

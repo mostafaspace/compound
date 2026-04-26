@@ -1,15 +1,31 @@
 import React, { useState, useEffect } from 'react';
-import { StatusBar } from 'react-native';
+import { StatusBar, View, StyleSheet } from 'react-native';
+import BootSplash from 'react-native-bootsplash';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { useRestoreSession } from './src/hooks/useRestoreSession';
 import { SplashScreen } from './src/components/layout/SplashScreen';
+import { SystemStatusFallback } from './src/components/layout/SystemStatusFallback';
+import { useSelector } from 'react-redux';
+import { selectIsOffline } from './src/store/systemSlice';
+
+const hideBootSplash = async () => {
+  try {
+    await BootSplash.hide({ fade: true });
+  } catch (e) {
+    console.warn('BootSplash.hide failed:', e);
+  }
+};
 
 const AppContent = () => {
   const [isReady, setIsReady] = useState(false);
   const { isRestoring } = useRestoreSession();
+  const isOffline = useSelector(selectIsOffline);
 
   useEffect(() => {
-    // Artificial delay for splash screen to show the brand
+    // Hide native bootsplash overlay immediately
+    hideBootSplash();
+
     const timer = setTimeout(() => {
       if (!isRestoring) {
         setIsReady(true);
@@ -20,16 +36,26 @@ const AppContent = () => {
   }, [isRestoring]);
 
   return (
-    <>
+    <View style={styles.root}>
       <StatusBar barStyle="light-content" backgroundColor="#010409" />
-      <RootNavigator />
-      {!isReady && <SplashScreen />}
-    </>
+      {!isReady ? <SplashScreen /> : <RootNavigator />}
+      {isOffline && <SystemStatusFallback />}
+    </View>
   );
 };
 
 const App = () => {
-  return <AppContent />;
+  return (
+    <SafeAreaProvider>
+      <AppContent />
+    </SafeAreaProvider>
+  );
 };
 
 export default App;
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
+});

@@ -7,11 +7,12 @@ import {
   useColorScheme,
   Pressable,
   ScrollView,
-  Modal
+  Modal,
+  Text
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useGetUnitAccountsQuery, useGetAccountDetailQuery, useSubmitPaymentMutation } from '../../../services/finance';
-import { colors, spacing } from '../../../theme';
+import { colors, spacing, shadows, glass } from '../../../theme';
 import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
 import { Typography } from '../../../components/ui/Typography';
@@ -68,7 +69,11 @@ export const AccountsScreen = () => {
   };
 
   const renderAccountItem = ({ item }: { item: any }) => (
-    <View style={[styles.card, { backgroundColor: isDark ? colors.surface.dark : colors.surface.light, borderColor: isDark ? colors.border.dark : colors.border.light }]}>
+    <View style={[
+      styles.card, 
+      isDark ? glass.dark : glass.light,
+      shadows.lg
+    ]}>
       <View style={styles.rowBetween}>
         <Typography variant="label">{t("Finance.balance")}</Typography>
         <Typography variant="h2" style={{ color: parseFloat(item.balance) < 0 ? colors.error : colors.success }}>
@@ -94,7 +99,7 @@ export const AccountsScreen = () => {
                 <View key={entry.id} style={styles.transactionItem}>
                   <View style={styles.rowBetween}>
                     <Typography style={styles.transactionText}>{entry.description || entry.type}</Typography>
-                    <Typography style={[styles.transactionAmount, { color: entry.type === 'charge' ? colors.error : colors.success }]}>
+                    <Typography style={[styles.transactionAmount, { color: entry.type === 'charge' ? colors.error : colors.success }] as any}>
                       {entry.amount}
                     </Typography>
                   </View>
@@ -192,10 +197,10 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   card: {
-    padding: spacing.md,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: spacing.md,
+    padding: spacing.xl,
+    borderRadius: 20,
+    marginBottom: spacing.lg,
+    overflow: 'hidden',
   },
   rowBetween: {
     flexDirection: 'row',

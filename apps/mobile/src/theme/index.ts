@@ -59,9 +59,29 @@ export const shadows = {
   },
   md: {
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
     elevation: 4,
+  },
+  lg: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    elevation: 8,
+  },
+};
+
+export const glass = {
+  light: {
+    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+    borderColor: 'rgba(255, 255, 255, 0.4)',
+    borderWidth: 1,
+  },
+  dark: {
+    backgroundColor: 'rgba(13, 17, 23, 0.75)',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderWidth: 1,
   },
 };

@@ -4,7 +4,8 @@ import {
   StyleSheet, 
   FlatList, 
   useColorScheme,
-  Pressable
+  Pressable,
+  Text
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useGetVotesQuery, useLazyGetVoteEligibilityQuery, useCastVoteMutation } from '../../../services/governance';
@@ -23,7 +24,7 @@ export const VotesScreen = () => {
   const [castVote, { isLoading: isCasting }] = useCastVoteMutation();
 
   const [eligibilityData, setEligibilityData] = useState<Record<string, any>>({});
-  const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
+  const [selectedOptions, setSelectedOptions] = useState<Record<string, number>>({});
   const [message, setMessage] = useState<string | null>(null);
 
   const handleCheckEligibility = async (voteId: string) => {

@@ -51,7 +51,7 @@ export const NotificationsScreen = () => {
     <ScreenContainer withKeyboard={false} style={styles.container}>
       <FlatList
         data={notifications}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.id.toString()}
         renderItem={renderItem}
         refreshing={isLoading}
         onRefresh={refetch}

@@ -31,7 +31,7 @@ export const PropertyScreen = () => {
     <ScreenContainer withKeyboard={false} style={styles.container}>
       <FlatList
         data={units}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.id.toString()}
         renderItem={renderItem}
         refreshing={isLoading}
         onRefresh={refetch}

@@ -1,6 +1,5 @@
 import React from 'react';
 import { 
-  SafeAreaView, 
   StyleSheet, 
   ViewStyle, 
   useColorScheme, 
@@ -9,6 +8,7 @@ import {
   View,
   ScrollView
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing } from '../../theme';
 
 interface ScreenContainerProps {
@@ -61,14 +61,18 @@ export const ScreenContainer: React.FC<ScreenContainerProps> = ({
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
+  },
+  flex: {
+    flex: 1,
+  },
+  scrollGrow: {
+    flexGrow: 1,
   },
   inner: {
     flex: 1,
-  },
-  content: {
-    flexGrow: 1,
-    padding: spacing.md,
+    paddingHorizontal: spacing.lg, // Premium generous padding
+    paddingTop: spacing.md,
   },
 });

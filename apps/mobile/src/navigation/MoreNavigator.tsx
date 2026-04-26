@@ -7,9 +7,10 @@ import { NotificationsScreen } from '../features/notifications/screens/Notificat
 import { AnnouncementsScreen } from '../features/announcements/screens/AnnouncementsScreen';
 import { PropertyScreen } from '../features/property/screens/PropertyScreen';
 import { OrgChartScreen } from '../features/orgchart/screens/OrgChartScreen';
+import { MoreStackParamList } from './types';
 import { colors } from '../theme';
 
-const Stack = createStackNavigator();
+const Stack = createStackNavigator<MoreStackParamList>();
 
 export const MoreNavigator = () => {
   const { t } = useTranslation();
@@ -22,7 +23,7 @@ export const MoreNavigator = () => {
           backgroundColor: isDark ? colors.surface.dark : colors.surface.light,
         },
         headerTintColor: isDark ? colors.text.primary.dark : colors.text.primary.light,
-        headerBackTitleVisible: false,
+        headerBackTitle: "",
       }}
     >
       <Stack.Screen 

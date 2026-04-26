@@ -6,7 +6,8 @@ import {
   ActivityIndicator, 
   ViewStyle, 
   TextStyle, 
-  useColorScheme 
+  useColorScheme,
+  StyleProp
 } from 'react-native';
 import { colors, spacing } from '../../theme';
 
@@ -16,8 +17,8 @@ interface ButtonProps {
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
   disabled?: boolean;
   loading?: boolean;
-  style?: ViewStyle;
-  textStyle?: TextStyle;
+  style?: StyleProp<ViewStyle>;
+  textStyle?: StyleProp<TextStyle>;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -32,7 +33,8 @@ export const Button: React.FC<ButtonProps> = ({
   const isDark = useColorScheme() === 'dark';
   
   const getButtonStyle = () => {
-    const base = [styles.button, style];
+    const base: any[] = [styles.button];
+    if (style) base.push(style);
     
     if (disabled || loading) {
       base.push(styles.disabled);
@@ -57,7 +59,8 @@ export const Button: React.FC<ButtonProps> = ({
   };
 
   const getTextStyle = () => {
-    const base: any = [styles.text, textStyle];
+    const base: any[] = [styles.text];
+    if (textStyle) base.push(textStyle);
     
     if (variant === 'primary') {
       base.push({ color: isDark ? colors.surface.dark : '#ffffff' });

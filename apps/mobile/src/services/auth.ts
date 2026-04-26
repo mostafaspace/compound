@@ -28,7 +28,14 @@ export const authApi = api.injectEndpoints({
       }),
       invalidatesTags: ["User"],
     }),
+    registerDevice: builder.mutation<void, { token: string; platform: string }>({
+      query: (data) => ({
+        url: "/auth/devices",
+        method: "POST",
+        body: data,
+      }),
+    }),
   }),
 });
 
-export const { useLoginMutation, useGetMeQuery, useLogoutMutation } = authApi;
+export const { useLoginMutation, useGetMeQuery, useLogoutMutation, useRegisterDeviceMutation } = authApi;

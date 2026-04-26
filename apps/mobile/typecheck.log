@@ -1,0 +1,83 @@
+
+> @compound/mobile@0.1.0 typecheck
+> tsc --noEmit
+
+App_old.tsx(361,3): error TS2322: Type 'string | object' is not assignable to type 'string | null'.
+  Type 'object' is not assignable to type 'string'.
+App_old.tsx(364,83): error TS2345: Argument of type 'string | object' is not assignable to parameter of type 'string | number | boolean'.
+  Type 'object' is not assignable to type 'string | number | boolean'.
+App_old.tsx(365,84): error TS2345: Argument of type 'string | object' is not assignable to parameter of type 'string | number | boolean'.
+  Type 'object' is not assignable to type 'string | number | boolean'.
+src/components/layout/SystemStatusFallback.tsx(49,19): error TS2551: Property 'absoluteFillObject' does not exist on type 'typeof StyleSheet'. Did you mean 'absoluteFill'?
+src/features/auth/screens/LoginScreen.tsx(98,27): error TS2339: Property 'xxl' does not exist on type '{ xs: number; sm: number; md: number; lg: number; xl: number; '2xl': number; }'.
+src/features/finance/screens/AccountsScreen.tsx(101,33): error TS2322: Type '({ fontWeight: "700"; } | { color: string; })[]' is not assignable to type 'TextStyle'.
+  Types of property 'filter' are incompatible.
+    Type '{ <S extends { fontWeight: "700"; } | { color: string; }>(predicate: (value: { fontWeight: "700"; } | { color: string; }, index: number, array: ({ fontWeight: "700"; } | { color: string; })[]) => value is S, thisArg?: any): S[]; (predicate: (value: { ...; } | { ...; }, index: number, array: ({ ...; } | { ...; })[]) ...' is not assignable to type 'string | readonly FilterFunction[] | undefined'.
+src/features/finance/screens/AccountsScreen.tsx(161,22): error TS2693: 'Text' only refers to a type, but is being used as a value here.
+src/features/finance/screens/AccountsScreen.tsx(161,134): error TS2693: 'Text' only refers to a type, but is being used as a value here.
+src/features/governance/screens/VotesScreen.tsx(10,28): error TS2724: '"../../../services/governance"' has no exported member named 'useLazyGetVoteEligibilityQuery'. Did you mean 'useGetVoteEligibilityQuery'?
+src/features/governance/screens/VotesScreen.tsx(44,32): error TS2322: Type 'string' is not assignable to type 'number'.
+src/features/governance/screens/VotesScreen.tsx(85,20): error TS2693: 'Text' only refers to a type, but is being used as a value here.
+src/features/governance/screens/VotesScreen.tsx(85,120): error TS2693: 'Text' only refers to a type, but is being used as a value here.
+src/features/notifications/screens/NotificationsScreen.tsx(44,39): error TS2322: Type '{ color: string; }[]' is not assignable to type 'TextStyle'.
+  Types of property 'filter' are incompatible.
+    Type '{ <S extends { color: string; }>(predicate: (value: { color: string; }, index: number, array: { color: string; }[]) => value is S, thisArg?: any): S[]; (predicate: (value: { color: string; }, index: number, array: { color: string; }[]) => unknown, thisArg?: any): { ...; }[]; }' is not assignable to type 'string | readonly FilterFunction[] | undefined'.
+src/features/orgchart/screens/OrgChartScreen.tsx(79,9): error TS2322: Type '({ fontSize: number; fontWeight: "600"; textAlign: "center"; lineHeight: number; } | { color: string; })[]' is not assignable to type 'TextStyle'.
+  Types of property 'filter' are incompatible.
+    Type '{ <S extends { fontSize: number; fontWeight: "600"; textAlign: "center"; lineHeight: number; } | { color: string; }>(predicate: (value: { fontSize: number; fontWeight: "600"; textAlign: "center"; lineHeight: number; } | { ...; }, index: number, array: ({ ...; } | { ...; })[]) => value is S, thisArg?: any): S[]; (pre...' is not assignable to type 'string | readonly FilterFunction[] | undefined'.
+src/features/orgchart/screens/OrgChartScreen.tsx(85,21): error TS2322: Type '({ fontSize: number; fontWeight: "600"; } | { color: string; })[]' is not assignable to type 'TextStyle'.
+  Types of property 'filter' are incompatible.
+    Type '{ <S extends { fontSize: number; fontWeight: "600"; } | { color: string; }>(predicate: (value: { fontSize: number; fontWeight: "600"; } | { color: string; }, index: number, array: ({ fontSize: number; fontWeight: "600"; } | { ...; })[]) => value is S, thisArg?: any): S[]; (predicate: (value: { ...; } | { ...; }, ind...' is not assignable to type 'string | readonly FilterFunction[] | undefined'.
+src/features/orgchart/screens/OrgChartScreen.tsx(96,19): error TS2322: Type '({ fontSize: number; fontStyle: "italic"; marginTop: number; } | { color: string; })[]' is not assignable to type 'TextStyle'.
+  Types of property 'filter' are incompatible.
+    Type '{ <S extends { fontSize: number; fontStyle: "italic"; marginTop: number; } | { color: string; }>(predicate: (value: { fontSize: number; fontStyle: "italic"; marginTop: number; } | { color: string; }, index: number, array: ({ ...; } | { ...; })[]) => value is S, thisArg?: any): S[]; (predicate: (value: { ...; } | { ....' is not assignable to type 'string | readonly FilterFunction[] | undefined'.
+src/features/orgchart/screens/OrgChartScreen.tsx(123,28): error TS2339: Property 'compoundId' does not exist on type 'AuthenticatedUser'.
+src/features/orgchart/screens/OrgChartScreen.tsx(221,27): error TS2322: Type '({ fontSize: number; fontWeight: "400"; } | { color: string; })[]' is not assignable to type 'TextStyle'.
+  Types of property 'filter' are incompatible.
+    Type '{ <S extends { fontSize: number; fontWeight: "400"; } | { color: string; }>(predicate: (value: { fontSize: number; fontWeight: "400"; } | { color: string; }, index: number, array: ({ fontSize: number; fontWeight: "400"; } | { ...; })[]) => value is S, thisArg?: any): S[]; (predicate: (value: { ...; } | { ...; }, ind...' is not assignable to type 'string | readonly FilterFunction[] | undefined'.
+src/features/orgchart/screens/OrgChartScreen.tsx(264,19): error TS2322: Type '({ fontWeight: "600"; fontSize: number; } | { color: string; })[]' is not assignable to type 'TextStyle'.
+  Types of property 'filter' are incompatible.
+    Type '{ <S extends { fontWeight: "600"; fontSize: number; } | { color: string; }>(predicate: (value: { fontWeight: "600"; fontSize: number; } | { color: string; }, index: number, array: ({ fontWeight: "600"; fontSize: number; } | { ...; })[]) => value is S, thisArg?: any): S[]; (predicate: (value: { ...; } | { ...; }, ind...' is not assignable to type 'string | readonly FilterFunction[] | undefined'.
+src/features/property/screens/PropertyScreen.tsx(34,9): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: FlatListProps<UnitMembership>): FlatList<UnitMembership>', gave the following error.
+    Type '(item: UnitMembership) => number' is not assignable to type '(item: UnitMembership, index: number) => string'.
+      Type 'number' is not assignable to type 'string'.
+  Overload 2 of 2, '(props: FlatListProps<UnitMembership>, context: any): FlatList<UnitMembership>', gave the following error.
+    Type '(item: UnitMembership) => number' is not assignable to type '(item: UnitMembership, index: number) => string'.
+      Type 'number' is not assignable to type 'string'.
+src/features/security/screens/GateScreen.tsx(65,11): error TS2322: Type '({ flex: number; } | { borderColor: string; })[]' is not assignable to type 'ViewStyle'.
+  Types of property 'filter' are incompatible.
+    Type '{ <S extends { flex: number; } | { borderColor: string; }>(predicate: (value: { flex: number; } | { borderColor: string; }, index: number, array: ({ flex: number; } | { borderColor: string; })[]) => value is S, thisArg?: any): S[]; (predicate: (value: { ...; } | { ...; }, index: number, array: ({ ...; } | { ...; })[...' is not assignable to type 'string | readonly FilterFunction[] | undefined'.
+src/navigation/MainTabNavigator.tsx(59,15): error TS2367: This comparison appears to be unintentional because the types 'keyof MainTabParamList' and '"Governance"' have no overlap.
+src/navigation/MainTabNavigator.tsx(81,9): error TS2322: Type '"Governance"' is not assignable to type 'keyof MainTabParamList'.
+src/navigation/MoreNavigator.tsx(25,9): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: Omit<StackNavigatorProps, "id" | "children" | "initialRouteName" | "layout" | "screenListeners" | "screenOptions" | "screenLayout" | "UNSTABLE_router" | "UNSTABLE_routeNamesChangeBehavior"> & DefaultRouterOptions<...> & ({ ...; } & ({ ...; } | { ...; })), context?: any): string | ... 8 more ... | undefined', gave the following error.
+    Object literal may only specify known properties, and 'headerBackTitleVisible' does not exist in type 'StackNavigationOptions | ((props: { route: RouteProp<ParamListBase, string>; navigation: StackNavigationProp<ParamListBase, string, string | undefined>; theme: Theme; }) => StackNavigationOptions)'.
+  Overload 2 of 2, '(props: Omit<StackNavigatorProps, "id" | "children" | "initialRouteName" | "layout" | "screenListeners" | "screenOptions" | "screenLayout" | "UNSTABLE_router" | "UNSTABLE_routeNamesChangeBehavior"> & DefaultRouterOptions<...> & ({ ...; } & ({ ...; } | { ...; }))): string | ... 8 more ... | undefined', gave the following error.
+    Object literal may only specify known properties, and 'headerBackTitleVisible' does not exist in type 'StackNavigationOptions | ((props: { route: RouteProp<ParamListBase, string>; navigation: StackNavigationProp<ParamListBase, string, string | undefined>; theme: Theme; }) => StackNavigationOptions)'.
+src/services/api.ts(3,10): error TS2300: Duplicate identifier 'Platform'.
+src/services/api.ts(5,10): error TS2300: Duplicate identifier 'Platform'.
+src/services/finance.ts(12,22): error TS2322: Type '"UnitAccount"' is not assignable to type 'TagDescription<"Finance" | "User" | "VerificationRequest" | "UnitMembership" | "VisitorRequest" | "Issue" | "Notification" | "Announcement" | "Vote"> | null | undefined'.
+src/services/finance.ts(17,7): error TS2322: Type '(result: UnitAccount | undefined, error: FetchBaseQueryError | undefined, id: string) => { type: "UnitAccount"; id: string; }[]' is not assignable to type 'ResultDescription<"Finance" | "User" | "VerificationRequest" | "UnitMembership" | "VisitorRequest" | "Issue" | "Notification" | "Announcement" | "Vote", UnitAccount, string, FetchBaseQueryError, {} | undefined> | undefined'.
+  Type '(result: UnitAccount | undefined, error: FetchBaseQueryError | undefined, id: string) => { type: "UnitAccount"; id: string; }[]' is not assignable to type 'GetResultDescriptionFn<"Finance" | "User" | "VerificationRequest" | "UnitMembership" | "VisitorRequest" | "Issue" | "Notification" | "Announcement" | "Vote", UnitAccount, string, FetchBaseQueryError, {} | undefined>'.
+    Type '{ type: "UnitAccount"; id: string; }[]' is not assignable to type 'TagDescriptionArray<"Finance" | "User" | "VerificationRequest" | "UnitMembership" | "VisitorRequest" | "Issue" | "Notification" | "Announcement" | "Vote">'.
+      Type '{ type: "UnitAccount"; id: string; }' is not assignable to type 'TagDescription<"Finance" | "User" | "VerificationRequest" | "UnitMembership" | "VisitorRequest" | "Issue" | "Notification" | "Announcement" | "Vote"> | null | undefined'.
+        Type '{ type: "UnitAccount"; id: string; }' is not assignable to type 'FullTagDescription<"Finance" | "User" | "VerificationRequest" | "UnitMembership" | "VisitorRequest" | "Issue" | "Notification" | "Announcement" | "Vote">'.
+          Types of property 'type' are incompatible.
+            Type '"UnitAccount"' is not assignable to type '"Finance" | "User" | "VerificationRequest" | "UnitMembership" | "VisitorRequest" | "Issue" | "Notification" | "Announcement" | "Vote"'.
+src/services/finance.ts(25,7): error TS2322: Type '(result: void | undefined, error: FetchBaseQueryError | undefined, { accountId }: { accountId: string; body: FormData; }) => { type: "UnitAccount"; id: string; }[]' is not assignable to type 'ResultDescription<"Finance" | "User" | "VerificationRequest" | "UnitMembership" | "VisitorRequest" | "Issue" | "Notification" | "Announcement" | "Vote", void, { accountId: string; body: FormData; }, FetchBaseQueryError, {} | undefined> | undefined'.
+  Type '(result: void | undefined, error: FetchBaseQueryError | undefined, { accountId }: { accountId: string; body: FormData; }) => { type: "UnitAccount"; id: string; }[]' is not assignable to type 'GetResultDescriptionFn<"Finance" | "User" | "VerificationRequest" | "UnitMembership" | "VisitorRequest" | "Issue" | "Notification" | "Announcement" | "Vote", void, { accountId: string; body: FormData; }, FetchBaseQueryError, {} | undefined>'.
+    Type '{ type: "UnitAccount"; id: string; }[]' is not assignable to type 'TagDescriptionArray<"Finance" | "User" | "VerificationRequest" | "UnitMembership" | "VisitorRequest" | "Issue" | "Notification" | "Announcement" | "Vote">'.
+      Type '{ type: "UnitAccount"; id: string; }' is not assignable to type 'TagDescription<"Finance" | "User" | "VerificationRequest" | "UnitMembership" | "VisitorRequest" | "Issue" | "Notification" | "Announcement" | "Vote"> | null | undefined'.
+        Type '{ type: "UnitAccount"; id: string; }' is not assignable to type 'FullTagDescription<"Finance" | "User" | "VerificationRequest" | "UnitMembership" | "VisitorRequest" | "Issue" | "Notification" | "Announcement" | "Vote">'.
+          Types of property 'type' are incompatible.
+            Type '"UnitAccount"' is not assignable to type '"Finance" | "User" | "VerificationRequest" | "UnitMembership" | "VisitorRequest" | "Issue" | "Notification" | "Announcement" | "Vote"'.
+src/store/index.ts(3,30): error TS7016: Could not find a declaration file for module 'redux-logger'. '/Users/mostafamagdy/Developer/monorepo/compound/node_modules/redux-logger/dist/redux-logger.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/redux-logger` if it exists or add a new declaration (.d.ts) file containing `declare module 'redux-logger';`
+npm error Lifecycle script `typecheck` failed with error:
+npm error code 2
+npm error path /Users/mostafamagdy/Developer/monorepo/compound/apps/mobile
+npm error workspace @compound/mobile@0.1.0
+npm error location /Users/mostafamagdy/Developer/monorepo/compound/apps/mobile
+npm error command failed
+npm error command sh -c tsc --noEmit

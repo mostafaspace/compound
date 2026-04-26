@@ -1,6 +1,7 @@
-import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+import { createApi, fetchBaseQuery, BaseQueryFn, FetchArgs, FetchBaseQueryError } from "@reduxjs/toolkit/query/react";
 import * as Keychain from "react-native-keychain";
 import { Platform } from "react-native";
+import { setOfflineState } from "../store/systemSlice";
 
 const authTokenService = "compound.mobile.authToken";
 
@@ -10,19 +11,42 @@ const defaultApiBaseUrl = Platform.select({
   default: "http://localhost:8000/api/v1",
 });
 
+const baseQuery = fetchBaseQuery({
+  baseUrl: defaultApiBaseUrl,
+  prepareHeaders: (headers, { getState }) => {
+    headers.set("Accept", "application/json");
+    const token = (getState() as any).auth.token;
+    if (token) {
+      headers.set("Authorization", `Bearer ${token}`);
+    }
+    return headers;
+  },
+});
+
+const baseQueryWithFallback: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> = async (
+  args,
+  api,
+  extraOptions
+) => {
+  let result = await baseQuery(args, api, extraOptions);
+
+  if (result.error && result.error.status === 'FETCH_ERROR') {
+    api.dispatch(setOfflineState({ isOffline: true, error: "Network Error: Could not connect to server" }));
+  } else if (result.error && typeof result.error.status === 'number' && result.error.status >= 500) {
+    api.dispatch(setOfflineState({ isOffline: true, error: "Server Error: The backend is currently down" }));
+  } else {
+    const state = api.getState() as any;
+    if (state.system?.isOffline) {
+       api.dispatch(setOfflineState({ isOffline: false }));
+    }
+  }
+
+  return result;
+};
+
 export const api = createApi({
   reducerPath: "api",
-  baseQuery: fetchBaseQuery({
-    baseUrl: defaultApiBaseUrl,
-    prepareHeaders: (headers, { getState }) => {
-      headers.set("Accept", "application/json");
-      const token = (getState() as any).auth.token;
-      if (token) {
-        headers.set("Authorization", `Bearer ${token}`);
-      }
-      return headers;
-    },
-  }),
+  baseQuery: baseQueryWithFallback,
   tagTypes: [
     "User",
     "VerificationRequest",
@@ -33,6 +57,7 @@ export const api = createApi({
     "Announcement",
     "Finance",
     "Vote",
+    "UnitAccount",
   ],
   endpoints: () => ({}),
 });

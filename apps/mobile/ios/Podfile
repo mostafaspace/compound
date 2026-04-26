@@ -34,5 +34,41 @@ target 'Compound' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+
+    installer.pods_project.targets.each do |target|
+      # Fix: use_frameworks! :static causes -Werror,-Wnon-modular-include-in-framework-module
+      # which fails on many React Native + Firebase headers with RN 0.85+
+      target.build_configurations.each do |config|
+        flags = config.build_settings['OTHER_CFLAGS'] || ['$(inherited)']
+        flags = Array(flags)
+        unless flags.include?('-Wno-non-modular-include-in-framework-module')
+          flags << '-Wno-non-modular-include-in-framework-module'
+          config.build_settings['OTHER_CFLAGS'] = flags
+        end
+      end
+
+      # Fix: RNFB targets can't resolve React types through modules with static frameworks
+      if target.name.start_with?('RNFB')
+        target.build_configurations.each do |config|
+          config.build_settings['CLANG_ENABLE_MODULES'] = 'NO'
+        end
+      end
+    end
+
+    # Add Photos framework to main app target for PHAsset symbols (RNFBApp)
+    xcode_project = Xcodeproj::Project.open('Compound.xcodeproj')
+    xcode_project.targets.each do |app_target|
+      if app_target.name == 'Compound'
+        app_target.build_configurations.each do |config|
+          other_ld_flags = config.build_settings['OTHER_LDFLAGS'] || ['$(inherited)']
+          other_ld_flags = Array(other_ld_flags)
+          unless other_ld_flags.any? { |f| f.to_s.include?('Photos') }
+            other_ld_flags << '-framework' << 'Photos'
+            config.build_settings['OTHER_LDFLAGS'] = other_ld_flags
+          end
+        end
+      end
+    end
+    xcode_project.save
   end
 end

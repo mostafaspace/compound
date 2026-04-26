@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
   },
   header: {
-    marginBottom: spacing.xxl,
+    marginBottom: spacing['2xl'],
     alignItems: 'center',
   },
   title: {

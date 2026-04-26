@@ -29,6 +29,7 @@ export const governanceApi = api.injectEndpoints({
 
 export const { 
   useGetVotesQuery, 
-  useGetVoteEligibilityQuery, 
+  useGetVoteEligibilityQuery,
+  useLazyGetVoteEligibilityQuery,
   useCastVoteMutation,
 } = governanceApi;

@@ -10,6 +10,8 @@ import { LoginScreen } from '../features/auth/screens/LoginScreen';
 import { MainTabNavigator } from './MainTabNavigator';
 import { GuardNavigator } from './GuardNavigator';
 import { colors } from '../theme';
+import { linking } from './linking';
+import { usePushNotifications } from '../hooks/usePushNotifications';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -19,6 +21,9 @@ export const RootNavigator = () => {
   const authToken = useSelector(selectCurrentToken);
   const user = useSelector(selectCurrentUser);
   const isRestoring = useSelector(selectIsRestoring);
+
+  // Initialize push notifications
+  usePushNotifications();
 
   if (isRestoring) {
     return (
@@ -35,7 +40,7 @@ export const RootNavigator = () => {
   const isSecurityGuard = userRole === "security_guard";
 
   return (
-    <NavigationContainer>
+    <NavigationContainer linking={linking}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!authToken ? (
           <Stack.Screen name="Auth" component={LoginScreen} />

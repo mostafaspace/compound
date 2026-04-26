@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "904931142698",
+    "project_id": "compound-c89fc",
+    "storage_bucket": "compound-c89fc.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:904931142698:android:31dd912ffc66aea2f92753",
+        "android_client_info": {
+          "package_name": "com.compound.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDxxhX3NNNl2JYViB5tYZgsuf0cna4ETOk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
