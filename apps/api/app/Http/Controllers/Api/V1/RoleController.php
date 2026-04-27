@@ -13,12 +13,13 @@ class RoleController extends Controller
     {
         $roles = Role::where('guard_name', 'sanctum')
             ->with('permissions')
+            ->withCount('users')
             ->get()
             ->map(fn (Role $role) => [
                 'id'          => $role->id,
                 'name'        => $role->name,
                 'permissions' => $role->permissions->pluck('name'),
-                'users_count' => $role->users()->count(),
+                'users_count' => $role->users_count,
             ]);
 
         return response()->json(['data' => $roles]);

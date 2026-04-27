@@ -13,11 +13,12 @@ class PermissionController extends Controller
     public function index(): JsonResponse
     {
         $permissions = SpatiePermission::where('guard_name', 'sanctum')
+            ->withCount('roles')
             ->get()
             ->map(fn ($p) => [
                 'id'          => $p->id,
                 'name'        => $p->name,
-                'roles_count' => $p->roles()->count(),
+                'roles_count' => $p->roles_count,
                 'is_core'     => in_array($p->name, Permission::values()),
             ]);
 
