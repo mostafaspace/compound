@@ -13,7 +13,7 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->string('role_name', 64);
             $table->enum('scope_type', ['global', 'compound', 'building', 'floor', 'unit']);
-            $table->unsignedBigInteger('scope_id')->default(0);
+            $table->string('scope_id', 26)->default('');
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
 

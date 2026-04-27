@@ -26,13 +26,16 @@ class ScopeResolver
 
         foreach ($assignments as $assignment) {
             match ($assignment->scope_type) {
-                'compound' => $ids->push((int) $assignment->scope_id),
+                'compound' => $ids->push($assignment->scope_id),
                 'building' => $ids->push(
-                    (int) \App\Models\Property\Building::find($assignment->scope_id)?->compound_id
+                    \App\Models\Property\Building::find($assignment->scope_id)?->compound_id
                 ),
                 'floor' => $ids->push(
-                    (int) \App\Models\Property\Floor::find($assignment->scope_id)
+                    \App\Models\Property\Floor::find($assignment->scope_id)
                         ?->building?->compound_id
+                ),
+                'unit' => $ids->push(
+                    \App\Models\Property\Unit::find($assignment->scope_id)?->compound_id
                 ),
                 default => null,
             };
@@ -62,9 +65,12 @@ class ScopeResolver
                     ...\App\Models\Property\Building::where('compound_id', $assignment->scope_id)
                         ->pluck('id')->all()
                 ),
-                'building' => $ids->push((int) $assignment->scope_id),
+                'building' => $ids->push($assignment->scope_id),
                 'floor' => $ids->push(
-                    (int) \App\Models\Property\Floor::find($assignment->scope_id)?->building_id
+                    \App\Models\Property\Floor::find($assignment->scope_id)?->building_id
+                ),
+                'unit' => $ids->push(
+                    \App\Models\Property\Unit::find($assignment->scope_id)?->building_id
                 ),
                 default => null,
             };
@@ -73,11 +79,10 @@ class ScopeResolver
         $ids = $ids->filter()->unique();
 
         if ($compoundId !== null) {
-            $ids = $ids->filter(fn ($bid) =>
-                \App\Models\Property\Building::where('id', $bid)
-                    ->where('compound_id', $compoundId)
-                    ->exists()
-            );
+            $validIds = \App\Models\Property\Building::whereIn('id', $ids->all())
+                ->where('compound_id', $compoundId)
+                ->pluck('id');
+            $ids = collect($validIds);
         }
 
         return $ids->values()->all();
@@ -109,7 +114,10 @@ class ScopeResolver
                     ...\App\Models\Property\Floor::where('building_id', $assignment->scope_id)
                         ->pluck('id')->all()
                 ),
-                'floor' => $ids->push((int) $assignment->scope_id),
+                'floor' => $ids->push($assignment->scope_id),
+                'unit' => $ids->push(
+                    \App\Models\Property\Unit::find($assignment->scope_id)?->floor_id
+                ),
                 default => null,
             };
         }
@@ -117,11 +125,10 @@ class ScopeResolver
         $ids = $ids->filter()->unique();
 
         if ($buildingId !== null) {
-            $ids = $ids->filter(fn ($fid) =>
-                \App\Models\Property\Floor::where('id', $fid)
-                    ->where('building_id', $buildingId)
-                    ->exists()
-            );
+            $validIds = \App\Models\Property\Floor::whereIn('id', $ids->all())
+                ->where('building_id', $buildingId)
+                ->pluck('id');
+            $ids = collect($validIds);
         }
 
         return $ids->values()->all();
@@ -154,7 +161,7 @@ class ScopeResolver
     ): bool {
         return match ($assignment->scope_type) {
             'compound' => match ($targetType) {
-                'compound' => (int) $assignment->scope_id === $targetId,
+                'compound' => $assignment->scope_id === (string) $targetId,
                 'building' => \App\Models\Property\Building::where('id', $targetId)
                     ->where('compound_id', $assignment->scope_id)->exists(),
                 'floor' => \App\Models\Property\Floor::where('id', $targetId)
@@ -163,12 +170,13 @@ class ScopeResolver
                 default => false,
             },
             'building' => match ($targetType) {
-                'building' => (int) $assignment->scope_id === $targetId,
+                'building' => $assignment->scope_id === (string) $targetId,
                 'floor' => \App\Models\Property\Floor::where('id', $targetId)
                     ->where('building_id', $assignment->scope_id)->exists(),
                 default => false,
             },
-            'floor' => $targetType === 'floor' && (int) $assignment->scope_id === $targetId,
+            'floor' => $targetType === 'floor' && $assignment->scope_id === (string) $targetId,
+            'unit' => $targetType === 'unit' && $assignment->scope_id === (string) $targetId,
             default => false,
         };
     }
