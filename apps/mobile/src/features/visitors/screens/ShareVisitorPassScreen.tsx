@@ -63,8 +63,13 @@ export const ShareVisitorPassScreen = () => {
 
   const handleShare = async () => {
     try {
-      if (viewShotRef.current?.capture) {
-        const uri = await viewShotRef.current.capture();
+      if (viewShotRef.current) {
+        const uri = await (viewShotRef.current as any).capture({
+          format: 'png',
+          quality: 1.0,
+          result: 'tmpfile',
+          captureAllScrollableViews: true,
+        });
         await Share.open({
           url: Platform.OS === 'android' ? 'file://' + uri : uri,
           title: 'Visitor Pass',
@@ -90,7 +95,11 @@ export const ShareVisitorPassScreen = () => {
   return (
     <ScreenContainer>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-        <ViewShot ref={viewShotRef} options={{ format: "png", quality: 1.0 }} style={styles.viewShotContainer}>
+        <ViewShot
+          ref={viewShotRef}
+          options={{ format: "png", quality: 1.0, result: 'tmpfile' }}
+          style={styles.viewShotContainer}
+        >
           <View style={cardStyle}>
             {/* Header / Accent */}
             <View style={[styles.cardHeader, { backgroundColor: colors.primary.light }]}>
@@ -98,7 +107,7 @@ export const ShareVisitorPassScreen = () => {
                 {visitor.unit?.compoundName || 'Compound Pass'}
               </Typography>
               <View style={styles.vipBadge}>
-                <Typography variant="caption" style={{ color: colors.primary.light, fontWeight: '900', letterSpacing: 1 }}>
+                <Typography variant="caption" style={{ color: '#FFF', fontWeight: '900', letterSpacing: 1 }}>
                   VIP INVITATION
                 </Typography>
               </View>
@@ -177,14 +186,14 @@ export const ShareVisitorPassScreen = () => {
         </ViewShot>
 
         <View style={styles.actions}>
-          <Button 
+          <Button
             title={t("Common.share", "Share Invitation")}
             onPress={handleShare}
             style={styles.shareButton}
           />
-          <Button 
+          <Button
             variant="outline"
-            title={t("Common.backToDashboard", "Back to Dashboard")} 
+            title={t("Common.backToDashboard", "Back to Dashboard")}
             onPress={() => navigation.navigate('Main', { screen: 'Dashboard' } as any)}
             style={styles.doneButton}
           />
@@ -201,9 +210,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   container: {
+    flexGrow: 1,
     paddingHorizontal: spacing.sm,
     paddingBottom: spacing.xxl,
     alignItems: 'center',
+  },
+  cardWrapper: {
+    width: '100%',
+    marginBottom: spacing.xl,
   },
   viewShotContainer: {
     width: '100%',

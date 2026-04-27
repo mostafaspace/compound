@@ -114,7 +114,6 @@ export const CreateVisitorScreen = () => {
 
       const result = await createVisitor(formData).unwrap();
       
-      navigation.goBack();
       navigation.navigate('ShareVisitorPass', { visitorId: result.id });
     } catch (err) {
       console.error("Failed to create visitor", err);
