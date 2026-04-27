@@ -93,6 +93,11 @@ import type {
   WorkOrder,
   DataExportRequest,
   LocaleSettings,
+  Poll,
+  PollType,
+  CreatePollInput,
+  CreatePollTypeInput,
+  PollStatus,
 } from "@compound/contracts";
 
 import { config } from "./config";
@@ -2985,4 +2990,122 @@ export async function revokeUserRole(userId: number, assignmentId: number): Prom
   if (!response.ok) {
     throw new Error(`Failed to revoke user role: ${response.status}`);
   }
+}
+
+// ── Poll Types ────────────────────────────────────────────────────────────────
+
+export async function getPollTypes(compoundId?: string): Promise<PollType[]> {
+  const params = compoundId ? `?compoundId=${compoundId}` : "";
+  const response = await fetch(`${config.apiBaseUrl}/polls/types${params}`, {
+    cache: "no-store",
+    headers: await apiHeaders(true),
+  });
+  if (!response.ok) return [];
+  const json: ApiEnvelope<PollType[]> = await response.json();
+  return json.data;
+}
+
+export async function createPollType(input: CreatePollTypeInput): Promise<PollType> {
+  const response = await fetch(`${config.apiBaseUrl}/polls/types`, {
+    method: "POST",
+    headers: { ...(await apiHeaders(true)), "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error((err.message as string | undefined) ?? "Failed to create poll type");
+  }
+  const json: ApiEnvelope<PollType> = await response.json();
+  return json.data;
+}
+
+export async function updatePollType(id: string, input: Partial<CreatePollTypeInput>): Promise<PollType> {
+  const response = await fetch(`${config.apiBaseUrl}/polls/types/${id}`, {
+    method: "PATCH",
+    headers: { ...(await apiHeaders(true)), "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error((err.message as string | undefined) ?? "Failed to update poll type");
+  }
+  const json: ApiEnvelope<PollType> = await response.json();
+  return json.data;
+}
+
+export async function deletePollType(id: string): Promise<void> {
+  const response = await fetch(`${config.apiBaseUrl}/polls/types/${id}`, {
+    method: "DELETE",
+    headers: await apiHeaders(true),
+  });
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error((err.message as string | undefined) ?? "Failed to delete poll type");
+  }
+}
+
+// ── Polls ────────────────────────────────────────────────────────────────────
+
+export async function getPolls(params?: { status?: PollStatus; compoundId?: string }): Promise<Poll[]> {
+  const qs = new URLSearchParams();
+  if (params?.status) qs.set("status", params.status);
+  if (params?.compoundId) qs.set("compoundId", params.compoundId);
+  const query = qs.toString() ? `?${qs.toString()}` : "";
+  const response = await fetch(`${config.apiBaseUrl}/polls${query}`, {
+    cache: "no-store",
+    headers: await apiHeaders(true),
+  });
+  if (!response.ok) return [];
+  const json: PaginatedEnvelope<Poll> = await response.json();
+  return json.data;
+}
+
+export async function getPoll(id: string): Promise<Poll | null> {
+  const response = await fetch(`${config.apiBaseUrl}/polls/${id}`, {
+    cache: "no-store",
+    headers: await apiHeaders(true),
+  });
+  if (!response.ok) return null;
+  const json: ApiEnvelope<Poll> = await response.json();
+  return json.data;
+}
+
+export async function createPoll(input: CreatePollInput): Promise<Poll> {
+  const response = await fetch(`${config.apiBaseUrl}/polls`, {
+    method: "POST",
+    headers: { ...(await apiHeaders(true)), "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error((err.message as string | undefined) ?? "Failed to create poll");
+  }
+  const json: ApiEnvelope<Poll> = await response.json();
+  return json.data;
+}
+
+export async function publishPoll(id: string): Promise<Poll> {
+  const response = await fetch(`${config.apiBaseUrl}/polls/${id}/publish`, {
+    method: "POST",
+    headers: await apiHeaders(true),
+  });
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error((err.message as string | undefined) ?? "Failed to publish poll");
+  }
+  const json: ApiEnvelope<Poll> = await response.json();
+  return json.data;
+}
+
+export async function closePoll(id: string): Promise<Poll> {
+  const response = await fetch(`${config.apiBaseUrl}/polls/${id}/close`, {
+    method: "POST",
+    headers: await apiHeaders(true),
+  });
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error((err.message as string | undefined) ?? "Failed to close poll");
+  }
+  const json: ApiEnvelope<Poll> = await response.json();
+  return json.data;
 }
