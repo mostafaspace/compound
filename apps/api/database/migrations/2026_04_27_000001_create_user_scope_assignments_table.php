@@ -13,12 +13,13 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->string('role_name', 64);
             $table->enum('scope_type', ['global', 'compound', 'building', 'floor', 'unit']);
-            $table->unsignedBigInteger('scope_id')->nullable();
+            $table->unsignedBigInteger('scope_id')->default(0);
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
 
             $table->unique(['user_id', 'role_name', 'scope_type', 'scope_id'], 'uq_user_role_scope');
             $table->index(['user_id', 'scope_type']);
+            $table->index(['scope_type', 'scope_id']);
         });
     }
 
