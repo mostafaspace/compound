@@ -29,6 +29,14 @@ class UserResource extends JsonResource
             'lastLoginAt'     => $this->last_login_at?->toJSON(),
             'legal_hold'      => $this->legal_hold ?? false,
             'anonymized_at'   => $this->anonymized_at?->toJSON(),
+            // New RBAC fields (only included when loaded)
+            'roles'       => $this->whenLoaded('roles', fn () => $this->getRoleNames()),
+            'permissions' => $this->whenLoaded('permissions', fn () => $this->getAllPermissions()->pluck('name')),
+            'scopes'      => $this->whenLoaded('scopeAssignments', fn () => $this->scopeAssignments->map(fn ($a) => [
+                'role'       => $a->role_name,
+                'scope_type' => $a->scope_type,
+                'scope_id'   => $a->scope_id !== '' ? $a->scope_id : null,
+            ])),
         ];
     }
 }
