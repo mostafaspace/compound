@@ -24,21 +24,33 @@ class ScopeResolver
 
         $ids = collect();
 
-        foreach ($assignments as $assignment) {
-            match ($assignment->scope_type) {
-                'compound' => $ids->push($assignment->scope_id),
-                'building' => $ids->push(
-                    \App\Models\Property\Building::find($assignment->scope_id)?->compound_id
-                ),
-                'floor' => $ids->push(
-                    \App\Models\Property\Floor::find($assignment->scope_id)
-                        ?->building?->compound_id
-                ),
-                'unit' => $ids->push(
-                    \App\Models\Property\Unit::find($assignment->scope_id)?->compound_id
-                ),
-                default => null,
-            };
+        // Direct compound assignments
+        $compoundIds = $assignments->where('scope_type', 'compound')->pluck('scope_id');
+        $ids->push(...$compoundIds->all());
+
+        // Building assignments → get their compound_id in one query
+        $buildingIds = $assignments->where('scope_type', 'building')->pluck('scope_id');
+        if ($buildingIds->isNotEmpty()) {
+            $cids = \App\Models\Property\Building::whereIn('id', $buildingIds->all())
+                ->pluck('compound_id');
+            $ids->push(...$cids->all());
+        }
+
+        // Floor assignments → get building→compound_id in one query
+        $floorIds = $assignments->where('scope_type', 'floor')->pluck('scope_id');
+        if ($floorIds->isNotEmpty()) {
+            $cids = \App\Models\Property\Floor::whereIn('id', $floorIds->all())
+                ->join('buildings', 'floors.building_id', '=', 'buildings.id')
+                ->pluck('buildings.compound_id');
+            $ids->push(...$cids->all());
+        }
+
+        // Unit assignments → get compound_id in one query
+        $unitIds = $assignments->where('scope_type', 'unit')->pluck('scope_id');
+        if ($unitIds->isNotEmpty()) {
+            $cids = \App\Models\Property\Unit::whereIn('id', $unitIds->all())
+                ->pluck('compound_id');
+            $ids->push(...$cids->all());
         }
 
         return $ids->filter()->unique()->values()->all();
@@ -137,7 +149,7 @@ class ScopeResolver
     /**
      * Returns true if user's scope covers the given resource.
      */
-    public function userCanAccessResource(User $user, string $scopeType, int $scopeId): bool
+    public function userCanAccessResource(User $user, string $scopeType, string $scopeId): bool
     {
         $assignments = $user->scopeAssignments()->get();
 
@@ -157,11 +169,11 @@ class ScopeResolver
     private function assignmentCoversResource(
         \App\Models\UserScopeAssignment $assignment,
         string $targetType,
-        int $targetId
+        string $targetId
     ): bool {
         return match ($assignment->scope_type) {
             'compound' => match ($targetType) {
-                'compound' => $assignment->scope_id === (string) $targetId,
+                'compound' => $assignment->scope_id === $targetId,
                 'building' => \App\Models\Property\Building::where('id', $targetId)
                     ->where('compound_id', $assignment->scope_id)->exists(),
                 'floor' => \App\Models\Property\Floor::where('id', $targetId)
@@ -170,13 +182,13 @@ class ScopeResolver
                 default => false,
             },
             'building' => match ($targetType) {
-                'building' => $assignment->scope_id === (string) $targetId,
+                'building' => $assignment->scope_id === $targetId,
                 'floor' => \App\Models\Property\Floor::where('id', $targetId)
                     ->where('building_id', $assignment->scope_id)->exists(),
                 default => false,
             },
-            'floor' => $targetType === 'floor' && $assignment->scope_id === (string) $targetId,
-            'unit' => $targetType === 'unit' && $assignment->scope_id === (string) $targetId,
+            'floor' => $targetType === 'floor' && $assignment->scope_id === $targetId,
+            'unit' => $targetType === 'unit' && $assignment->scope_id === $targetId,
             default => false,
         };
     }
