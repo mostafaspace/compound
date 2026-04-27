@@ -1,26 +1,27 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f6f7f9;
-  --foreground: #111827;
+  --background: #f8fafc; /* Slate 50 */
+  --foreground: #0f172a; /* Slate 900 */
   --panel: #ffffff;
-  --muted: #5b6472;
-  --line: #d7dce3;
-  --brand: #116a57;
-  --brand-strong: #0a4f41;
-  --accent: #d99227;
+  --muted: #64748b; /* Slate 500 */
+  --line: #e2e8f0; /* Slate 200 */
+  --brand: #2563eb; /* Professional Blue */
+  --brand-strong: #1d4ed8;
+  --accent: #0ea5e9; /* Sky blue */
+  --danger: #ef4444;
 }
 
 .dark {
-  --background: #111827;
-  --foreground: #f9fafb;
-  --panel: #1f2937;
-  --muted: #9ca3af;
-  --line: #374151;
-  --brand: #14b8a6;
-  --brand-strong: #0d9488;
-  --accent: #f59e0b;
-  --danger: #ef4444;
+  --background: #0f172a; /* Slate 900 */
+  --foreground: #f8fafc; /* Slate 50 */
+  --panel: #1e293b; /* Slate 800 */
+  --muted: #94a3b8; /* Slate 400 */
+  --line: #334155; /* Slate 700 */
+  --brand: #3b82f6; /* Lighter blue */
+  --brand-strong: #60a5fa;
+  --accent: #38bdf8;
+  --danger: #f87171;
 }
 
 @theme inline {
@@ -33,14 +34,15 @@
   --color-brand-strong: var(--brand-strong);
   --color-accent: var(--accent);
   --color-danger: var(--danger);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  letter-spacing: -0.01em;
 }
 
 button,

@@ -6,7 +6,10 @@ import { AdminTabParamList } from './types';
 import { AdminDashboardScreen } from '../features/admin/screens/AdminDashboardScreen';
 import { VisitorsScreen } from '../features/visitors/screens/VisitorsScreen';
 import { AccountsScreen } from '../features/finance/screens/AccountsScreen';
+import { PropertyScreen } from '../features/property/screens/PropertyScreen';
+import { SettingsScreen } from '../features/settings/screens/SettingsScreen';
 import { colors, spacing } from '../theme';
+import { LogoutButton } from '../components/ui/LogoutButton';
 
 const Tab = createBottomTabNavigator<AdminTabParamList>();
 
@@ -17,7 +20,7 @@ export const AdminTabNavigator = () => {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
-        tabBarActiveTintColor: colors.primary.dark,
+        tabBarActiveTintColor: isDark ? colors.cta.dark : colors.primary.light,
         tabBarInactiveTintColor: isDark ? '#9ca3af' : '#6b7280',
         tabBarStyle: {
           backgroundColor: isDark ? colors.surface.dark : colors.surface.light,
@@ -37,6 +40,7 @@ export const AdminTabNavigator = () => {
           fontSize: 18,
           color: isDark ? colors.text.primary.dark : colors.text.primary.light,
         },
+        headerRight: () => <LogoutButton />,
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: '600',
@@ -69,12 +73,12 @@ export const AdminTabNavigator = () => {
       />
       <Tab.Screen
         name="Units"
-        component={AdminDashboardScreen}
+        component={PropertyScreen}
         options={{ title: t('Admin.units', 'Units') }}
       />
       <Tab.Screen
         name="Settings"
-        component={AdminDashboardScreen}
+        component={SettingsScreen}
         options={{ title: t('Common.settings', 'Settings') }}
       />
     </Tab.Navigator>

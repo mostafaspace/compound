@@ -49,6 +49,18 @@ export const ScannerScreen = () => {
           `${vr.visitorName} - Unit ${vr.unit?.unitNumber}\n\n${t('Security.allowOrDeny', 'Allow or deny entry?')}`,
           [
             {
+              text: t('Security.arrive', 'Mark Arrived'),
+              onPress: async () => {
+                await performAction({
+                  id: vr.id,
+                  action: 'arrive',
+                }).unwrap();
+                setScanResult((prev) =>
+                  prev ? { ...prev, message: t('Security.arrived', 'Visitor marked as arrived') } : null
+                );
+              },
+            },
+            {
               text: t('Security.allow', 'Allow Entry'),
               onPress: async () => {
                 await performAction({

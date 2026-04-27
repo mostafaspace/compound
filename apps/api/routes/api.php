@@ -107,7 +107,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::put('/notification-preferences', [NotificationPreferenceController::class, 'update'])
             ->name('notification-preferences.update');
 
-        Route::group(function (): void {
+        Route::group([], function (): void {
                 Route::get('/document-types', [DocumentTypeController::class, 'index'])->name('document-types.index');
                 Route::get('/documents', [UserDocumentController::class, 'index'])->name('documents.index');
                 Route::post('/documents', [UserDocumentController::class, 'store'])

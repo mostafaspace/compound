@@ -43,12 +43,12 @@ export const Button: React.FC<ButtonProps> = ({
     switch (variant) {
       case 'primary':
         base.push({ 
-          backgroundColor: isDark ? colors.primary.dark : colors.primary.light,
-          shadowColor: isDark ? 'transparent' : colors.primary.light,
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.2,
-          shadowRadius: 12,
-          elevation: 5,
+          backgroundColor: isDark ? colors.cta.dark : colors.cta.light,
+          shadowColor: isDark ? colors.cta.dark : colors.cta.light,
+          shadowOffset: { width: 0, height: 12 },
+          shadowOpacity: 0.3,
+          shadowRadius: 20,
+          elevation: 8,
         });
         break;
       case 'secondary':
@@ -63,7 +63,7 @@ export const Button: React.FC<ButtonProps> = ({
         base.push({ 
           backgroundColor: 'transparent', 
           borderWidth: 1.5, 
-          borderColor: isDark ? colors.primary.dark : colors.primary.light 
+          borderColor: isDark ? colors.text.primary.dark : colors.text.primary.light 
         });
         break;
       case 'ghost':
@@ -79,9 +79,9 @@ export const Button: React.FC<ButtonProps> = ({
     if (textStyle) base.push(textStyle);
     
     if (variant === 'primary') {
-      base.push({ color: '#ffffff' });
+      base.push({ color: '#ffffff' }); // White on Gold
     } else if (variant === 'outline' || variant === 'ghost') {
-      base.push({ color: isDark ? colors.primary.dark : colors.primary.light });
+      base.push({ color: isDark ? colors.text.primary.dark : colors.text.primary.light });
     } else {
       base.push({ color: isDark ? colors.text.primary.dark : colors.text.primary.light });
     }
@@ -100,7 +100,7 @@ export const Button: React.FC<ButtonProps> = ({
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'primary' ? '#ffffff' : (isDark ? colors.primary.dark : colors.primary.light)} />
+        <ActivityIndicator color={variant === 'primary' ? '#ffffff' : (isDark ? colors.cta.dark : colors.cta.light)} />
       ) : (
         <Text style={getTextStyle()}>{title}</Text>
       )}
