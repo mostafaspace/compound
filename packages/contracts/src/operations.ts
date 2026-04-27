@@ -73,6 +73,8 @@ export interface VisitorRequest {
   visitStartsAt: string | null;
   visitEndsAt: string | null;
   notes: string | null;
+  pictureUrl: string | null;
+  numberOfVisitors: number | null;
   status: VisitorRequestStatus;
   pass?: VisitorPass | null;
   qrToken?: string;
@@ -94,6 +96,8 @@ export interface CreateVisitorRequestInput {
   visitStartsAt: string;
   visitEndsAt: string;
   notes?: string;
+  pictureUrl?: string;
+  numberOfVisitors?: number;
 }
 
 export interface VisitorDecisionInput {

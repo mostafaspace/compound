@@ -30,9 +30,12 @@ class VisitorRequestResource extends JsonResource
             'visitStartsAt' => $this->visit_starts_at?->toIso8601String(),
             'visitEndsAt' => $this->visit_ends_at?->toIso8601String(),
             'notes' => $this->notes,
+            'pictureUrl' => $this->picture_url,
+            'numberOfVisitors' => $this->number_of_visitors,
             'status' => $this->status->value,
             'pass' => VisitorPassResource::make($this->whenLoaded('pass')),
-            'qrToken' => $this->when(isset($this->qr_token), $this->qr_token),
+            'qrToken' => $this->when(isset($this->qr_token), $this->qr_token) 
+                         ?? $this->whenLoaded('pass', fn() => $this->pass?->token),
             'arrivedAt' => $this->arrived_at?->toIso8601String(),
             'allowedAt' => $this->allowed_at?->toIso8601String(),
             'deniedAt' => $this->denied_at?->toIso8601String(),

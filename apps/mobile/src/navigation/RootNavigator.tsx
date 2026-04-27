@@ -12,6 +12,8 @@ import { GuardNavigator } from './GuardNavigator';
 import { colors } from '../theme';
 import { linking } from './linking';
 import { usePushNotifications } from '../hooks/usePushNotifications';
+import { CreateVisitorScreen } from '../features/visitors/screens/CreateVisitorScreen';
+import { ShareVisitorPassScreen } from '../features/visitors/screens/ShareVisitorPassScreen';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -47,7 +49,11 @@ export const RootNavigator = () => {
         ) : isSecurityGuard ? (
           <Stack.Screen name="Guard" component={GuardNavigator} />
         ) : (
-          <Stack.Screen name="Main" component={MainTabNavigator} />
+          <Stack.Group>
+            <Stack.Screen name="Main" component={MainTabNavigator} />
+            <Stack.Screen name="CreateVisitor" component={CreateVisitorScreen} />
+            <Stack.Screen name="ShareVisitorPass" component={ShareVisitorPassScreen} />
+          </Stack.Group>
         )}
       </Stack.Navigator>
     </NavigationContainer>

@@ -21,6 +21,9 @@ class StoreVisitorRequestRequest extends FormRequest
             'visitStartsAt' => ['required', 'date'],
             'visitEndsAt' => ['required', 'date', 'after:visitStartsAt'],
             'notes' => ['nullable', 'string', 'max:1000'],
+            'pictureUrl' => ['nullable', 'string', 'url', 'max:2000'],
+            'picture' => ['nullable', 'image', 'max:5120'],
+            'numberOfVisitors' => ['nullable', 'integer', 'min:1', 'max:50'],
         ];
     }
 }

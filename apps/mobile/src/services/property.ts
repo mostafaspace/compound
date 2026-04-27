@@ -26,6 +26,11 @@ export const propertyApi = api.injectEndpoints({
       transformResponse: (response: PaginatedEnvelope<VisitorRequest>) => response.data,
       providesTags: ["VisitorRequest"],
     }),
+    getVisitorRequest: builder.query<VisitorRequest, string>({
+      query: (id) => `/visitor-requests/${id}`,
+      transformResponse: (response: ApiEnvelope<VisitorRequest>) => response.data,
+      providesTags: (_result, _error, id) => [{ type: "VisitorRequest", id }],
+    }),
     cancelVisitor: builder.mutation<VisitorRequest, { id: string; reason: string }>({
       query: ({ id, reason }) => ({
         url: `/visitor-requests/${id}/cancel`,
@@ -69,6 +74,7 @@ export const propertyApi = api.injectEndpoints({
         method: "POST",
         body,
       }),
+      transformResponse: (response: ApiEnvelope<Issue>) => response.data,
       invalidatesTags: ["Issue"],
     }),
     createVisitor: builder.mutation<VisitorRequest, any>({
@@ -77,6 +83,7 @@ export const propertyApi = api.injectEndpoints({
         method: "POST",
         body,
       }),
+      transformResponse: (response: ApiEnvelope<VisitorRequest>) => response.data,
       invalidatesTags: ["VisitorRequest"],
     }),
     uploadDocument: builder.mutation<any, FormData>({
@@ -85,6 +92,7 @@ export const propertyApi = api.injectEndpoints({
         method: "POST",
         body,
       }),
+      transformResponse: (response: any) => response.data,
       invalidatesTags: ["VerificationRequest"],
     }),
     markNotificationRead: builder.mutation<void, string | number>({
@@ -108,6 +116,7 @@ export const {
   useGetUnitsQuery, 
   useGetVerificationRequestsQuery, 
   useGetVisitorRequestsQuery,
+  useGetVisitorRequestQuery,
   useCancelVisitorMutation,
   useGetIssuesQuery,
   useGetNotificationsQuery,

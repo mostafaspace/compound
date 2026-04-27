@@ -42,13 +42,29 @@ export const Button: React.FC<ButtonProps> = ({
     
     switch (variant) {
       case 'primary':
-        base.push({ backgroundColor: isDark ? colors.primary.dark : colors.primary.light });
+        base.push({ 
+          backgroundColor: isDark ? colors.primary.dark : colors.primary.light,
+          shadowColor: isDark ? 'transparent' : colors.primary.light,
+          shadowOffset: { width: 0, height: 8 },
+          shadowOpacity: 0.2,
+          shadowRadius: 12,
+          elevation: 5,
+        });
         break;
       case 'secondary':
-        base.push({ backgroundColor: isDark ? colors.surface.dark : colors.surface.light, borderWidth: 1, borderColor: isDark ? colors.border.dark : colors.border.light });
+        base.push({ 
+          backgroundColor: isDark ? colors.surface.dark : colors.surface.light, 
+          borderWidth: 1, 
+          borderColor: isDark ? colors.border.dark : colors.border.light,
+          elevation: 1,
+        });
         break;
       case 'outline':
-        base.push({ backgroundColor: 'transparent', borderWidth: 1, borderColor: isDark ? colors.primary.dark : colors.primary.light });
+        base.push({ 
+          backgroundColor: 'transparent', 
+          borderWidth: 1.5, 
+          borderColor: isDark ? colors.primary.dark : colors.primary.light 
+        });
         break;
       case 'ghost':
         base.push({ backgroundColor: 'transparent' });
@@ -63,7 +79,7 @@ export const Button: React.FC<ButtonProps> = ({
     if (textStyle) base.push(textStyle);
     
     if (variant === 'primary') {
-      base.push({ color: isDark ? colors.surface.dark : '#ffffff' });
+      base.push({ color: '#ffffff' });
     } else if (variant === 'outline' || variant === 'ghost') {
       base.push({ color: isDark ? colors.primary.dark : colors.primary.light });
     } else {
@@ -79,7 +95,8 @@ export const Button: React.FC<ButtonProps> = ({
       disabled={disabled || loading}
       style={({ pressed }) => [
         ...getButtonStyle(),
-        pressed && styles.pressed
+        pressed && styles.pressed,
+        pressed && { transform: [{ scale: 0.98 }] }
       ]}
     >
       {loading ? (
@@ -93,19 +110,20 @@ export const Button: React.FC<ButtonProps> = ({
 
 const styles = StyleSheet.create({
   button: {
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    borderRadius: 8,
+    height: 56,
+    paddingHorizontal: spacing.xl,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
   },
   text: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 17,
+    fontWeight: '700',
+    letterSpacing: -0.2,
   },
   pressed: {
-    opacity: 0.8,
+    opacity: 0.9,
   },
   disabled: {
     opacity: 0.5,

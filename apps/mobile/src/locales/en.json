@@ -15,6 +15,11 @@
     "dark": "Dark Mode",
     "system": "System Auto"
   },
+  "Dashboard": {
+    "welcome": "Hello, {{name}}",
+    "recentActivity": "Recent activity",
+    "viewAll": "View all"
+  },
   "App": {
     "brand": "Compound",
     "title": "Resident workspace",
@@ -60,6 +65,9 @@
     },
     "more": "More",
     "settings": "Settings",
+    "verified": "Verified",
+    "viewAll": "View all",
+    "remove": "Remove",
     "loading": "Loading..."
   },
   "Status": {
@@ -167,6 +175,10 @@
     "unitRequired": "A verified unit is required before visitor passes can be created.",
     "vehicle": "Vehicle: {{vehicle}}",
     "vehiclePlate": "Vehicle plate",
+    "photo": "Visitor Photo",
+    "photoHint": "A photo helps security identify your guest faster.",
+    "addPhoto": "Add Photo",
+    "authorizedGuest": "Authorized Guest",
     "visitEnds": "Visit ends",
     "visitStarts": "Visit starts",
     "window": "Window: {{start}} - {{end}}"

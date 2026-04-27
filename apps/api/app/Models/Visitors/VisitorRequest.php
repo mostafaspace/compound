@@ -27,6 +27,8 @@ class VisitorRequest extends Model
         'visit_starts_at',
         'visit_ends_at',
         'notes',
+        'picture_url',
+        'number_of_visitors',
         'status',
         'arrived_at',
         'allowed_at',

@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
   },
   inner: {
     flex: 1,
-    paddingHorizontal: spacing.lg, // Premium generous padding
+    paddingHorizontal: spacing.md, // Base padding
     paddingTop: spacing.md,
   },
 });

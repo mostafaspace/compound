@@ -19,6 +19,7 @@ class VisitorPassService
         $token = Str::random(64);
 
         $visitorRequest->pass()->create([
+            'token' => $token,
             'token_hash' => $this->hashToken($token),
             'status' => VisitorPassStatus::Active->value,
             'expires_at' => $visitorRequest->visit_ends_at,
