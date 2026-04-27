@@ -118,6 +118,12 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
           >
             Permissions
           </Link>
+          <Link
+            href="/settings/roles"
+            className="inline-flex items-center gap-2 rounded-lg border border-line bg-panel px-4 py-2.5 text-sm font-medium text-foreground transition hover:border-brand hover:text-brand"
+          >
+            Roles
+          </Link>
         </div>
 
         <div className="rounded-lg border border-line bg-panel px-4 py-3">
