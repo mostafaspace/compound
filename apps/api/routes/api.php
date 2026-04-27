@@ -153,6 +153,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::middleware('role:super_admin,compound_admin,security_guard,support_agent,resident_owner,resident_tenant')
             ->group(function (): void {
                 Route::get('/visitor-requests', [VisitorRequestController::class, 'index'])->name('visitor-requests.index');
+                Route::get('/visitor-requests/{visitorRequest}', [VisitorRequestController::class, 'show'])->name('visitor-requests.show');
                 Route::post('/visitor-requests', [VisitorRequestController::class, 'store'])
                     ->middleware('throttle:visitor-request-create')
                     ->name('visitor-requests.store');

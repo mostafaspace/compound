@@ -48,19 +48,22 @@ export const Input: React.FC<InputProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
   },
   label: {
     marginBottom: spacing.xs,
+    marginLeft: 4,
   },
   input: {
-    height: 48,
-    borderRadius: 8,
-    borderWidth: 1,
-    paddingHorizontal: spacing.md,
+    height: 54,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    paddingHorizontal: spacing.lg,
     fontSize: 16,
+    fontWeight: '500',
   },
   error: {
     marginTop: spacing.xs,
+    marginLeft: 4,
   },
 });

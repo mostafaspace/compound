@@ -23,6 +23,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\Response;
 
 class VisitorRequestController extends Controller
@@ -55,6 +56,18 @@ class VisitorRequestController extends Controller
         return VisitorRequestResource::collection($visitorRequests);
     }
 
+    public function show(Request $request, VisitorRequest $visitorRequest): VisitorRequestResource
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        abort_unless($this->isStaff($user) || $visitorRequest->host_user_id === $user->id, Response::HTTP_FORBIDDEN);
+        
+        $visitorRequest->load(['host', 'unit.building.compound', 'pass']);
+
+        return VisitorRequestResource::make($visitorRequest);
+    }
+
     public function store(StoreVisitorRequestRequest $request): VisitorRequestResource
     {
         /** @var User $actor */
@@ -66,7 +79,15 @@ class VisitorRequestController extends Controller
         $visitorRequest = null;
         $token = null;
 
-        DB::transaction(function () use (&$visitorRequest, &$token, $actor, $validated): void {
+        DB::transaction(function () use (&$visitorRequest, &$token, $actor, $validated, $request): void {
+            $pictureUrl = $validated['pictureUrl'] ?? null;
+
+            if ($request->hasFile('picture')) {
+                $file = $request->file('picture');
+                $path = $file->store('visitors/pictures', config('filesystems.default'));
+                $pictureUrl = Storage::url($path);
+            }
+
             $visitorRequest = VisitorRequest::query()->create([
                 'host_user_id' => $actor->id,
                 'unit_id' => $validated['unitId'],
@@ -76,6 +97,8 @@ class VisitorRequestController extends Controller
                 'visit_starts_at' => $validated['visitStartsAt'],
                 'visit_ends_at' => $validated['visitEndsAt'],
                 'notes' => $validated['notes'] ?? null,
+                'picture_url' => $pictureUrl,
+                'number_of_visitors' => $validated['numberOfVisitors'] ?? null,
                 'status' => VisitorRequestStatus::Pending->value,
             ]);
 

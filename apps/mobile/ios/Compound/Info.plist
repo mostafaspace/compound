@@ -64,6 +64,10 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Compound needs access to your camera to take visitor photos.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Compound needs access to your photo library to upload visitor photos.</string>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
 </dict>

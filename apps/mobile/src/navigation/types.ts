@@ -5,6 +5,8 @@ export type RootStackParamList = {
   Main: undefined;
   Guard: undefined;
   Restoring: undefined;
+  CreateVisitor: undefined;
+  ShareVisitorPass: { visitorId: string };
 };
 
 export type AuthStackParamList = {
