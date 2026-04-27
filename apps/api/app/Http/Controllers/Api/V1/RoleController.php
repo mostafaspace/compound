@@ -20,6 +20,7 @@ class RoleController extends Controller
                 'name'        => $role->name,
                 'permissions' => $role->permissions->pluck('name'),
                 'users_count' => $role->users_count,
+                'is_system'   => (bool) $role->is_system,
             ]);
 
         return response()->json(['data' => $roles]);
@@ -43,6 +44,7 @@ class RoleController extends Controller
             'name'        => $role->name,
             'permissions' => $role->permissions->pluck('name'),
             'users_count' => 0,
+            'is_system'   => false,
         ]], 201);
     }
 
@@ -60,11 +62,18 @@ class RoleController extends Controller
             'name'        => $role->name,
             'permissions' => $role->fresh('permissions')->permissions->pluck('name'),
             'users_count' => $role->users()->count(),
+            'is_system'   => (bool) $role->is_system,
         ]]);
     }
 
     public function destroy(Role $role): JsonResponse
     {
+        if ($role->is_system) {
+            return response()->json([
+                'message' => "Cannot delete system role '{$role->name}'.",
+            ], 422);
+        }
+
         $usersCount = $role->users()->count();
         if ($usersCount > 0) {
             return response()->json([

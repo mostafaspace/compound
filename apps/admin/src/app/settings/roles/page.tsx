@@ -1,10 +1,11 @@
 import { getRoles, getPermissions, getCurrentUser } from "@/lib/api";
 import { SiteNav } from "@/components/site-nav";
-import { requireAdminUser } from "@/lib/session";
+import { requireAdminUser, requirePermission } from "@/lib/session";
 import { RolesClient } from "./roles-client";
 
 export default async function RolesPage() {
-  await requireAdminUser(getCurrentUser);
+  const user = await requireAdminUser(getCurrentUser);
+  await requirePermission(user, "manage_roles");
   const [roles, permissions] = await Promise.all([getRoles(), getPermissions()]);
 
   return (

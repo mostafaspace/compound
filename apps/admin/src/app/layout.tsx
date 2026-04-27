@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { NotificationProvider } from "@/components/notifications/notification-provider";
+import { PermissionProviderWrapper } from "@/components/permission-provider-wrapper";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -34,7 +35,9 @@ export default async function RootLayout({
       <body>
         <NextIntlClientProvider messages={messages}>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-            <NotificationProvider>{children}</NotificationProvider>
+            <PermissionProviderWrapper>
+              <NotificationProvider>{children}</NotificationProvider>
+            </PermissionProviderWrapper>
           </ThemeProvider>
         </NextIntlClientProvider>
       </body>

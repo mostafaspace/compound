@@ -93,7 +93,14 @@ class RbacSeeder extends Seeder
         ];
 
         foreach ($rolePermissions as $roleName => $permissions) {
-            $role = Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'sanctum']);
+            $role = Role::firstOrCreate(
+                ['name' => $roleName, 'guard_name' => 'sanctum'],
+                ['is_system' => true],
+            );
+            // Ensure existing rows also get is_system = true
+            if (! $role->is_system) {
+                $role->update(['is_system' => true]);
+            }
             $role->syncPermissions($permissions);
         }
     }
