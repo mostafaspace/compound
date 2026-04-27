@@ -8,6 +8,8 @@ import { selectCurrentToken, selectCurrentUser, selectIsRestoring } from '../sto
 import { RootStackParamList } from './types';
 import { LoginScreen } from '../features/auth/screens/LoginScreen';
 import { MainTabNavigator } from './MainTabNavigator';
+import { ResidentTabNavigator } from './ResidentTabNavigator';
+import { AdminTabNavigator } from './AdminTabNavigator';
 import { GuardNavigator } from './GuardNavigator';
 import { colors } from '../theme';
 import { linking } from './linking';
@@ -16,6 +18,17 @@ import { CreateVisitorScreen } from '../features/visitors/screens/CreateVisitorS
 import { ShareVisitorPassScreen } from '../features/visitors/screens/ShareVisitorPassScreen';
 
 const Stack = createStackNavigator<RootStackParamList>();
+
+const ADMIN_ROLES = ['super_admin', 'compound_admin', 'board_member', 'finance_reviewer', 'support_agent'];
+const RESIDENT_ROLES = ['resident_owner', 'resident_tenant'];
+const SECURITY_ROLES = ['security_guard'];
+
+const getUserRoleType = (role?: string) => {
+  if (SECURITY_ROLES.includes(role ?? '')) return 'security';
+  if (ADMIN_ROLES.includes(role ?? '')) return 'admin';
+  if (RESIDENT_ROLES.includes(role ?? '')) return 'resident';
+  return 'resident'; // default fallback
+};
 
 export const RootNavigator = () => {
   const { t } = useTranslation();
@@ -38,19 +51,20 @@ export const RootNavigator = () => {
     );
   }
 
-  const userRole = user?.role;
-  const isSecurityGuard = userRole === "security_guard";
+  const roleType = getUserRoleType(user?.role);
 
   return (
     <NavigationContainer linking={linking}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!authToken ? (
           <Stack.Screen name="Auth" component={LoginScreen} />
-        ) : isSecurityGuard ? (
+        ) : roleType === 'security' ? (
           <Stack.Screen name="Guard" component={GuardNavigator} />
+        ) : roleType === 'admin' ? (
+          <Stack.Screen name="Admin" component={AdminTabNavigator} />
         ) : (
           <Stack.Group>
-            <Stack.Screen name="Main" component={MainTabNavigator} />
+            <Stack.Screen name="Main" component={ResidentTabNavigator} />
             <Stack.Screen name="CreateVisitor" component={CreateVisitorScreen} />
             <Stack.Screen name="ShareVisitorPass" component={ShareVisitorPassScreen} />
           </Stack.Group>

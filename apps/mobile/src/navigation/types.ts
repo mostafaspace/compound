@@ -4,6 +4,7 @@ export type RootStackParamList = {
   Auth: undefined;
   Main: undefined;
   Guard: undefined;
+  Admin: undefined;
   Restoring: undefined;
   CreateVisitor: undefined;
   ShareVisitorPass: { visitorId: string };
@@ -22,6 +23,14 @@ export type MainTabParamList = {
   More: undefined;
 };
 
+export type AdminTabParamList = {
+  Dashboard: undefined;
+  Visitors: undefined;
+  Finance: undefined;
+  Units: undefined;
+  Settings: undefined;
+};
+
 export type MoreStackParamList = {
   MoreHome: undefined;
   Notifications: undefined;
@@ -33,5 +42,5 @@ export type MoreStackParamList = {
 export type GuardStackParamList = {
   Gate: undefined;
   Scanner: undefined;
-  Settings: undefined;
+  Invitations: undefined;
 };

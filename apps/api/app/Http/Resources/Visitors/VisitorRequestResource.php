@@ -41,6 +41,7 @@ class VisitorRequestResource extends JsonResource
             'deniedAt' => $this->denied_at?->toIso8601String(),
             'completedAt' => $this->completed_at?->toIso8601String(),
             'cancelledAt' => $this->cancelled_at?->toIso8601String(),
+            'sharedAt' => $this->shared_at?->toIso8601String(),
             'decisionReason' => $this->decision_reason,
             'createdAt' => $this->created_at?->toIso8601String(),
             'updatedAt' => $this->updated_at?->toIso8601String(),

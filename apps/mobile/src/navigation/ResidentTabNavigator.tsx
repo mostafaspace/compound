@@ -2,15 +2,17 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useTranslation } from 'react-i18next';
 import { useColorScheme, Text } from 'react-native';
-import { GuardStackParamList } from './types';
-import { GateScreen } from '../features/security/screens/GateScreen';
-import { ScannerScreen } from '../features/security/screens/ScannerScreen';
-import { InvitationsScreen } from '../features/security/screens/InvitationsScreen';
+import { MainTabParamList } from './types';
+import { ResidentDashboardScreen } from '../features/resident/screens/ResidentDashboardScreen';
+import { VisitorsScreen } from '../features/visitors/screens/VisitorsScreen';
+import { AccountsScreen } from '../features/finance/screens/AccountsScreen';
+import { VotesScreen } from '../features/governance/screens/VotesScreen';
+import { MoreNavigator } from './MoreNavigator';
 import { colors, spacing } from '../theme';
 
-const Tab = createBottomTabNavigator<GuardStackParamList>();
+const Tab = createBottomTabNavigator<MainTabParamList>();
 
-export const GuardNavigator = () => {
+export const ResidentTabNavigator = () => {
   const { t } = useTranslation();
   const isDark = useColorScheme() === 'dark';
 
@@ -43,27 +45,42 @@ export const GuardNavigator = () => {
         },
         tabBarIcon: ({ color, size }) => {
           let icon = '•';
-          if (route.name === 'Gate') icon = '🏠';
-          if (route.name === 'Scanner') icon = '📷';
-          if (route.name === 'Invitations') icon = '📋';
+          if (route.name === 'Dashboard') icon = '🏠';
+          if (route.name === 'Visitors') icon = '👥';
+          if (route.name === 'Finance') icon = '💳';
+          if (route.name === 'Governance') icon = '⚖️';
+          if (route.name === 'More') icon = '•••';
           return <Text style={{ color, fontSize: 20 }}>{icon}</Text>;
         },
       })}
     >
       <Tab.Screen
-        name="Gate"
-        component={GateScreen}
-        options={{ title: t('Security.gate', 'Gate') }}
+        name="Dashboard"
+        component={ResidentDashboardScreen}
+        options={{ title: t('Dashboard.title', { defaultValue: 'Dashboard' }) }}
       />
       <Tab.Screen
-        name="Scanner"
-        component={ScannerScreen}
-        options={{ title: t('Security.scanner', 'Scanner') }}
+        name="Visitors"
+        component={VisitorsScreen}
+        options={{ title: t('Visitors.label') }}
       />
       <Tab.Screen
-        name="Invitations"
-        component={InvitationsScreen}
-        options={{ title: t('Security.invitations', 'Invitations') }}
+        name="Finance"
+        component={AccountsScreen}
+        options={{ title: t('Finance.label') }}
+      />
+      <Tab.Screen
+        name="Governance"
+        component={VotesScreen}
+        options={{ title: t('Governance.label') }}
+      />
+      <Tab.Screen
+        name="More"
+        component={MoreNavigator}
+        options={{
+          title: t('Common.more', { defaultValue: 'More' }),
+          headerShown: false,
+        }}
       />
     </Tab.Navigator>
   );

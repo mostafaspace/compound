@@ -6,7 +6,7 @@ import ViewShot from 'react-native-view-shot';
 import Share from 'react-native-share';
 import QRCode from 'react-native-qrcode-svg';
 import { RootStackParamList } from '../../../navigation/types';
-import { useGetVisitorRequestQuery } from '../../../services/property';
+import { useGetVisitorRequestQuery, useMarkAsSharedMutation } from '../../../services/property';
 import { ScreenContainer } from '../../../components/layout/ScreenContainer';
 import { Typography } from '../../../components/ui/Typography';
 import { Button } from '../../../components/ui/Button';
@@ -24,6 +24,7 @@ export const ShareVisitorPassScreen = () => {
   const viewShotRef = useRef<ViewShot>(null);
 
   const { data: visitor, isLoading, error, refetch } = useGetVisitorRequestQuery(visitorId);
+  const [markAsShared] = useMarkAsSharedMutation();
 
   React.useEffect(() => {
     // Debug logging
@@ -75,6 +76,8 @@ export const ShareVisitorPassScreen = () => {
           title: 'Visitor Pass',
           message: `Here is your visitor pass for ${visitor.unit?.compoundName || 'our compound'}.`,
         });
+        // Mark as shared after successful share
+        await markAsShared(visitorId).unwrap();
       }
     } catch (err) {
       console.error("Error sharing pass", err);

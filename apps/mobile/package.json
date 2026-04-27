@@ -36,8 +36,10 @@
     "react-native-share": "^12.2.6",
     "react-native-svg": "^15.15.4",
     "react-native-view-shot": "^4.0.3",
+    "react-native-vision-camera": "^5.0.7",
     "react-redux": "^9.2.0",
     "redux-logger": "^3.0.6",
+    "vision-camera-code-scanner": "^0.2.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {

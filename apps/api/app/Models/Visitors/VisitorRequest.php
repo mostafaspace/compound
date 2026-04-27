@@ -35,6 +35,7 @@ class VisitorRequest extends Model
         'denied_at',
         'completed_at',
         'cancelled_at',
+        'shared_at',
         'decision_reason',
     ];
 
@@ -46,6 +47,7 @@ class VisitorRequest extends Model
             'cancelled_at' => 'datetime',
             'completed_at' => 'datetime',
             'denied_at' => 'datetime',
+            'shared_at' => 'datetime',
             'status' => VisitorRequestStatus::class,
             'visit_ends_at' => 'datetime',
             'visit_starts_at' => 'datetime',

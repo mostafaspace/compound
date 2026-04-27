@@ -214,6 +214,22 @@ class VisitorRequestController extends Controller
         return VisitorRequestResource::make($visitorRequest);
     }
 
+    public function markAsShared(Request $request, VisitorRequest $visitorRequest): VisitorRequestResource
+    {
+        /** @var User $actor */
+        $actor = $request->user();
+
+        abort_unless($visitorRequest->host_user_id === $actor->id, Response::HTTP_FORBIDDEN);
+
+        $visitorRequest->update(['shared_at' => now()]);
+
+        $this->auditLogger->record('visitors.pass_shared', actor: $actor, request: $request, metadata: [
+            'visitor_request_id' => $visitorRequest->id,
+        ]);
+
+        return VisitorRequestResource::make($visitorRequest);
+    }
+
     public function cancel(VisitorDecisionRequest $request, VisitorRequest $visitorRequest): VisitorRequestResource
     {
         /** @var User $actor */

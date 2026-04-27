@@ -157,6 +157,8 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
                     ->name('visitor-requests.store');
                 Route::post('/visitor-requests/{visitorRequest}/cancel', [VisitorRequestController::class, 'cancel'])
                     ->name('visitor-requests.cancel');
+                Route::post('/visitor-requests/{visitorRequest}/mark-as-shared', [VisitorRequestController::class, 'markAsShared'])
+                    ->name('visitor-requests.mark-as-shared');
             });
 
         Route::middleware('role:manage_security')

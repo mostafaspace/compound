@@ -39,6 +39,13 @@ export const propertyApi = api.injectEndpoints({
       }),
       invalidatesTags: ["VisitorRequest"],
     }),
+    markAsShared: builder.mutation<VisitorRequest, string>({
+      query: (id) => ({
+        url: `/visitor-requests/${id}/mark-as-shared`,
+        method: "POST",
+      }),
+      invalidatesTags: ["VisitorRequest"],
+    }),
     getIssues: builder.query<Issue[], void>({
       query: () => "/my/issues",
       transformResponse: (response: ApiEnvelope<Issue[]>) => response.data,
@@ -118,6 +125,7 @@ export const {
   useGetVisitorRequestsQuery,
   useGetVisitorRequestQuery,
   useCancelVisitorMutation,
+  useMarkAsSharedMutation,
   useGetIssuesQuery,
   useGetNotificationsQuery,
   useGetAnnouncementsQuery,

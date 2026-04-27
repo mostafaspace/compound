@@ -35,7 +35,16 @@ export const VisitorsScreen = () => {
     <View style={[styles.card, { backgroundColor: isDark ? colors.surface.dark : colors.surface.light, borderColor: isDark ? colors.border.dark : colors.border.light }]}>
       <View style={styles.cardHeader}>
         <Typography variant="h3">{item.visitorName}</Typography>
-        <Typography variant="label">{formatStatus(item.status)}</Typography>
+        <View style={styles.badgeRow}>
+          <Typography variant="label">{formatStatus(item.status)}</Typography>
+          {item.sharedAt && (
+            <View style={styles.sharedBadge}>
+              <Typography variant="caption" style={{ color: colors.primary.light, fontWeight: '600' }}>
+                ✓ Shared
+              </Typography>
+            </View>
+          )}
+        </View>
       </View>
       <Typography variant="caption" style={styles.cardText}>{t("Visitors.visitStarts")}: {formatDate(item.visitStartsAt)}</Typography>
       <Typography variant="caption" style={styles.cardText}>{t("Visitors.visitEnds")}: {formatDate(item.visitEndsAt)}</Typography>
@@ -108,6 +117,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: spacing.xs,
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  sharedBadge: {
+    backgroundColor: colors.primary.light + '20',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
   },
   cardText: {
     marginBottom: 2,
