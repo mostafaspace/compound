@@ -42,17 +42,17 @@ class MigrateExistingRolesToSpatie extends Seeder
                     $user->assignRole($role);
                 }
 
-                // Determine scope_id (bigint — 0 = global/no scope sentinel)
+                // Determine scope_id (varchar(26) — '' = global/no scope sentinel)
                 $scopeId = match ($scopeType) {
-                    'compound' => (int) ($user->compound_id ?? 0),
-                    'unit' => (int) ($user->unitMemberships()
-                        ->where('is_primary', true)
-                        ->value('unit_id') ?? 0),
-                    default => 0, // global — zero sentinel
+                    'compound' => (string) ($user->compound_id ?? ''),
+                    'unit'     => (string) ($user->unitMemberships()
+                                    ->where('is_primary', true)
+                                    ->value('unit_id') ?? ''),
+                    default    => '', // global — empty string sentinel
                 };
 
-                // Skip compound-scoped users with no compound
-                if ($scopeType === 'compound' && $scopeId === 0) {
+                // Skip compound-scoped users with no compound assigned
+                if ($scopeType === 'compound' && $scopeId === '') {
                     continue;
                 }
 
