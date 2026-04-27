@@ -87,7 +87,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         // Accessible to all authenticated roles (needed for client-side formatting).
         Route::get('/locale', LocaleController::class)->name('locale');
         Route::get('/system/ops-status', OperationalStatusController::class)
-            ->middleware('role:super_admin,compound_admin,support_agent')
+            ->middleware('role:view_analytics')
             ->name('system.ops-status');
         Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
         Route::get('/notifications/unread-count', [NotificationController::class, 'getUnreadCount'])
@@ -107,8 +107,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::put('/notification-preferences', [NotificationPreferenceController::class, 'update'])
             ->name('notification-preferences.update');
 
-        Route::middleware('role:super_admin,compound_admin,board_member,finance_reviewer,support_agent,resident_owner,resident_tenant')
-            ->group(function (): void {
+        Route::group(function (): void {
                 Route::get('/document-types', [DocumentTypeController::class, 'index'])->name('document-types.index');
                 Route::get('/documents', [UserDocumentController::class, 'index'])->name('documents.index');
                 Route::post('/documents', [UserDocumentController::class, 'store'])
@@ -118,10 +117,10 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
                     ->name('documents.download');
             });
 
-        Route::middleware('role:resident_owner,resident_tenant')
+        Route::middleware('role:view_visitors')
             ->get('/my/verification-requests', [VerificationRequestController::class, 'mine'])
             ->name('my.verification-requests.index');
-        Route::middleware('role:resident_owner,resident_tenant')->group(function (): void {
+        Route::middleware('role:view_visitors')->group(function (): void {
             Route::get('/my/units', [UnitController::class, 'mine'])
                 ->name('my.units.index');
             Route::get('/my/finance/unit-accounts', [UnitAccountController::class, 'mine'])
@@ -133,8 +132,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         });
 
         // Resident transparency: approved spending summary — accessible to all authenticated roles
-        Route::middleware('role:super_admin,compound_admin,board_member,finance_reviewer,support_agent,resident_owner,resident_tenant')
-            ->get('/finance/expenses/public-summary', [ExpenseController::class, 'publicSummary'])
+        Route::get('/finance/expenses/public-summary', [ExpenseController::class, 'publicSummary'])
             ->name('finance.expenses.public-summary');
 
         // Issue Management for residents
@@ -150,7 +148,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::post('/announcements/{announcement}/acknowledge', [AnnouncementController::class, 'acknowledge'])
             ->name('announcements.acknowledge');
 
-        Route::middleware('role:super_admin,compound_admin,security_guard,support_agent,resident_owner,resident_tenant')
+        Route::middleware('role:view_visitors')
             ->group(function (): void {
                 Route::get('/visitor-requests', [VisitorRequestController::class, 'index'])->name('visitor-requests.index');
                 Route::post('/visitor-requests', [VisitorRequestController::class, 'store'])
@@ -160,7 +158,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
                     ->name('visitor-requests.cancel');
             });
 
-        Route::middleware('role:super_admin,compound_admin,security_guard,support_agent')
+        Route::middleware('role:manage_security')
             ->group(function (): void {
                 Route::post('/visitor-requests/validate-pass', [VisitorRequestController::class, 'validatePass'])
                     ->middleware('throttle:visitor-pass-scan')
@@ -182,7 +180,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             ->name('units.responsible-party');
     });
 
-    Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,board_member,finance_reviewer,support_agent'])
+    Route::middleware(['auth:sanctum', 'role:view_users'])
         ->group(function (): void {
             Route::get('/units', [UnitController::class, 'lookup'])->name('units.lookup');
             Route::post('/buildings/{building}/units/import', [UnitController::class, 'import'])->name('buildings.units.import');
@@ -219,14 +217,14 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
                 ->name('verification-requests.request-more-info');
             Route::patch('/documents/{userDocument}/review', [UserDocumentController::class, 'review'])->name('documents.review');
 
-            Route::middleware('role:super_admin,compound_admin,support_agent')->group(function (): void {
+            Route::middleware('role:view_audit_logs')->group(function (): void {
                 Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
                 Route::get('/audit-logs/timeline', [AuditLogController::class, 'timeline'])->name('audit-logs.timeline');
                 Route::get('/audit-logs/export', [AuditLogController::class, 'export'])->name('audit-logs.export');
             });
 
             // Data import
-            Route::middleware('role:super_admin,compound_admin')->group(function (): void {
+            Route::middleware('role:manage_compounds')->group(function (): void {
                 Route::get('/imports', [ImportBatchController::class, 'index'])->name('imports.index');
                 Route::post('/imports', [ImportBatchController::class, 'store'])->name('imports.store');
                 Route::get('/imports/templates/{type}', [ImportBatchController::class, 'template'])->name('imports.template');
@@ -267,7 +265,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
                 ->name('announcements.acknowledgements');
         });
 
-    Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,board_member,finance_reviewer'])
+    Route::middleware(['auth:sanctum', 'role:view_finance'])
         ->prefix('finance')
         ->name('finance.')
         ->group(function (): void {
@@ -344,13 +342,13 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             Route::post('/expenses/{expense}/reject', [ExpenseController::class, 'reject'])->name('expenses.reject');
         });
 
-    Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,board_member,finance_reviewer,support_agent,resident_owner,resident_tenant'])
+    Route::middleware(['auth:sanctum'])
         ->post('/finance/unit-accounts/{unitAccount}/payment-submissions', [UnitAccountController::class, 'submitPayment'])
         ->middleware('throttle:payment-submit')
         ->name('finance.unit-accounts.payment-submissions.store');
 
     // Online payments — admin views
-    Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,board_member,finance_reviewer'])
+    Route::middleware(['auth:sanctum', 'role:view_finance'])
         ->prefix('finance')
         ->name('finance.')
         ->group(function (): void {
@@ -360,7 +358,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         });
 
     // Online payments — resident: initiate a session
-    Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,board_member,finance_reviewer,support_agent,resident_owner,resident_tenant'])
+    Route::middleware(['auth:sanctum'])
         ->post('/finance/payment-sessions', [PaymentSessionController::class, 'store'])
         ->middleware('throttle:payment-submit')
         ->name('finance.payment-sessions.store');
@@ -370,7 +368,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         ->name('webhooks.payments');
 
     // Governance — admin management routes
-    Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,board_member'])
+    Route::middleware(['auth:sanctum', 'role:view_governance'])
         ->prefix('governance')
         ->name('governance.')
         ->group(function (): void {
@@ -384,7 +382,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         });
 
     // Governance — resident participation routes
-    Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,board_member,resident_owner,resident_tenant'])
+    Route::middleware(['auth:sanctum', 'role:view_governance'])
         ->prefix('governance')
         ->name('governance.resident.')
         ->group(function (): void {
@@ -393,7 +391,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         });
 
     // Notification channels — admin: templates + delivery logs
-    Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,board_member,finance_reviewer,support_agent'])
+    Route::middleware(['auth:sanctum', 'role:view_users'])
         ->name('notifications.')
         ->group(function (): void {
             Route::get('/notification-templates', [NotificationTemplateController::class, 'index'])->name('templates.index');
@@ -406,7 +404,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         });
 
     // Notification channels — resident/user: device token management
-    Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,board_member,finance_reviewer,support_agent,resident_owner,resident_tenant'])
+    Route::middleware(['auth:sanctum'])
         ->name('device-tokens.')
         ->group(function (): void {
             Route::get('/device-tokens', [DeviceTokenController::class, 'index'])->name('index');
@@ -415,18 +413,18 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         });
 
     // Operational analytics — read-only metrics dashboard (CM-109)
-    Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,support_agent'])
+    Route::middleware(['auth:sanctum', 'role:view_analytics'])
         ->get('/analytics/operational', OperationalAnalyticsController::class)
         ->name('analytics.operational');
 
     // ─── Launch readiness (CM-127) ────────────────────────────────────────────
     // Comprehensive pre-launch health gate — super_admin only.
-    Route::middleware(['auth:sanctum', 'role:super_admin'])
+    Route::middleware(['auth:sanctum', 'role:manage_roles'])
         ->get('/system/launch-readiness', LaunchReadinessController::class)
         ->name('system.launch-readiness');
 
     // User support console + lifecycle actions
-    Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,support_agent'])
+    Route::middleware(['auth:sanctum', 'role:view_users'])
         ->group(function (): void {
             Route::get('/users', [UserSupportViewController::class, 'index'])->name('users.index');
             Route::get('/users/{user}/support-view', [UserSupportViewController::class, 'show'])->name('users.support-view');
@@ -434,13 +432,13 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         });
 
     // User photo upload — any authenticated admin
-    Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin'])
+    Route::middleware(['auth:sanctum', 'role:manage_users'])
         ->group(function (): void {
             Route::post('/users/{user}/photo', [UserPhotoController::class, 'update'])->name('users.photo.update');
             Route::delete('/users/{user}/photo', [UserPhotoController::class, 'destroy'])->name('users.photo.destroy');
         });
 
-    Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin'])
+    Route::middleware(['auth:sanctum', 'role:manage_users'])
         ->group(function (): void {
             Route::post('/users/{user}/suspend', [UserLifecycleController::class, 'suspend'])->name('users.suspend');
             Route::post('/users/{user}/reactivate', [UserLifecycleController::class, 'reactivate'])->name('users.reactivate');
@@ -455,7 +453,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         });
 
     // Settings — admin only (super_admin / compound_admin)
-    Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin'])
+    Route::middleware(['auth:sanctum', 'role:manage_settings'])
         ->prefix('settings')
         ->name('settings.')
         ->group(function (): void {
@@ -467,7 +465,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
     // ─── Security operations (CM-81) ─────────────────────────────────────────
 
     // Gates — admin read/write; guard read-only
-    Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,support_agent'])
+    Route::middleware(['auth:sanctum', 'role:manage_security'])
         ->prefix('security')
         ->name('security.')
         ->group(function (): void {
@@ -500,7 +498,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         });
 
     // Security operations — guard: create incidents + manual entries, heartbeat devices
-    Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,support_agent,security_guard'])
+    Route::middleware(['auth:sanctum', 'role:manage_security'])
         ->prefix('security')
         ->name('security.guard.')
         ->group(function (): void {
@@ -512,7 +510,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
     // ─── Governance meetings (CM-82) ─────────────────────────────────────────
 
     // Admin routes: full CRUD for meetings, agenda, participants, minutes, decisions, action items
-    Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,board_member'])
+    Route::middleware(['auth:sanctum', 'role:view_governance'])
         ->prefix('meetings')
         ->name('meetings.')
         ->group(function (): void {
@@ -549,7 +547,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         });
 
     // Resident: RSVP + view published minutes
-    Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,board_member,resident_owner,resident_tenant,support_agent'])
+    Route::middleware(['auth:sanctum', 'role:view_governance'])
         ->prefix('meetings')
         ->name('meetings.resident.')
         ->group(function (): void {
@@ -558,7 +556,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
 
     // ─── Maintenance work orders (CM-83) ─────────────────────────────────────
 
-    Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin,support_agent'])
+    Route::middleware(['auth:sanctum', 'role:manage_compounds'])
         ->prefix('work-orders')
         ->name('work-orders.')
         ->group(function (): void {
@@ -594,7 +592,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         });
 
     // Admin-only: manage consents for any user, process exports, anonymize, legal hold
-    Route::middleware(['auth:sanctum', 'role:super_admin,compound_admin'])
+    Route::middleware(['auth:sanctum', 'role:manage_settings'])
         ->prefix('privacy')
         ->name('privacy.admin.')
         ->group(function (): void {
@@ -604,4 +602,22 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             Route::post('/users/{user}/legal-hold', [AnonymizationController::class, 'legalHold'])->name('users.legal-hold');
             Route::post('/users/{user}/anonymize', [AnonymizationController::class, 'anonymize'])->name('users.anonymize');
         });
+
+    // RBAC management
+    Route::middleware(['auth:sanctum', 'role:manage_roles'])->group(function (): void {
+        Route::get('/roles', [\App\Http\Controllers\Api\V1\RoleController::class, 'index'])->name('roles.index');
+        Route::post('/roles', [\App\Http\Controllers\Api\V1\RoleController::class, 'store'])->name('roles.store');
+        Route::put('/roles/{role}', [\App\Http\Controllers\Api\V1\RoleController::class, 'update'])->name('roles.update');
+        Route::delete('/roles/{role}', [\App\Http\Controllers\Api\V1\RoleController::class, 'destroy'])->name('roles.destroy');
+
+        Route::get('/permissions', [\App\Http\Controllers\Api\V1\PermissionController::class, 'index'])->name('permissions.index');
+        Route::post('/permissions', [\App\Http\Controllers\Api\V1\PermissionController::class, 'store'])->name('permissions.store');
+        Route::delete('/permissions/{permission}', [\App\Http\Controllers\Api\V1\PermissionController::class, 'destroy'])->name('permissions.destroy');
+    });
+
+    Route::middleware(['auth:sanctum', 'role:manage_users'])->group(function (): void {
+        Route::get('/users/{user}/role-assignments', [\App\Http\Controllers\Api\V1\UserRoleAssignmentController::class, 'index'])->name('users.role-assignments.index');
+        Route::post('/users/{user}/role-assignments', [\App\Http\Controllers\Api\V1\UserRoleAssignmentController::class, 'store'])->name('users.role-assignments.store');
+        Route::delete('/users/{user}/role-assignments/{assignment}', [\App\Http\Controllers\Api\V1\UserRoleAssignmentController::class, 'destroy'])->name('users.role-assignments.destroy');
+    });
 });
