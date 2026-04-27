@@ -393,6 +393,31 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             Route::post('/votes/{vote}/cast', [VoteController::class, 'cast'])->name('votes.cast');
         });
 
+    // Polls — all operations (admin CRUD + resident participation) under view_governance
+    Route::middleware(['auth:sanctum', 'role:view_governance'])
+        ->prefix('polls')
+        ->name('polls.')
+        ->group(function (): void {
+            // Poll Types
+            Route::get('/types', [\App\Http\Controllers\Api\V1\Polls\PollTypeController::class, 'index'])->name('types.index');
+            Route::post('/types', [\App\Http\Controllers\Api\V1\Polls\PollTypeController::class, 'store'])->name('types.store');
+            Route::patch('/types/{pollType}', [\App\Http\Controllers\Api\V1\Polls\PollTypeController::class, 'update'])->name('types.update');
+            Route::delete('/types/{pollType}', [\App\Http\Controllers\Api\V1\Polls\PollTypeController::class, 'destroy'])->name('types.destroy');
+
+            // Polls CRUD + lifecycle
+            Route::get('/', [\App\Http\Controllers\Api\V1\Polls\PollController::class, 'index'])->name('index');
+            Route::post('/', [\App\Http\Controllers\Api\V1\Polls\PollController::class, 'store'])->name('store');
+            Route::get('/{poll}', [\App\Http\Controllers\Api\V1\Polls\PollController::class, 'show'])->name('show');
+            Route::patch('/{poll}', [\App\Http\Controllers\Api\V1\Polls\PollController::class, 'update'])->name('update');
+            Route::post('/{poll}/publish', [\App\Http\Controllers\Api\V1\Polls\PollController::class, 'publish'])->name('publish');
+            Route::post('/{poll}/close', [\App\Http\Controllers\Api\V1\Polls\PollController::class, 'close'])->name('close');
+            Route::post('/{poll}/archive', [\App\Http\Controllers\Api\V1\Polls\PollController::class, 'archive'])->name('archive');
+
+            // Resident participation
+            Route::get('/{poll}/eligibility', [\App\Http\Controllers\Api\V1\Polls\PollController::class, 'eligibility'])->name('eligibility');
+            Route::post('/{poll}/vote', [\App\Http\Controllers\Api\V1\Polls\PollController::class, 'vote'])->name('vote');
+        });
+
     // Notification channels — admin: templates + delivery logs
     Route::middleware(['auth:sanctum', 'role:view_users'])
         ->name('notifications.')
