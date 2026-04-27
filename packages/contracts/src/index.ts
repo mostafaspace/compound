@@ -9,3 +9,4 @@ export * from "./announcements";
 export * from "./settings";
 export * from "./imports";
 export * from "./advanced-finance";
+export * from "./polls";
