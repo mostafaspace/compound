@@ -2826,6 +2826,7 @@ export interface RoleRecord {
   name: string;
   permissions: string[];
   users_count: number;
+  is_system: boolean;
 }
 
 export interface PermissionRecord {

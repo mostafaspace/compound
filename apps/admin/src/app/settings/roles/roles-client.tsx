@@ -122,7 +122,11 @@ export function RolesClient({
               <p className="text-sm font-semibold">{role.name}</p>
               <p className="text-xs text-muted">{role.users_count} users</p>
             </div>
-            {role.users_count === 0 && (
+            {role.is_system ? (
+              <span className="rounded border border-line px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
+                System
+              </span>
+            ) : role.users_count === 0 ? (
               <button
                 onClick={(e) => { e.stopPropagation(); handleDeleteRole(role); }}
                 disabled={isPending}
@@ -130,7 +134,7 @@ export function RolesClient({
               >
                 Delete
               </button>
-            )}
+            ) : null}
           </div>
         ))}
       </div>

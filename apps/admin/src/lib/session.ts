@@ -87,3 +87,22 @@ export async function requireAdminUser(
 
   return user;
 }
+
+/**
+ * Like requireAdminUser but also enforces a Spatie permission gate.
+ * Super admins bypass all permission checks.
+ * Redirects to /403 if the user lacks the required permission.
+ */
+export async function requirePermission(
+  user: AuthenticatedUser,
+  permission: string,
+): Promise<void> {
+  const isSuperAdmin =
+    user.roles?.includes("super_admin") || user.role === "super_admin";
+  if (isSuperAdmin) return;
+
+  const hasPermission = user.permissions?.includes(permission) ?? false;
+  if (!hasPermission) {
+    redirect("/403");
+  }
+}
