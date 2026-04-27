@@ -57,6 +57,12 @@ export interface PaginatedEnvelope<T> extends ApiEnvelope<T[]> {
   };
 }
 
+export interface ScopeAssignment {
+  role: string;
+  scope_type: 'global' | 'compound' | 'building' | 'floor' | 'unit';
+  scope_id: string | null;
+}
+
 export interface AuthenticatedUser {
   id: number;
   name: string;
@@ -67,6 +73,9 @@ export interface AuthenticatedUser {
   status: "invited" | "pending_review" | "active" | "suspended" | "archived";
   emailVerifiedAt: string | null;
   lastLoginAt: string | null;
+  roles: string[];
+  permissions: string[];
+  scopes: ScopeAssignment[];
 }
 
 export interface InvitationUnitSummary {

@@ -2818,3 +2818,170 @@ export async function getLocaleSettings(): Promise<LocaleSettings | null> {
     return null;
   }
 }
+
+// --- RBAC ---
+
+export interface RoleRecord {
+  id: number;
+  name: string;
+  permissions: string[];
+  users_count: number;
+}
+
+export interface PermissionRecord {
+  id: number;
+  name: string;
+  roles_count: number;
+  is_core: boolean;
+}
+
+export interface AdminScopeAssignment {
+  id: number;
+  role_name: string;
+  scope_type: 'global' | 'compound' | 'building' | 'floor' | 'unit';
+  scope_id: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+export async function getRoles(): Promise<RoleRecord[]> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/roles`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+    if (!response.ok) return [];
+    const payload = (await response.json()) as { data: RoleRecord[] };
+    return payload.data;
+  } catch {
+    return [];
+  }
+}
+
+export async function createRole(name: string, permissions: string[]): Promise<RoleRecord> {
+  const response = await fetch(`${config.apiBaseUrl}/roles`, {
+    body: JSON.stringify({ name, permissions }),
+    headers: {
+      ...(await apiHeaders(true)),
+      "Content-Type": "application/json",
+    },
+    method: "POST",
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to create role: ${response.status}`);
+  }
+  const payload = (await response.json()) as { data: RoleRecord };
+  return payload.data;
+}
+
+export async function updateRolePermissions(roleId: number, permissions: string[]): Promise<RoleRecord> {
+  const response = await fetch(`${config.apiBaseUrl}/roles/${roleId}`, {
+    body: JSON.stringify({ permissions }),
+    headers: {
+      ...(await apiHeaders(true)),
+      "Content-Type": "application/json",
+    },
+    method: "PUT",
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to update role: ${response.status}`);
+  }
+  const payload = (await response.json()) as { data: RoleRecord };
+  return payload.data;
+}
+
+export async function deleteRole(roleId: number): Promise<void> {
+  const response = await fetch(`${config.apiBaseUrl}/roles/${roleId}`, {
+    headers: await apiHeaders(true),
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to delete role: ${response.status}`);
+  }
+}
+
+export async function getPermissions(): Promise<PermissionRecord[]> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/permissions`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+    if (!response.ok) return [];
+    const payload = (await response.json()) as { data: PermissionRecord[] };
+    return payload.data;
+  } catch {
+    return [];
+  }
+}
+
+export async function createPermission(name: string): Promise<PermissionRecord> {
+  const response = await fetch(`${config.apiBaseUrl}/permissions`, {
+    body: JSON.stringify({ name }),
+    headers: {
+      ...(await apiHeaders(true)),
+      "Content-Type": "application/json",
+    },
+    method: "POST",
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to create permission: ${response.status}`);
+  }
+  const payload = (await response.json()) as { data: PermissionRecord };
+  return payload.data;
+}
+
+export async function deletePermission(permissionId: number): Promise<void> {
+  const response = await fetch(`${config.apiBaseUrl}/permissions/${permissionId}`, {
+    headers: await apiHeaders(true),
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to delete permission: ${response.status}`);
+  }
+}
+
+export async function getUserRoleAssignments(userId: number): Promise<{
+  spatie_roles: string[];
+  scope_assignments: AdminScopeAssignment[];
+}> {
+  const response = await fetch(`${config.apiBaseUrl}/users/${userId}/role-assignments`, {
+    cache: "no-store",
+    headers: await apiHeaders(true),
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to get user role assignments: ${response.status}`);
+  }
+  const payload = (await response.json()) as { data: { spatie_roles: string[]; scope_assignments: AdminScopeAssignment[] } };
+  return payload.data;
+}
+
+export async function assignUserRole(
+  userId: number,
+  roleName: string,
+  scopeType: string,
+  scopeId?: string | null,
+): Promise<AdminScopeAssignment> {
+  const response = await fetch(`${config.apiBaseUrl}/users/${userId}/role-assignments`, {
+    body: JSON.stringify({ role_name: roleName, scope_type: scopeType, scope_id: scopeId ?? null }),
+    headers: {
+      ...(await apiHeaders(true)),
+      "Content-Type": "application/json",
+    },
+    method: "POST",
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to assign user role: ${response.status}`);
+  }
+  const payload = (await response.json()) as { data: AdminScopeAssignment };
+  return payload.data;
+}
+
+export async function revokeUserRole(userId: number, assignmentId: number): Promise<void> {
+  const response = await fetch(`${config.apiBaseUrl}/users/${userId}/role-assignments/${assignmentId}`, {
+    headers: await apiHeaders(true),
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to revoke user role: ${response.status}`);
+  }
+}
