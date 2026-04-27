@@ -1,10 +1,10 @@
-import type { AuthenticatedUser } from "@compound/contracts";
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
 import { LogoutButton } from "@/components/logout-button";
 import { getCurrentUser, getUsers } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
+import { UsersTableClient } from "./users-table-client";
 
 interface SupportUsersPageProps {
   searchParams?: Promise<{
@@ -27,18 +27,6 @@ const roleOptions = [
   "support_agent",
 ];
 
-function statusBadge(status: string): string {
-  switch (status) {
-    case "suspended":
-      return "bg-[#fde8e5] text-danger";
-    case "archived":
-      return "bg-background text-muted";
-    case "active":
-      return "bg-[#e6f3ef] text-brand";
-    default:
-      return "bg-[#fff5e5] text-[#8a520c]";
-  }
-}
 
 export default async function SupportUsersPage({ searchParams }: SupportUsersPageProps) {
   await requireAdminUser(getCurrentUser, ["super_admin", "compound_admin", "support_agent"]);
@@ -136,49 +124,16 @@ export default async function SupportUsersPage({ searchParams }: SupportUsersPag
             <p className="text-sm text-muted">{users.length} user(s) found</p>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[700px] border-collapse text-left text-sm">
-              <thead className="bg-background text-muted">
-                <tr>
-                  <th className="px-4 py-3 font-semibold">{t("colName")}</th>
-                  <th className="px-4 py-3 font-semibold">{t("colEmail")}</th>
-                  <th className="px-4 py-3 font-semibold">{t("colRole")}</th>
-                  <th className="px-4 py-3 font-semibold">{t("colStatus")}</th>
-                  <th className="px-4 py-3 font-semibold">{t("colActions")}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line">
-                {users.length === 0 ? (
-                  <tr>
-                    <td className="px-4 py-8 text-center text-muted" colSpan={5}>
-                      {t("empty")}
-                    </td>
-                  </tr>
-                ) : (
-                  users.map((user: AuthenticatedUser) => (
-                    <tr key={user.id}>
-                      <td className="px-4 py-4 font-semibold">{user.name}</td>
-                      <td className="px-4 py-4 text-muted">{user.email}</td>
-                      <td className="px-4 py-4 text-muted">{user.role}</td>
-                      <td className="px-4 py-4">
-                        <span className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${statusBadge(user.status)}`}>
-                          {user.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4">
-                        <Link
-                          className="text-sm font-semibold text-brand hover:text-brand-strong"
-                          href={`/support/users/${user.id}`}
-                        >
-                          {t("viewDetails")}
-                        </Link>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+          <UsersTableClient
+            users={users}
+            colName={t("colName")}
+            colEmail={t("colEmail")}
+            colRole={t("colRole")}
+            colStatus={t("colStatus")}
+            colActions={t("colActions")}
+            empty={t("empty")}
+            viewDetails={t("viewDetails")}
+          />
         </div>
       </section>
     </main>
