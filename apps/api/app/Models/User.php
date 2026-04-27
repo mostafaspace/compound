@@ -19,13 +19,23 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Spatie\Permission\Traits\HasRoles;
 
 #[Fillable(['name', 'email', 'phone', 'photo_url', 'role', 'compound_id', 'status', 'password', 'legal_hold', 'anonymized_at'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable, HasRoles;
+
+    /**
+     * Tell Spatie which guard this model uses so roles/permissions are matched
+     * against the 'sanctum' guard (the app's API authentication driver).
+     */
+    public function guardName(): string
+    {
+        return 'sanctum';
+    }
 
     /**
      * Get the attributes that should be cast.
@@ -119,5 +129,13 @@ class User extends Authenticatable
     public function notificationPreference(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
         return $this->hasOne(NotificationPreference::class);
+    }
+
+    /**
+     * @return HasMany<UserScopeAssignment, $this>
+     */
+    public function scopeAssignments(): HasMany
+    {
+        return $this->hasMany(UserScopeAssignment::class);
     }
 }

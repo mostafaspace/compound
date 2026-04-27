@@ -64,7 +64,8 @@ class AuthController extends Controller
 
     public function me(Request $request): UserResource
     {
-        return UserResource::make($request->user());
+        $user = $request->user()->load(['roles', 'permissions', 'scopeAssignments']);
+        return UserResource::make($user);
     }
 
     public function logout(Request $request): JsonResponse

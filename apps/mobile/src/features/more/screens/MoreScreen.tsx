@@ -4,10 +4,14 @@ import { useTranslation } from 'react-i18next';
 import { colors, spacing } from '../../../theme';
 import { Typography } from '../../../components/ui/Typography';
 import { ScreenContainer } from '../../../components/layout/ScreenContainer';
+import { usePermission } from '../../../hooks/usePermission';
 
 export const MoreScreen = ({ navigation }: { navigation: any }) => {
   const { t } = useTranslation();
   const isDark = useColorScheme() === 'dark';
+
+  const canViewAnnouncements = usePermission('view_announcements');
+  const canViewOrgChart = usePermission('view_org_chart');
 
   const menuItems = [
     {
@@ -15,43 +19,48 @@ export const MoreScreen = ({ navigation }: { navigation: any }) => {
       label: t("Property.label"),
       icon: '🏠',
       screen: 'Property',
+      show: true,
     },
     {
       id: 'notifications',
       label: t("Notifications.label"),
       icon: '🔔',
       screen: 'Notifications',
+      show: true,
     },
     {
       id: 'announcements',
       label: t("Announcements.label"),
       icon: '📢',
       screen: 'Announcements',
+      show: canViewAnnouncements,
     },
     {
       id: 'orgchart',
       label: t("OrgChart.label", { defaultValue: "Org Chart" }),
       icon: '🏛️',
       screen: 'OrgChart',
+      show: canViewOrgChart,
     },
     {
       id: 'settings',
       label: t("Common.settings", { defaultValue: "Settings" }),
       icon: '⚙️',
       screen: 'Settings',
+      show: true,
     },
   ];
 
   return (
     <ScreenContainer scrollable style={styles.container}>
       <View style={styles.section}>
-        {menuItems.map((item) => (
-          <Pressable 
-            key={item.id} 
+        {menuItems.filter((item) => item.show).map((item) => (
+          <Pressable
+            key={item.id}
             onPress={() => navigation.navigate(item.screen)}
             style={({ pressed }) => [
-              styles.menuItem, 
-              { 
+              styles.menuItem,
+              {
                 backgroundColor: isDark ? colors.surface.dark : colors.surface.light,
                 borderColor: isDark ? colors.border.dark : colors.border.light,
               },

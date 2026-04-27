@@ -110,6 +110,22 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
       </header>
 
       <section className="mx-auto max-w-7xl space-y-8 px-5 py-6 lg:px-8">
+        {/* Sub-page navigation */}
+        <div className="flex flex-wrap gap-3">
+          <Link
+            href="/settings/permissions"
+            className="inline-flex items-center gap-2 rounded-lg border border-line bg-panel px-4 py-2.5 text-sm font-medium text-foreground transition hover:border-brand hover:text-brand"
+          >
+            Permissions
+          </Link>
+          <Link
+            href="/settings/roles"
+            className="inline-flex items-center gap-2 rounded-lg border border-line bg-panel px-4 py-2.5 text-sm font-medium text-foreground transition hover:border-brand hover:text-brand"
+          >
+            Roles
+          </Link>
+        </div>
+
         <div className="rounded-lg border border-line bg-panel px-4 py-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted">{t("scopeLabel")}</p>
           <p className="mt-1 text-sm font-medium text-foreground">

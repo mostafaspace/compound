@@ -9,6 +9,7 @@ import { AccountsScreen } from '../features/finance/screens/AccountsScreen';
 import { VotesScreen } from '../features/governance/screens/VotesScreen';
 import { MoreNavigator } from './MoreNavigator';
 import { colors, spacing } from '../theme';
+import { usePermission } from '../hooks/usePermission';
 
 // Placeholder for other screens
 import { View, Text } from 'react-native';
@@ -23,6 +24,10 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 export const MainTabNavigator = () => {
   const { t } = useTranslation();
   const isDark = useColorScheme() === 'dark';
+
+  const canViewVisitors = usePermission('view_visitors');
+  const canViewFinance = usePermission('view_finance');
+  const canViewGovernance = usePermission('view_governance');
 
   return (
     <Tab.Navigator
@@ -67,21 +72,27 @@ export const MainTabNavigator = () => {
         component={DashboardScreen}
         options={{ title: t("Dashboard.title", { defaultValue: "Dashboard" }) }}
       />
-      <Tab.Screen 
-        name="Visitors" 
-        component={VisitorsScreen}
-        options={{ title: t("Visitors.label") }}
-      />
-      <Tab.Screen 
-        name="Finance" 
-        component={AccountsScreen}
-        options={{ title: t("Finance.label") }}
-      />
-      <Tab.Screen 
-        name="Governance" 
-        component={VotesScreen}
-        options={{ title: t("Governance.label") }}
-      />
+      {canViewVisitors && (
+        <Tab.Screen
+          name="Visitors"
+          component={VisitorsScreen}
+          options={{ title: t("Visitors.label") }}
+        />
+      )}
+      {canViewFinance && (
+        <Tab.Screen
+          name="Finance"
+          component={AccountsScreen}
+          options={{ title: t("Finance.label") }}
+        />
+      )}
+      {canViewGovernance && (
+        <Tab.Screen
+          name="Governance"
+          component={VotesScreen}
+          options={{ title: t("Governance.label") }}
+        />
+      )}
       <Tab.Screen 
         name="More" 
         component={MoreNavigator}
