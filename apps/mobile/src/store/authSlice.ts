@@ -5,12 +5,14 @@ import { RootState } from "../store";
 interface AuthState {
   token: string | null;
   user: AuthenticatedUser | null;
+  permissions: string[];
   isRestoring: boolean;
 }
 
 const initialState: AuthState = {
   token: null,
   user: null,
+  permissions: [],
   isRestoring: true,
 };
 
@@ -24,16 +26,19 @@ const authSlice = createSlice({
     ) => {
       state.user = action.payload.user;
       state.token = action.payload.token;
+      state.permissions = action.payload.user.permissions ?? [];
       state.isRestoring = false;
     },
     setToken: (state, action: PayloadAction<string | null>) => {
       state.token = action.payload;
       if (!action.payload) {
         state.user = null;
+        state.permissions = [];
       }
     },
     setUser: (state, action: PayloadAction<AuthenticatedUser | null>) => {
       state.user = action.payload;
+      state.permissions = action.payload?.permissions ?? [];
       state.isRestoring = false;
     },
     setRestoring: (state, action: PayloadAction<boolean>) => {
@@ -42,15 +47,16 @@ const authSlice = createSlice({
     logout: (state) => {
       state.user = null;
       state.token = null;
+      state.permissions = [];
       state.isRestoring = false;
     },
   },
 });
 
 export const { setCredentials, setToken, setUser, setRestoring, logout } = authSlice.actions;
-
 export default authSlice.reducer;
 
 export const selectCurrentUser = (state: RootState) => state.auth.user;
 export const selectCurrentToken = (state: RootState) => state.auth.token;
 export const selectIsRestoring = (state: RootState) => state.auth.isRestoring;
+export const selectPermissions = (state: RootState) => state.auth.permissions;
