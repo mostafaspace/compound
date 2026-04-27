@@ -40,6 +40,7 @@ class DatabaseSeeder extends Seeder
         );
 
         $this->call([
+            RbacSeeder::class,
             DocumentTypeSeeder::class,
             NextPointSeeder::class,
             BaselineSeeder::class,

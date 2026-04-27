@@ -29,6 +29,15 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, Notifiable, HasRoles;
 
     /**
+     * Tell Spatie which guard this model uses so roles/permissions are matched
+     * against the 'sanctum' guard (the app's API authentication driver).
+     */
+    public function guardName(): string
+    {
+        return 'sanctum';
+    }
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
