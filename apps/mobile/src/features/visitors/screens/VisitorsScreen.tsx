@@ -52,19 +52,19 @@ export const VisitorsScreen = () => {
       {item.status === 'pending' || item.status === 'qr_issued' ? (
         <View style={styles.actionButtons}>
           <Button 
-            variant="outline" 
+            variant="primary" 
             title={t("Visitors.share", "Share Pass")} 
             onPress={() => handleShare(item)}
-            style={[styles.actionButton, { borderColor: colors.primary.light }]}
-            textStyle={{ color: colors.primary.light }}
+            style={styles.actionButton}
+            textStyle={{ fontSize: 14 }}
           />
           <Button 
-            variant="outline" 
-            title={t("Visitors.cancel")} 
+            variant="ghost" 
+            title={t("Visitors.cancel", "Cancel")} 
             onPress={() => handleCancel(item.id)}
             loading={isCancelling}
             style={[styles.actionButton, styles.cancelButton]}
-            textStyle={{ color: colors.error }}
+            textStyle={{ color: colors.error, fontSize: 14 }}
           />
         </View>
       ) : null}
@@ -72,7 +72,7 @@ export const VisitorsScreen = () => {
   );
 
   return (
-    <ScreenContainer withKeyboard={false} style={styles.container}>
+    <ScreenContainer withKeyboard={false} style={styles.container} edges={['left', 'right']}>
       <FlatList
         data={visitors}
         keyExtractor={(item) => item.id}
@@ -105,6 +105,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: spacing.md,
+    paddingBottom: 100, // Make room for the FAB
   },
   card: {
     padding: spacing.md,
@@ -134,12 +135,14 @@ const styles = StyleSheet.create({
   },
   actionButtons: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: spacing.sm,
+    justifyContent: 'flex-start',
+    marginTop: spacing.md,
+    gap: spacing.sm,
   },
   actionButton: {
-    flex: 1,
-    marginHorizontal: 4,
+    height: 36,
+    paddingHorizontal: spacing.md,
+    borderRadius: 8,
   },
   cancelButton: {
     borderColor: colors.error,
@@ -157,11 +160,11 @@ const styles = StyleSheet.create({
     left: spacing.lg,
   },
   fab: {
-    borderRadius: 24,
+    borderRadius: 16,
     elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
   }
 });

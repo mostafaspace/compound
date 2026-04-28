@@ -7,6 +7,7 @@ import { NotificationsScreen } from '../features/notifications/screens/Notificat
 import { AnnouncementsScreen } from '../features/announcements/screens/AnnouncementsScreen';
 import { PropertyScreen } from '../features/property/screens/PropertyScreen';
 import { OrgChartScreen } from '../features/orgchart/screens/OrgChartScreen';
+import { SettingsScreen } from '../features/settings/screens/SettingsScreen';
 import { MoreStackParamList } from './types';
 import { colors } from '../theme';
 
@@ -51,7 +52,11 @@ export const MoreNavigator = () => {
         component={OrgChartScreen}
         options={{ title: t("OrgChart.label", { defaultValue: "Org Chart" }) }}
       />
-      {/* Settings screen etc can be added here */}
+      <Stack.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{ title: t("Common.settings", { defaultValue: "Settings" }) }}
+      />
     </Stack.Navigator>
   );
 };

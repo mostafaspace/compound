@@ -16,6 +16,7 @@ interface ScreenContainerProps {
   style?: ViewStyle;
   scrollable?: boolean;
   withKeyboard?: boolean;
+  edges?: readonly ('top' | 'right' | 'bottom' | 'left')[];
 }
 
 export const ScreenContainer: React.FC<ScreenContainerProps> = ({
@@ -23,6 +24,7 @@ export const ScreenContainer: React.FC<ScreenContainerProps> = ({
   style,
   scrollable = false,
   withKeyboard = true,
+  edges,
 }) => {
   const isDark = useColorScheme() === 'dark';
   
@@ -33,7 +35,10 @@ export const ScreenContainer: React.FC<ScreenContainerProps> = ({
   );
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: isDark ? colors.background.dark : colors.background.light }]}>
+    <SafeAreaView 
+      style={[styles.safeArea, { backgroundColor: isDark ? colors.background.dark : colors.background.light }]}
+      edges={edges}
+    >
       {withKeyboard ? (
         <KeyboardAvoidingView 
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}

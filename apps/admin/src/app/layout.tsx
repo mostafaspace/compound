@@ -8,12 +8,12 @@ import { NotificationProvider } from "@/components/notifications/notification-pr
 import { PermissionProviderWrapper } from "@/components/permission-provider-wrapper";
 
 const geistSans = Geist({
-  variable: "--font-geist-sans",
+  variable: "--font-sans",
   subsets: ["latin"],
 });
 
 const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+  variable: "--font-mono",
   subsets: ["latin"],
 });
 

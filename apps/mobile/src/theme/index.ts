@@ -1,43 +1,43 @@
 export const colors = {
   primary: {
-    light: '#0F766E', // Teal 700
-    dark: '#14B8A6',  // Teal 500
+    light: '#2563EB', // Professional Blue
+    dark: '#3B82F6',  // Lighter blue for dark mode
   },
   secondary: {
-    light: '#14B8A6',
-    dark: '#2DD4BF',
+    light: '#64748B', // Slate 500
+    dark: '#94A3B8',  // Slate 400
   },
   cta: {
-    light: '#0369A1', // Professional Blue
-    dark: '#0EA5E9',
+    light: '#2563EB', // Blue
+    dark: '#3B82F6',
   },
   background: {
-    light: '#F0FDFA', // Ultra-light teal
-    dark: '#010409',  // Near-black for OLED
+    light: '#F8FAFC', // Slate 50
+    dark: '#0F172A',  // Slate 900
   },
   surface: {
     light: '#FFFFFF',
-    dark: '#0D1117',  // Deep surface
+    dark: '#1E293B',  // Slate 800
   },
   text: {
     primary: {
-      light: '#134E4A', // Dark teal text
-      dark: '#F0FDFA',  // Light teal text
+      light: '#0F172A', // Slate 900
+      dark: '#F8FAFC',  // Slate 50
     },
     secondary: {
-      light: '#475569',
-      dark: '#94A3B8',
+      light: '#475569', // Slate 600
+      dark: '#CBD5E1',  // Slate 300
     },
   },
   border: {
-    light: '#CCFBF1',
-    dark: '#1E293B',
+    light: '#E2E8F0', // Slate 200
+    dark: '#334155',  // Slate 700
   },
-  error: '#E11D48',
-  success: '#22C55E', // Next Point Earth
-  warning: '#F97316', // Next Point Sun
-  info: '#3B82F6',    // Next Point Air
-  accent: '#06B6D4',  // Next Point Water
+  error: '#EF4444',
+  success: '#10B981',
+  warning: '#F59E0B',
+  info: '#3B82F6',
+  accent: '#6366F1', // Indigo
 };
 
 export const spacing = {
@@ -57,40 +57,40 @@ export const shadows = {
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
-    elevation: 2,
+    elevation: 1,
   },
   md: {
-    shadowColor: '#134E4A',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
     elevation: 3,
   },
   lg: {
-    shadowColor: '#134E4A',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.08,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.05,
     shadowRadius: 20,
     elevation: 6,
   },
   premium: {
-    shadowColor: '#0F766E',
-    shadowOffset: { width: 0, height: 20 },
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 14 },
     shadowOpacity: 0.1,
-    shadowRadius: 30,
-    elevation: 10,
+    shadowRadius: 24,
+    elevation: 8,
   }
 };
 
 export const glass = {
   light: {
-    backgroundColor: 'rgba(255, 255, 255, 0.85)',
-    borderColor: 'rgba(255, 255, 255, 0.4)',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderColor: 'rgba(226, 232, 240, 0.5)',
     borderWidth: 1,
   },
   dark: {
-    backgroundColor: 'rgba(13, 17, 23, 0.75)',
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(30, 41, 59, 0.85)',
+    borderColor: 'rgba(255, 255, 255, 0.05)',
     borderWidth: 1,
   },
 };

@@ -14,7 +14,7 @@ export const ResidentDashboardScreen = () => {
   const isDark = useColorScheme() === 'dark';
 
   return (
-    <ScreenContainer style={styles.container}>
+    <ScreenContainer style={styles.container} edges={['left', 'right']}>
       <View style={styles.header}>
         <Typography variant="h1">
           {t('Dashboard.title', { defaultValue: 'Dashboard' })}

@@ -57,7 +57,7 @@ export const ShareVisitorPassScreen = () => {
         <Typography variant="caption" style={{ color: colors.error, marginBottom: spacing.xl, textAlign: 'center' }}>
           {error ? JSON.stringify(error) : 'Visitor not found'}
         </Typography>
-        <Button title="Back to Dashboard" onPress={() => navigation.navigate('Main', { screen: 'Dashboard' } as any)} />
+        <Button title="Back to Dashboard" onPress={() => navigation.popToTop()} />
       </ScreenContainer>
     );
   }
@@ -105,13 +105,13 @@ export const ShareVisitorPassScreen = () => {
         >
           <View style={cardStyle}>
             {/* Header / Accent */}
-            <View style={[styles.cardHeader, { backgroundColor: colors.primary.light }]}>
-              <Typography variant="h3" style={{ color: '#FFF', fontSize: 22 }}>
+            <View style={[styles.cardHeader, { backgroundColor: isDark ? colors.primary.dark : colors.primary.light }]}>
+              <Typography variant="h3" style={{ color: isDark ? colors.text.primary.dark : '#FFF', fontSize: 22 }}>
                 {visitor.unit?.compoundName || 'Compound Pass'}
               </Typography>
-              <View style={styles.vipBadge}>
-                <Typography variant="caption" style={{ color: '#FFF', fontWeight: '900', letterSpacing: 1 }}>
-                  VIP INVITATION
+              <View style={[styles.vipBadge, { backgroundColor: colors.cta.light }]}>
+                <Typography variant="caption" style={{ color: '#FFF', fontWeight: '800', letterSpacing: 0.5 }}>
+                  VISITOR PASS
                 </Typography>
               </View>
             </View>
@@ -197,7 +197,7 @@ export const ShareVisitorPassScreen = () => {
           <Button
             variant="outline"
             title={t("Common.backToDashboard", "Back to Dashboard")}
-            onPress={() => navigation.navigate('Main', { screen: 'Dashboard' } as any)}
+            onPress={() => navigation.popToTop()}
             style={styles.doneButton}
           />
         </View>

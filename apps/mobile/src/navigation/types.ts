@@ -39,6 +39,7 @@ export type MoreStackParamList = {
   Announcements: undefined;
   Property: undefined;
   OrgChart: undefined;
+  Settings: undefined;
 };
 
 export type GuardStackParamList = {

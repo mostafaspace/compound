@@ -11,6 +11,7 @@ import { PollsScreen } from '../features/polls/screens/PollsScreen';
 import { MoreNavigator } from './MoreNavigator';
 import { colors, spacing } from '../theme';
 import { usePermission } from '../hooks/usePermission';
+import { LogoutButton } from '../components/ui/LogoutButton';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
@@ -22,7 +23,7 @@ export const ResidentTabNavigator = () => {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
-        tabBarActiveTintColor: colors.primary.dark,
+        tabBarActiveTintColor: isDark ? colors.cta.dark : colors.primary.light,
         tabBarInactiveTintColor: isDark ? '#9ca3af' : '#6b7280',
         tabBarStyle: {
           backgroundColor: isDark ? colors.surface.dark : colors.surface.light,
@@ -42,6 +43,7 @@ export const ResidentTabNavigator = () => {
           fontSize: 18,
           color: isDark ? colors.text.primary.dark : colors.text.primary.light,
         },
+        headerRight: () => <LogoutButton />,
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: '600',

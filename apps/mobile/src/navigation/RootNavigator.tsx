@@ -59,13 +59,15 @@ export const RootNavigator = () => {
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!authToken ? (
           <Stack.Screen name="Auth" component={LoginScreen} />
-        ) : roleType === 'security' ? (
-          <Stack.Screen name="Guard" component={GuardNavigator} />
-        ) : roleType === 'admin' ? (
-          <Stack.Screen name="Admin" component={AdminTabNavigator} />
         ) : (
           <Stack.Group>
-            <Stack.Screen name="Main" component={ResidentTabNavigator} />
+            {roleType === 'security' ? (
+              <Stack.Screen name="Guard" component={GuardNavigator} />
+            ) : roleType === 'admin' ? (
+              <Stack.Screen name="Admin" component={AdminTabNavigator} />
+            ) : (
+              <Stack.Screen name="Main" component={ResidentTabNavigator} />
+            )}
             <Stack.Screen name="CreateVisitor" component={CreateVisitorScreen} />
             <Stack.Screen name="ShareVisitorPass" component={ShareVisitorPassScreen} />
             <Stack.Screen name="PollDetail" component={PollDetailScreen} />
