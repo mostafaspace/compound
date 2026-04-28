@@ -59,6 +59,8 @@ export const api = createApi({
     "Vote",
     "Poll",
     "UnitAccount",
+    "UserDocument",
+    "PolicyConsent",
   ],
   endpoints: () => ({}),
 });

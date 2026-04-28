@@ -1,12 +1,14 @@
 import { api } from "./api";
-import type { 
-  ApiEnvelope, 
-  PaginatedEnvelope, 
-  UnitMembership, 
-  VerificationRequest, 
+import type {
+  ApiEnvelope,
+  PaginatedEnvelope,
+  UnitMembership,
+  VerificationRequest,
   VisitorRequest,
   Issue,
   UserNotification,
+  UserDocument,
+  DocumentType,
 } from "@compound/contracts";
 
 export const propertyApi = api.injectEndpoints({
@@ -71,9 +73,14 @@ export const propertyApi = api.injectEndpoints({
     getStatus: builder.query<any, void>({
       query: () => "/status",
     }),
-    getDocumentTypes: builder.query<any[], void>({
+    getDocumentTypes: builder.query<DocumentType[], void>({
       query: () => "/document-types",
-      transformResponse: (response: ApiEnvelope<any[]>) => response.data,
+      transformResponse: (response: ApiEnvelope<DocumentType[]>) => response.data,
+    }),
+    getDocuments: builder.query<UserDocument[], void>({
+      query: () => "/documents",
+      transformResponse: (response: PaginatedEnvelope<UserDocument>) => response.data,
+      providesTags: ["UserDocument"],
     }),
     createIssue: builder.mutation<Issue, any>({
       query: (body) => ({
@@ -93,14 +100,14 @@ export const propertyApi = api.injectEndpoints({
       transformResponse: (response: ApiEnvelope<VisitorRequest>) => response.data,
       invalidatesTags: ["VisitorRequest"],
     }),
-    uploadDocument: builder.mutation<any, FormData>({
+    uploadDocument: builder.mutation<UserDocument, FormData>({
       query: (body) => ({
         url: "/documents",
         method: "POST",
         body,
       }),
-      transformResponse: (response: any) => response.data,
-      invalidatesTags: ["VerificationRequest"],
+      transformResponse: (response: ApiEnvelope<UserDocument>) => response.data,
+      invalidatesTags: ["UserDocument"],
     }),
     markNotificationRead: builder.mutation<void, string | number>({
       query: (id) => ({
@@ -119,9 +126,9 @@ export const propertyApi = api.injectEndpoints({
   }),
 });
 
-export const { 
-  useGetUnitsQuery, 
-  useGetVerificationRequestsQuery, 
+export const {
+  useGetUnitsQuery,
+  useGetVerificationRequestsQuery,
   useGetVisitorRequestsQuery,
   useGetVisitorRequestQuery,
   useCancelVisitorMutation,
@@ -132,6 +139,7 @@ export const {
   useAcknowledgeAnnouncementMutation,
   useGetStatusQuery,
   useGetDocumentTypesQuery,
+  useGetDocumentsQuery,
   useCreateIssueMutation,
   useCreateVisitorMutation,
   useUploadDocumentMutation,
