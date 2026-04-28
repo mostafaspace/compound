@@ -16,6 +16,7 @@ import { linking } from './linking';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { CreateVisitorScreen } from '../features/visitors/screens/CreateVisitorScreen';
 import { ShareVisitorPassScreen } from '../features/visitors/screens/ShareVisitorPassScreen';
+import { PollDetailScreen } from '../features/polls/screens/PollDetailScreen';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -67,6 +68,7 @@ export const RootNavigator = () => {
             <Stack.Screen name="Main" component={ResidentTabNavigator} />
             <Stack.Screen name="CreateVisitor" component={CreateVisitorScreen} />
             <Stack.Screen name="ShareVisitorPass" component={ShareVisitorPassScreen} />
+            <Stack.Screen name="PollDetail" component={PollDetailScreen} />
           </Stack.Group>
         )}
       </Stack.Navigator>

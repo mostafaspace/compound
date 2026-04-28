@@ -7,6 +7,7 @@ import { DashboardScreen } from '../features/dashboard/screens/DashboardScreen';
 import { VisitorsScreen } from '../features/visitors/screens/VisitorsScreen';
 import { AccountsScreen } from '../features/finance/screens/AccountsScreen';
 import { VotesScreen } from '../features/governance/screens/VotesScreen';
+import { PollsScreen } from '../features/polls/screens/PollsScreen';
 import { MoreNavigator } from './MoreNavigator';
 import { colors, spacing } from '../theme';
 import { usePermission } from '../hooks/usePermission';
@@ -62,6 +63,7 @@ export const MainTabNavigator = () => {
           if (route.name === 'Visitors') icon = '👥';
           if (route.name === 'Finance') icon = '💳';
           if (route.name === 'Governance') icon = '⚖️';
+          if (route.name === 'Polls') icon = '📊';
           if (route.name === 'More') icon = '•••';
           return <Text style={{ color, fontSize: 20 }}>{icon}</Text>;
         },
@@ -93,7 +95,14 @@ export const MainTabNavigator = () => {
           options={{ title: t("Governance.label") }}
         />
       )}
-      <Tab.Screen 
+      {canViewGovernance && (
+        <Tab.Screen
+          name="Polls"
+          component={PollsScreen}
+          options={{ title: "Polls" }}
+        />
+      )}
+      <Tab.Screen
         name="More" 
         component={MoreNavigator}
         options={{ 

@@ -8,6 +8,7 @@ export type RootStackParamList = {
   Restoring: undefined;
   CreateVisitor: undefined;
   ShareVisitorPass: { visitorId: string };
+  PollDetail: { pollId: string };
 };
 
 export type AuthStackParamList = {
@@ -20,6 +21,7 @@ export type MainTabParamList = {
   Visitors: undefined;
   Finance: undefined;
   Governance: undefined;
+  Polls: undefined;
   More: undefined;
 };
 

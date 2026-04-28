@@ -7,14 +7,17 @@ import { ResidentDashboardScreen } from '../features/resident/screens/ResidentDa
 import { VisitorsScreen } from '../features/visitors/screens/VisitorsScreen';
 import { AccountsScreen } from '../features/finance/screens/AccountsScreen';
 import { VotesScreen } from '../features/governance/screens/VotesScreen';
+import { PollsScreen } from '../features/polls/screens/PollsScreen';
 import { MoreNavigator } from './MoreNavigator';
 import { colors, spacing } from '../theme';
+import { usePermission } from '../hooks/usePermission';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
 export const ResidentTabNavigator = () => {
   const { t } = useTranslation();
   const isDark = useColorScheme() === 'dark';
+  const canViewGovernance = usePermission('view_governance');
 
   return (
     <Tab.Navigator
@@ -49,6 +52,7 @@ export const ResidentTabNavigator = () => {
           if (route.name === 'Visitors') icon = '👥';
           if (route.name === 'Finance') icon = '💳';
           if (route.name === 'Governance') icon = '⚖️';
+          if (route.name === 'Polls') icon = '📊';
           if (route.name === 'More') icon = '•••';
           return <Text style={{ color, fontSize: 20 }}>{icon}</Text>;
         },
@@ -74,6 +78,13 @@ export const ResidentTabNavigator = () => {
         component={VotesScreen}
         options={{ title: t('Governance.label') }}
       />
+      {canViewGovernance && (
+        <Tab.Screen
+          name="Polls"
+          component={PollsScreen}
+          options={{ title: 'Polls' }}
+        />
+      )}
       <Tab.Screen
         name="More"
         component={MoreNavigator}
