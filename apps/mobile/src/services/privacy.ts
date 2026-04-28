@@ -1,5 +1,5 @@
 import { api } from "./api";
-import type { ApiEnvelope, UserPolicyConsent } from "@compound/contracts";
+import type { ApiEnvelope, UserPolicyConsent, PolicyType } from "@compound/contracts";
 
 export const privacyApi = api.injectEndpoints({
   endpoints: (builder) => ({
@@ -8,7 +8,7 @@ export const privacyApi = api.injectEndpoints({
       transformResponse: (response: ApiEnvelope<UserPolicyConsent[]>) => response.data,
       providesTags: ["PolicyConsent"],
     }),
-    acceptConsent: builder.mutation<UserPolicyConsent, { policyType: string; policyVersion: string }>({
+    acceptConsent: builder.mutation<UserPolicyConsent, { policyType: PolicyType; policyVersion: string }>({
       query: (body) => ({
         url: "/privacy/consents",
         method: "POST",
