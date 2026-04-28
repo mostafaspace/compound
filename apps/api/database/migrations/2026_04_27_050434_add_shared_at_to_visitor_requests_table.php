@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('visitor_requests', function (Blueprint $table): void {
-            $table->timestamp('shared_at')->nullable()->after('qr_token');
+            $table->timestamp('shared_at')->nullable()->after('cancelled_at');
         });
     }
 
