@@ -4,19 +4,22 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
-import { selectCurrentToken, selectCurrentUser, selectIsRestoring } from '../store/authSlice';
+import { selectConsentVerified, selectCurrentToken, selectCurrentUser, selectIsRestoring } from '../store/authSlice';
 import { RootStackParamList } from './types';
 import { LoginScreen } from '../features/auth/screens/LoginScreen';
-import { MainTabNavigator } from './MainTabNavigator';
 import { ResidentTabNavigator } from './ResidentTabNavigator';
 import { AdminTabNavigator } from './AdminTabNavigator';
 import { GuardNavigator } from './GuardNavigator';
+import { PrivacyConsentScreen } from '../features/privacy/screens/PrivacyConsentScreen';
 import { colors } from '../theme';
 import { linking } from './linking';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { CreateVisitorScreen } from '../features/visitors/screens/CreateVisitorScreen';
 import { ShareVisitorPassScreen } from '../features/visitors/screens/ShareVisitorPassScreen';
 import { PollDetailScreen } from '../features/polls/screens/PollDetailScreen';
+import { CreateIssueScreen } from '../features/issues/screens/CreateIssueScreen';
+import { IssueDetailScreen } from '../features/issues/screens/IssueDetailScreen';
+import { UploadDocumentScreen } from '../features/documents/screens/UploadDocumentScreen';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -37,6 +40,7 @@ export const RootNavigator = () => {
   const authToken = useSelector(selectCurrentToken);
   const user = useSelector(selectCurrentUser);
   const isRestoring = useSelector(selectIsRestoring);
+  const consentVerified = useSelector(selectConsentVerified);
 
   // Initialize push notifications
   usePushNotifications();
@@ -59,6 +63,8 @@ export const RootNavigator = () => {
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!authToken ? (
           <Stack.Screen name="Auth" component={LoginScreen} />
+        ) : !consentVerified ? (
+          <Stack.Screen name="ConsentGate" component={PrivacyConsentScreen} />
         ) : (
           <Stack.Group>
             {roleType === 'security' ? (
@@ -71,6 +77,21 @@ export const RootNavigator = () => {
             <Stack.Screen name="CreateVisitor" component={CreateVisitorScreen} />
             <Stack.Screen name="ShareVisitorPass" component={ShareVisitorPassScreen} />
             <Stack.Screen name="PollDetail" component={PollDetailScreen} />
+            <Stack.Screen
+              name="CreateIssue"
+              component={CreateIssueScreen}
+              options={{ headerShown: true, title: t("Issues.create", { defaultValue: "Report Issue" }) }}
+            />
+            <Stack.Screen
+              name="IssueDetail"
+              component={IssueDetailScreen}
+              options={{ headerShown: true, title: t("Issues.detail", { defaultValue: "Issue Details" }) }}
+            />
+            <Stack.Screen
+              name="UploadDocument"
+              component={UploadDocumentScreen}
+              options={{ headerShown: true, title: t("Documents.upload", { defaultValue: "Upload Document" }) }}
+            />
           </Stack.Group>
         )}
       </Stack.Navigator>

@@ -83,7 +83,7 @@ export const PollDetailScreen = ({ route, navigation }: Props) => {
   });
   const [castVote, { isLoading: isCasting }] = useCastPollVoteMutation();
 
-  const [selectedOptionIds, setSelectedOptionIds] = useState<string[]>([]);
+  const [selectedOptionIds, setSelectedOptionIds] = useState<number[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
@@ -96,7 +96,7 @@ export const PollDetailScreen = ({ route, navigation }: Props) => {
   const options: PollOption[] = poll?.options ?? [];
   const totalVotes = poll?.votesCount ?? 0;
 
-  const toggleOption = (optionId: string) => {
+  const toggleOption = (optionId: number) => {
     if (!allowMultiple) {
       setSelectedOptionIds([optionId]);
       return;
@@ -231,16 +231,15 @@ export const PollDetailScreen = ({ route, navigation }: Props) => {
           ) : (
             options.map((opt) => {
               const optPct = pct(opt.votesCount);
-              const isSelected = selectedOptionIds.includes(String(opt.id));
-              const userVoted =
-                poll.userVoteOptionIds?.includes(String(opt.id)) ?? false;
+              const isSelected = selectedOptionIds.includes(opt.id);
+              const userVoted = poll.userVoteOptionIds?.includes(opt.id) ?? false;
 
               return (
                 <Pressable
                   key={opt.id}
                   onPress={() => {
                     if (!showResults && isEligible && isActive) {
-                      toggleOption(String(opt.id));
+                      toggleOption(opt.id);
                     }
                   }}
                   style={[

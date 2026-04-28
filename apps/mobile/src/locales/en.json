@@ -26,7 +26,9 @@
     "subtitle": "Unit access, verification, visitors, finance, complaints, and official updates."
   },
   "Common": {
+    "active": "Active",
     "done": "Done",
+    "error": "Error",
     "optional": "Optional",
     "refresh": "Refresh",
     "refreshing": "Refreshing",
@@ -93,13 +95,18 @@
     "signOut": "Sign out"
   },
   "Verification": {
-    "label": "Verification",
+    "label": "Verification Status",
     "pendingTitle": "Pending review",
     "requestedAccess": "Requested access: {{role}}",
     "submitted": "Submitted: {{date}}",
     "moreInfoRequested": "More information requested",
     "reviewerNote": "Reviewer note",
-    "noRequest": "No verification request is linked to this account yet."
+    "noRequest": "No verification request is linked to this account yet.",
+    "statusHeading": "Verification Status",
+    "role": "Requested role",
+    "relation": "Relation",
+    "adminNote": "Admin note",
+    "moreInfoNote": "Additional information requested"
   },
   "Property": {
     "activeWindow": "Active from {{start}} to {{end}}",
@@ -140,13 +147,30 @@
     }
   },
   "Documents": {
+    "label": "Documents",
+    "empty": "No documents uploaded yet.",
     "chooseAndUpload": "Choose and upload",
     "followUpTitle": "Upload follow-up document",
     "noTypes": "No active document types are available yet.",
     "selectFile": "Select a PDF or image file.",
+    "typeLabel": "Document type",
+    "fileLabel": "File (PDF, JPG, PNG)",
+    "chooseFile": "Tap to choose file...",
+    "selectTypeRequired": "Please select a document type.",
+    "selectFileRequired": "Please select a file.",
+    "uploadSuccessTitle": "Document uploaded",
+    "uploadSuccessMsg": "Your document has been submitted for review.",
     "uploadError": "Upload failed. Check the file size and document type.",
     "uploadNetworkError": "Document upload could not be completed.",
-    "uploadSuccess": "Document uploaded for admin review."
+    "uploadSuccess": "Document uploaded for admin review.",
+    "upload": "Upload Document",
+    "statuses": {
+      "submitted": "Submitted",
+      "under_review": "Under Review",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "missing": "Missing"
+    }
   },
   "Visitors": {
     "activeCount_one": "{{count}} active or pending",
@@ -226,19 +250,25 @@
     }
   },
   "Issues": {
-    "label": "Complaints",
+    "label": "Issues & Complaints",
     "title": "My issues",
     "count_one": "{{count}} submitted",
     "count_other": "{{count}} submitted",
     "newIssue": "New issue",
+    "create": "Report Issue",
+    "detail": "Issue Details",
     "cancel": "Cancel",
     "refresh": "Refresh",
     "refreshing": "Refreshing",
     "category": "Category",
+    "categoryLabel": "Category",
     "issueTitle": "Title",
+    "titleLabel": "Title",
     "titlePlaceholder": "Brief summary of the issue",
     "description": "Description",
+    "descriptionLabel": "Description",
     "descriptionPlaceholder": "Describe the issue in detail",
+    "priorityLabel": "Priority",
     "submit": "Submit issue",
     "submitSuccess": "Issue submitted. An admin will review it shortly.",
     "submitError": "Issue could not be submitted. Try again.",
@@ -246,12 +276,19 @@
     "recent": "Recent issues",
     "created": "Created: {{date}}",
     "empty": "No issues submitted yet.",
+    "resolvedAt": "Resolved: {{date}}",
     "categories": {
       "maintenance": "Maintenance",
       "security": "Security",
       "cleaning": "Cleaning",
       "noise": "Noise",
       "other": "Other"
+    },
+    "priorities": {
+      "low": "Low",
+      "normal": "Normal",
+      "high": "High",
+      "urgent": "Urgent"
     },
     "statuses": {
       "new": "New",
@@ -376,5 +413,24 @@
     "noRep": "No representative assigned",
     "floors_one": "{{count}} floor",
     "floors_other": "{{count}} floors"
+  },
+  "Privacy": {
+    "label": "Privacy & Consents",
+    "consentTitle": "Before you continue",
+    "consentBody": "Please review and accept the following to use the platform:",
+    "acceptAll": "Accept & Continue",
+    "consentsHeading": "Your consents",
+    "noConsents": "No active consents.",
+    "version": "Version {{v}}",
+    "policies": {
+      "privacy_policy": "Privacy Policy",
+      "terms_of_service": "Terms of Service",
+      "data_processing": "Data Processing Agreement"
+    },
+    "policiesDesc": {
+      "privacy_policy": "How we collect, use, and protect your personal data.",
+      "terms_of_service": "Rules and guidelines for using the Compound platform.",
+      "data_processing": "Details on how your data is processed."
+    }
   }
 }

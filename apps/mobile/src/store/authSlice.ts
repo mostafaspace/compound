@@ -7,6 +7,7 @@ interface AuthState {
   user: AuthenticatedUser | null;
   permissions: string[];
   isRestoring: boolean;
+  consentVerified: boolean;
 }
 
 const initialState: AuthState = {
@@ -14,6 +15,7 @@ const initialState: AuthState = {
   user: null,
   permissions: [],
   isRestoring: true,
+  consentVerified: false,
 };
 
 const authSlice = createSlice({
@@ -44,19 +46,24 @@ const authSlice = createSlice({
     setRestoring: (state, action: PayloadAction<boolean>) => {
       state.isRestoring = action.payload;
     },
+    setConsentVerified: (state, action: PayloadAction<boolean>) => {
+      state.consentVerified = action.payload;
+    },
     logout: (state) => {
       state.user = null;
       state.token = null;
       state.permissions = [];
       state.isRestoring = false;
+      state.consentVerified = false;
     },
   },
 });
 
-export const { setCredentials, setToken, setUser, setRestoring, logout } = authSlice.actions;
+export const { setCredentials, setToken, setUser, setRestoring, setConsentVerified, logout } = authSlice.actions;
 export default authSlice.reducer;
 
 export const selectCurrentUser = (state: RootState) => state.auth.user;
 export const selectCurrentToken = (state: RootState) => state.auth.token;
 export const selectIsRestoring = (state: RootState) => state.auth.isRestoring;
 export const selectPermissions = (state: RootState) => state.auth.permissions;
+export const selectConsentVerified = (state: RootState) => state.auth.consentVerified;

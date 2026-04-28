@@ -8,6 +8,10 @@ import { AnnouncementsScreen } from '../features/announcements/screens/Announcem
 import { PropertyScreen } from '../features/property/screens/PropertyScreen';
 import { OrgChartScreen } from '../features/orgchart/screens/OrgChartScreen';
 import { SettingsScreen } from '../features/settings/screens/SettingsScreen';
+import { IssuesScreen } from '../features/issues/screens/IssuesScreen';
+import { DocumentsScreen } from '../features/documents/screens/DocumentsScreen';
+import { VerificationStatusScreen } from '../features/verification/screens/VerificationStatusScreen';
+import { PrivacySettingsScreen } from '../features/privacy/screens/PrivacySettingsScreen';
 import { MoreStackParamList } from './types';
 import { colors } from '../theme';
 
@@ -56,6 +60,26 @@ export const MoreNavigator = () => {
         name="Settings"
         component={SettingsScreen}
         options={{ title: t("Common.settings", { defaultValue: "Settings" }) }}
+      />
+      <Stack.Screen
+        name="Issues"
+        component={IssuesScreen}
+        options={{ title: t("Issues.label", { defaultValue: "Issues & Complaints" }) }}
+      />
+      <Stack.Screen
+        name="Documents"
+        component={DocumentsScreen}
+        options={{ title: t("Documents.label", { defaultValue: "Documents" }) }}
+      />
+      <Stack.Screen
+        name="VerificationStatus"
+        component={VerificationStatusScreen}
+        options={{ title: t("Verification.label", { defaultValue: "Verification Status" }) }}
+      />
+      <Stack.Screen
+        name="PrivacySettings"
+        component={PrivacySettingsScreen}
+        options={{ title: t("Privacy.label", { defaultValue: "Privacy & Consents" }) }}
       />
     </Stack.Navigator>
   );

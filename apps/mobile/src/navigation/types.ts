@@ -1,7 +1,8 @@
-import { AuthenticatedUser } from "@compound/contracts";
+import { Issue } from "@compound/contracts";
 
 export type RootStackParamList = {
   Auth: undefined;
+  ConsentGate: undefined;
   Main: undefined;
   Guard: undefined;
   Admin: undefined;
@@ -9,6 +10,9 @@ export type RootStackParamList = {
   CreateVisitor: undefined;
   ShareVisitorPass: { visitorId: string };
   PollDetail: { pollId: string };
+  CreateIssue: undefined;
+  IssueDetail: { issue: Issue };
+  UploadDocument: undefined;
 };
 
 export type AuthStackParamList = {
@@ -40,6 +44,10 @@ export type MoreStackParamList = {
   Property: undefined;
   OrgChart: undefined;
   Settings: undefined;
+  Issues: undefined;
+  Documents: undefined;
+  VerificationStatus: undefined;
+  PrivacySettings: undefined;
 };
 
 export type GuardStackParamList = {
