@@ -4,7 +4,10 @@ namespace Tests\Feature\Api\V1;
 
 use App\Enums\CampaignStatus;
 use App\Enums\ChargeFrequency;
+use App\Enums\Permission;
+use App\Enums\UnitRelationType;
 use App\Enums\UserRole;
+use App\Enums\VerificationStatus;
 use App\Models\Finance\ChargeType;
 use App\Models\Finance\CollectionCampaign;
 use App\Models\Finance\RecurringCharge;
@@ -13,13 +16,40 @@ use App\Models\Property\Building;
 use App\Models\Property\Compound;
 use App\Models\Property\Unit;
 use App\Models\User;
+use App\Models\UserScopeAssignment;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
+use Spatie\Permission\Models\Permission as SpatiePermission;
+use Spatie\Permission\Models\Role as SpatieRole;
 use Tests\TestCase;
 
 class ChargesTest extends TestCase
 {
     use RefreshDatabase;
+
+    private function makeScopeAssignedFinanceReviewer(Compound $compound): User
+    {
+        $reviewerRole = SpatieRole::findOrCreate('finance_reviewer', 'sanctum');
+        $reviewerRole->givePermissionTo(
+            SpatiePermission::findOrCreate(Permission::ViewFinance->value, 'sanctum'),
+            SpatiePermission::findOrCreate(Permission::ManageFinance->value, 'sanctum'),
+        );
+        $reviewer = User::factory()->create([
+            'role' => UserRole::ResidentOwner->value,
+            'compound_id' => null,
+        ]);
+        $reviewer->assignRole($reviewerRole);
+
+        UserScopeAssignment::create([
+            'user_id' => $reviewer->id,
+            'role_name' => 'finance_reviewer',
+            'scope_type' => 'compound',
+            'scope_id' => $compound->id,
+            'created_by' => $reviewer->id,
+        ]);
+
+        return $reviewer->refresh();
+    }
 
     // ──────────────────────────────────────────────────────────
     // Charge types
@@ -240,6 +270,49 @@ class ChargesTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_membership_scoped_compound_admin_cannot_cross_compound_recurring_charge_access_when_compound_id_is_null(): void
+    {
+        $compoundA = Compound::factory()->create();
+        $compoundB = Compound::factory()->create();
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => null,
+        ]);
+        $managedUnit = $this->createUnitForCompound($compoundA, 'A-401');
+        $managedUnit->memberships()->create([
+            'user_id' => $admin->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'verification_status' => VerificationStatus::Verified->value,
+            'starts_at' => now()->subYear(),
+        ]);
+
+        $chargeType = ChargeType::factory()->create();
+        $chargeA = RecurringCharge::factory()->create([
+            'compound_id' => $compoundA->id,
+            'charge_type_id' => $chargeType->id,
+        ]);
+        $chargeB = RecurringCharge::factory()->create([
+            'compound_id' => $compoundB->id,
+            'charge_type_id' => $chargeType->id,
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $this->getJson('/api/v1/finance/recurring-charges')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $chargeA->id);
+
+        $this->getJson("/api/v1/finance/recurring-charges?compound_id={$compoundB->id}")
+            ->assertForbidden();
+
+        $this->getJson("/api/v1/finance/recurring-charges/{$chargeB->id}")
+            ->assertForbidden();
+
+        $this->patchJson("/api/v1/finance/recurring-charges/{$chargeB->id}/deactivate")
+            ->assertForbidden();
+    }
+
     public function test_compound_scoped_finance_reviewer_cannot_create_recurring_charge_for_other_compound(): void
     {
         $compoundA = Compound::factory()->create();
@@ -437,6 +510,55 @@ class ChargesTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_membership_scoped_compound_admin_cannot_cross_compound_campaign_access_when_compound_id_is_null(): void
+    {
+        $compoundA = Compound::factory()->create();
+        $compoundB = Compound::factory()->create();
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => null,
+        ]);
+        $managedUnit = $this->createUnitForCompound($compoundA, 'A-501');
+        $managedUnit->memberships()->create([
+            'user_id' => $admin->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'verification_status' => VerificationStatus::Verified->value,
+            'starts_at' => now()->subYear(),
+        ]);
+
+        $campaignA = CollectionCampaign::factory()->create([
+            'compound_id' => $compoundA->id,
+            'status' => CampaignStatus::Draft,
+        ]);
+        $campaignB = CollectionCampaign::factory()->create([
+            'compound_id' => $compoundB->id,
+            'status' => CampaignStatus::Draft,
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $this->getJson('/api/v1/finance/collection-campaigns')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $campaignA->id);
+
+        $this->getJson("/api/v1/finance/collection-campaigns?compound_id={$compoundB->id}")
+            ->assertForbidden();
+
+        $this->getJson("/api/v1/finance/collection-campaigns/{$campaignB->id}")
+            ->assertForbidden();
+
+        $this->patchJson("/api/v1/finance/collection-campaigns/{$campaignB->id}", [
+            'name' => 'Blocked rename',
+        ])->assertForbidden();
+
+        $this->patchJson("/api/v1/finance/collection-campaigns/{$campaignB->id}/publish")
+            ->assertForbidden();
+
+        $this->patchJson("/api/v1/finance/collection-campaigns/{$campaignB->id}/archive")
+            ->assertForbidden();
+    }
+
     public function test_compound_scoped_finance_reviewer_cannot_create_campaign_for_other_compound(): void
     {
         $compoundA = Compound::factory()->create();
@@ -487,6 +609,61 @@ class ChargesTest extends TestCase
         $this->assertDatabaseHas('unit_accounts', ['id' => $otherAccount->id, 'balance' => '0.00']);
     }
 
+    public function test_scope_assigned_finance_reviewer_without_direct_compound_id_cannot_cross_compound_recurring_charges_or_campaigns(): void
+    {
+        $compoundA = Compound::factory()->create();
+        $compoundB = Compound::factory()->create();
+        $reviewer = $this->makeScopeAssignedFinanceReviewer($compoundA);
+        $chargeType = ChargeType::factory()->create(['is_recurring' => true]);
+        $chargeA = RecurringCharge::factory()->create([
+            'compound_id' => $compoundA->id,
+            'charge_type_id' => $chargeType->id,
+        ]);
+        $chargeB = RecurringCharge::factory()->create([
+            'compound_id' => $compoundB->id,
+            'charge_type_id' => $chargeType->id,
+        ]);
+        $campaignA = CollectionCampaign::factory()->create(['compound_id' => $compoundA->id]);
+        $campaignB = CollectionCampaign::factory()->create(['compound_id' => $compoundB->id]);
+
+        Sanctum::actingAs($reviewer);
+
+        $this->getJson('/api/v1/finance/recurring-charges')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $chargeA->id);
+
+        $this->getJson("/api/v1/finance/recurring-charges/{$chargeB->id}")
+            ->assertForbidden();
+
+        $this->postJson('/api/v1/finance/recurring-charges', [
+            'compound_id' => $compoundB->id,
+            'charge_type_id' => $chargeType->id,
+            'name' => 'Foreign Recurring Charge',
+            'amount' => 750,
+            'currency' => 'EGP',
+            'frequency' => ChargeFrequency::Monthly->value,
+            'billing_day' => 1,
+            'target_type' => 'all',
+            'starts_at' => now()->startOfMonth()->toDateString(),
+        ])->assertForbidden();
+
+        $this->getJson('/api/v1/finance/collection-campaigns')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $campaignA->id);
+
+        $this->getJson("/api/v1/finance/collection-campaigns/{$campaignB->id}")
+            ->assertForbidden();
+
+        $this->postJson('/api/v1/finance/collection-campaigns', [
+            'compound_id' => $compoundB->id,
+            'name' => 'Foreign Campaign',
+            'description' => 'Should not be allowed.',
+            'target_amount' => 3000,
+        ])->assertForbidden();
+    }
+
     // ──────────────────────────────────────────────────────────
     // RBAC
     // ──────────────────────────────────────────────────────────
@@ -506,5 +683,15 @@ class ChargesTest extends TestCase
         $this->getJson('/api/v1/finance/charge-types')->assertUnauthorized();
         $this->getJson('/api/v1/finance/recurring-charges')->assertUnauthorized();
         $this->getJson('/api/v1/finance/collection-campaigns')->assertUnauthorized();
+    }
+
+    private function createUnitForCompound(Compound $compound, string $unitNumber): Unit
+    {
+        $building = Building::factory()->for($compound)->create();
+
+        return Unit::factory()
+            ->for($compound)
+            ->for($building)
+            ->create(['floor_id' => null, 'unit_number' => $unitNumber]);
     }
 }

@@ -55,15 +55,12 @@ class AuditLogController extends Controller
             ->with('actor')
             ->where('auditable_type', $validated['entity_type'])
             ->where('auditable_id', $validated['entity_id'])
-            ->when($compoundId !== null, function ($builder) use ($request): void {
-                /** @var User $user */
-                $user = $request->user();
-
-                $builder->where(function ($scoped) use ($user): void {
+            ->when($compoundId !== null, function ($builder) use ($compoundId): void {
+                $builder->where(function ($scoped) use ($compoundId): void {
                     $scoped
-                        ->whereHas('actor', fn ($q) => $q->where('compound_id', $user->compound_id))
-                        ->orWhere('metadata->compound_id', $user->compound_id)
-                        ->orWhere('metadata->compoundId', $user->compound_id);
+                        ->whereHas('actor', fn ($q) => $this->scopeUsersToCompound($q, $compoundId))
+                        ->orWhere('metadata->compound_id', $compoundId)
+                        ->orWhere('metadata->compoundId', $compoundId);
                 });
             })
             ->oldest();
@@ -145,16 +142,14 @@ class AuditLogController extends Controller
      */
     private function buildBaseQuery(Request $request, array $validated): \Illuminate\Database\Eloquent\Builder
     {
+        $compoundId = $this->compoundContext->resolve($request);
+
         return AuditLog::query()
             ->with('actor')
-            ->when($this->compoundContext->resolve($request) !== null, function ($builder) use ($request): void {
-                /** @var User $user */
-                $user       = $request->user();
-                $compoundId = $user->compound_id;
-
+            ->when($compoundId !== null, function ($builder) use ($compoundId): void {
                 $builder->where(function ($scoped) use ($compoundId): void {
                     $scoped
-                        ->whereHas('actor', fn ($actorQuery) => $actorQuery->where('compound_id', $compoundId))
+                        ->whereHas('actor', fn ($actorQuery) => $this->scopeUsersToCompound($actorQuery, $compoundId))
                         ->orWhere('metadata->compound_id', $compoundId)
                         ->orWhere('metadata->compoundId', $compoundId);
                 });
@@ -182,5 +177,14 @@ class AuditLogController extends Controller
                 });
             })
             ->latest();
+    }
+
+    private function scopeUsersToCompound($query, string $compoundId): void
+    {
+        $query->where(function ($scoped) use ($compoundId): void {
+            $scoped
+                ->where('compound_id', $compoundId)
+                ->orWhereHas('unitMemberships.unit', fn ($unitQuery) => $unitQuery->where('compound_id', $compoundId));
+        });
     }
 }

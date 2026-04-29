@@ -13,6 +13,7 @@ use App\Models\Governance\Vote;
 use App\Models\Governance\VoteOption;
 use App\Models\Governance\VoteParticipation;
 use App\Models\User;
+use App\Services\CompoundContextService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -20,6 +21,26 @@ use Illuminate\Validation\Rule;
 
 class VoteController extends Controller
 {
+    public function __construct(
+        private readonly CompoundContextService $compoundContext,
+    ) {}
+
+    /**
+     * @var list<UserRole>
+     */
+    private const ADMIN_ROLES = [
+        UserRole::SuperAdmin,
+        UserRole::CompoundAdmin,
+        UserRole::BoardMember,
+        UserRole::FinanceReviewer,
+        UserRole::SupportAgent,
+    ];
+
+    private function isAdmin(User $user): bool
+    {
+        return $user->hasAnyEffectiveRole(self::ADMIN_ROLES);
+    }
+
     /**
      * List votes. Admin sees all (with optional status filter); residents see active ones in their compound.
      */
@@ -32,13 +53,7 @@ class VoteController extends Controller
         ]);
 
         $user = $request->user();
-        $isAdmin = in_array($user->role->value ?? $user->role, [
-            UserRole::SuperAdmin->value,
-            UserRole::CompoundAdmin->value,
-            UserRole::BoardMember->value,
-            UserRole::FinanceReviewer->value,
-            UserRole::SupportAgent->value,
-        ]);
+        $isAdmin = $this->isAdmin($user);
 
         $query = Vote::query()->with('options');
 
@@ -55,17 +70,22 @@ class VoteController extends Controller
                 ->values();
             $query->whereIn('compound_id', $verifiedCompoundIds);
         } else {
-            if (filled($user->compound_id) && isset($validated['compoundId']) && $validated['compoundId'] !== $user->compound_id) {
-                abort(403);
-            }
+            $managedCompoundId = $this->compoundContext->resolveManagedCompoundId($user);
 
             if (isset($validated['status'])) {
                 $query->where('status', $validated['status']);
             }
-            if (filled($user->compound_id)) {
-                $query->where('compound_id', $user->compound_id);
-            } elseif (isset($validated['compoundId'])) {
-                $query->where('compound_id', $validated['compoundId']);
+            if ($user->isEffectiveSuperAdmin()) {
+                if (isset($validated['compoundId'])) {
+                    $query->where('compound_id', $validated['compoundId']);
+                }
+            } else {
+                abort_unless($managedCompoundId !== null, 403);
+                if (isset($validated['compoundId']) && $validated['compoundId'] !== $managedCompoundId) {
+                    abort(403);
+                }
+
+                $query->where('compound_id', $managedCompoundId);
             }
         }
 
@@ -100,10 +120,13 @@ class VoteController extends Controller
         ]);
         /** @var User $actor */
         $actor = $request->user();
+        $this->ensureAdminCanManageCompound($actor, $validated['compoundId']);
 
-        if (filled($actor->compound_id)) {
-            abort_if($validated['compoundId'] !== $actor->compound_id, 403);
-            $validated['compoundId'] = $actor->compound_id;
+        $managedCompoundId = $this->compoundContext->resolveManagedCompoundId($actor);
+
+        if (! $actor->isEffectiveSuperAdmin()) {
+            abort_unless($managedCompoundId !== null, 403);
+            $validated['compoundId'] = $managedCompoundId;
         }
 
         $vote = Vote::create([
@@ -151,7 +174,7 @@ class VoteController extends Controller
      */
     public function update(Request $request, Vote $vote): VoteResource
     {
-        $this->ensureViewerCanAccessVote($request, $vote);
+        $this->ensureAdminCanManageVote($request->user(), $vote);
 
         if ($vote->status !== VoteStatus::Draft->value) {
             abort(422, 'Only draft votes can be edited.');
@@ -199,7 +222,7 @@ class VoteController extends Controller
      */
     public function activate(Request $request, Vote $vote): VoteResource
     {
-        $this->ensureViewerCanAccessVote($request, $vote);
+        $this->ensureAdminCanManageVote($request->user(), $vote);
 
         if ($vote->status !== VoteStatus::Draft->value) {
             abort(422, 'Only draft votes can be activated.');
@@ -219,7 +242,7 @@ class VoteController extends Controller
      */
     public function close(Request $request, Vote $vote): VoteResource
     {
-        $this->ensureViewerCanAccessVote($request, $vote);
+        $this->ensureAdminCanManageVote($request->user(), $vote);
 
         if ($vote->status !== VoteStatus::Active->value) {
             abort(422, 'Only active votes can be closed.');
@@ -235,7 +258,7 @@ class VoteController extends Controller
      */
     public function cancel(Request $request, Vote $vote): VoteResource
     {
-        $this->ensureViewerCanAccessVote($request, $vote);
+        $this->ensureAdminCanManageVote($request->user(), $vote);
 
         if (in_array($vote->status, [VoteStatus::Closed->value, VoteStatus::Cancelled->value])) {
             abort(422, 'This vote cannot be cancelled.');
@@ -316,9 +339,16 @@ class VoteController extends Controller
      */
     private function checkEligibility(Vote $vote, \App\Models\User $user): array
     {
+        $effectiveRoleNames = $user->effectiveRoleNames();
+        $isResidentOwner = $user->hasEffectiveRole(UserRole::ResidentOwner);
+        $isResidentTenant = $user->hasEffectiveRole(UserRole::ResidentTenant);
+
         $snapshot = [
             'userId'   => $user->id,
-            'role'     => $user->role->value ?? $user->role,
+            'role'     => $isResidentOwner
+                ? UserRole::ResidentOwner->value
+                : ($isResidentTenant ? UserRole::ResidentTenant->value : ($effectiveRoleNames[0] ?? ($user->role->value ?? $user->role))),
+            'effectiveRoles' => $effectiveRoleNames,
             'checkedAt' => now()->toJSON(),
         ];
 
@@ -336,17 +366,15 @@ class VoteController extends Controller
             return ['eligible' => false, 'reason' => 'vote_ended', 'snapshot' => $snapshot];
         }
 
-        $userRole = $user->role->value ?? $user->role;
-
         // Eligibility rule check
         switch ($vote->eligibility) {
             case VoteEligibility::OwnersOnly->value:
-                if ($userRole !== UserRole::ResidentOwner->value) {
+                if (! $isResidentOwner) {
                     return ['eligible' => false, 'reason' => 'owners_only', 'snapshot' => $snapshot];
                 }
                 break;
             case VoteEligibility::OwnersAndResidents->value:
-                if (! in_array($userRole, [UserRole::ResidentOwner->value, UserRole::ResidentTenant->value])) {
+                if (! $isResidentOwner && ! $isResidentTenant) {
                     return ['eligible' => false, 'reason' => 'residents_only', 'snapshot' => $snapshot];
                 }
                 break;
@@ -392,21 +420,12 @@ class VoteController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        $adminRoles = [
-            UserRole::SuperAdmin->value,
-            UserRole::CompoundAdmin->value,
-            UserRole::BoardMember->value,
-            UserRole::FinanceReviewer->value,
-            UserRole::SupportAgent->value,
-        ];
-        $userRole = $user->role->value ?? $user->role;
-
-        if (in_array($userRole, $adminRoles, true)) {
-            if (! filled($user->compound_id) || $userRole === UserRole::SuperAdmin->value) {
+        if ($this->isAdmin($user)) {
+            if ($user->isEffectiveSuperAdmin()) {
                 return;
             }
 
-            abort_if($user->compound_id !== $vote->compound_id, 403);
+            $this->compoundContext->ensureManagedCompoundAccess($user, $vote->compound_id);
 
             return;
         }
@@ -417,5 +436,27 @@ class VoteController extends Controller
             ->exists();
 
         abort_unless($hasMembership, 403);
+    }
+
+    private function ensureAdminCanManageVote(User $user, Vote $vote): void
+    {
+        abort_unless($this->isAdmin($user), 403);
+
+        if ($user->isEffectiveSuperAdmin()) {
+            return;
+        }
+
+        $this->compoundContext->ensureManagedCompoundAccess($user, $vote->compound_id);
+    }
+
+    private function ensureAdminCanManageCompound(User $user, string $compoundId): void
+    {
+        abort_unless($this->isAdmin($user), 403);
+
+        if ($user->isEffectiveSuperAdmin()) {
+            return;
+        }
+
+        $this->compoundContext->ensureManagedCompoundAccess($user, $compoundId);
     }
 }

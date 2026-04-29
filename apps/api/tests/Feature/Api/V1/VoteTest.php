@@ -7,6 +7,7 @@ use App\Enums\VoteEligibility;
 use App\Enums\VoteScope;
 use App\Enums\VoteStatus;
 use App\Enums\VoteType;
+use App\Enums\Permission;
 use App\Models\Governance\Vote;
 use App\Models\Governance\VoteOption;
 use App\Models\Governance\VoteParticipation;
@@ -17,11 +18,20 @@ use App\Models\Property\UnitMembership;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
+use Spatie\Permission\Models\Permission as SpatiePermission;
+use Spatie\Permission\Models\Role as SpatieRole;
 use Tests\TestCase;
 
 class VoteTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+    }
 
     // ─────────────────────────────────────────────────────────────────
     // Admin CRUD
@@ -29,8 +39,8 @@ class VoteTest extends TestCase
 
     public function test_admin_can_create_a_poll(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
         $compound = Compound::factory()->create();
+        $admin = $this->makeScopedAdmin($compound);
         Sanctum::actingAs($admin);
 
         $response = $this->postJson('/api/v1/governance/votes', [
@@ -53,8 +63,8 @@ class VoteTest extends TestCase
 
     public function test_admin_can_create_an_election(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::BoardMember->value]);
         $compound = Compound::factory()->create();
+        $admin = $this->makeScopedAdmin($compound, UserRole::BoardMember);
         Sanctum::actingAs($admin);
 
         $response = $this->postJson('/api/v1/governance/votes', [
@@ -74,8 +84,8 @@ class VoteTest extends TestCase
 
     public function test_vote_creation_requires_at_least_two_options(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
         $compound = Compound::factory()->create();
+        $admin = $this->makeScopedAdmin($compound);
         Sanctum::actingAs($admin);
 
         $this->postJson('/api/v1/governance/votes', [
@@ -89,8 +99,8 @@ class VoteTest extends TestCase
 
     public function test_admin_can_update_a_draft_vote(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
         $compound = Compound::factory()->create();
+        $admin = $this->makeScopedAdmin($compound);
         $vote = Vote::factory()->for($compound)->create(['created_by' => $admin->id, 'title' => 'Old title']);
         VoteOption::factory()->count(2)->create(['vote_id' => $vote->id, 'label' => 'opt']);
 
@@ -105,8 +115,9 @@ class VoteTest extends TestCase
 
     public function test_cannot_update_active_vote(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
-        $vote = Vote::factory()->active()->create(['created_by' => $admin->id]);
+        $compound = Compound::factory()->create();
+        $admin = $this->makeScopedAdmin($compound);
+        $vote = Vote::factory()->active()->create(['compound_id' => $compound->id, 'created_by' => $admin->id]);
 
         Sanctum::actingAs($admin);
 
@@ -121,8 +132,9 @@ class VoteTest extends TestCase
 
     public function test_admin_can_activate_draft_vote(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
-        $vote = Vote::factory()->create(['created_by' => $admin->id]);
+        $compound = Compound::factory()->create();
+        $admin = $this->makeScopedAdmin($compound);
+        $vote = Vote::factory()->create(['compound_id' => $compound->id, 'created_by' => $admin->id]);
         VoteOption::factory()->count(2)->create(['vote_id' => $vote->id, 'label' => 'opt']);
 
         Sanctum::actingAs($admin);
@@ -134,8 +146,9 @@ class VoteTest extends TestCase
 
     public function test_cannot_activate_vote_with_fewer_than_two_options(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
-        $vote = Vote::factory()->create(['created_by' => $admin->id]);
+        $compound = Compound::factory()->create();
+        $admin = $this->makeScopedAdmin($compound);
+        $vote = Vote::factory()->create(['compound_id' => $compound->id, 'created_by' => $admin->id]);
         VoteOption::factory()->create(['vote_id' => $vote->id, 'label' => 'Only one']);
 
         Sanctum::actingAs($admin);
@@ -146,8 +159,9 @@ class VoteTest extends TestCase
 
     public function test_admin_can_close_active_vote(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
-        $vote = Vote::factory()->active()->create(['created_by' => $admin->id]);
+        $compound = Compound::factory()->create();
+        $admin = $this->makeScopedAdmin($compound);
+        $vote = Vote::factory()->active()->create(['compound_id' => $compound->id, 'created_by' => $admin->id]);
 
         Sanctum::actingAs($admin);
 
@@ -158,8 +172,9 @@ class VoteTest extends TestCase
 
     public function test_cannot_close_draft_vote(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
-        $vote = Vote::factory()->create(['created_by' => $admin->id]);
+        $compound = Compound::factory()->create();
+        $admin = $this->makeScopedAdmin($compound);
+        $vote = Vote::factory()->create(['compound_id' => $compound->id, 'created_by' => $admin->id]);
 
         Sanctum::actingAs($admin);
 
@@ -169,8 +184,9 @@ class VoteTest extends TestCase
 
     public function test_admin_can_cancel_a_vote(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
-        $vote = Vote::factory()->active()->create(['created_by' => $admin->id]);
+        $compound = Compound::factory()->create();
+        $admin = $this->makeScopedAdmin($compound);
+        $vote = Vote::factory()->active()->create(['compound_id' => $compound->id, 'created_by' => $admin->id]);
 
         Sanctum::actingAs($admin);
 
@@ -355,8 +371,9 @@ class VoteTest extends TestCase
 
     public function test_show_returns_tally_after_participations(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
-        $vote = Vote::factory()->active()->create(['created_by' => $admin->id]);
+        $compound = Compound::factory()->create();
+        $admin = $this->makeScopedAdmin($compound);
+        $vote = Vote::factory()->active()->create(['compound_id' => $compound->id, 'created_by' => $admin->id]);
         $opt1 = VoteOption::factory()->create(['vote_id' => $vote->id, 'label' => 'Yes']);
         $opt2 = VoteOption::factory()->create(['vote_id' => $vote->id, 'label' => 'No']);
 
@@ -468,6 +485,123 @@ class VoteTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_effective_compound_head_is_treated_as_admin_for_vote_index_even_when_legacy_role_is_stale(): void
+    {
+        $compound = Compound::factory()->create();
+        $permission = SpatiePermission::findOrCreate(Permission::ViewGovernance->value, 'sanctum');
+        $compoundHeadRole = SpatieRole::findOrCreate('compound_head', 'sanctum');
+
+        $admin = User::factory()->create([
+            'role' => UserRole::ResidentOwner->value,
+            'compound_id' => $compound->id,
+        ]);
+        $admin->assignRole($compoundHeadRole);
+        $admin->givePermissionTo($permission);
+
+        $vote = Vote::factory()->create([
+            'compound_id' => $compound->id,
+            'status' => VoteStatus::Draft->value,
+            'created_by' => $admin->id,
+        ]);
+        VoteOption::factory()->count(2)->create(['vote_id' => $vote->id, 'label' => 'opt']);
+
+        Sanctum::actingAs($admin);
+
+        $this->getJson('/api/v1/governance/votes')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $vote->id)
+            ->assertJsonPath('data.0.status', VoteStatus::Draft->value);
+    }
+
+    public function test_effective_compound_head_is_not_treated_as_owner_for_owner_only_vote_when_legacy_role_is_stale(): void
+    {
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $compound = Compound::factory()->create();
+        $permission = SpatiePermission::findOrCreate(Permission::ViewGovernance->value, 'sanctum');
+        $compoundHeadRole = SpatieRole::findOrCreate('compound_head', 'sanctum');
+
+        $admin = User::factory()->create([
+            'role' => UserRole::ResidentOwner->value,
+            'compound_id' => $compound->id,
+        ]);
+        $admin->assignRole($compoundHeadRole);
+        $admin->givePermissionTo($permission);
+
+        $vote = Vote::factory()->active()->create([
+            'compound_id' => $compound->id,
+            'eligibility' => VoteEligibility::OwnersOnly->value,
+            'scope' => VoteScope::Compound->value,
+            'created_by' => $admin->id,
+        ]);
+        $option = VoteOption::factory()->create(['vote_id' => $vote->id, 'label' => 'Approve']);
+        VoteOption::factory()->create(['vote_id' => $vote->id, 'label' => 'Reject']);
+
+        Sanctum::actingAs($admin);
+
+        $this->getJson("/api/v1/governance/votes/{$vote->id}/eligibility")
+            ->assertOk()
+            ->assertJsonPath('data.eligible', false)
+            ->assertJsonPath('data.reason', 'owners_only');
+
+        $this->postJson("/api/v1/governance/votes/{$vote->id}/cast", [
+            'optionId' => $option->id,
+        ])->assertForbidden();
+    }
+
+    public function test_effective_compound_head_with_membership_scope_cannot_access_other_compounds_votes_when_compound_id_is_null(): void
+    {
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $compoundA = Compound::factory()->create();
+        $compoundB = Compound::factory()->create();
+        $buildingA = Building::factory()->for($compoundA)->create();
+        $unitA = Unit::factory()->for($compoundA)->for($buildingA)->create(['floor_id' => null]);
+        $permission = SpatiePermission::findOrCreate(Permission::ViewGovernance->value, 'sanctum');
+        $compoundHeadRole = SpatieRole::findOrCreate('compound_head', 'sanctum');
+
+        $admin = User::factory()->create([
+            'role' => UserRole::ResidentOwner->value,
+            'compound_id' => null,
+        ]);
+        $admin->assignRole($compoundHeadRole);
+        $admin->givePermissionTo($permission);
+        UnitMembership::factory()->create([
+            'unit_id' => $unitA->id,
+            'user_id' => $admin->id,
+            'verification_status' => 'verified',
+            'starts_at' => now()->subYear(),
+            'ends_at' => null,
+        ]);
+
+        $voteA = Vote::factory()->create([
+            'compound_id' => $compoundA->id,
+            'status' => VoteStatus::Draft->value,
+            'created_by' => $admin->id,
+        ]);
+        $voteB = Vote::factory()->create([
+            'compound_id' => $compoundB->id,
+            'status' => VoteStatus::Draft->value,
+            'created_by' => $admin->id,
+        ]);
+        VoteOption::factory()->count(2)->create(['vote_id' => $voteA->id, 'label' => 'opt']);
+        VoteOption::factory()->count(2)->create(['vote_id' => $voteB->id, 'label' => 'opt']);
+
+        Sanctum::actingAs($admin);
+
+        $this->getJson('/api/v1/governance/votes')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $voteA->id);
+
+        $this->getJson("/api/v1/governance/votes?compoundId={$compoundB->id}")
+            ->assertForbidden();
+
+        $this->getJson("/api/v1/governance/votes/{$voteB->id}")
+            ->assertForbidden();
+    }
+
     public function test_resident_cannot_access_vote_from_another_compound(): void
     {
         $compoundA = Compound::factory()->create();
@@ -524,7 +658,7 @@ class VoteTest extends TestCase
             'ends_at'             => null,
         ]);
 
-        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
+        $admin = $this->makeScopedAdmin($compound);
         $vote  = Vote::factory()->active()->create([
             'compound_id' => $compound->id,
             'eligibility' => $eligibility->value,
@@ -534,5 +668,13 @@ class VoteTest extends TestCase
         VoteOption::factory()->create(['vote_id' => $vote->id, 'label' => 'Option B']);
 
         return [$owner, $vote, $opt1];
+    }
+
+    private function makeScopedAdmin(Compound $compound, UserRole $role = UserRole::CompoundAdmin): User
+    {
+        return User::factory()->create([
+            'role' => $role->value,
+            'compound_id' => $compound->id,
+        ]);
     }
 }

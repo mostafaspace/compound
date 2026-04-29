@@ -71,12 +71,12 @@ class AnnouncementResource extends JsonResource
 
     private function canViewAcknowledgementSummary(Request $request): bool
     {
-        return in_array($request->user()?->role, [
+        return $request->user()?->hasAnyEffectiveRole([
             UserRole::SuperAdmin,
             UserRole::CompoundAdmin,
             UserRole::BoardMember,
             UserRole::FinanceReviewer,
             UserRole::SupportAgent,
-        ], true);
+        ]) ?? false;
     }
 }

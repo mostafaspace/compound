@@ -6,6 +6,7 @@ use App\Enums\AnnouncementCategory;
 use App\Enums\AnnouncementPriority;
 use App\Enums\AnnouncementStatus;
 use App\Enums\AnnouncementTargetType;
+use App\Enums\Permission;
 use App\Enums\UnitRelationType;
 use App\Enums\UserRole;
 use App\Enums\VerificationStatus;
@@ -20,11 +21,20 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
+use Spatie\Permission\Models\Permission as SpatiePermission;
+use Spatie\Permission\Models\Role as SpatieRole;
 use Tests\TestCase;
 
 class AnnouncementsTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+    }
 
     public function test_admin_can_publish_building_announcement_to_targeted_residents_only(): void
     {
@@ -247,6 +257,116 @@ class AnnouncementsTest extends TestCase
             ->assertOk()
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.id', $announcementId);
+
+        Sanctum::actingAs($resident);
+        $this->getJson('/api/v1/my/announcements')
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
+    }
+
+    public function test_role_targeted_announcements_reach_effective_security_users_even_when_legacy_role_is_stale(): void
+    {
+        $compound = Compound::factory()->create();
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compound->id,
+        ]);
+
+        $securityRole = SpatieRole::findOrCreate('security_guard', 'sanctum');
+
+        $effectiveSecurity = User::factory()->create([
+            'role' => UserRole::ResidentOwner->value,
+            'compound_id' => $compound->id,
+        ]);
+        $effectiveSecurity->assignRole($securityRole);
+
+        $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+
+        Sanctum::actingAs($admin);
+        $announcementId = $this->postJson('/api/v1/announcements', [
+            'titleEn' => 'Security rota update',
+            'titleAr' => 'تحديث جدول الأمن',
+            'bodyEn' => 'Security staff must confirm the new gate rota.',
+            'bodyAr' => 'يجب على فريق الأمن تأكيد جدول البوابة الجديد.',
+            'category' => AnnouncementCategory::SecurityAlert->value,
+            'priority' => AnnouncementPriority::High->value,
+            'targetType' => AnnouncementTargetType::Role->value,
+            'targetRole' => UserRole::SecurityGuard->value,
+            'requiresAcknowledgement' => true,
+        ])->assertCreated()->json('data.id');
+
+        $this->postJson("/api/v1/announcements/{$announcementId}/publish")
+            ->assertOk()
+            ->assertJsonPath('data.acknowledgementSummary.targetedCount', 1);
+
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $effectiveSecurity->id,
+            'category' => 'announcements',
+            'title' => 'Security rota update',
+        ]);
+        $this->assertDatabaseMissing('notifications', [
+            'user_id' => $resident->id,
+            'category' => 'announcements',
+            'title' => 'Security rota update',
+        ]);
+
+        Sanctum::actingAs($effectiveSecurity);
+        $this->getJson('/api/v1/my/announcements')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $announcementId);
+
+        Sanctum::actingAs($resident);
+        $this->getJson('/api/v1/my/announcements')
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
+    }
+
+    public function test_role_targeted_announcements_exclude_users_whose_explicit_roles_override_stale_legacy_staff_roles(): void
+    {
+        $compound = Compound::factory()->create();
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compound->id,
+        ]);
+
+        $residentTenantRole = SpatieRole::findOrCreate('resident_tenant', 'sanctum');
+
+        $staleSecurity = User::factory()->create([
+            'role' => UserRole::SecurityGuard->value,
+            'compound_id' => $compound->id,
+        ]);
+        $staleSecurity->assignRole($residentTenantRole);
+
+        $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+
+        Sanctum::actingAs($admin);
+        $announcementId = $this->postJson('/api/v1/announcements', [
+            'titleEn' => 'Security staff only',
+            'titleAr' => 'لفريق الأمن فقط',
+            'bodyEn' => 'Only effective security staff should receive this.',
+            'bodyAr' => 'يجب أن يستلم هذا فقط فريق الأمن الفعلي.',
+            'category' => AnnouncementCategory::SecurityAlert->value,
+            'priority' => AnnouncementPriority::High->value,
+            'targetType' => AnnouncementTargetType::Role->value,
+            'targetRole' => UserRole::SecurityGuard->value,
+            'requiresAcknowledgement' => true,
+        ])->assertCreated()->json('data.id');
+
+        $this->postJson("/api/v1/announcements/{$announcementId}/publish")
+            ->assertOk()
+            ->assertJsonPath('data.acknowledgementSummary.targetedCount', 0);
+
+        $this->assertDatabaseMissing('notifications', [
+            'user_id' => $staleSecurity->id,
+            'category' => 'announcements',
+            'title' => 'Security staff only',
+        ]);
+
+        Sanctum::actingAs($staleSecurity);
+        $this->getJson('/api/v1/my/announcements')
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
 
         Sanctum::actingAs($resident);
         $this->getJson('/api/v1/my/announcements')
@@ -527,6 +647,77 @@ class AnnouncementsTest extends TestCase
             'file' => UploadedFile::fake()->createWithContent('cross-compound.txt', 'forbidden'),
         ])->assertForbidden();
         $this->getJson("/api/v1/announcements/{$announcementId}/acknowledgements")->assertForbidden();
+    }
+
+    public function test_effective_compound_head_with_membership_scope_can_manage_own_compound_announcement_but_not_foreign_compound_when_compound_id_is_null(): void
+    {
+        $compoundA = Compound::factory()->create();
+        $compoundB = Compound::factory()->create();
+        $buildingA = Building::factory()->for($compoundA)->create();
+        $buildingB = Building::factory()->for($compoundB)->create();
+        $unitA = Unit::factory()->for($compoundA)->for($buildingA)->create(['floor_id' => null]);
+        $compoundHeadRole = SpatieRole::findOrCreate('compound_head', 'sanctum');
+        $manageAnnouncements = SpatiePermission::findOrCreate(Permission::ManageAnnouncements->value, 'sanctum');
+        $viewAnnouncements = SpatiePermission::findOrCreate(Permission::ViewAnnouncements->value, 'sanctum');
+        $compoundHeadRole->givePermissionTo($manageAnnouncements, $viewAnnouncements);
+
+        $adminA = User::factory()->create([
+            'role' => UserRole::ResidentOwner->value,
+            'compound_id' => null,
+        ]);
+        $adminA->assignRole($compoundHeadRole);
+        $adminA->givePermissionTo($manageAnnouncements, $viewAnnouncements);
+        UnitMembership::factory()->create([
+            'unit_id' => $unitA->id,
+            'user_id' => $adminA->id,
+            'verification_status' => VerificationStatus::Verified->value,
+            'starts_at' => now()->subYear(),
+            'ends_at' => null,
+        ]);
+
+        $adminB = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compoundB->id,
+        ]);
+
+        Sanctum::actingAs($adminA);
+        $announcementId = $this->postJson('/api/v1/announcements', [
+            'compoundId' => $compoundA->id,
+            'titleEn' => 'Scoped admin notice',
+            'titleAr' => 'إعلان المشرف المقيد',
+            'bodyEn' => 'Only compound A should allow this admin flow.',
+            'bodyAr' => 'يجب أن يسمح هذا التدفق فقط للمجمع أ.',
+            'category' => AnnouncementCategory::General->value,
+            'targetType' => AnnouncementTargetType::Building->value,
+            'targetIds' => [$buildingA->id],
+        ])->assertCreated()->json('data.id');
+
+        $this->postJson("/api/v1/announcements/{$announcementId}/publish")
+            ->assertOk();
+
+        $this->assertDatabaseHas('announcements', [
+            'id' => $announcementId,
+            'compound_id' => $compoundA->id,
+        ]);
+
+        Sanctum::actingAs($adminB);
+        $foreignAnnouncementId = $this->postJson('/api/v1/announcements', [
+            'titleEn' => 'Compound B notice',
+            'titleAr' => 'إعلان المجمع ب',
+            'bodyEn' => 'Only compound B should manage this.',
+            'bodyAr' => 'يجب أن يدير هذا مجمع ب فقط.',
+            'category' => AnnouncementCategory::General->value,
+            'targetType' => AnnouncementTargetType::Building->value,
+            'targetIds' => [$buildingB->id],
+        ])->assertCreated()->json('data.id');
+
+        Sanctum::actingAs($adminA);
+        $this->getJson("/api/v1/announcements/{$foreignAnnouncementId}")->assertForbidden();
+        $this->patchJson("/api/v1/announcements/{$foreignAnnouncementId}", [
+            'titleEn' => 'Blocked update',
+            'titleAr' => 'تعديل محظور',
+        ])->assertForbidden();
+        $this->postJson("/api/v1/announcements/{$foreignAnnouncementId}/publish")->assertForbidden();
     }
 
     private function buildingScenario(): array

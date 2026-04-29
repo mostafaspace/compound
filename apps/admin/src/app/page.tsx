@@ -4,7 +4,8 @@ import { getTranslations } from "next-intl/server";
 import { CompoundContextBanner } from "@/components/compound-context-banner";
 import { SiteNav } from "@/components/site-nav";
 import { getCurrentUser, getSystemStatus } from "@/lib/api";
-import { requireAdminUser } from "@/lib/session";
+import { formatRoleLabel, getPrimaryEffectiveRole } from "@/lib/auth-access";
+import { hasEffectiveRole, requireAdminUser } from "@/lib/session";
 
 const workstreams = [
   { key: "financeReview", value: "12", tone: "text-brand" },
@@ -51,8 +52,8 @@ export default async function Home() {
   const nav = await getTranslations("Navigation");
   const status = await getSystemStatus();
   const apiOnline = status?.status === "ok";
-  const role = user.role.replaceAll("_", " ");
-  const isSuperAdmin = user.role === "super_admin";
+  const role = formatRoleLabel(getPrimaryEffectiveRole(user));
+  const isSuperAdmin = hasEffectiveRole(user, "super_admin");
 
   return (
     <main className="min-h-screen bg-background text-foreground">

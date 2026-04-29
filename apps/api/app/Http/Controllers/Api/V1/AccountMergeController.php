@@ -29,7 +29,7 @@ class AccountMergeController extends Controller
         $merges = AccountMerge::query()
             ->with(['sourceUser', 'targetUser', 'initiator'])
             ->when($compoundId !== null, function ($q) use ($compoundId): void {
-                $q->whereHas('sourceUser', fn ($u) => $u->where('compound_id', $compoundId));
+                $q->whereHas('sourceUser', fn ($u) => $this->context->scopeUsersToCompound($u, $compoundId));
             })
             ->latest()
             ->paginate(25);
@@ -54,7 +54,8 @@ class AccountMergeController extends Controller
         $compoundId = $this->context->resolve($request);
 
         if ($compoundId !== null) {
-            $this->context->ensureCompoundAccess($request, $source->compound_id ?? '');
+            $this->context->ensureUserAccess($request, $source);
+            $this->context->ensureUserAccess($request, $target);
         }
 
         // Block if either user already has a pending merge
@@ -91,6 +92,10 @@ class AccountMergeController extends Controller
     {
         $accountMerge->load(['sourceUser', 'targetUser', 'initiator']);
 
+        if ($accountMerge->sourceUser !== null) {
+            $this->context->ensureUserAccess(request(), $accountMerge->sourceUser);
+        }
+
         return response()->json($this->formatMerge($accountMerge));
     }
 
@@ -101,8 +106,8 @@ class AccountMergeController extends Controller
     {
         $compoundId = $this->context->resolve($request);
 
-        if ($compoundId !== null) {
-            $this->context->ensureCompoundAccess($request, $accountMerge->sourceUser?->compound_id ?? '');
+        if ($compoundId !== null && $accountMerge->sourceUser !== null) {
+            $this->context->ensureUserAccess($request, $accountMerge->sourceUser);
         }
 
         $this->service->execute($accountMerge, $request->user());
@@ -113,8 +118,12 @@ class AccountMergeController extends Controller
     /**
      * Cancel a pending merge.
      */
-    public function cancel(AccountMerge $accountMerge): JsonResponse
+    public function cancel(Request $request, AccountMerge $accountMerge): JsonResponse
     {
+        if ($accountMerge->sourceUser !== null) {
+            $this->context->ensureUserAccess($request, $accountMerge->sourceUser);
+        }
+
         if ($accountMerge->status !== AccountMergeStatus::Pending) {
             abort(422, 'Only pending merges can be cancelled.');
         }

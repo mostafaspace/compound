@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import { LogoutButton } from "@/components/logout-button";
 import { getCurrentUser, getUserDuplicates, getUserSupportView } from "@/lib/api";
+import { formatRoleLabel, getPrimaryEffectiveRole } from "@/lib/auth-access";
 import { requireAdminUser } from "@/lib/session";
 import {
   moveOutUserAction,
@@ -127,7 +128,7 @@ export default async function SupportUserDetailPage({ params, searchParams }: Su
                 </div>
                 <div className="flex justify-between gap-2">
                   <dt className="text-muted">Role</dt>
-                  <dd className="font-semibold">{user.role}</dd>
+                  <dd className="font-semibold">{formatRoleLabel(getPrimaryEffectiveRole(user))}</dd>
                 </div>
                 <div className="flex justify-between gap-2">
                   <dt className="text-muted">Status</dt>

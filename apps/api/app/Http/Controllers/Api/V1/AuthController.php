@@ -57,7 +57,7 @@ class AuthController extends Controller
             'data' => [
                 'token' => $token,
                 'tokenType' => 'Bearer',
-                'user' => UserResource::make($user->refresh()),
+                'user' => UserResource::make($user->refresh()->load(['roles', 'permissions', 'scopeAssignments'])),
             ],
         ]);
     }
@@ -90,7 +90,22 @@ class AuthController extends Controller
             return ['verification:self'];
         }
 
-        return $this->abilitiesForRole($user->role);
+        return $this->abilitiesForRole($this->effectiveAbilityRoleForUser($user));
+    }
+
+    private function effectiveAbilityRoleForUser(User $user): UserRole
+    {
+        return match (true) {
+            $user->isEffectiveSuperAdmin() => UserRole::SuperAdmin,
+            $user->hasEffectiveRole(UserRole::CompoundAdmin) => UserRole::CompoundAdmin,
+            $user->hasEffectiveRole(UserRole::BoardMember) => UserRole::BoardMember,
+            $user->hasEffectiveRole(UserRole::FinanceReviewer) => UserRole::FinanceReviewer,
+            $user->hasEffectiveRole(UserRole::SupportAgent) => UserRole::SupportAgent,
+            $user->hasEffectiveRole(UserRole::SecurityGuard) => UserRole::SecurityGuard,
+            $user->hasEffectiveRole(UserRole::ResidentOwner) => UserRole::ResidentOwner,
+            $user->hasEffectiveRole(UserRole::ResidentTenant) => UserRole::ResidentTenant,
+            default => $user->role,
+        };
     }
 
     /**

@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers\Api\V1\Finance;
 
-use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Finance\ApplyCampaignChargesRequest;
 use App\Http\Requests\Finance\StoreCollectionCampaignRequest;
 use App\Http\Resources\Finance\CollectionCampaignResource;
 use App\Models\Finance\CollectionCampaign;
 use App\Models\User;
+use App\Services\CompoundContextService;
 use App\Services\FinanceService;
 use App\Support\AuditLogger;
 use Illuminate\Http\JsonResponse;
@@ -19,6 +19,7 @@ use Symfony\Component\HttpFoundation\Response;
 class CollectionCampaignController extends Controller
 {
     public function __construct(
+        private readonly CompoundContextService $compoundContext,
         private readonly FinanceService $financeService,
         private readonly AuditLogger $auditLogger,
     ) {}
@@ -28,15 +29,10 @@ class CollectionCampaignController extends Controller
         /** @var User $actor */
         $actor = $request->user();
         $requestedCompoundId = $request->filled('compound_id') ? $request->string('compound_id')->toString() : null;
-
-        if (filled($actor->compound_id) && $requestedCompoundId !== null && $requestedCompoundId !== $actor->compound_id) {
-            abort(Response::HTTP_FORBIDDEN);
-        }
-
-        $compoundId = filled($actor->compound_id) ? $actor->compound_id : $requestedCompoundId;
+        $compoundIds = $this->compoundContext->resolveRequestedAccessibleCompoundIds($actor, $requestedCompoundId);
 
         $campaigns = CollectionCampaign::query()
-            ->when($compoundId, fn ($query) => $query->where('compound_id', $compoundId))
+            ->when($compoundIds !== null, fn ($query) => $query->whereIn('compound_id', $compoundIds))
             ->when(
                 $request->filled('status'),
                 fn ($query) => $query->where('status', $request->string('status')->toString()),
@@ -53,13 +49,9 @@ class CollectionCampaignController extends Controller
         $actor = $request->user();
         $validated = $request->validated();
         $requestedCompoundId = $validated['compound_id'] ?? null;
-
-        if (filled($actor->compound_id)) {
-            abort_if($requestedCompoundId !== $actor->compound_id, Response::HTTP_FORBIDDEN);
-            $validated['compound_id'] = $actor->compound_id;
-        } else {
-            abort_if(! filled($requestedCompoundId), Response::HTTP_UNPROCESSABLE_ENTITY);
-        }
+        $compoundId = $this->compoundContext->resolveRequestedAccessibleCompoundId($actor, $requestedCompoundId);
+        abort_if(! filled($compoundId), Response::HTTP_UNPROCESSABLE_ENTITY);
+        $validated['compound_id'] = $compoundId;
 
         $campaign = $this->financeService->createCampaign(
             data: $validated,
@@ -151,10 +143,6 @@ class CollectionCampaignController extends Controller
 
     private function ensureFinanceCompoundAccess(User $actor, string $compoundId): void
     {
-        if ($actor->role === UserRole::SuperAdmin || ! filled($actor->compound_id)) {
-            return;
-        }
-
-        abort_if($actor->compound_id !== $compoundId, Response::HTTP_FORBIDDEN);
+        $this->compoundContext->ensureUserCanAccessCompound($actor, $compoundId);
     }
 }

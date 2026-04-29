@@ -24,13 +24,15 @@ class PaymentSubmissionController extends Controller
 
     public function index(Request $request): AnonymousResourceCollection
     {
-        $compoundId = $this->compoundContext->resolve($request);
+        /** @var User $actor */
+        $actor = $request->user();
+        $compoundIds = $this->compoundContext->resolveAccessibleCompoundIds($actor);
 
         $payments = PaymentSubmission::query()
             ->with(['unitAccount.unit.building', 'submitter', 'reviewer'])
-            ->when($compoundId, fn ($query) => $query->whereHas(
+            ->when($compoundIds !== null, fn ($query) => $query->whereHas(
                 'unitAccount.unit',
-                fn ($unitQuery) => $unitQuery->where('compound_id', $compoundId),
+                fn ($unitQuery) => $unitQuery->whereIn('compound_id', $compoundIds),
             ))
             ->when($request->filled('status'), fn ($query) => $query->where('status', $request->string('status')->toString()))
             ->latest()
@@ -131,10 +133,8 @@ class PaymentSubmissionController extends Controller
             abort(Response::HTTP_FORBIDDEN);
         }
 
-        $compoundId = $this->compoundContext->resolve($request);
-
-        if ($compoundId !== null) {
-            abort_unless($payment->unitAccount->unit->compound_id === $compoundId, Response::HTTP_FORBIDDEN);
-        }
+        /** @var User $actor */
+        $actor = $request->user();
+        $this->compoundContext->ensureUserCanAccessCompound($actor, $payment->unitAccount->unit->compound_id);
     }
 }

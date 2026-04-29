@@ -5,12 +5,17 @@ namespace App\Http\Controllers\Api\V1\Polls;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Polls\PollTypeResource;
 use App\Models\Polls\PollType;
+use App\Services\CompoundContextService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class PollTypeController extends Controller
 {
+    public function __construct(
+        private readonly CompoundContextService $compoundContext,
+    ) {}
+
     public function index(Request $request): AnonymousResourceCollection
     {
         $validated = $request->validate([
@@ -19,11 +24,16 @@ class PollTypeController extends Controller
 
         $user = $request->user();
         $query = PollType::query()->orderBy('sort_order')->orderBy('name');
+        $compoundId = $this->compoundContext->resolve($request);
 
         // Scope to compound: admins locked to their compound see compound + global types
-        if (filled($user->compound_id)) {
-            $query->where(function ($q) use ($user): void {
-                $q->where('compound_id', $user->compound_id)->orWhereNull('compound_id');
+        if ($compoundId !== null) {
+            if (isset($validated['compoundId']) && $validated['compoundId'] !== $compoundId) {
+                abort(403);
+            }
+
+            $query->where(function ($q) use ($compoundId): void {
+                $q->where('compound_id', $compoundId)->orWhereNull('compound_id');
             });
         } elseif (isset($validated['compoundId'])) {
             $query->where(function ($q) use ($validated): void {
@@ -46,10 +56,11 @@ class PollTypeController extends Controller
         ]);
 
         $user = $request->user();
-
-        if (filled($user->compound_id)) {
-            $validated['compoundId'] = $user->compound_id;
-        }
+        $validated['compoundId'] = $this->compoundContext->resolveManagedCompound(
+            $request,
+            $validated['compoundId'] ?? null,
+            allowGlobalForSuperAdmin: true,
+        );
 
         $pollType = PollType::create([
             'compound_id' => $validated['compoundId'] ?? null,
@@ -75,9 +86,7 @@ class PollTypeController extends Controller
         ]);
 
         $user = $request->user();
-        if (filled($user->compound_id) && $pollType->compound_id !== null && $pollType->compound_id !== $user->compound_id) {
-            abort(403);
-        }
+        $this->ensurePollTypeAccess($request, $pollType);
 
         $pollType->update(array_filter([
             'name'        => $validated['name'] ?? null,
@@ -92,15 +101,23 @@ class PollTypeController extends Controller
 
     public function destroy(Request $request, PollType $pollType): JsonResponse
     {
-        $user = $request->user();
-        if (filled($user->compound_id) && $pollType->compound_id !== null && $pollType->compound_id !== $user->compound_id) {
-            abort(403);
-        }
+        $this->ensurePollTypeAccess($request, $pollType);
 
         // Detach from polls (nullify FK) before deleting the type
         $pollType->polls()->update(['poll_type_id' => null]);
         $pollType->delete();
 
         return response()->json(null, 204);
+    }
+
+    private function ensurePollTypeAccess(Request $request, PollType $pollType): void
+    {
+        if ($pollType->compound_id === null) {
+            $this->compoundContext->ensureGlobalCompoundAccess($request);
+
+            return;
+        }
+
+        $this->compoundContext->ensureCompoundAccess($request, $pollType->compound_id);
     }
 }

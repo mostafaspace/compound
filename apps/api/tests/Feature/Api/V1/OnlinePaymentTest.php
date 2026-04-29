@@ -36,6 +36,19 @@ class OnlinePaymentTest extends TestCase
         ]);
     }
 
+    private function makeMembershipScopedAdmin(Compound $compound): User
+    {
+        $admin = User::factory()->create([
+            'role'        => UserRole::CompoundAdmin->value,
+            'compound_id' => null,
+            'status'      => AccountStatus::Active->value,
+        ]);
+
+        [$unit] = $this->createUnitWithAccount($compound, $admin);
+
+        return $admin->refresh();
+    }
+
     private function makeResident(Compound $compound): User
     {
         return User::factory()->create([
@@ -215,6 +228,36 @@ class OnlinePaymentTest extends TestCase
             ->assertJsonCount(3, 'data');
     }
 
+    public function test_membership_scoped_admin_cannot_list_other_compounds_payment_sessions_when_compound_id_is_null(): void
+    {
+        $compoundA = Compound::factory()->create();
+        $compoundB = Compound::factory()->create();
+        $admin = $this->makeMembershipScopedAdmin($compoundA);
+        $residentA = $this->makeResident($compoundA);
+        $residentB = $this->makeResident($compoundB);
+        [, $accountA] = $this->createUnitWithAccount($compoundA, $residentA);
+        [, $accountB] = $this->createUnitWithAccount($compoundB, $residentB);
+
+        $sessionA = PaymentSession::factory()->create([
+            'unit_account_id' => $accountA->id,
+            'initiated_by' => $residentA->id,
+        ]);
+        PaymentSession::factory()->create([
+            'unit_account_id' => $accountB->id,
+            'initiated_by' => $residentB->id,
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $this->getJson('/api/v1/finance/payment-sessions')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $sessionA->id);
+
+        $this->getJson("/api/v1/finance/payment-sessions?compound_id={$compoundB->id}")
+            ->assertForbidden();
+    }
+
     // ── Admin: refund ─────────────────────────────────────────────────────────
 
     public function test_admin_can_refund_confirmed_transaction(): void
@@ -301,6 +344,32 @@ class OnlinePaymentTest extends TestCase
         ]);
 
         Sanctum::actingAs($adminA);
+
+        $this->postJson("/api/v1/finance/gateway-transactions/{$tx->id}/refund")
+            ->assertForbidden();
+    }
+
+    public function test_membership_scoped_admin_cannot_refund_other_compounds_transaction_when_compound_id_is_null(): void
+    {
+        $compoundA = Compound::factory()->create();
+        $compoundB = Compound::factory()->create();
+
+        $admin = $this->makeMembershipScopedAdmin($compoundA);
+        $residentB = $this->makeResident($compoundB);
+        [, $accountB] = $this->createUnitWithAccount($compoundB, $residentB);
+
+        $session = PaymentSession::factory()->confirmed()->create([
+            'unit_account_id' => $accountB->id,
+            'initiated_by' => $residentB->id,
+        ]);
+
+        $tx = GatewayTransaction::factory()->create([
+            'payment_session_id' => $session->id,
+            'status' => GatewayTransactionStatus::Confirmed,
+            'amount' => 100.00,
+        ]);
+
+        Sanctum::actingAs($admin);
 
         $this->postJson("/api/v1/finance/gateway-transactions/{$tx->id}/refund")
             ->assertForbidden();

@@ -4,13 +4,17 @@ namespace Tests\Feature\Api\V1;
 
 use App\Enums\BudgetStatus;
 use App\Enums\ExpenseStatus;
+use App\Enums\UnitRelationType;
 use App\Enums\UserRole;
+use App\Enums\VerificationStatus;
 use App\Models\Finance\Budget;
 use App\Models\Finance\BudgetCategory;
 use App\Models\Finance\Expense;
 use App\Models\Finance\ReserveFund;
 use App\Models\Finance\Vendor;
+use App\Models\Property\Building;
 use App\Models\Property\Compound;
+use App\Models\Property\Unit;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -41,6 +45,25 @@ class AdvancedFinanceTest extends TestCase
     private function makeSuperAdmin(): User
     {
         return User::factory()->create(['role' => UserRole::SuperAdmin->value]);
+    }
+
+    private function makeMembershipScopedAdmin(Compound $compound): User
+    {
+        $admin = User::factory()->create([
+            'role'        => UserRole::CompoundAdmin->value,
+            'compound_id' => null,
+        ]);
+
+        $building = Building::factory()->for($compound)->create();
+        $unit = Unit::factory()->for($compound)->for($building)->create(['floor_id' => null]);
+        $unit->memberships()->create([
+            'user_id' => $admin->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'verification_status' => VerificationStatus::Verified->value,
+            'starts_at' => now()->subYear(),
+        ]);
+
+        return $admin->refresh();
     }
 
     private function makeResident(Compound $compound): User
@@ -118,6 +141,23 @@ class AdvancedFinanceTest extends TestCase
         $this->getJson("/api/v1/finance/reserve-funds/{$fundB->id}")->assertForbidden();
     }
 
+    public function test_membership_scoped_admin_can_manage_only_own_compound_reserve_funds_when_compound_id_is_null(): void
+    {
+        $compoundA = Compound::factory()->create();
+        $compoundB = Compound::factory()->create();
+        $admin = $this->makeMembershipScopedAdmin($compoundA);
+        $fundA = ReserveFund::factory()->create(['compound_id' => $compoundA->id]);
+        $fundB = ReserveFund::factory()->create(['compound_id' => $compoundB->id]);
+        Sanctum::actingAs($admin);
+
+        $this->getJson('/api/v1/finance/reserve-funds')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $fundA->id);
+
+        $this->getJson("/api/v1/finance/reserve-funds/{$fundB->id}")->assertForbidden();
+    }
+
     // ── Vendors ───────────────────────────────────────────────────────────────
 
     public function test_admin_can_create_vendor(): void
@@ -149,6 +189,23 @@ class AdvancedFinanceTest extends TestCase
         $adminA    = $this->makeAdmin($compoundA);
         $vendorB   = Vendor::factory()->create(['compound_id' => $compoundB->id]);
         Sanctum::actingAs($adminA);
+
+        $this->getJson("/api/v1/finance/vendors/{$vendorB->id}")->assertForbidden();
+    }
+
+    public function test_membership_scoped_admin_can_manage_only_own_compound_vendors_when_compound_id_is_null(): void
+    {
+        $compoundA = Compound::factory()->create();
+        $compoundB = Compound::factory()->create();
+        $admin = $this->makeMembershipScopedAdmin($compoundA);
+        $vendorA = Vendor::factory()->create(['compound_id' => $compoundA->id]);
+        $vendorB = Vendor::factory()->create(['compound_id' => $compoundB->id]);
+        Sanctum::actingAs($admin);
+
+        $this->getJson('/api/v1/finance/vendors')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $vendorA->id);
 
         $this->getJson("/api/v1/finance/vendors/{$vendorB->id}")->assertForbidden();
     }
@@ -224,6 +281,29 @@ class AdvancedFinanceTest extends TestCase
             'created_by'  => User::factory()->create()->id,
         ]);
         Sanctum::actingAs($adminA);
+
+        $this->getJson("/api/v1/finance/budgets/{$budgetB->id}")->assertForbidden();
+    }
+
+    public function test_membership_scoped_admin_can_manage_only_own_compound_budgets_when_compound_id_is_null(): void
+    {
+        $compoundA = Compound::factory()->create();
+        $compoundB = Compound::factory()->create();
+        $admin = $this->makeMembershipScopedAdmin($compoundA);
+        $budgetA = Budget::factory()->create([
+            'compound_id' => $compoundA->id,
+            'created_by' => User::factory()->create()->id,
+        ]);
+        $budgetB = Budget::factory()->create([
+            'compound_id' => $compoundB->id,
+            'created_by' => User::factory()->create()->id,
+        ]);
+        Sanctum::actingAs($admin);
+
+        $this->getJson('/api/v1/finance/budgets')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $budgetA->id);
 
         $this->getJson("/api/v1/finance/budgets/{$budgetB->id}")->assertForbidden();
     }
@@ -366,5 +446,33 @@ class AdvancedFinanceTest extends TestCase
         Sanctum::actingAs($adminA);
 
         $this->getJson("/api/v1/finance/expenses/{$expense->id}")->assertForbidden();
+    }
+
+    public function test_membership_scoped_admin_can_manage_only_own_compound_expenses_when_compound_id_is_null(): void
+    {
+        $compoundA = Compound::factory()->create();
+        $compoundB = Compound::factory()->create();
+        $admin = $this->makeMembershipScopedAdmin($compoundA);
+        $expenseA = Expense::factory()->create([
+            'compound_id' => $compoundA->id,
+            'status' => ExpenseStatus::PendingApproval,
+            'submitted_by' => User::factory()->create()->id,
+        ]);
+        $expenseB = Expense::factory()->create([
+            'compound_id' => $compoundB->id,
+            'status' => ExpenseStatus::PendingApproval,
+            'submitted_by' => User::factory()->create()->id,
+        ]);
+        Sanctum::actingAs($admin);
+
+        $this->getJson('/api/v1/finance/expenses')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $expenseA->id);
+
+        $this->getJson("/api/v1/finance/expenses/{$expenseB->id}")->assertForbidden();
+        $this->postJson("/api/v1/finance/expenses/{$expenseB->id}/approve", [
+            'reason' => 'Should not be allowed.',
+        ])->assertForbidden();
     }
 }

@@ -24,6 +24,17 @@ use Symfony\Component\HttpFoundation\Response;
 
 class UserDocumentController extends Controller
 {
+    /**
+     * @var list<UserRole>
+     */
+    private const REVIEWER_ROLES = [
+        UserRole::SuperAdmin,
+        UserRole::CompoundAdmin,
+        UserRole::BoardMember,
+        UserRole::FinanceReviewer,
+        UserRole::SupportAgent,
+    ];
+
     public function __construct(
         private readonly AuditLogger $auditLogger,
         private readonly CompoundContextService $compoundContext,
@@ -153,25 +164,21 @@ class UserDocumentController extends Controller
 
     private function isReviewer(User $user): bool
     {
-        return in_array($user->role, [
-            UserRole::SuperAdmin,
-            UserRole::CompoundAdmin,
-            UserRole::BoardMember,
-            UserRole::FinanceReviewer,
-            UserRole::SupportAgent,
-        ], strict: true);
+        return $user->hasAnyEffectiveRole(self::REVIEWER_ROLES);
     }
 
     private function scopeReviewerDocuments(mixed $query, User $user): mixed
     {
-        if (! filled($user->compound_id)) {
+        $managedCompoundId = $this->compoundContext->resolveManagedCompoundId($user);
+
+        if ($managedCompoundId === null) {
             return $query;
         }
 
-        return $query->where(function ($scoped) use ($user): void {
+        return $query->where(function ($scoped) use ($managedCompoundId): void {
             $scoped
-                ->whereHas('unit', fn ($unitQuery) => $unitQuery->where('compound_id', $user->compound_id))
-                ->orWhereHas('user.unitMemberships.unit', fn ($unitQuery) => $unitQuery->where('compound_id', $user->compound_id));
+                ->whereHas('unit', fn ($unitQuery) => $unitQuery->where('compound_id', $managedCompoundId))
+                ->orWhereHas('user.unitMemberships.unit', fn ($unitQuery) => $unitQuery->where('compound_id', $managedCompoundId));
         });
     }
 
@@ -191,8 +198,10 @@ class UserDocumentController extends Controller
             return;
         }
 
-        if ($this->isReviewer($actor) && filled($actor->compound_id)) {
-            abort_unless($this->userHasCompoundMembership($targetUserId, $actor->compound_id), Response::HTTP_FORBIDDEN);
+        $managedCompoundId = $this->compoundContext->resolveManagedCompoundId($actor);
+
+        if ($this->isReviewer($actor) && $managedCompoundId !== null) {
+            abort_unless($this->userHasCompoundMembership($targetUserId, $managedCompoundId), Response::HTTP_FORBIDDEN);
         }
     }
 
@@ -207,12 +216,14 @@ class UserDocumentController extends Controller
             return;
         }
 
-        if (! filled($user->compound_id)) {
+        $managedCompoundId = $this->compoundContext->resolveManagedCompoundId($user);
+
+        if ($managedCompoundId === null) {
             return;
         }
 
         abort_unless(
-            $this->documentBelongsToCompound($userDocument, $user->compound_id),
+            $this->documentBelongsToCompound($userDocument, $managedCompoundId),
             Response::HTTP_FORBIDDEN,
         );
     }
@@ -222,11 +233,11 @@ class UserDocumentController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        if (! filled($user->compound_id)) {
+        if ($this->compoundContext->resolveManagedCompoundId($user) === null) {
             return;
         }
 
-        $this->compoundContext->ensureCompoundAccess($request, $compoundId);
+        $this->compoundContext->ensureManagedCompoundAccess($user, $compoundId);
     }
 
     private function documentBelongsToCompound(UserDocument $userDocument, string $compoundId): bool

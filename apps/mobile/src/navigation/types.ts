@@ -2,7 +2,6 @@ import { Issue } from "@compound/contracts";
 
 export type RootStackParamList = {
   Auth: undefined;
-  ConsentGate: undefined;
   Main: undefined;
   Guard: undefined;
   Admin: undefined;

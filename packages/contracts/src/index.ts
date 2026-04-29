@@ -1,4 +1,5 @@
 export * from "./platform";
+export * from "./auth-access";
 export * from "./documents";
 export * from "./finance";
 export * from "./governance";

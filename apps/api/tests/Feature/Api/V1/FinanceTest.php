@@ -5,6 +5,7 @@ namespace Tests\Feature\Api\V1;
 use App\Enums\LedgerEntryType;
 use App\Enums\NotificationCategory;
 use App\Enums\PaymentStatus;
+use App\Enums\Permission;
 use App\Enums\UnitRelationType;
 use App\Enums\UserRole;
 use App\Enums\VerificationStatus;
@@ -15,16 +16,43 @@ use App\Models\Property\Building;
 use App\Models\Property\Compound;
 use App\Models\Property\Unit;
 use App\Models\User;
+use App\Models\UserScopeAssignment;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
+use Spatie\Permission\Models\Permission as SpatiePermission;
+use Spatie\Permission\Models\Role as SpatieRole;
 use Tests\TestCase;
 
 class FinanceTest extends TestCase
 {
     use RefreshDatabase;
+
+    private function makeScopeAssignedFinanceReviewer(Compound $compound): User
+    {
+        $reviewerRole = SpatieRole::findOrCreate('finance_reviewer', 'sanctum');
+        $reviewerRole->givePermissionTo(
+            SpatiePermission::findOrCreate(Permission::ViewFinance->value, 'sanctum'),
+            SpatiePermission::findOrCreate(Permission::ManageFinance->value, 'sanctum'),
+        );
+        $reviewer = User::factory()->create([
+            'role' => UserRole::ResidentOwner->value,
+            'compound_id' => null,
+        ]);
+        $reviewer->assignRole($reviewerRole);
+
+        UserScopeAssignment::create([
+            'user_id' => $reviewer->id,
+            'role_name' => 'finance_reviewer',
+            'scope_type' => 'compound',
+            'scope_id' => $compound->id,
+            'created_by' => $reviewer->id,
+        ]);
+
+        return $reviewer->refresh();
+    }
 
     public function test_finance_reviewer_can_create_account_and_post_ledger_charge(): void
     {
@@ -110,6 +138,37 @@ class FinanceTest extends TestCase
         $payment = PaymentSubmission::query()->firstOrFail();
         $this->assertNotNull($payment->proof_path);
         Storage::disk('local')->assertExists($payment->proof_path);
+
+        $this->postJson("/api/v1/finance/unit-accounts/{$otherAccount->id}/payment-submissions", [
+            'amount' => 100,
+            'method' => 'bank_transfer',
+        ])->assertForbidden();
+    }
+
+    public function test_effective_resident_role_cannot_bypass_finance_account_access_when_legacy_role_is_stale(): void
+    {
+        $residentRole = SpatieRole::findOrCreate('resident_owner', 'sanctum');
+        $resident = User::factory()->create(['role' => UserRole::FinanceReviewer->value]);
+        $resident->assignRole($residentRole);
+
+        $ownUnit = $this->createUnit();
+        $otherUnit = $this->createUnit('C-303');
+        $ownAccount = UnitAccount::factory()->for($ownUnit)->create(['balance' => '500.00']);
+        $otherAccount = UnitAccount::factory()->for($otherUnit)->create(['balance' => '700.00']);
+
+        $ownUnit->memberships()->create([
+            'user_id' => $resident->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'verification_status' => VerificationStatus::Verified->value,
+            'is_primary' => true,
+        ]);
+
+        Sanctum::actingAs($resident);
+
+        $this->postJson("/api/v1/finance/unit-accounts/{$ownAccount->id}/payment-submissions", [
+            'amount' => 150,
+            'method' => 'bank_transfer',
+        ])->assertCreated();
 
         $this->postJson("/api/v1/finance/unit-accounts/{$otherAccount->id}/payment-submissions", [
             'amount' => 100,
@@ -422,6 +481,52 @@ class FinanceTest extends TestCase
         ])->assertForbidden();
     }
 
+    public function test_membership_scoped_compound_admin_cannot_access_or_mutate_other_compound_unit_account_when_compound_id_is_null(): void
+    {
+        $compoundA = Compound::factory()->create();
+        $compoundB = Compound::factory()->create();
+
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => null,
+        ]);
+
+        $managedUnit = $this->createUnitForCompound($compoundA, 'A-111');
+        $managedUnit->memberships()->create([
+            'user_id' => $admin->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'verification_status' => VerificationStatus::Verified->value,
+            'starts_at' => now()->subYear(),
+        ]);
+
+        $unitA = $this->createUnitForCompound($compoundA, 'A-101');
+        $unitB = $this->createUnitForCompound($compoundB, 'B-101');
+        $unbilledUnitB = $this->createUnitForCompound($compoundB, 'B-102');
+        $accountA = UnitAccount::factory()->for($unitA)->create();
+        $accountB = UnitAccount::factory()->for($unitB)->create();
+
+        Sanctum::actingAs($admin);
+
+        $this->getJson('/api/v1/finance/unit-accounts')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $accountA->id);
+
+        $this->getJson("/api/v1/finance/unit-accounts/{$accountB->id}")
+            ->assertForbidden();
+
+        $this->postJson("/api/v1/finance/unit-accounts/{$accountB->id}/ledger-entries", [
+            'type' => LedgerEntryType::Charge->value,
+            'amount' => 350,
+            'description' => 'Cross-compound charge must be blocked.',
+        ])->assertForbidden();
+
+        $this->postJson('/api/v1/finance/unit-accounts', [
+            'unitId' => $unbilledUnitB->id,
+            'currency' => 'EGP',
+        ])->assertForbidden();
+    }
+
     public function test_scoped_finance_reviewer_cannot_access_or_review_other_compound_payment_submission(): void
     {
         $compoundA = Compound::factory()->create();
@@ -448,6 +553,116 @@ class FinanceTest extends TestCase
         ]);
 
         Sanctum::actingAs($reviewer);
+
+        $this->getJson('/api/v1/finance/payment-submissions')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $paymentA->id);
+
+        $this->patchJson("/api/v1/finance/payment-submissions/{$paymentB->id}/approve")
+            ->assertForbidden();
+        $this->patchJson("/api/v1/finance/payment-submissions/{$paymentB->id}/reject", [
+            'reason' => 'Cross-compound review must be blocked.',
+        ])->assertForbidden();
+        $this->patchJson("/api/v1/finance/payment-submissions/{$paymentB->id}/request-correction", [
+            'note' => 'Cross-compound correction must be blocked.',
+        ])->assertForbidden();
+
+        $this->assertDatabaseHas('payment_submissions', [
+            'id' => $paymentB->id,
+            'status' => PaymentStatus::Submitted->value,
+            'reviewed_by' => null,
+        ]);
+        $this->assertDatabaseHas('unit_accounts', [
+            'id' => $accountB->id,
+            'balance' => '700.00',
+        ]);
+    }
+
+    public function test_scope_assigned_finance_reviewer_without_direct_compound_id_cannot_cross_compound_unit_accounts_or_payment_reviews(): void
+    {
+        $compoundA = Compound::factory()->create();
+        $compoundB = Compound::factory()->create();
+
+        $reviewer = $this->makeScopeAssignedFinanceReviewer($compoundA);
+
+        $unitA = $this->createUnitForCompound($compoundA, 'A-301');
+        $unitB = $this->createUnitForCompound($compoundB, 'B-301');
+        $unbilledUnitB = $this->createUnitForCompound($compoundB, 'B-302');
+        $accountA = UnitAccount::factory()->for($unitA)->create(['balance' => '500.00']);
+        $accountB = UnitAccount::factory()->for($unitB)->create(['balance' => '700.00']);
+
+        $paymentA = PaymentSubmission::factory()->for($accountA)->create([
+            'status' => PaymentStatus::Submitted->value,
+        ]);
+        $paymentB = PaymentSubmission::factory()->for($accountB)->create([
+            'status' => PaymentStatus::Submitted->value,
+        ]);
+
+        Sanctum::actingAs($reviewer);
+
+        $this->getJson('/api/v1/finance/unit-accounts')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $accountA->id);
+
+        $this->getJson("/api/v1/finance/unit-accounts/{$accountB->id}")
+            ->assertForbidden();
+
+        $this->postJson('/api/v1/finance/unit-accounts', [
+            'unitId' => $unbilledUnitB->id,
+            'currency' => 'EGP',
+        ])->assertForbidden();
+
+        $this->getJson('/api/v1/finance/payment-submissions')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $paymentA->id);
+
+        $this->patchJson("/api/v1/finance/payment-submissions/{$paymentB->id}/approve")
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('payment_submissions', [
+            'id' => $paymentB->id,
+            'status' => PaymentStatus::Submitted->value,
+            'reviewed_by' => null,
+        ]);
+    }
+
+    public function test_membership_scoped_compound_admin_cannot_access_or_review_other_compound_payment_submission_when_compound_id_is_null(): void
+    {
+        $compoundA = Compound::factory()->create();
+        $compoundB = Compound::factory()->create();
+
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => null,
+        ]);
+
+        $managedUnit = $this->createUnitForCompound($compoundA, 'A-301');
+        $managedUnit->memberships()->create([
+            'user_id' => $admin->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'verification_status' => VerificationStatus::Verified->value,
+            'starts_at' => now()->subYear(),
+        ]);
+
+        $accountA = UnitAccount::factory()
+            ->for($this->createUnitForCompound($compoundA, 'A-201'))
+            ->create(['balance' => '500.00']);
+        $accountB = UnitAccount::factory()
+            ->for($this->createUnitForCompound($compoundB, 'B-201'))
+            ->create(['balance' => '700.00']);
+
+        $paymentA = PaymentSubmission::factory()->for($accountA)->create([
+            'status' => PaymentStatus::Submitted->value,
+        ]);
+        $paymentB = PaymentSubmission::factory()->for($accountB)->create([
+            'status' => PaymentStatus::Submitted->value,
+            'amount' => '200.00',
+        ]);
+
+        Sanctum::actingAs($admin);
 
         $this->getJson('/api/v1/finance/payment-submissions')
             ->assertOk()

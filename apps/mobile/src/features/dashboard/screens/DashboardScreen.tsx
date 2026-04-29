@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, useColorScheme } from 'react-native';
+import { formatRoleLabel, getPrimaryEffectiveRole } from '@compound/contracts';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 import { selectCurrentUser, logout as logoutAction } from '../../../store/authSlice';
@@ -31,6 +32,8 @@ export const DashboardScreen = () => {
 
   if (!user) return null;
 
+  const primaryRole = getPrimaryEffectiveRole(user);
+
   return (
     <ScreenContainer scrollable>
       <View style={styles.header}>
@@ -43,7 +46,7 @@ export const DashboardScreen = () => {
         <Typography variant="label" style={styles.panelLabel}>{t("Auth.signedIn")}</Typography>
         <Typography variant="h2">{user.name}</Typography>
         <Typography style={styles.userRole}>
-          {t(`Common.roles.${user.role}`, { defaultValue: user.role })}
+          {t(`Common.roles.${primaryRole}`, { defaultValue: formatRoleLabel(primaryRole) })}
         </Typography>
       </View>
 

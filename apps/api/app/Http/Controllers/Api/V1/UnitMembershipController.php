@@ -9,7 +9,6 @@ use App\Http\Requests\Property\UpdateUnitMembershipRequest;
 use App\Http\Resources\UnitMembershipResource;
 use App\Models\Property\Unit;
 use App\Models\Property\UnitMembership;
-use App\Models\User;
 use App\Services\CompoundContextService;
 use App\Support\AuditLogger;
 use Illuminate\Http\JsonResponse;
@@ -129,13 +128,6 @@ class UnitMembershipController extends Controller
 
     private function ensureCanAccessUnit(Request $request, Unit $unit): void
     {
-        /** @var User|null $user */
-        $user = $request->user();
-
-        if ($user === null || ! filled($user->compound_id)) {
-            return;
-        }
-
         $this->compoundContext->ensureCompoundAccess($request, $unit->compound_id);
     }
 }

@@ -5,6 +5,7 @@ namespace Tests\Feature\Api\V1;
 use App\Enums\AccountStatus;
 use App\Enums\DocumentStatus;
 use App\Enums\InvitationStatus;
+use App\Enums\Permission;
 use App\Enums\UnitRelationType;
 use App\Enums\UserRole;
 use App\Enums\VerificationRequestStatus;
@@ -24,11 +25,20 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
+use Spatie\Permission\Models\Permission as SpatiePermission;
+use Spatie\Permission\Models\Role as SpatieRole;
 use Tests\TestCase;
 
 class OnboardingAndDocumentsTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+    }
 
     public function test_admin_can_invite_and_resident_can_accept(): void
     {
@@ -122,11 +132,11 @@ class OnboardingAndDocumentsTest extends TestCase
         ]);
     }
 
-    public function test_admin_can_resend_and_revoke_invitation(): void
+    public function test_super_admin_can_resend_and_revoke_unitless_invitation(): void
     {
         Notification::fake();
 
-        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin->value]);
         Sanctum::actingAs($admin);
 
         $createResponse = $this->postJson('/api/v1/resident-invitations', [
@@ -235,6 +245,74 @@ class OnboardingAndDocumentsTest extends TestCase
             'id' => $invitation->id,
             'status' => InvitationStatus::Pending->value,
         ]);
+    }
+
+    public function test_effective_compound_head_with_membership_scope_can_manage_own_compound_invitations_but_not_foreign_compound_when_compound_id_is_null(): void
+    {
+        Notification::fake();
+
+        $compoundA = Compound::factory()->create();
+        $compoundB = Compound::factory()->create();
+        $buildingA = Building::factory()->for($compoundA)->create();
+        $buildingB = Building::factory()->for($compoundB)->create();
+        $unitA = Unit::factory()->for($compoundA)->for($buildingA)->create(['floor_id' => null, 'unit_number' => 'A-301']);
+        $unitB = Unit::factory()->for($compoundB)->for($buildingB)->create(['floor_id' => null, 'unit_number' => 'B-301']);
+        $compoundHeadRole = SpatieRole::findOrCreate('compound_head', 'sanctum');
+        $viewUsersPermission = SpatiePermission::findOrCreate(Permission::ViewUsers->value, 'sanctum');
+        $compoundHeadRole->givePermissionTo($viewUsersPermission);
+
+        $adminA = User::factory()->create([
+            'role' => UserRole::ResidentOwner->value,
+            'compound_id' => null,
+        ]);
+        $adminA->assignRole($compoundHeadRole);
+        $adminA->givePermissionTo($viewUsersPermission);
+        $unitA->memberships()->create([
+            'user_id' => $adminA->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'verification_status' => VerificationStatus::Verified->value,
+            'starts_at' => now()->subYear(),
+        ]);
+
+        $adminB = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compoundB->id,
+        ]);
+
+        Sanctum::actingAs($adminA);
+        $ownInvitationId = $this->postJson('/api/v1/resident-invitations', [
+            'name' => 'Scoped Invitee',
+            'email' => 'scoped.invitee@example.com',
+            'phone' => '+201000000401',
+            'role' => UserRole::ResidentOwner->value,
+            'unitId' => $unitA->id,
+            'relationType' => UnitRelationType::Owner->value,
+        ])->assertCreated()->json('data.id');
+
+        Sanctum::actingAs($adminB);
+        $foreignInvitationId = $this->postJson('/api/v1/resident-invitations', [
+            'name' => 'Foreign Invitee',
+            'email' => 'foreign.invitee@example.com',
+            'phone' => '+201000000402',
+            'role' => UserRole::ResidentOwner->value,
+            'unitId' => $unitB->id,
+            'relationType' => UnitRelationType::Owner->value,
+        ])->assertCreated()->json('data.id');
+
+        Sanctum::actingAs($adminA);
+        $this->getJson('/api/v1/resident-invitations')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $ownInvitationId);
+
+        $this->postJson("/api/v1/resident-invitations/{$ownInvitationId}/resend")
+            ->assertOk();
+
+        $this->postJson("/api/v1/resident-invitations/{$foreignInvitationId}/resend")
+            ->assertForbidden();
+
+        $this->postJson("/api/v1/resident-invitations/{$foreignInvitationId}/revoke")
+            ->assertForbidden();
     }
 
     public function test_admin_can_upload_and_review_verification_document(): void
@@ -346,6 +424,135 @@ class OnboardingAndDocumentsTest extends TestCase
         ])->assertForbidden();
 
         $this->getJson("/api/v1/documents/{$documentB->id}/download")->assertForbidden();
+    }
+
+    public function test_effective_compound_head_is_treated_as_document_reviewer_even_when_legacy_role_is_stale(): void
+    {
+        Storage::fake('local');
+        config(['filesystems.default' => 'local']);
+
+        $compound = Compound::factory()->create();
+        $building = Building::factory()->for($compound)->create();
+        $unit = Unit::factory()->for($compound)->for($building)->create(['floor_id' => null]);
+        $documentType = DocumentType::query()->create([
+            'key' => 'passport',
+            'name' => 'Passport',
+            'is_required_default' => true,
+            'allowed_mime_types' => ['application/pdf'],
+            'max_file_size_kb' => 10240,
+            'is_active' => true,
+        ]);
+
+        $compoundHeadRole = SpatieRole::findOrCreate('compound_head', 'sanctum');
+        $viewUsersPermission = SpatiePermission::findOrCreate(Permission::ViewUsers->value, 'sanctum');
+        $compoundHeadRole->givePermissionTo($viewUsersPermission);
+        $admin = User::factory()->create([
+            'role' => UserRole::ResidentOwner->value,
+            'compound_id' => $compound->id,
+        ]);
+        $admin->assignRole($compoundHeadRole);
+        $admin->givePermissionTo($viewUsersPermission);
+
+        $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+        $document = UserDocument::query()->create([
+            'document_type_id' => $documentType->id,
+            'user_id' => $resident->id,
+            'unit_id' => $unit->id,
+            'status' => DocumentStatus::Submitted->value,
+            'storage_disk' => 'local',
+            'storage_path' => 'verification-documents/passport.pdf',
+            'original_name' => 'passport.pdf',
+            'mime_type' => 'application/pdf',
+            'size_bytes' => 100,
+            'checksum_sha256' => str_repeat('c', 64),
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $this->getJson('/api/v1/documents')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $document->id);
+    }
+
+    public function test_effective_compound_head_with_membership_scope_can_review_own_compound_documents_but_not_foreign_compound_when_compound_id_is_null(): void
+    {
+        Storage::fake('local');
+        config(['filesystems.default' => 'local']);
+
+        $compoundA = Compound::factory()->create();
+        $compoundB = Compound::factory()->create();
+        $buildingA = Building::factory()->for($compoundA)->create();
+        $buildingB = Building::factory()->for($compoundB)->create();
+        $unitA = Unit::factory()->for($compoundA)->for($buildingA)->create(['floor_id' => null]);
+        $unitB = Unit::factory()->for($compoundB)->for($buildingB)->create(['floor_id' => null]);
+        $documentType = DocumentType::query()->create([
+            'key' => 'residency_proof',
+            'name' => 'Residency Proof',
+            'is_required_default' => true,
+            'allowed_mime_types' => ['application/pdf'],
+            'max_file_size_kb' => 10240,
+            'is_active' => true,
+        ]);
+
+        $compoundHeadRole = SpatieRole::findOrCreate('compound_head', 'sanctum');
+        $viewUsersPermission = SpatiePermission::findOrCreate(Permission::ViewUsers->value, 'sanctum');
+        $compoundHeadRole->givePermissionTo($viewUsersPermission);
+
+        $admin = User::factory()->create([
+            'role' => UserRole::ResidentOwner->value,
+            'compound_id' => null,
+        ]);
+        $admin->assignRole($compoundHeadRole);
+        $admin->givePermissionTo($viewUsersPermission);
+        Unit::query()->findOrFail($unitA->id)->memberships()->create([
+            'user_id' => $admin->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'verification_status' => VerificationStatus::Verified->value,
+            'starts_at' => now()->subYear(),
+        ]);
+
+        $residentA = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+        $residentB = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+        $documentA = UserDocument::query()->create([
+            'document_type_id' => $documentType->id,
+            'user_id' => $residentA->id,
+            'unit_id' => $unitA->id,
+            'status' => DocumentStatus::Submitted->value,
+            'storage_disk' => 'local',
+            'storage_path' => 'verification-documents/a-scope.pdf',
+            'original_name' => 'a-scope.pdf',
+            'mime_type' => 'application/pdf',
+            'size_bytes' => 100,
+            'checksum_sha256' => str_repeat('d', 64),
+        ]);
+        $documentB = UserDocument::query()->create([
+            'document_type_id' => $documentType->id,
+            'user_id' => $residentB->id,
+            'unit_id' => $unitB->id,
+            'status' => DocumentStatus::Submitted->value,
+            'storage_disk' => 'local',
+            'storage_path' => 'verification-documents/b-scope.pdf',
+            'original_name' => 'b-scope.pdf',
+            'mime_type' => 'application/pdf',
+            'size_bytes' => 100,
+            'checksum_sha256' => str_repeat('e', 64),
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $this->getJson('/api/v1/documents')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $documentA->id);
+
+        $this->patchJson("/api/v1/documents/{$documentA->id}/review", [
+            'status' => DocumentStatus::Approved->value,
+        ])->assertOk();
+
+        $this->patchJson("/api/v1/documents/{$documentB->id}/review", [
+            'status' => DocumentStatus::Approved->value,
+        ])->assertForbidden();
     }
 
     public function test_admin_can_approve_accepted_resident_verification_request(): void
@@ -475,6 +682,90 @@ class OnboardingAndDocumentsTest extends TestCase
             'status' => VerificationRequestStatus::PendingReview->value,
             'reviewed_by' => null,
         ]);
+    }
+
+    public function test_effective_compound_head_with_membership_scope_can_manage_own_compound_verification_requests_but_not_foreign_compound_when_compound_id_is_null(): void
+    {
+        Notification::fake();
+
+        $compoundA = Compound::factory()->create();
+        $compoundB = Compound::factory()->create();
+        $buildingA = Building::factory()->for($compoundA)->create();
+        $buildingB = Building::factory()->for($compoundB)->create();
+        $unitA = Unit::factory()->for($compoundA)->for($buildingA)->create(['floor_id' => null]);
+        $unitB = Unit::factory()->for($compoundB)->for($buildingB)->create(['floor_id' => null]);
+        $compoundHeadRole = SpatieRole::findOrCreate('compound_head', 'sanctum');
+        $viewUsersPermission = SpatiePermission::findOrCreate(Permission::ViewUsers->value, 'sanctum');
+        $compoundHeadRole->givePermissionTo($viewUsersPermission);
+
+        $admin = User::factory()->create([
+            'role' => UserRole::ResidentOwner->value,
+            'compound_id' => null,
+        ]);
+        $admin->assignRole($compoundHeadRole);
+        $admin->givePermissionTo($viewUsersPermission);
+        $unitA->memberships()->create([
+            'user_id' => $admin->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'verification_status' => VerificationStatus::Verified->value,
+            'starts_at' => now()->subYear(),
+        ]);
+
+        $residentA = User::factory()->create([
+            'role' => UserRole::ResidentOwner->value,
+            'status' => AccountStatus::PendingReview->value,
+        ]);
+        $residentB = User::factory()->create([
+            'role' => UserRole::ResidentOwner->value,
+            'status' => AccountStatus::PendingReview->value,
+        ]);
+
+        $unitA->memberships()->create([
+            'user_id' => $residentA->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'is_primary' => true,
+            'verification_status' => VerificationStatus::Pending->value,
+            'created_by' => $admin->id,
+        ]);
+        $unitB->memberships()->create([
+            'user_id' => $residentB->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'is_primary' => true,
+            'verification_status' => VerificationStatus::Pending->value,
+            'created_by' => $admin->id,
+        ]);
+
+        $requestA = VerificationRequest::query()->create([
+            'user_id' => $residentA->id,
+            'unit_id' => $unitA->id,
+            'requested_role' => UserRole::ResidentOwner->value,
+            'relation_type' => UnitRelationType::Owner->value,
+            'status' => VerificationRequestStatus::PendingReview->value,
+            'submitted_at' => now(),
+        ]);
+        $requestB = VerificationRequest::query()->create([
+            'user_id' => $residentB->id,
+            'unit_id' => $unitB->id,
+            'requested_role' => UserRole::ResidentOwner->value,
+            'relation_type' => UnitRelationType::Owner->value,
+            'status' => VerificationRequestStatus::PendingReview->value,
+            'submitted_at' => now(),
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $this->getJson('/api/v1/verification-requests')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $requestA->id);
+
+        $this->patchJson("/api/v1/verification-requests/{$requestA->id}/approve", [
+            'note' => 'Membership-scoped verification approved.',
+        ])->assertOk();
+
+        $this->patchJson("/api/v1/verification-requests/{$requestB->id}/approve", [
+            'note' => 'Should be blocked.',
+        ])->assertForbidden();
     }
 
     public function test_admin_can_request_more_info_and_reject_verification_request(): void

@@ -49,6 +49,62 @@ class PropertyRegistryTest extends TestCase
             ->assertJsonPath('data.0.unitsCount', 1);
     }
 
+    public function test_membership_scoped_compound_admin_sees_only_own_compound_in_compound_index_when_compound_id_is_null(): void
+    {
+        $compoundA = Compound::factory()->create(['name' => 'Compound A']);
+        $compoundB = Compound::factory()->create(['name' => 'Compound B']);
+        $buildingA = Building::factory()->for($compoundA)->create();
+        $unitA = Unit::factory()->for($compoundA)->for($buildingA)->create(['floor_id' => null]);
+
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => null,
+        ]);
+        UnitMembership::query()->create([
+            'unit_id' => $unitA->id,
+            'user_id' => $admin->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'starts_at' => now()->subDay()->toDateString(),
+            'is_primary' => true,
+            'verification_status' => VerificationStatus::Verified->value,
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $this->getJson('/api/v1/compounds')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $compoundA->id);
+    }
+
+    public function test_effective_compound_admin_compound_index_prefers_membership_scope_over_stale_direct_compound_id(): void
+    {
+        $compoundA = Compound::factory()->create(['name' => 'Compound A']);
+        $compoundB = Compound::factory()->create(['name' => 'Compound B']);
+        $buildingA = Building::factory()->for($compoundA)->create();
+        $unitA = Unit::factory()->for($compoundA)->for($buildingA)->create(['floor_id' => null]);
+
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compoundB->id,
+        ]);
+        UnitMembership::query()->create([
+            'unit_id' => $unitA->id,
+            'user_id' => $admin->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'starts_at' => now()->subDay()->toDateString(),
+            'is_primary' => true,
+            'verification_status' => VerificationStatus::Verified->value,
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $this->getJson('/api/v1/compounds')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $compoundA->id);
+    }
+
     public function test_it_creates_compound_as_draft(): void
     {
         Sanctum::actingAs(User::factory()->create(['role' => UserRole::SuperAdmin->value]));
@@ -266,6 +322,48 @@ class PropertyRegistryTest extends TestCase
         ]);
     }
 
+    public function test_membership_scoped_compound_admin_cannot_manage_other_compound_unit_memberships_when_compound_id_is_null(): void
+    {
+        $compoundA = Compound::factory()->create();
+        $compoundB = Compound::factory()->create();
+        $buildingA = Building::factory()->for($compoundA)->create();
+        $buildingB = Building::factory()->for($compoundB)->create();
+        $adminA = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => null,
+        ]);
+        $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+        $unitA = Unit::factory()->for($compoundA)->for($buildingA)->create(['floor_id' => null]);
+        $unitB = Unit::factory()->for($compoundB)->for($buildingB)->create(['floor_id' => null]);
+        $membership = UnitMembership::query()->create([
+            'unit_id' => $unitB->id,
+            'user_id' => $resident->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'starts_at' => now()->toDateString(),
+            'verification_status' => VerificationStatus::Verified->value,
+        ]);
+        UnitMembership::query()->create([
+            'unit_id' => $unitA->id,
+            'user_id' => $adminA->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'starts_at' => now()->subDay()->toDateString(),
+            'is_primary' => true,
+            'verification_status' => VerificationStatus::Verified->value,
+        ]);
+
+        Sanctum::actingAs($adminA);
+
+        $this->getJson("/api/v1/units/{$unitB->id}/memberships")->assertForbidden();
+        $this->postJson("/api/v1/units/{$unitB->id}/memberships", [
+            'userId' => $resident->id,
+            'relationType' => UnitRelationType::Tenant->value,
+        ])->assertForbidden();
+        $this->patchJson("/api/v1/unit-memberships/{$membership->id}", [
+            'verificationStatus' => VerificationStatus::Rejected->value,
+        ])->assertForbidden();
+        $this->postJson("/api/v1/unit-memberships/{$membership->id}/end")->assertForbidden();
+    }
+
     public function test_admin_can_search_and_filter_unit_registry_lookup(): void
     {
         $resident = User::factory()->create([
@@ -337,6 +435,72 @@ class PropertyRegistryTest extends TestCase
             ->assertJsonPath('data.0.building.id', $building->id)
             ->assertJsonPath('data.0.floor.id', $floor->id)
             ->assertJsonPath('data.0.memberships.0.user.email', 'owner.lookup@example.test');
+    }
+
+    public function test_membership_scoped_compound_admin_lookup_is_limited_to_own_compound_when_compound_id_is_null(): void
+    {
+        $compoundA = Compound::factory()->create(['name' => 'Compound A']);
+        $compoundB = Compound::factory()->create(['name' => 'Compound B']);
+        $buildingA = Building::factory()->for($compoundA)->create();
+        $buildingB = Building::factory()->for($compoundB)->create();
+        $unitA = Unit::factory()->for($compoundA)->for($buildingA)->create(['floor_id' => null, 'unit_number' => 'A-101']);
+        Unit::factory()->for($compoundB)->for($buildingB)->create(['floor_id' => null, 'unit_number' => 'B-101']);
+
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => null,
+        ]);
+        UnitMembership::query()->create([
+            'unit_id' => $unitA->id,
+            'user_id' => $admin->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'starts_at' => now()->subDay()->toDateString(),
+            'is_primary' => true,
+            'verification_status' => VerificationStatus::Verified->value,
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $this->getJson('/api/v1/units')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $unitA->id);
+
+        $this->getJson('/api/v1/units?compoundId='.$compoundB->id)
+            ->assertForbidden();
+    }
+
+    public function test_effective_compound_admin_lookup_prefers_membership_scope_over_stale_direct_compound_id(): void
+    {
+        $compoundA = Compound::factory()->create(['name' => 'Compound A']);
+        $compoundB = Compound::factory()->create(['name' => 'Compound B']);
+        $buildingA = Building::factory()->for($compoundA)->create();
+        $buildingB = Building::factory()->for($compoundB)->create();
+        $unitA = Unit::factory()->for($compoundA)->for($buildingA)->create(['floor_id' => null, 'unit_number' => 'A-101']);
+        Unit::factory()->for($compoundB)->for($buildingB)->create(['floor_id' => null, 'unit_number' => 'B-101']);
+
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compoundB->id,
+        ]);
+        UnitMembership::query()->create([
+            'unit_id' => $unitA->id,
+            'user_id' => $admin->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'starts_at' => now()->subDay()->toDateString(),
+            'is_primary' => true,
+            'verification_status' => VerificationStatus::Verified->value,
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $this->getJson('/api/v1/units')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $unitA->id);
+
+        $this->getJson('/api/v1/units?compoundId='.$compoundB->id)
+            ->assertForbidden();
     }
 
     public function test_resident_unit_scope_uses_only_active_verified_memberships(): void
@@ -606,6 +770,94 @@ class PropertyRegistryTest extends TestCase
             ->assertForbidden();
 
         $this->getJson('/api/v1/units?compoundId='.$compoundB->id)
+            ->assertForbidden();
+
+        $this->getJson("/api/v1/units/{$unitB->id}")
+            ->assertForbidden();
+    }
+
+    public function test_membership_scoped_compound_admin_can_access_own_building_floor_and_unit_when_compound_id_is_null(): void
+    {
+        $compound = Compound::factory()->create();
+        $building = Building::factory()->for($compound)->create(['name' => 'Managed Building']);
+        $floor = Floor::factory()->for($building)->create(['label' => 'Managed Floor']);
+        $unit = Unit::factory()->for($compound)->for($building)->for($floor)->create(['unit_number' => 'M-101']);
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => null,
+        ]);
+
+        UnitMembership::query()->create([
+            'unit_id' => $unit->id,
+            'user_id' => $admin->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'starts_at' => now()->subDay()->toDateString(),
+            'is_primary' => true,
+            'verification_status' => VerificationStatus::Verified->value,
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $this->getJson("/api/v1/compounds/{$compound->id}/buildings")
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $building->id);
+
+        $this->getJson("/api/v1/buildings/{$building->id}")
+            ->assertOk()
+            ->assertJsonPath('data.id', $building->id);
+
+        $this->getJson("/api/v1/floors/{$floor->id}")
+            ->assertOk()
+            ->assertJsonPath('data.id', $floor->id);
+
+        $this->getJson("/api/v1/units/{$unit->id}")
+            ->assertOk()
+            ->assertJsonPath('data.id', $unit->id);
+    }
+
+    public function test_effective_compound_admin_property_detail_access_prefers_membership_scope_over_stale_direct_compound_id(): void
+    {
+        $compoundA = Compound::factory()->create(['name' => 'Managed Compound']);
+        $compoundB = Compound::factory()->create(['name' => 'Stale Compound']);
+        $buildingA = Building::factory()->for($compoundA)->create();
+        $buildingB = Building::factory()->for($compoundB)->create();
+        $floorA = Floor::factory()->for($buildingA)->create();
+        $floorB = Floor::factory()->for($buildingB)->create();
+        $unitA = Unit::factory()->for($compoundA)->for($buildingA)->for($floorA)->create(['unit_number' => 'A-501']);
+        $unitB = Unit::factory()->for($compoundB)->for($buildingB)->for($floorB)->create(['unit_number' => 'B-501']);
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compoundB->id,
+        ]);
+
+        UnitMembership::query()->create([
+            'unit_id' => $unitA->id,
+            'user_id' => $admin->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'starts_at' => now()->subDay()->toDateString(),
+            'is_primary' => true,
+            'verification_status' => VerificationStatus::Verified->value,
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $this->getJson("/api/v1/buildings/{$buildingA->id}")
+            ->assertOk()
+            ->assertJsonPath('data.id', $buildingA->id);
+
+        $this->getJson("/api/v1/floors/{$floorA->id}")
+            ->assertOk()
+            ->assertJsonPath('data.id', $floorA->id);
+
+        $this->getJson("/api/v1/units/{$unitA->id}")
+            ->assertOk()
+            ->assertJsonPath('data.id', $unitA->id);
+
+        $this->getJson("/api/v1/buildings/{$buildingB->id}")
+            ->assertForbidden();
+
+        $this->getJson("/api/v1/floors/{$floorB->id}")
             ->assertForbidden();
 
         $this->getJson("/api/v1/units/{$unitB->id}")

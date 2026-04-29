@@ -4,7 +4,7 @@ import { getTranslations } from "next-intl/server";
 
 import { SiteNav } from "@/components/site-nav";
 import { getCompounds, getCurrentUser } from "@/lib/api";
-import { requireAdminUser } from "@/lib/session";
+import { hasEffectiveRole, requireAdminUser } from "@/lib/session";
 
 function BuildingIcon() {
   return (
@@ -18,7 +18,7 @@ export default async function CompoundsPage() {
   const user = await requireAdminUser(getCurrentUser);
 
   // Compound admins are scoped to their own compound — skip the list entirely
-  if (user.role === "compound_admin" && user.compoundId) {
+  if (hasEffectiveRole(user, "compound_admin") && user.compoundId) {
     redirect(`/compounds/${user.compoundId}`);
   }
 
@@ -34,7 +34,7 @@ export default async function CompoundsPage() {
             <h1 className="text-3xl font-semibold">{t("propertyRegistry")}</h1>
             <p className="mt-2 max-w-2xl text-sm text-muted">{t("propertyRegistryDesc")}</p>
           </div>
-          {user.role === "super_admin" && (
+          {hasEffectiveRole(user, "super_admin") && (
             <Link
               className="inline-flex h-11 items-center justify-center rounded-lg bg-brand px-4 text-sm font-semibold text-white transition hover:bg-brand-strong"
               href="/compounds/new"

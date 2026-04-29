@@ -17,6 +17,7 @@ class IssueService
     public function __construct(
         private readonly NotificationService $notificationService,
         private readonly AuditLogger $auditLogger,
+        private readonly CompoundContextService $compoundContext,
     ) {}
 
     /**
@@ -300,14 +301,24 @@ class IssueService
 
     public function userCanAccessIssue(User $user, Issue $issue): bool
     {
-        if (in_array($user->role, [
+        if ($user->hasAnyEffectiveRole([
             UserRole::SuperAdmin,
             UserRole::CompoundAdmin,
             UserRole::BoardMember,
             UserRole::FinanceReviewer,
             UserRole::SupportAgent,
-        ], true)) {
-            if ($user->role === UserRole::SuperAdmin || ! filled($user->compound_id)) {
+        ])) {
+            if ($user->isEffectiveSuperAdmin()) {
+                return true;
+            }
+
+            if ($user->hasEffectiveRole(UserRole::CompoundAdmin)) {
+                $managedCompoundId = $this->compoundContext->resolveManagedCompoundId($user);
+
+                return $managedCompoundId !== null && $managedCompoundId === $issue->compound_id;
+            }
+
+            if (! filled($user->compound_id)) {
                 return true;
             }
 

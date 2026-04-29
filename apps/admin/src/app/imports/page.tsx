@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 
 import { LogoutButton } from "@/components/logout-button";
 import { getCurrentUser, getImportBatches, getImportTemplateUrl, getCompounds } from "@/lib/api";
-import { requireAdminUser, getCompoundContext } from "@/lib/session";
+import { requireAdminUser, getCompoundContext, hasEffectiveRole } from "@/lib/session";
 import type { ImportBatchType } from "@compound/contracts";
 import { importBatchTypeValues } from "@compound/contracts";
 
@@ -14,7 +14,7 @@ export default async function ImportsPage() {
   const t = await getTranslations("Import");
   const nav = await getTranslations("Navigation");
 
-  const isSuperAdmin = user.role === "super_admin";
+  const isSuperAdmin = hasEffectiveRole(user, "super_admin");
 
   const [batches, compoundsData, compoundCtx] = await Promise.all([
     getImportBatches(),

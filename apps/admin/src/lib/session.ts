@@ -4,6 +4,10 @@ import type { AuthenticatedUser, UserRole } from "@compound/contracts";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { canAccessAdmin, hasEffectiveRole } from "./auth-access";
+
+export { canAccessAdmin, hasEffectiveRole } from "./auth-access";
+
 const authCookieName = "compound_admin_token";
 const compoundContextCookieName = "compound_ctx";
 
@@ -57,10 +61,6 @@ export async function setCompoundContext(compoundId: string | null): Promise<voi
   }
 }
 
-export function canAccessAdmin(user: AuthenticatedUser, allowedRoles: UserRole[]): boolean {
-  return user.status === "active" && allowedRoles.includes(user.role);
-}
-
 export async function requireAdminUser(
   loader: () => Promise<AuthenticatedUser | null>,
   allowedRoles: UserRole[] = [
@@ -97,8 +97,7 @@ export async function requirePermission(
   user: AuthenticatedUser,
   permission: string,
 ): Promise<void> {
-  const isSuperAdmin =
-    user.roles?.includes("super_admin") || user.role === "super_admin";
+  const isSuperAdmin = hasEffectiveRole(user, "super_admin");
   if (isSuperAdmin) return;
 
   const hasPermission = user.permissions?.includes(permission) ?? false;

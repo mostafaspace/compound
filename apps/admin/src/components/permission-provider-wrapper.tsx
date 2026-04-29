@@ -1,4 +1,5 @@
 import { getCurrentUser } from "@/lib/api";
+import { getEffectiveRoleNames } from "@/lib/auth-access";
 import { getAuthToken } from "@/lib/session";
 import { PermissionProvider } from "@/context/permission-context";
 
@@ -27,11 +28,7 @@ export async function PermissionProviderWrapper({
   return (
     <PermissionProvider
       permissions={user?.permissions ?? []}
-      roles={[
-        ...(user?.roles ?? []),
-        // Also include the legacy role enum for backward compat
-        ...(user?.role ? [user.role] : []),
-      ]}
+      roles={user ? getEffectiveRoleNames(user) : []}
     >
       {children}
     </PermissionProvider>

@@ -19,6 +19,8 @@ const systemSlice = createSlice({
       state.isOffline = action.payload.isOffline;
       if (action.payload.error) {
         state.lastError = action.payload.error;
+      } else if (!action.payload.isOffline) {
+        state.lastError = null;
       }
     },
     clearError: (state) => {

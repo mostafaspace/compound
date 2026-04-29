@@ -2,6 +2,7 @@ import { createApi, fetchBaseQuery, BaseQueryFn, FetchArgs, FetchBaseQueryError 
 import * as Keychain from "react-native-keychain";
 import { Platform } from "react-native";
 import { setOfflineState } from "../store/systemSlice";
+import { logout } from "../store/authSlice";
 
 const authTokenService = "compound.mobile.authToken";
 
@@ -32,8 +33,14 @@ const baseQueryWithFallback: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQ
 
   if (result.error && result.error.status === 'FETCH_ERROR') {
     api.dispatch(setOfflineState({ isOffline: true, error: "Network Error: Could not connect to server" }));
-  } else if (result.error && typeof result.error.status === 'number' && result.error.status >= 500) {
-    api.dispatch(setOfflineState({ isOffline: true, error: "Server Error: The backend is currently down" }));
+  } else if (result.error && result.error.status === 401) {
+    api.dispatch(logout());
+    await Keychain.resetGenericPassword({ service: authTokenService });
+
+    const state = api.getState() as any;
+    if (state.system?.isOffline) {
+      api.dispatch(setOfflineState({ isOffline: false }));
+    }
   } else {
     const state = api.getState() as any;
     if (state.system?.isOffline) {

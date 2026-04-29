@@ -1,4 +1,11 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
-  "enabledMcpjsonServers": ["atlassian", "playwright"]
+  "enabledMcpjsonServers": [
+    "atlassian",
+    "playwright",
+    "chrome-devtools",
+    "github.com/executeautomation/mcp-playwright",
+    "react-native-guide",
+    "react-native-mcp"
+  ]
 }

@@ -28,7 +28,7 @@ class UserPhotoController extends Controller
         $path = $request->file('photo')->store("users/photos", 'public');
         $user->update(['photo_url' => Storage::disk('public')->url($path)]);
 
-        return response()->json(new UserResource($user));
+        return response()->json(new UserResource($user->fresh()->loadAuthorizationSnapshot()));
     }
 
     public function destroy(Request $request, User $user): JsonResponse
@@ -41,6 +41,6 @@ class UserPhotoController extends Controller
             $user->update(['photo_url' => null]);
         }
 
-        return response()->json(new UserResource($user));
+        return response()->json(new UserResource($user->fresh()->loadAuthorizationSnapshot()));
     }
 }

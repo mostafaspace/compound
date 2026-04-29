@@ -372,13 +372,13 @@ class AnnouncementController extends Controller
 
     private function isAnnouncementAdmin(Request $request): bool
     {
-        return in_array($request->user()?->role, [
+        return $request->user()?->hasAnyEffectiveRole([
             UserRole::SuperAdmin,
             UserRole::CompoundAdmin,
             UserRole::BoardMember,
             UserRole::FinanceReviewer,
             UserRole::SupportAgent,
-        ], true);
+        ]) ?? false;
     }
 
     private function canAccessAnnouncement(Request $request, Announcement $announcement): bool
@@ -398,11 +398,11 @@ class AnnouncementController extends Controller
             return false;
         }
 
-        if ($user->role === UserRole::SuperAdmin || ! filled($user->compound_id)) {
+        if ($user->isEffectiveSuperAdmin()) {
             return true;
         }
 
-        return $user->compound_id === $announcement->compound_id;
+        return $this->compoundContext->resolveManagedCompoundId($user) === $announcement->compound_id;
     }
 
     private function ensureAnnouncementAdminAccess(Request $request, string $compoundId): void
@@ -411,11 +411,11 @@ class AnnouncementController extends Controller
 
         $user = $request->user();
 
-        if ($user === null || $user->role === UserRole::SuperAdmin || ! filled($user->compound_id)) {
+        if ($user === null || $user->isEffectiveSuperAdmin()) {
             return;
         }
 
-        abort_if($user->compound_id !== $compoundId, Response::HTTP_FORBIDDEN);
+        $this->compoundContext->ensureManagedCompoundAccess($user, $compoundId);
     }
 
     /**

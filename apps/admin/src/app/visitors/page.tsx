@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { LogoutButton } from "@/components/logout-button";
 import { VisitorGateWorkspace } from "@/components/visitors/visitor-gate-workspace";
 import { getCurrentUser, getSystemStatus, getVisitorRequests } from "@/lib/api";
+import { formatRoleLabel, getPrimaryEffectiveRole } from "@/lib/auth-access";
 import { requireAdminUser } from "@/lib/session";
 
 export default async function VisitorsPage() {
@@ -17,6 +18,7 @@ export default async function VisitorsPage() {
   const [visitors, systemStatus] = await Promise.all([getVisitorRequests(), getSystemStatus()]);
   const isDegraded = systemStatus?.status !== "ok";
   const showDegradedWarning = isDegraded && visitors.length === 0;
+  const effectiveRoleLabel = formatRoleLabel(getPrimaryEffectiveRole(user));
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -26,7 +28,7 @@ export default async function VisitorsPage() {
             <p className="text-sm font-semibold uppercase text-brand">{t("section")}</p>
             <h1 className="mt-2 text-3xl font-semibold md:text-4xl">{t("title")}</h1>
             <p className="mt-2 text-sm text-muted">
-              {t("subtitle", { name: user.name, role: user.role.replaceAll("_", " ") })}
+              {t("subtitle", { name: user.name, role: effectiveRoleLabel })}
             </p>
           </div>
           <div className="flex flex-wrap gap-3">

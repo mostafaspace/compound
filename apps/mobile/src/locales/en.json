@@ -207,11 +207,6 @@
     "visitStarts": "Visit starts",
     "window": "Window: {{start}} - {{end}}"
   },
-  "Footer": {
-    "environment": "Environment",
-    "notConnected": "Not connected",
-    "timezonePending": "Timezone pending"
-  },
   "QuickActions": {
     "visitors": "Visitor QR",
     "visitorsDetail": "Create or revoke guest passes",

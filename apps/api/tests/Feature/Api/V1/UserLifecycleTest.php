@@ -13,6 +13,7 @@ use App\Models\Property\UnitMembership;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
+use Spatie\Permission\Models\Role as SpatieRole;
 use Tests\TestCase;
 
 // CM-106: User lifecycle, suspension, recovery, move-out, account merge
@@ -57,10 +58,62 @@ class UserLifecycleTest extends TestCase
         ]);
     }
 
+    public function test_compound_admin_can_suspend_membership_scoped_resident_when_compound_id_is_null(): void
+    {
+        $compound = Compound::factory()->create();
+        $building = \App\Models\Property\Building::factory()->for($compound)->create();
+        $unit = \App\Models\Property\Unit::factory()->for($compound)->for($building)->create(['floor_id' => null]);
+
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'status' => AccountStatus::Active->value,
+            'compound_id' => $compound->id,
+        ]);
+        $target = $this->makeUser(['compound_id' => null]);
+
+        UnitMembership::factory()->create([
+            'user_id' => $target->id,
+            'unit_id' => $unit->id,
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $this->postJson("/api/v1/users/{$target->id}/suspend", ['reason' => 'Membership-scoped user.'])
+            ->assertOk()
+            ->assertJsonPath('user.status', 'suspended');
+    }
+
     public function test_cannot_suspend_super_admin(): void
     {
         $admin  = $this->makeAdmin();
         $target = $this->makeAdmin();
+
+        Sanctum::actingAs($admin);
+
+        $this->postJson("/api/v1/users/{$target->id}/suspend", ['reason' => 'Test.'])
+            ->assertUnprocessable();
+    }
+
+    public function test_effective_spatie_super_admin_can_suspend_even_when_legacy_role_is_stale(): void
+    {
+        $superAdminRole = SpatieRole::findOrCreate('super_admin', 'sanctum');
+        $actor = $this->makeUser();
+        $target = $this->makeUser();
+        $actor->assignRole($superAdminRole);
+
+        Sanctum::actingAs($actor);
+
+        $this->postJson("/api/v1/users/{$target->id}/suspend", ['reason' => 'Repeated violations.'])
+            ->assertOk()
+            ->assertJsonPath('user.status', 'suspended');
+    }
+
+    public function test_cannot_suspend_effective_spatie_super_admin_when_legacy_role_is_stale(): void
+    {
+        $admin = $this->makeAdmin();
+        $superAdminRole = SpatieRole::findOrCreate('super_admin', 'sanctum');
+        $target = $this->makeUser();
+        $target->assignRole($superAdminRole);
 
         Sanctum::actingAs($admin);
 
@@ -197,6 +250,24 @@ class UserLifecycleTest extends TestCase
             ->assertJsonStructure(['user', 'memberships', 'documentCounts', 'recentAuditEvents']);
     }
 
+    public function test_support_view_user_payload_includes_effective_spatie_roles_when_legacy_role_is_stale(): void
+    {
+        $agent = User::factory()->create(['role' => UserRole::SupportAgent->value, 'status' => AccountStatus::Active->value]);
+        $compoundHeadRole = SpatieRole::findOrCreate('compound_head', 'sanctum');
+        $target = $this->makeUser([
+            'role' => UserRole::ResidentOwner->value,
+            'name' => 'Compound Head User',
+        ]);
+        $target->assignRole($compoundHeadRole);
+
+        Sanctum::actingAs($agent);
+
+        $this->getJson("/api/v1/users/{$target->id}/support-view")
+            ->assertOk()
+            ->assertJsonPath('user.role', UserRole::ResidentOwner->value)
+            ->assertJsonPath('user.roles.0', 'compound_head');
+    }
+
     public function test_users_index_is_searchable(): void
     {
         $admin = $this->makeAdmin();
@@ -208,6 +279,35 @@ class UserLifecycleTest extends TestCase
         $this->getJson('/api/v1/users?q=Ahmed')
             ->assertOk()
             ->assertJsonCount(1, 'data');
+    }
+
+    public function test_users_index_role_filter_matches_effective_spatie_role_when_legacy_role_is_stale(): void
+    {
+        $admin = $this->makeAdmin();
+        $compoundHeadRole = SpatieRole::findOrCreate('compound_head', 'sanctum');
+        $matchingUser = $this->makeUser([
+            'role' => UserRole::ResidentOwner->value,
+            'name' => 'Effective Compound Head',
+            'email' => 'compound-head@example.com',
+        ]);
+        $matchingUser->assignRole($compoundHeadRole);
+        $nonMatchingUser = $this->makeUser([
+            'role' => UserRole::ResidentOwner->value,
+            'name' => 'Resident Only',
+            'email' => 'resident-only@example.com',
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $response = $this->getJson('/api/v1/users?role=compound_admin')
+            ->assertOk();
+
+        $ids = collect($response->json('data'))->pluck('id')->all();
+
+        $this->assertContains($matchingUser->id, $ids);
+        $this->assertNotContains($nonMatchingUser->id, $ids);
+        $this->assertSame(['compound_head'], collect($response->json('data'))
+            ->firstWhere('id', $matchingUser->id)['roles']);
     }
 
     public function test_compound_admin_only_sees_own_compound_users(): void
@@ -230,6 +330,79 @@ class UserLifecycleTest extends TestCase
 
         $this->assertContains($userA->id, $ids);
         $this->assertNotContains($userB->id, $ids);
+    }
+
+    public function test_compound_admin_can_list_resident_users_scoped_by_unit_membership_when_compound_id_is_null(): void
+    {
+        $compoundA = Compound::factory()->create();
+        $compoundB = Compound::factory()->create();
+        $buildingA = \App\Models\Property\Building::factory()->for($compoundA)->create();
+        $buildingB = \App\Models\Property\Building::factory()->for($compoundB)->create();
+        $unitA = \App\Models\Property\Unit::factory()->for($compoundA)->for($buildingA)->create(['floor_id' => null]);
+        $unitB = \App\Models\Property\Unit::factory()->for($compoundB)->for($buildingB)->create(['floor_id' => null]);
+
+        $adminA = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'status' => AccountStatus::Active->value,
+            'compound_id' => $compoundA->id,
+        ]);
+
+        $residentA = $this->makeUser(['compound_id' => null, 'email' => 'resident-a@example.com']);
+        $residentB = $this->makeUser(['compound_id' => null, 'email' => 'resident-b@example.com']);
+
+        UnitMembership::factory()->create([
+            'user_id' => $residentA->id,
+            'unit_id' => $unitA->id,
+        ]);
+        UnitMembership::factory()->create([
+            'user_id' => $residentB->id,
+            'unit_id' => $unitB->id,
+        ]);
+
+        Sanctum::actingAs($adminA);
+
+        $response = $this->getJson('/api/v1/users')->assertOk();
+        $ids = collect($response->json('data'))->pluck('id')->all();
+
+        $this->assertContains($residentA->id, $ids);
+        $this->assertNotContains($residentB->id, $ids);
+    }
+
+    public function test_compound_admin_can_view_support_detail_for_resident_scoped_by_unit_membership_when_compound_id_is_null(): void
+    {
+        $compound = Compound::factory()->create();
+        $otherCompound = Compound::factory()->create();
+        $building = \App\Models\Property\Building::factory()->for($compound)->create();
+        $otherBuilding = \App\Models\Property\Building::factory()->for($otherCompound)->create();
+        $unit = \App\Models\Property\Unit::factory()->for($compound)->for($building)->create(['floor_id' => null]);
+        $otherUnit = \App\Models\Property\Unit::factory()->for($otherCompound)->for($otherBuilding)->create(['floor_id' => null]);
+
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'status' => AccountStatus::Active->value,
+            'compound_id' => $compound->id,
+        ]);
+
+        $resident = $this->makeUser(['compound_id' => null]);
+        UnitMembership::factory()->create([
+            'user_id' => $resident->id,
+            'unit_id' => $unit->id,
+        ]);
+
+        $foreignResident = $this->makeUser(['compound_id' => null, 'email' => 'foreign-resident@example.com']);
+        UnitMembership::factory()->create([
+            'user_id' => $foreignResident->id,
+            'unit_id' => $otherUnit->id,
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $this->getJson("/api/v1/users/{$resident->id}/support-view")
+            ->assertOk()
+            ->assertJsonPath('user.id', $resident->id);
+
+        $this->getJson("/api/v1/users/{$foreignResident->id}/support-view")
+            ->assertForbidden();
     }
 
     // --- Account merge ---
@@ -258,6 +431,40 @@ class UserLifecycleTest extends TestCase
             'target_user_id' => $target->id,
             'status'         => 'pending',
         ]);
+    }
+
+    public function test_compound_admin_can_initiate_merge_for_membership_scoped_residents_when_source_compound_id_is_null(): void
+    {
+        $compound = Compound::factory()->create();
+        $building = \App\Models\Property\Building::factory()->for($compound)->create();
+        $unit = \App\Models\Property\Unit::factory()->for($compound)->for($building)->create(['floor_id' => null]);
+
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'status' => AccountStatus::Active->value,
+            'compound_id' => $compound->id,
+        ]);
+        $source = $this->makeUser(['compound_id' => null, 'email' => 'merge-source@example.com']);
+        $target = $this->makeUser(['compound_id' => null, 'email' => 'merge-target@example.com']);
+
+        UnitMembership::factory()->create([
+            'user_id' => $source->id,
+            'unit_id' => $unit->id,
+        ]);
+        UnitMembership::factory()->create([
+            'user_id' => $target->id,
+            'unit_id' => $unit->id,
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $this->postJson('/api/v1/account-merges', [
+            'source_user_id' => $source->id,
+            'target_user_id' => $target->id,
+            'notes' => 'Membership-scoped merge.',
+        ])->assertCreated()
+            ->assertJsonPath('sourceUser.id', $source->id)
+            ->assertJsonPath('targetUser.id', $target->id);
     }
 
     public function test_cannot_initiate_duplicate_pending_merge(): void
@@ -311,6 +518,139 @@ class UserLifecycleTest extends TestCase
         $this->assertDatabaseHas('audit_logs', ['action' => 'users.account_merge_completed', 'severity' => 'critical']);
     }
 
+    public function test_compound_admin_can_confirm_membership_scoped_merge_when_source_compound_id_is_null(): void
+    {
+        $compound = Compound::factory()->create();
+        $building = \App\Models\Property\Building::factory()->for($compound)->create();
+        $unit = \App\Models\Property\Unit::factory()->for($compound)->for($building)->create(['floor_id' => null]);
+
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'status' => AccountStatus::Active->value,
+            'compound_id' => $compound->id,
+        ]);
+        $source = $this->makeUser(['compound_id' => null, 'email' => 'confirm-source@example.com']);
+        $target = $this->makeUser(['compound_id' => null, 'email' => 'confirm-target@example.com']);
+
+        UnitMembership::factory()->create([
+            'user_id' => $source->id,
+            'unit_id' => $unit->id,
+        ]);
+        UnitMembership::factory()->create([
+            'user_id' => $target->id,
+            'unit_id' => $unit->id,
+        ]);
+
+        $merge = AccountMerge::create([
+            'source_user_id' => $source->id,
+            'target_user_id' => $target->id,
+            'initiated_by' => $admin->id,
+            'status' => AccountMergeStatus::Pending->value,
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $this->postJson("/api/v1/account-merges/{$merge->id}/confirm")
+            ->assertOk()
+            ->assertJsonPath('status', 'completed');
+    }
+
+    public function test_compound_admin_can_list_membership_scoped_merges_when_source_compound_id_is_null(): void
+    {
+        $compound = Compound::factory()->create();
+        $otherCompound = Compound::factory()->create();
+        $building = \App\Models\Property\Building::factory()->for($compound)->create();
+        $otherBuilding = \App\Models\Property\Building::factory()->for($otherCompound)->create();
+        $unit = \App\Models\Property\Unit::factory()->for($compound)->for($building)->create(['floor_id' => null]);
+        $otherUnit = \App\Models\Property\Unit::factory()->for($otherCompound)->for($otherBuilding)->create(['floor_id' => null]);
+
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'status' => AccountStatus::Active->value,
+            'compound_id' => $compound->id,
+        ]);
+        $source = $this->makeUser(['compound_id' => null, 'email' => 'listed-source@example.com']);
+        $target = $this->makeUser(['compound_id' => null, 'email' => 'listed-target@example.com']);
+        $foreignSource = $this->makeUser(['compound_id' => null, 'email' => 'foreign-source@example.com']);
+        $foreignTarget = $this->makeUser(['compound_id' => null, 'email' => 'foreign-target@example.com']);
+
+        UnitMembership::factory()->create([
+            'user_id' => $source->id,
+            'unit_id' => $unit->id,
+        ]);
+        UnitMembership::factory()->create([
+            'user_id' => $target->id,
+            'unit_id' => $unit->id,
+        ]);
+        UnitMembership::factory()->create([
+            'user_id' => $foreignSource->id,
+            'unit_id' => $otherUnit->id,
+        ]);
+        UnitMembership::factory()->create([
+            'user_id' => $foreignTarget->id,
+            'unit_id' => $otherUnit->id,
+        ]);
+
+        $visibleMerge = AccountMerge::create([
+            'source_user_id' => $source->id,
+            'target_user_id' => $target->id,
+            'initiated_by' => $admin->id,
+            'status' => AccountMergeStatus::Pending->value,
+        ]);
+        AccountMerge::create([
+            'source_user_id' => $foreignSource->id,
+            'target_user_id' => $foreignTarget->id,
+            'initiated_by' => $admin->id,
+            'status' => AccountMergeStatus::Pending->value,
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $response = $this->getJson('/api/v1/account-merges')->assertOk();
+
+        $ids = collect($response->json('data'))->pluck('id')->all();
+
+        $this->assertContains($visibleMerge->id, $ids);
+        $this->assertCount(1, $ids);
+    }
+
+    public function test_compound_admin_can_view_membership_scoped_merge_when_source_compound_id_is_null(): void
+    {
+        $compound = Compound::factory()->create();
+        $building = \App\Models\Property\Building::factory()->for($compound)->create();
+        $unit = \App\Models\Property\Unit::factory()->for($compound)->for($building)->create(['floor_id' => null]);
+
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'status' => AccountStatus::Active->value,
+            'compound_id' => $compound->id,
+        ]);
+        $source = $this->makeUser(['compound_id' => null, 'email' => 'show-source@example.com']);
+        $target = $this->makeUser(['compound_id' => null, 'email' => 'show-target@example.com']);
+
+        UnitMembership::factory()->create([
+            'user_id' => $source->id,
+            'unit_id' => $unit->id,
+        ]);
+        UnitMembership::factory()->create([
+            'user_id' => $target->id,
+            'unit_id' => $unit->id,
+        ]);
+
+        $merge = AccountMerge::create([
+            'source_user_id' => $source->id,
+            'target_user_id' => $target->id,
+            'initiated_by' => $admin->id,
+            'status' => AccountMergeStatus::Pending->value,
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $this->getJson("/api/v1/account-merges/{$merge->id}")
+            ->assertOk()
+            ->assertJsonPath('id', $merge->id);
+    }
+
     public function test_cancel_merge(): void
     {
         $admin  = $this->makeAdmin();
@@ -321,6 +661,43 @@ class UserLifecycleTest extends TestCase
             'target_user_id' => $target->id,
             'initiated_by'   => $admin->id,
             'status'         => AccountMergeStatus::Pending->value,
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $this->postJson("/api/v1/account-merges/{$merge->id}/cancel")
+            ->assertOk()
+            ->assertJsonPath('status', 'cancelled');
+    }
+
+    public function test_compound_admin_can_cancel_membership_scoped_merge_when_source_compound_id_is_null(): void
+    {
+        $compound = Compound::factory()->create();
+        $building = \App\Models\Property\Building::factory()->for($compound)->create();
+        $unit = \App\Models\Property\Unit::factory()->for($compound)->for($building)->create(['floor_id' => null]);
+
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'status' => AccountStatus::Active->value,
+            'compound_id' => $compound->id,
+        ]);
+        $source = $this->makeUser(['compound_id' => null, 'email' => 'cancel-source@example.com']);
+        $target = $this->makeUser(['compound_id' => null, 'email' => 'cancel-target@example.com']);
+
+        UnitMembership::factory()->create([
+            'user_id' => $source->id,
+            'unit_id' => $unit->id,
+        ]);
+        UnitMembership::factory()->create([
+            'user_id' => $target->id,
+            'unit_id' => $unit->id,
+        ]);
+
+        $merge = AccountMerge::create([
+            'source_user_id' => $source->id,
+            'target_user_id' => $target->id,
+            'initiated_by' => $admin->id,
+            'status' => AccountMergeStatus::Pending->value,
         ]);
 
         Sanctum::actingAs($admin);

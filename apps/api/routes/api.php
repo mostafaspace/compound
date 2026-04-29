@@ -254,8 +254,17 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             Route::get('/issues/{issue}/attachments', [IssueAttachmentController::class, 'index'])->name('issues.attachments.index');
             Route::post('/issues/{issue}/attachments', [IssueAttachmentController::class, 'store'])->name('issues.attachments.store');
 
-            // Official announcements and notices
+        });
+
+    Route::middleware(['auth:sanctum', 'role:view_announcements'])
+        ->group(function (): void {
             Route::get('/announcements', [AnnouncementController::class, 'index'])->name('announcements.index');
+            Route::get('/announcements/{announcement}/acknowledgements', [AnnouncementController::class, 'acknowledgements'])
+                ->name('announcements.acknowledgements');
+        });
+
+    Route::middleware(['auth:sanctum', 'role:manage_announcements'])
+        ->group(function (): void {
             Route::post('/announcements', [AnnouncementController::class, 'store'])->name('announcements.store');
             Route::patch('/announcements/{announcement}', [AnnouncementController::class, 'update'])->name('announcements.update');
             Route::post('/announcements/{announcement}/publish', [AnnouncementController::class, 'publish'])
@@ -264,8 +273,6 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
                 ->name('announcements.archive');
             Route::post('/announcements/{announcement}/attachments', [AnnouncementController::class, 'storeAttachment'])
                 ->name('announcements.attachments.store');
-            Route::get('/announcements/{announcement}/acknowledgements', [AnnouncementController::class, 'acknowledgements'])
-                ->name('announcements.acknowledgements');
         });
 
     Route::middleware(['auth:sanctum', 'role:view_finance'])

@@ -31,12 +31,14 @@ class UnitAccountController extends Controller
 
     public function index(Request $request): AnonymousResourceCollection
     {
-        $compoundId = $this->compoundContext->resolve($request);
+        /** @var User $actor */
+        $actor = $request->user();
+        $compoundIds = $this->compoundContext->resolveAccessibleCompoundIds($actor);
 
         $accounts = UnitAccount::query()
             ->with(['unit.building', 'unit.compound'])
-            ->when($compoundId, fn ($q) => $q->whereHas(
-                'unit', fn ($uq) => $uq->where('compound_id', $compoundId)
+            ->when($compoundIds !== null, fn ($q) => $q->whereHas(
+                'unit', fn ($uq) => $uq->whereIn('compound_id', $compoundIds)
             ))
             ->when($request->filled('unitId'), fn ($query) => $query->where('unit_id', $request->string('unitId')->toString()))
             ->latest()
@@ -191,30 +193,29 @@ class UnitAccountController extends Controller
 
     private function isResident(User $user): bool
     {
-        return str_starts_with($user->role->value, 'resident_');
+        return $user->hasAnyEffectiveRole([
+            'resident_owner',
+            'resident_tenant',
+        ]);
     }
 
     private function ensureAccountCompoundAccess(Request $request, UnitAccount $account): void
     {
+        /** @var User $actor */
+        $actor = $request->user();
         $account->loadMissing('unit');
 
         if ($account->unit?->compound_id === null) {
             abort(Response::HTTP_FORBIDDEN);
         }
 
-        $compoundId = $this->compoundContext->resolve($request);
-
-        if ($compoundId !== null) {
-            abort_unless($account->unit->compound_id === $compoundId, Response::HTTP_FORBIDDEN);
-        }
+        $this->compoundContext->ensureUserCanAccessCompound($actor, $account->unit->compound_id);
     }
 
     private function ensureUnitCompoundAccess(Request $request, Unit $unit): void
     {
-        $compoundId = $this->compoundContext->resolve($request);
-
-        if ($compoundId !== null) {
-            abort_unless($unit->compound_id === $compoundId, Response::HTTP_FORBIDDEN);
-        }
+        /** @var User $actor */
+        $actor = $request->user();
+        $this->compoundContext->ensureUserCanAccessCompound($actor, $unit->compound_id);
     }
 }

@@ -12,6 +12,7 @@ use App\Http\Requests\Visitors\StoreVisitorRequestRequest;
 use App\Http\Requests\Visitors\ValidateVisitorPassRequest;
 use App\Http\Requests\Visitors\VisitorDecisionRequest;
 use App\Http\Resources\Visitors\VisitorRequestResource;
+use App\Models\Property\Unit;
 use App\Models\Property\UnitMembership;
 use App\Models\User;
 use App\Models\Visitors\VisitorRequest;
@@ -28,6 +29,19 @@ use Symfony\Component\HttpFoundation\Response;
 
 class VisitorRequestController extends Controller
 {
+    private const STAFF_ROLES = [
+        UserRole::SuperAdmin,
+        UserRole::CompoundAdmin,
+        UserRole::SecurityGuard,
+        UserRole::SupportAgent,
+    ];
+
+    private const NOTIFIABLE_SECURITY_ROLE_NAMES = [
+        'security_guard',
+        'compound_admin',
+        'compound_head',
+    ];
+
     public function __construct(
         private readonly AuditLogger $auditLogger,
         private readonly CompoundContextService $compoundContext,
@@ -40,7 +54,9 @@ class VisitorRequestController extends Controller
         /** @var User $user */
         $user = $request->user();
         $status = $request->string('status')->toString();
-        $compoundId = $this->compoundContext->resolve($request);
+        $compoundId = $this->isStaff($user)
+            ? $this->resolveStaffCompoundScope($user)
+            : null;
 
         $visitorRequests = VisitorRequest::query()
             ->with(['host', 'unit.building.compound', 'pass'])
@@ -253,10 +269,12 @@ class VisitorRequestController extends Controller
     private function canHostUnit(User $user, string $unitId): bool
     {
         if ($this->isStaff($user)) {
-            if (filled($user->compound_id)) {
+            $compoundId = $this->resolveStaffCompoundScope($user);
+
+            if (filled($compoundId)) {
                 return Unit::query()
                     ->whereKey($unitId)
-                    ->where('compound_id', $user->compound_id)
+                    ->where('compound_id', $compoundId)
                     ->exists();
             }
 
@@ -273,12 +291,7 @@ class VisitorRequestController extends Controller
 
     private function isStaff(User $user): bool
     {
-        return in_array($user->role, [
-            UserRole::SuperAdmin,
-            UserRole::CompoundAdmin,
-            UserRole::SecurityGuard,
-            UserRole::SupportAgent,
-        ], strict: true);
+        return $user->hasAnyEffectiveRole(self::STAFF_ROLES);
     }
 
     private function abortUnlessActionable(VisitorRequest $visitorRequest): void
@@ -333,7 +346,19 @@ class VisitorRequestController extends Controller
         $compoundId = $visitorRequest->unit?->compound_id;
 
         User::query()
-            ->whereIn('role', [UserRole::SecurityGuard->value, UserRole::CompoundAdmin->value])
+            ->where(function ($query): void {
+                $query
+                    ->whereHas('roles', function ($roleQuery): void {
+                        $roleQuery
+                            ->where('guard_name', 'sanctum')
+                            ->whereIn('name', self::NOTIFIABLE_SECURITY_ROLE_NAMES);
+                    })
+                    ->orWhere(function ($legacyFallback): void {
+                        $legacyFallback
+                            ->whereDoesntHave('roles')
+                            ->whereIn('role', [UserRole::SecurityGuard->value, UserRole::CompoundAdmin->value]);
+                    });
+            })
             ->where('status', 'active')
             ->when($compoundId !== null, fn ($query) => $query->where(function ($scoped) use ($compoundId): void {
                 $scoped
@@ -360,13 +385,31 @@ class VisitorRequestController extends Controller
     {
         /** @var User $user */
         $user = $request->user();
+        $compoundId = $this->resolveStaffCompoundScope($user);
 
-        if (! filled($user->compound_id)) {
+        if (! filled($compoundId)) {
             return;
         }
 
         $visitorRequest->loadMissing('unit');
 
-        abort_unless($visitorRequest->unit?->compound_id === $user->compound_id, Response::HTTP_FORBIDDEN);
+        abort_unless($visitorRequest->unit?->compound_id === $compoundId, Response::HTTP_FORBIDDEN);
+    }
+
+    private function resolveStaffCompoundScope(User $user): ?string
+    {
+        if ($user->isEffectiveSuperAdmin()) {
+            return null;
+        }
+
+        if ($user->hasEffectiveRole(UserRole::CompoundAdmin)) {
+            $managedCompoundId = $this->compoundContext->resolveManagedCompoundId($user);
+
+            abort_if($managedCompoundId === null, Response::HTTP_FORBIDDEN);
+
+            return $managedCompoundId;
+        }
+
+        return $user->compound_id;
     }
 }

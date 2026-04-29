@@ -3,11 +3,12 @@
 Production-grade monorepo for the Owners Association / Compound Management platform.
 
 ## AI Agent Instructions & Governance
-This project uses strict protocols for AI coding assistants (GitHub Copilot, Cursor, Cline, etc.) to ensure stability and alignment with user stories:
-- **Global Rules:** See [system-instructions.md](docs/system-instructions.md) for core rules and testing mandates.
-- **Local Agents:** Use [local-ai-agent-prompt.md](docs/local-ai-agent-prompt.md) when initializing a session with a local model.
-- **GitHub Copilot:** Repository-level instructions are defined in [.github/copilot-instructions.md](.github/copilot-instructions.md).
-- **Jira Integration:** All work must be aligned with tickets in [Project CM](https://mostafatorra.atlassian.net/jira/core/projects/CM/). Use the Jira MCP to sync progress.
+This project now uses a canonical documentation model for project truth.
+
+- **Start Here:** [docs/canon/README.md](docs/canon/README.md)
+- **Agent Guide:** [docs/canon/agent-operator-guide.md](docs/canon/agent-operator-guide.md)
+- **Legacy Pointers:** [system-instructions.md](docs/system-instructions.md) and [local-ai-agent-prompt.md](docs/local-ai-agent-prompt.md) now defer to canon.
+- **Jira Integration:** Jira is the execution and evidence layer, not the source of truth. Active work should still be aligned with [Project CM](https://mostafatorra.atlassian.net/jira/core/projects/CM/).
 
 ## Apps
 

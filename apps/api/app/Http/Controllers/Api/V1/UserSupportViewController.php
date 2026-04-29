@@ -32,9 +32,10 @@ class UserSupportViewController extends Controller
         $compoundId = $this->context->resolve($request);
 
         $query = User::query()
-            ->when($compoundId !== null, fn ($b) => $b->where('compound_id', $compoundId))
+            ->with('roles')
+            ->when($compoundId !== null, fn ($b) => $this->scopeUsersToCompound($b, $compoundId))
             ->when($validated['status'] ?? null, fn ($b, string $v) => $b->where('status', $v))
-            ->when($validated['role'] ?? null, fn ($b, string $v) => $b->where('role', $v))
+            ->when($validated['role'] ?? null, fn ($b, string $v) => $this->applyEffectiveRoleFilter($b, $v))
             ->when($validated['q'] ?? null, function ($b, string $search): void {
                 $term = '%'.$search.'%';
                 $b->where(function ($inner) use ($term): void {
@@ -57,10 +58,11 @@ class UserSupportViewController extends Controller
         $compoundId = $this->context->resolve($request);
 
         if ($compoundId !== null) {
-            $this->context->ensureCompoundAccess($request, $user->compound_id ?? '');
+            abort_unless($this->userBelongsToCompound($user, $compoundId), 403);
         }
 
         $user->loadMissing([
+            'roles',
             'unitMemberships.unit',
             'documents',
             'verificationRequests' => fn ($q) => $q->latest()->limit(5),
@@ -69,7 +71,7 @@ class UserSupportViewController extends Controller
 
         // Recent audit events where this user was the actor
         $recentAuditEvents = AuditLog::query()
-            ->with('actor')
+            ->with('actor.roles')
             ->where('actor_id', $user->id)
             ->latest()
             ->limit(10)
@@ -126,13 +128,14 @@ class UserSupportViewController extends Controller
         $compoundId = $this->context->resolve($request);
 
         if ($compoundId !== null) {
-            $this->context->ensureCompoundAccess($request, $user->compound_id ?? '');
+            abort_unless($this->userBelongsToCompound($user, $compoundId), 403);
         }
 
         $candidates = User::query()
+            ->with('roles')
             ->where('id', '!=', $user->id)
             ->where('status', '!=', AccountStatus::Archived->value)
-            ->when($compoundId !== null, fn ($b) => $b->where('compound_id', $compoundId))
+            ->when($compoundId !== null, fn ($b) => $this->scopeUsersToCompound($b, $compoundId))
             ->where(function ($q) use ($user): void {
                 // Exact email match, or similar name (within same compound)
                 $q->where('email', $user->email)
@@ -149,5 +152,51 @@ class UserSupportViewController extends Controller
             ->get();
 
         return response()->json(['candidates' => UserResource::collection($candidates)]);
+    }
+
+    private function scopeUsersToCompound($query, string $compoundId): void
+    {
+        $query->where(function ($scoped) use ($compoundId): void {
+            $scoped
+                ->where('compound_id', $compoundId)
+                ->orWhereHas('unitMemberships.unit', fn ($unitQuery) => $unitQuery->where('compound_id', $compoundId));
+        });
+    }
+
+    private function applyEffectiveRoleFilter($query, string $role): void
+    {
+        $effectiveRoleNames = $this->effectiveRoleFilterNames($role);
+
+        $query->where(function ($roleQuery) use ($role, $effectiveRoleNames): void {
+            $roleQuery
+                ->whereHas('roles', fn ($assignedRoles) => $assignedRoles->whereIn('name', $effectiveRoleNames))
+                ->orWhere(function ($legacyFallback) use ($role): void {
+                    $legacyFallback
+                        ->whereDoesntHave('roles')
+                        ->where('role', $role);
+                });
+        });
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function effectiveRoleFilterNames(string $role): array
+    {
+        return match ($role) {
+            'compound_admin' => ['compound_admin', 'compound_head'],
+            default => [$role],
+        };
+    }
+
+    private function userBelongsToCompound(User $user, string $compoundId): bool
+    {
+        if ($user->compound_id === $compoundId) {
+            return true;
+        }
+
+        return $user->unitMemberships()
+            ->whereHas('unit', fn ($unitQuery) => $unitQuery->where('compound_id', $compoundId))
+            ->exists();
     }
 }

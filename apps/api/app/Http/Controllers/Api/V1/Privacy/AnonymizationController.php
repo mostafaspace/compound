@@ -40,7 +40,7 @@ class AnonymizationController extends Controller
             metadata: ['user_id' => $user->id, 'hold' => $validated['hold']],
         );
 
-        return response()->json(['data' => UserResource::make($user->fresh())]);
+        return response()->json(['data' => UserResource::make($user->fresh()->loadAuthorizationSnapshot())]);
     }
 
     /**
@@ -84,6 +84,6 @@ class AnonymizationController extends Controller
             metadata: ['user_id' => $user->id],
         );
 
-        return response()->json(['message' => 'User anonymized successfully.', 'data' => UserResource::make($user->fresh())]);
+        return response()->json(['message' => 'User anonymized successfully.', 'data' => UserResource::make($user->fresh()->loadAuthorizationSnapshot())]);
     }
 }

@@ -11,6 +11,7 @@ use App\Services\ExternalNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Symfony\Component\HttpFoundation\Response;
 
 class NotificationDeliveryLogController extends Controller
 {
@@ -32,7 +33,7 @@ class NotificationDeliveryLogController extends Controller
             ->orderByDesc('created_at');
 
         if ($compoundId !== null) {
-            $query->whereHas('notification.user', fn ($q) => $q->where('compound_id', $compoundId));
+            $query->whereHas('notification.user', fn ($q) => $this->scopeUsersToCompound($q, $compoundId));
         }
 
         if ($status && DeliveryStatus::tryFrom($status)) {
@@ -51,10 +52,23 @@ class NotificationDeliveryLogController extends Controller
     {
         $notificationDeliveryLog->loadMissing('notification.user');
 
-        if ($notificationDeliveryLog->notification?->user?->compound_id !== null) {
-            $this->context->ensureCompoundAccess($this->request(), $notificationDeliveryLog->notification->user->compound_id);
-        } else {
+        $user = $notificationDeliveryLog->notification?->user;
+        abort_unless($user !== null, Response::HTTP_FORBIDDEN);
+
+        if ($user->isEffectiveSuperAdmin()) {
             $this->context->ensureGlobalCompoundAccess($this->request());
+        } else {
+            $recipientCompoundId = $this->context->resolveUserCompoundId($user);
+
+            if ($recipientCompoundId !== null) {
+                $this->context->ensureCompoundAccess($this->request(), $recipientCompoundId);
+            } else {
+                $compoundId = $this->context->resolve($this->request());
+                abort_unless(
+                    $compoundId !== null && $this->userBelongsToCompound($user, $compoundId),
+                    Response::HTTP_FORBIDDEN,
+                );
+            }
         }
 
         if ($notificationDeliveryLog->status !== DeliveryStatus::Failed) {
@@ -71,5 +85,25 @@ class NotificationDeliveryLogController extends Controller
     private function request(): Request
     {
         return request();
+    }
+
+    private function scopeUsersToCompound($query, string $compoundId): void
+    {
+        $query->where(function ($scoped) use ($compoundId): void {
+            $scoped
+                ->where('compound_id', $compoundId)
+                ->orWhereHas('unitMemberships.unit', fn ($unitQuery) => $unitQuery->where('compound_id', $compoundId));
+        });
+    }
+
+    private function userBelongsToCompound(\App\Models\User $user, string $compoundId): bool
+    {
+        if ($user->compound_id === $compoundId) {
+            return true;
+        }
+
+        return $user->unitMemberships()
+            ->whereHas('unit', fn ($unitQuery) => $unitQuery->where('compound_id', $compoundId))
+            ->exists();
     }
 }

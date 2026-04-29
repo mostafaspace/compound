@@ -33,7 +33,7 @@ class UserLifecycleController extends Controller
             'reason' => ['required', 'string', 'max:500'],
         ]);
 
-        if ($user->role === UserRole::SuperAdmin) {
+        if ($user->isEffectiveSuperAdmin()) {
             abort(422, 'Super-admin accounts cannot be suspended.');
         }
 
@@ -55,7 +55,7 @@ class UserLifecycleController extends Controller
             metadata: ['user_id' => $user->id, 'previous_status' => AccountStatus::Active->value],
         );
 
-        return response()->json(['message' => 'User suspended.', 'user' => UserResource::make($user->fresh())]);
+        return response()->json(['message' => 'User suspended.', 'user' => UserResource::make($user->fresh()->loadAuthorizationSnapshot())]);
     }
 
     /**
@@ -87,7 +87,7 @@ class UserLifecycleController extends Controller
             metadata: ['user_id' => $user->id],
         );
 
-        return response()->json(['message' => 'User reactivated.', 'user' => UserResource::make($user->fresh())]);
+        return response()->json(['message' => 'User reactivated.', 'user' => UserResource::make($user->fresh()->loadAuthorizationSnapshot())]);
     }
 
     /**
@@ -138,7 +138,7 @@ class UserLifecycleController extends Controller
         return response()->json([
             'message'          => 'Move-out processed.',
             'memberships_ended' => $endedCount,
-            'user'             => UserResource::make($user->fresh()),
+            'user'             => UserResource::make($user->fresh()->loadAuthorizationSnapshot()),
         ]);
     }
 
@@ -180,7 +180,7 @@ class UserLifecycleController extends Controller
             ],
         );
 
-        return response()->json(['message' => 'Account recovered.', 'user' => UserResource::make($user->fresh())]);
+        return response()->json(['message' => 'Account recovered.', 'user' => UserResource::make($user->fresh()->loadAuthorizationSnapshot())]);
     }
 
     /**
@@ -188,14 +188,6 @@ class UserLifecycleController extends Controller
      */
     private function ensureLifecycleAccess(Request $request, User $user): void
     {
-        /** @var User $actor */
-        $actor = $request->user();
-
-        if ($actor->role === UserRole::SuperAdmin) {
-            return; // Super-admin can manage anyone
-        }
-
-        // Compound-admin can only manage users in their own compound
-        $this->context->ensureCompoundAccess($request, $user->compound_id ?? '');
+        $this->context->ensureUserAccess($request, $user);
     }
 }

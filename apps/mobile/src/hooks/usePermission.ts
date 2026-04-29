@@ -1,3 +1,4 @@
+import { isEffectiveSuperAdmin } from '@compound/contracts';
 import { useSelector } from 'react-redux';
 import { selectCurrentUser, selectPermissions } from '../store/authSlice';
 
@@ -12,7 +13,7 @@ export function usePermission(permission: string): boolean {
   if (!user) return false;
 
   // super_admin bypasses all checks (mirrors Gate::before in API)
-  if (user.roles?.includes('super_admin') || user.role === 'super_admin') {
+  if (isEffectiveSuperAdmin(user)) {
     return true;
   }
 
@@ -27,7 +28,7 @@ export function useAllPermissions(...perms: string[]): boolean {
   const permissions = useSelector(selectPermissions);
 
   if (!user) return false;
-  if (user.roles?.includes('super_admin') || user.role === 'super_admin') return true;
+  if (isEffectiveSuperAdmin(user)) return true;
   return perms.every((p) => permissions.includes(p));
 }
 
@@ -39,6 +40,6 @@ export function useAnyPermission(...perms: string[]): boolean {
   const permissions = useSelector(selectPermissions);
 
   if (!user) return false;
-  if (user.roles?.includes('super_admin') || user.role === 'super_admin') return true;
+  if (isEffectiveSuperAdmin(user)) return true;
   return perms.some((p) => permissions.includes(p));
 }

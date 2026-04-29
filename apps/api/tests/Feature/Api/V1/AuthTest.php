@@ -3,13 +3,17 @@
 namespace Tests\Feature\Api\V1;
 
 use App\Enums\AccountStatus;
+use App\Enums\Permission;
 use App\Enums\UserRole;
 use App\Models\AuditLog;
 use App\Models\User;
+use App\Models\UserScopeAssignment;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Laravel\Sanctum\Sanctum;
+use Spatie\Permission\Models\Permission as SpatiePermission;
+use Spatie\Permission\Models\Role as SpatieRole;
 use Tests\TestCase;
 
 class AuthTest extends TestCase
@@ -83,6 +87,110 @@ class AuthTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_pending_review_effective_resident_role_can_access_resident_routes_even_when_legacy_role_is_stale(): void
+    {
+        $residentTenantRole = SpatieRole::findOrCreate('resident_tenant', 'sanctum');
+        $residentTenantRole->givePermissionTo(
+            SpatiePermission::findOrCreate(Permission::ViewVisitors->value, 'sanctum'),
+        );
+
+        $user = User::factory()->create([
+            'email' => 'pending-effective-resident@example.com',
+            'password' => Hash::make('password'),
+            'role' => UserRole::FinanceReviewer->value,
+            'status' => AccountStatus::PendingReview->value,
+        ]);
+        $user->assignRole($residentTenantRole);
+
+        $token = $this->postJson('/api/v1/auth/login', [
+            'email' => 'pending-effective-resident@example.com',
+            'password' => 'password',
+            'deviceName' => 'Feature test',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.user.status', AccountStatus::PendingReview->value)
+            ->json('data.token');
+
+        $this->withHeader('Authorization', "Bearer {$token}")
+            ->getJson('/api/v1/my/verification-requests')
+            ->assertOk();
+
+        $this->withHeader('Authorization', "Bearer {$token}")
+            ->getJson('/api/v1/compounds')
+            ->assertForbidden();
+    }
+
+    public function test_login_returns_roles_permissions_and_scopes_payload(): void
+    {
+        $permission = SpatiePermission::findOrCreate(Permission::ViewFinance->value, 'sanctum');
+        $role = SpatieRole::findOrCreate('finance_reviewer', 'sanctum');
+        $role->givePermissionTo($permission);
+
+        $user = User::factory()->create([
+            'email' => 'rbac-login@example.com',
+            'password' => Hash::make('password'),
+            'role' => UserRole::FinanceReviewer->value,
+            'status' => AccountStatus::Active->value,
+        ]);
+
+        $user->assignRole($role);
+
+        UserScopeAssignment::create([
+            'user_id' => $user->id,
+            'role_name' => 'finance_reviewer',
+            'scope_type' => 'compound',
+            'scope_id' => 'cmp_1',
+            'created_by' => $user->id,
+        ]);
+
+        $this->postJson('/api/v1/auth/login', [
+            'email' => 'rbac-login@example.com',
+            'password' => 'password',
+            'deviceName' => 'Feature test',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.user.roles.0', 'finance_reviewer')
+            ->assertJsonPath('data.user.permissions.0', Permission::ViewFinance->value)
+            ->assertJsonPath('data.user.scopes.0.role', 'finance_reviewer')
+            ->assertJsonPath('data.user.scopes.0.scope_type', 'compound')
+            ->assertJsonPath('data.user.scopes.0.scope_id', 'cmp_1');
+    }
+
+    public function test_login_token_abilities_follow_effective_compound_head_role_even_when_legacy_role_is_stale(): void
+    {
+        $compoundHeadRole = SpatieRole::findOrCreate('compound_head', 'sanctum');
+        $compoundHeadRole->givePermissionTo(
+            SpatiePermission::findOrCreate(Permission::ManageCompounds->value, 'sanctum'),
+            SpatiePermission::findOrCreate(Permission::ManageUsers->value, 'sanctum'),
+        );
+
+        $user = User::factory()->create([
+            'email' => 'compound-head-login@example.com',
+            'password' => Hash::make('password'),
+            'role' => UserRole::ResidentOwner->value,
+            'status' => AccountStatus::Active->value,
+        ]);
+
+        $user->assignRole($compoundHeadRole);
+
+        $token = $this->postJson('/api/v1/auth/login', [
+            'email' => 'compound-head-login@example.com',
+            'password' => 'password',
+            'deviceName' => 'Feature test',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.user.roles.0', 'compound_head')
+            ->json('data.token');
+
+        [$tokenId] = explode('|', $token);
+        $storedToken = \Laravel\Sanctum\PersonalAccessToken::query()->findOrFail($tokenId);
+
+        $this->assertSame(
+            ['admin:*', 'property:*', 'resident:*', 'finance:read'],
+            $storedToken->abilities,
+        );
+    }
+
     public function test_user_can_logout_and_token_is_revoked(): void
     {
         $user = User::factory()->create([
@@ -122,6 +230,43 @@ class AuthTest extends TestCase
             ->assertUnauthorized();
     }
 
+    public function test_unauthenticated_auth_me_returns_json_401(): void
+    {
+        $this->getJson('/api/v1/auth/me')
+            ->assertUnauthorized()
+            ->assertJsonPath('message', 'Unauthenticated.');
+    }
+
+    public function test_missing_permission_configuration_falls_back_to_legacy_role_access(): void
+    {
+        $resident = User::factory()->create([
+            'role' => UserRole::ResidentOwner->value,
+            'status' => AccountStatus::Active->value,
+        ]);
+
+        Sanctum::actingAs($resident);
+
+        $this->getJson('/api/v1/visitor-requests')
+            ->assertOk();
+    }
+
+    public function test_explicit_spatie_roles_take_precedence_over_legacy_role_fallback(): void
+    {
+        $residentTenantRole = SpatieRole::findOrCreate('resident_tenant', 'sanctum');
+
+        $user = User::factory()->create([
+            'role' => UserRole::FinanceReviewer->value,
+            'status' => AccountStatus::Active->value,
+        ]);
+
+        $user->assignRole($residentTenantRole);
+
+        Sanctum::actingAs($user);
+
+        $this->getJson('/api/v1/finance/unit-accounts')
+            ->assertForbidden();
+    }
+
     public function test_wrong_credentials_return_validation_error(): void
     {
         User::factory()->create([
@@ -147,6 +292,23 @@ class AuthTest extends TestCase
         ]);
 
         Sanctum::actingAs($superAdmin);
+
+        $this->getJson('/api/v1/audit-logs')
+            ->assertOk();
+    }
+
+    public function test_spatie_super_admin_role_bypasses_admin_route_even_if_legacy_role_is_stale(): void
+    {
+        $superAdminRole = SpatieRole::findOrCreate('super_admin', 'sanctum');
+
+        $user = User::factory()->create([
+            'role' => UserRole::ResidentOwner->value,
+            'status' => AccountStatus::Active->value,
+        ]);
+
+        $user->assignRole($superAdminRole);
+
+        Sanctum::actingAs($user);
 
         $this->getJson('/api/v1/audit-logs')
             ->assertOk();

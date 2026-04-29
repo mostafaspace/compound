@@ -6,6 +6,7 @@ use App\Enums\AccountStatus;
 use App\Enums\AnnouncementStatus;
 use App\Enums\AnnouncementTargetType;
 use App\Enums\NotificationCategory;
+use App\Enums\UserRole;
 use App\Models\Announcements\Announcement;
 use App\Models\Announcements\AnnouncementAcknowledgement;
 use App\Models\Announcements\AnnouncementRevision;
@@ -29,7 +30,7 @@ class AnnouncementService
             ->orderBy('id');
 
         match ($announcement->target_type) {
-            AnnouncementTargetType::Role => $query->where('role', $announcement->target_role),
+            AnnouncementTargetType::Role => $this->applyRoleRecipientFilter($query, $announcement->target_role),
             AnnouncementTargetType::Compound => $this->whereScopedToUnits($query, 'compound_id', $announcement->target_ids ?? []),
             AnnouncementTargetType::Building => $this->whereScopedToUnits($query, 'building_id', $announcement->target_ids ?? []),
             AnnouncementTargetType::Floor => $this->whereScopedToUnits($query, 'floor_id', $announcement->target_ids ?? []),
@@ -57,10 +58,11 @@ class AnnouncementService
         $buildingIds = $memberships->pluck('unit.building_id')->filter()->unique()->values();
         $compoundIds = $memberships->pluck('unit.compound_id')->filter()->unique()->values();
         $hasVerifiedMembership = $memberships->isNotEmpty();
+        $effectiveRoleNames = $this->effectiveRoleNamesForUser($user);
 
         return $query->where(function (Builder $query) use (
-            $user,
             $hasVerifiedMembership,
+            $effectiveRoleNames,
             $compoundIds,
             $buildingIds,
             $floorIds,
@@ -77,9 +79,9 @@ class AnnouncementService
                     });
             });
 
-            $query->orWhere(function (Builder $query) use ($user, $hasVerifiedMembership): void {
+            $query->orWhere(function (Builder $query) use ($effectiveRoleNames, $hasVerifiedMembership): void {
                 $query->where('target_type', AnnouncementTargetType::Role->value)
-                    ->where('target_role', $user->role->value)
+                    ->whereIn('target_role', $effectiveRoleNames)
                     ->where(function (Builder $query) use ($hasVerifiedMembership): void {
                         $query->where('requires_verified_membership', false);
 
@@ -207,6 +209,50 @@ class AnnouncementService
             'acknowledgedCount' => $acknowledgedCount,
             'pendingCount' => max(0, $targetedCount - $acknowledgedCount),
         ];
+    }
+
+    private function applyRoleRecipientFilter(Builder $query, ?string $targetRole): void
+    {
+        if (! filled($targetRole)) {
+            $query->whereRaw('1 = 0');
+
+            return;
+        }
+
+        $roleNames = $this->effectiveTargetRoleNames($targetRole);
+
+        $query->where(function (Builder $query) use ($roleNames): void {
+            $query
+                ->whereHas('roles', function (Builder $roleQuery) use ($roleNames): void {
+                    $roleQuery
+                        ->where('guard_name', 'sanctum')
+                        ->whereIn('name', $roleNames);
+                })
+                ->orWhere(function (Builder $legacyFallback) use ($roleNames): void {
+                    $legacyFallback
+                        ->whereDoesntHave('roles')
+                        ->whereIn('role', $roleNames);
+                });
+        });
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function effectiveRoleNamesForUser(User $user): array
+    {
+        return $user->effectiveRoleNames();
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function effectiveTargetRoleNames(string $targetRole): array
+    {
+        return match ($targetRole) {
+            UserRole::CompoundAdmin->value => [UserRole::CompoundAdmin->value, 'compound_head'],
+            default => [$targetRole],
+        };
     }
 
     public function snapshot(Announcement $announcement): array

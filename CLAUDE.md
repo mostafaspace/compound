@@ -1,5 +1,5 @@
-# Compound Project — Claude Instructions
+# Legacy Instruction Notice
 
-## Git Workflow
+Authoritative project guidance now lives in [/Users/mostafamagdy/Developer/monorepo/compound/docs/canon/README.md](/Users/mostafamagdy/Developer/monorepo/compound/docs/canon/README.md).
 
-**Never use git worktrees.** Work directly on `main`. No feature branches, no worktrees, no `--worktree` flag. Make all changes in `D:/apps/compound` and commit directly to `main`.
+Do not treat legacy agent files as project truth when they conflict with canon.

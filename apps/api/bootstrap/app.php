@@ -3,8 +3,8 @@
 use App\Http\Middleware\AuditMutatingApiRequests;
 use App\Http\Middleware\EnsureUserHasRole;
 use Illuminate\Foundation\Application;
-use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withProviders([
@@ -18,6 +18,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->redirectGuestsTo(function (Request $request): ?string {
+            return $request->expectsJson() ? null : '/login';
+        });
+
         $middleware->append(AuditMutatingApiRequests::class);
 
         $middleware->alias([
@@ -25,6 +29,6 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
         ]);
     })
-    ->withExceptions(function (Exceptions $exceptions): void {
+    ->withExceptions(function ($exceptions): void {
         //
     })->create();

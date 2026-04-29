@@ -5,13 +5,13 @@ import { useRegisterDeviceMutation } from '../services/auth';
 import { useSelector } from 'react-redux';
 import { selectCurrentToken } from '../store/authSlice';
 
-export const usePushNotifications = () => {
+export const usePushNotifications = (enabled = true) => {
   const [registerDevice] = useRegisterDeviceMutation();
   const authToken = useSelector(selectCurrentToken);
 
   useEffect(() => {
-    // Only register the device if the user is authenticated
-    if (!authToken) return;
+    // Only register the device after session restore has completed and the user is authenticated.
+    if (!enabled || !authToken) return;
 
     const setupPushNotifications = async () => {
       try {
@@ -51,5 +51,5 @@ export const usePushNotifications = () => {
     return () => {
       unsubscribeTokenRefresh();
     };
-  }, [authToken, registerDevice]);
+  }, [authToken, enabled, registerDevice]);
 };

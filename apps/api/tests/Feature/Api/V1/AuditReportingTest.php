@@ -6,7 +6,10 @@ use App\Enums\AccountStatus;
 use App\Enums\AuditSeverity;
 use App\Enums\UserRole;
 use App\Models\AuditLog;
+use App\Models\Property\Building;
 use App\Models\Property\Compound;
+use App\Models\Property\Unit;
+use App\Models\Property\UnitMembership;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -34,6 +37,24 @@ class AuditReportingTest extends TestCase
             'status_code' => 200,
             'metadata'    => [],
         ], $attrs));
+    }
+
+    private function makeMembershipScopedResident(Compound $compound): User
+    {
+        $building = Building::factory()->for($compound)->create();
+        $unit = Unit::factory()->for($compound)->for($building)->create(['floor_id' => null]);
+        $resident = User::factory()->create([
+            'role' => UserRole::ResidentOwner->value,
+            'compound_id' => null,
+            'status' => AccountStatus::Active->value,
+        ]);
+
+        UnitMembership::factory()->create([
+            'user_id' => $resident->id,
+            'unit_id' => $unit->id,
+        ]);
+
+        return $resident;
     }
 
     // --- Severity & Reason filtering ---
@@ -205,6 +226,94 @@ class AuditReportingTest extends TestCase
         $this->getJson('/api/v1/audit-logs/timeline?entity_type=user_document&entity_id=55')
             ->assertOk()
             ->assertJsonCount(0, 'data');
+    }
+
+    public function test_scoped_admin_can_see_membership_scoped_resident_entity_timeline(): void
+    {
+        $compound = Compound::factory()->create();
+        $otherCompound = Compound::factory()->create();
+
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compound->id,
+            'status' => AccountStatus::Active->value,
+        ]);
+        $resident = $this->makeMembershipScopedResident($compound);
+        $foreignResident = $this->makeMembershipScopedResident($otherCompound);
+
+        $this->makeLog([
+            'actor_id' => $resident->id,
+            'action' => 'documents.uploaded',
+            'auditable_type' => 'user_document',
+            'auditable_id' => '700',
+            'created_at' => now()->subHour(),
+        ]);
+        $this->makeLog([
+            'actor_id' => $resident->id,
+            'action' => 'documents.reviewed',
+            'auditable_type' => 'user_document',
+            'auditable_id' => '700',
+        ]);
+        $this->makeLog([
+            'actor_id' => $foreignResident->id,
+            'action' => 'documents.reviewed',
+            'auditable_type' => 'user_document',
+            'auditable_id' => '700',
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $response = $this->getJson('/api/v1/audit-logs/timeline?entity_type=user_document&entity_id=700')
+            ->assertOk();
+
+        $this->assertEqualsCanonicalizing(
+            ['documents.uploaded', 'documents.reviewed'],
+            collect($response->json('data'))->pluck('action')->all(),
+        );
+    }
+
+    public function test_membership_scoped_compound_admin_can_see_own_entity_timeline_when_compound_id_is_null(): void
+    {
+        $compound = Compound::factory()->create();
+        $otherCompound = Compound::factory()->create();
+
+        $admin = $this->makeMembershipScopedResident($compound);
+        $admin->forceFill([
+            'role' => UserRole::CompoundAdmin->value,
+            'status' => AccountStatus::Active->value,
+        ])->save();
+        $resident = $this->makeMembershipScopedResident($compound);
+        $foreignResident = $this->makeMembershipScopedResident($otherCompound);
+
+        $this->makeLog([
+            'actor_id' => $resident->id,
+            'action' => 'documents.uploaded',
+            'auditable_type' => 'user_document',
+            'auditable_id' => '701',
+            'created_at' => now()->subHour(),
+        ]);
+        $this->makeLog([
+            'actor_id' => $resident->id,
+            'action' => 'documents.reviewed',
+            'auditable_type' => 'user_document',
+            'auditable_id' => '701',
+        ]);
+        $this->makeLog([
+            'actor_id' => $foreignResident->id,
+            'action' => 'documents.reviewed',
+            'auditable_type' => 'user_document',
+            'auditable_id' => '701',
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $response = $this->getJson('/api/v1/audit-logs/timeline?entity_type=user_document&entity_id=701')
+            ->assertOk();
+
+        $this->assertEqualsCanonicalizing(
+            ['documents.uploaded', 'documents.reviewed'],
+            collect($response->json('data'))->pluck('action')->all(),
+        );
     }
 
     // --- CSV Export ---

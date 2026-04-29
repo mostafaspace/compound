@@ -36,7 +36,7 @@ class VerificationRequestController extends Controller
 
         $verificationRequests = VerificationRequest::query()
             ->with(['residentInvitation', 'reviewer', 'unit', 'user'])
-            ->when($this->compoundContext->resolve($request) !== null, fn ($query) => $this->scopeVerificationRequests($query, $request))
+            ->when(true, fn ($query) => $this->scopeVerificationRequests($query, $request))
             ->when($status !== '' && $status !== 'all', fn ($query) => $query->where('status', $status))
             ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search): void {
                 $query->where('requested_role', 'like', "%{$search}%")
@@ -191,15 +191,17 @@ class VerificationRequestController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        if (! filled($user->compound_id)) {
+        $managedCompoundId = $this->compoundContext->resolveManagedCompoundId($user);
+
+        if ($managedCompoundId === null) {
             return $query;
         }
 
-        return $query->where(function ($scoped) use ($user): void {
+        return $query->where(function ($scoped) use ($managedCompoundId): void {
             $scoped
-                ->whereHas('unit', fn ($unitQuery) => $unitQuery->where('compound_id', $user->compound_id))
-                ->orWhereHas('residentInvitation.unit', fn ($unitQuery) => $unitQuery->where('compound_id', $user->compound_id))
-                ->orWhereHas('user.unitMemberships.unit', fn ($unitQuery) => $unitQuery->where('compound_id', $user->compound_id));
+                ->whereHas('unit', fn ($unitQuery) => $unitQuery->where('compound_id', $managedCompoundId))
+                ->orWhereHas('residentInvitation.unit', fn ($unitQuery) => $unitQuery->where('compound_id', $managedCompoundId))
+                ->orWhereHas('user.unitMemberships.unit', fn ($unitQuery) => $unitQuery->where('compound_id', $managedCompoundId));
         });
     }
 
@@ -208,12 +210,14 @@ class VerificationRequestController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        if (! filled($user->compound_id)) {
+        $managedCompoundId = $this->compoundContext->resolveManagedCompoundId($user);
+
+        if ($managedCompoundId === null) {
             return;
         }
 
         abort_unless(
-            $this->verificationRequestBelongsToCompound($verificationRequest, $user->compound_id),
+            $this->verificationRequestBelongsToCompound($verificationRequest, $managedCompoundId),
             Response::HTTP_FORBIDDEN,
         );
     }

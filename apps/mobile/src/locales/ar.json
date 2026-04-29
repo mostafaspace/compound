@@ -183,11 +183,6 @@
     "visitStarts": "بداية الزيارة",
     "window": "الفترة: {{start}} - {{end}}"
   },
-  "Footer": {
-    "environment": "البيئة",
-    "notConnected": "غير متصل",
-    "timezonePending": "المنطقة الزمنية قيد الانتظار"
-  },
   "QuickActions": {
     "visitors": "رمز الزائر",
     "visitorsDetail": "إنشاء أو إلغاء تصاريح الضيوف",

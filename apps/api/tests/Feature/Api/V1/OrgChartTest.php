@@ -16,6 +16,7 @@ use App\Models\RepresentativeAssignment;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
+use Spatie\Permission\Models\Role as SpatieRole;
 use Tests\TestCase;
 
 class OrgChartTest extends TestCase
@@ -261,6 +262,28 @@ class OrgChartTest extends TestCase
             'role' => UserRole::CompoundAdmin->value,
             'compound_id' => $compound->id,
         ]);
+        Sanctum::actingAs($admin);
+
+        RepresentativeAssignment::factory()->create([
+            'compound_id' => $compound->id,
+            'role' => RepresentativeRole::AdminContact->value,
+            'contact_visibility' => ContactVisibility::AdminsOnly->value,
+        ]);
+
+        $this->getJson("/api/v1/compounds/{$compound->id}/org-chart")
+            ->assertOk()
+            ->assertJsonCount(1, 'data.compound.representatives');
+    }
+
+    public function test_org_chart_treats_compound_head_assignment_as_effective_admin_even_when_legacy_role_is_stale(): void
+    {
+        $compound = Compound::factory()->create();
+        $compoundHeadRole = SpatieRole::findOrCreate('compound_head', 'sanctum');
+        $admin = User::factory()->create([
+            'role' => UserRole::ResidentOwner->value,
+            'compound_id' => $compound->id,
+        ]);
+        $admin->assignRole($compoundHeadRole);
         Sanctum::actingAs($admin);
 
         RepresentativeAssignment::factory()->create([

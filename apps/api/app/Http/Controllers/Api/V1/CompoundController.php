@@ -24,11 +24,12 @@ class CompoundController extends Controller
 
     public function index(Request $request): AnonymousResourceCollection
     {
+        $scopedCompoundId = $this->compoundContext->canManageAllCompounds($request)
+            ? null
+            : $this->compoundContext->resolve($request);
+
         $compounds = Compound::query()
-            ->when(
-                ! $this->compoundContext->canManageAllCompounds($request),
-                fn ($query) => $query->where('id', $request->user()?->compound_id),
-            )
+            ->when($scopedCompoundId !== null, fn ($query) => $query->where('id', $scopedCompoundId))
             ->withCount(['buildings', 'units'])
             ->orderBy('name')
             ->paginate();

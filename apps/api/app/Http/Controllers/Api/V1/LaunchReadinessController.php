@@ -84,8 +84,8 @@ class LaunchReadinessController extends Controller
     private function seedDataCheck(): array
     {
         try {
-            $superAdminCount  = User::query()->where('role', 'super_admin')->count();
-            $compoundAdminCount = User::query()->where('role', 'compound_admin')->count();
+            $superAdminCount  = $this->countUsersForEffectiveRole('super_admin');
+            $compoundAdminCount = $this->countUsersForEffectiveRole('compound_admin');
             $hasUatAccounts   = User::query()->where('email', 'like', '%@uat.compound.local')->exists();
 
             return [
@@ -97,6 +97,26 @@ class LaunchReadinessController extends Controller
         } catch (Throwable $e) {
             return ['status' => 'fail', 'message' => mb_substr($e->getMessage(), 0, 160)];
         }
+    }
+
+    private function countUsersForEffectiveRole(string $role): int
+    {
+        $effectiveRoleNames = match ($role) {
+            'compound_admin' => ['compound_admin', 'compound_head'],
+            default => [$role],
+        };
+
+        return User::query()
+            ->where(function ($query) use ($role, $effectiveRoleNames): void {
+                $query
+                    ->whereHas('roles', fn ($assignedRoles) => $assignedRoles->whereIn('name', $effectiveRoleNames))
+                    ->orWhere(function ($legacyFallback) use ($role): void {
+                        $legacyFallback
+                            ->whereDoesntHave('roles')
+                            ->where('role', $role);
+                    });
+            })
+            ->count();
     }
 
     /**

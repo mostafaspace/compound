@@ -2,15 +2,15 @@ import React from 'react';
 import { View, ActivityIndicator, Text, StyleSheet, useColorScheme } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
+import { getEffectiveRoleType } from '@compound/contracts';
 import { useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
-import { selectConsentVerified, selectCurrentToken, selectCurrentUser, selectIsRestoring } from '../store/authSlice';
+import { selectCurrentToken, selectCurrentUser, selectIsRestoring } from '../store/authSlice';
 import { RootStackParamList } from './types';
 import { LoginScreen } from '../features/auth/screens/LoginScreen';
 import { ResidentTabNavigator } from './ResidentTabNavigator';
 import { AdminTabNavigator } from './AdminTabNavigator';
 import { GuardNavigator } from './GuardNavigator';
-import { PrivacyConsentScreen } from '../features/privacy/screens/PrivacyConsentScreen';
 import { colors } from '../theme';
 import { linking } from './linking';
 import { usePushNotifications } from '../hooks/usePushNotifications';
@@ -23,27 +23,15 @@ import { UploadDocumentScreen } from '../features/documents/screens/UploadDocume
 
 const Stack = createStackNavigator<RootStackParamList>();
 
-const ADMIN_ROLES = ['super_admin', 'compound_admin', 'board_member', 'finance_reviewer', 'support_agent'];
-const RESIDENT_ROLES = ['resident_owner', 'resident_tenant'];
-const SECURITY_ROLES = ['security_guard'];
-
-const getUserRoleType = (role?: string) => {
-  if (SECURITY_ROLES.includes(role ?? '')) return 'security';
-  if (ADMIN_ROLES.includes(role ?? '')) return 'admin';
-  if (RESIDENT_ROLES.includes(role ?? '')) return 'resident';
-  return 'resident'; // default fallback
-};
-
 export const RootNavigator = () => {
   const { t } = useTranslation();
   const isDark = useColorScheme() === 'dark';
   const authToken = useSelector(selectCurrentToken);
   const user = useSelector(selectCurrentUser);
   const isRestoring = useSelector(selectIsRestoring);
-  const consentVerified = useSelector(selectConsentVerified);
 
   // Initialize push notifications
-  usePushNotifications();
+  usePushNotifications(!isRestoring);
 
   if (isRestoring) {
     return (
@@ -56,15 +44,13 @@ export const RootNavigator = () => {
     );
   }
 
-  const roleType = getUserRoleType(user?.role);
+  const roleType = getEffectiveRoleType(user);
 
   return (
     <NavigationContainer linking={linking}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!authToken ? (
           <Stack.Screen name="Auth" component={LoginScreen} />
-        ) : !consentVerified ? (
-          <Stack.Screen name="ConsentGate" component={PrivacyConsentScreen} />
         ) : (
           <Stack.Group>
             {roleType === 'security' ? (

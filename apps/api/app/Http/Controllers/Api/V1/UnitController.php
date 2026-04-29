@@ -36,7 +36,7 @@ class UnitController extends Controller
     public function lookup(IndexUnitsRequest $request): AnonymousResourceCollection
     {
         $validated = $request->validated();
-        $scopedCompoundId = $request->user()?->compound_id;
+        $scopedCompoundId = $this->compoundContext->resolve($request);
 
         if (filled($scopedCompoundId) && filled($validated['compoundId'] ?? null) && $validated['compoundId'] !== $scopedCompoundId) {
             abort(Response::HTTP_FORBIDDEN);

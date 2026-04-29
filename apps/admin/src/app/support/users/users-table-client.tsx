@@ -5,6 +5,7 @@ import { useState } from "react";
 import Link from "next/link";
 
 import { RoleAssignmentPanel } from "@/components/role-assignment-panel";
+import { formatRoleLabel, getPrimaryEffectiveRole } from "@/lib/auth-access";
 
 interface Props {
   users: AuthenticatedUser[];
@@ -68,7 +69,7 @@ export function UsersTableClient({
                 <tr key={user.id}>
                   <td className="px-4 py-4 font-semibold">{user.name}</td>
                   <td className="px-4 py-4 text-muted">{user.email}</td>
-                  <td className="px-4 py-4 text-muted">{user.role}</td>
+                  <td className="px-4 py-4 text-muted">{formatRoleLabel(getPrimaryEffectiveRole(user))}</td>
                   <td className="px-4 py-4">
                     <span className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${statusBadge(user.status)}`}>
                       {user.status}

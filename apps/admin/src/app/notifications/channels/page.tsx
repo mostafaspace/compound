@@ -17,7 +17,7 @@ import {
   getNotificationDeliveryLogs,
   getNotificationTemplates,
 } from "@/lib/api";
-import { getCompoundContext, requireAdminUser } from "@/lib/session";
+import { getCompoundContext, hasEffectiveRole, requireAdminUser } from "@/lib/session";
 
 interface NotificationChannelsPageProps {
   searchParams?: Promise<{
@@ -153,7 +153,7 @@ export default async function NotificationChannelsPage({ searchParams }: Notific
     getCompoundContext(),
   ]);
 
-  const isSuperAdmin = user.role === "super_admin";
+  const isSuperAdmin = hasEffectiveRole(user, "super_admin");
   const channelFilter = params.channel && notificationChannelValues.includes(params.channel as (typeof notificationChannelValues)[number])
     ? params.channel
     : "all";

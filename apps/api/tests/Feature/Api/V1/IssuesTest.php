@@ -115,8 +115,8 @@ class IssuesTest extends TestCase
 
     public function test_admin_can_list_all_issues_with_filters(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
         [$resident, $unit] = $this->residentWithVerifiedUnit();
+        $admin = $this->makeScopedAdminForCompound($unit->compound);
         $compound = $unit->compound;
         $building = $unit->building;
 
@@ -156,8 +156,8 @@ class IssuesTest extends TestCase
 
     public function test_admin_can_view_issue_detail(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
         [$resident, $unit] = $this->residentWithVerifiedUnit();
+        $admin = $this->makeScopedAdminForCompound($unit->compound);
         $compound = $unit->compound;
         $building = $unit->building;
 
@@ -185,8 +185,8 @@ class IssuesTest extends TestCase
 
     public function test_admin_can_update_issue_status_through_lifecycle(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
         [$resident, $unit] = $this->residentWithVerifiedUnit();
+        $admin = $this->makeScopedAdminForCompound($unit->compound);
         $compound = $unit->compound;
 
         $issue = Issue::factory()->create([
@@ -240,9 +240,9 @@ class IssuesTest extends TestCase
 
     public function test_admin_can_reassign_issue(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
         $assignee = User::factory()->create(['role' => UserRole::SupportAgent->value]);
         [$resident, $unit] = $this->residentWithVerifiedUnit();
+        $admin = $this->makeScopedAdminForCompound($unit->compound);
 
         $issue = Issue::factory()->create([
             'compound_id' => $unit->compound_id,
@@ -301,8 +301,8 @@ class IssuesTest extends TestCase
 
     public function test_admin_can_add_internal_comment(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
         [$resident, $unit] = $this->residentWithVerifiedUnit();
+        $admin = $this->makeScopedAdminForCompound($unit->compound);
         $compound = $unit->compound;
 
         $issue = Issue::factory()->create([
@@ -328,8 +328,8 @@ class IssuesTest extends TestCase
 
     public function test_comment_notifies_reporter_when_commenter_is_different(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
         [$resident, $unit] = $this->residentWithVerifiedUnit();
+        $admin = $this->makeScopedAdminForCompound($unit->compound);
         $compound = $unit->compound;
 
         $issue = Issue::factory()->create([
@@ -357,8 +357,8 @@ class IssuesTest extends TestCase
 
     public function test_admin_can_escalate_issue(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
         [$resident, $unit] = $this->residentWithVerifiedUnit();
+        $admin = $this->makeScopedAdminForCompound($unit->compound);
         $compound = $unit->compound;
 
         $issue = Issue::factory()->create([
@@ -396,8 +396,8 @@ class IssuesTest extends TestCase
 
     public function test_escalation_requires_reason(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
         [$resident, $unit] = $this->residentWithVerifiedUnit();
+        $admin = $this->makeScopedAdminForCompound($unit->compound);
 
         $issue = Issue::factory()->create([
             'compound_id' => $unit->compound_id,
@@ -421,8 +421,8 @@ class IssuesTest extends TestCase
         Storage::fake('local');
         config(['filesystems.default' => 'local']);
 
-        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
         [$resident, $unit] = $this->residentWithVerifiedUnit();
+        $admin = $this->makeScopedAdminForCompound($unit->compound);
         $compound = $unit->compound;
 
         $issue = Issue::factory()->create([
@@ -455,8 +455,8 @@ class IssuesTest extends TestCase
         Storage::fake('local');
         config(['filesystems.default' => 'local']);
 
-        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
         [$resident, $unit] = $this->residentWithVerifiedUnit();
+        $admin = $this->makeScopedAdminForCompound($unit->compound);
 
         $issue = Issue::factory()->create([
             'compound_id' => $unit->compound_id,
@@ -500,8 +500,8 @@ class IssuesTest extends TestCase
 
     public function test_issue_notifications_include_arabic_translations(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
         [$resident, $unit] = $this->residentWithVerifiedUnit();
+        $admin = $this->makeScopedAdminForCompound($unit->compound);
         $compound = $unit->compound;
 
         // Create issue with auto-assigned admin
@@ -569,6 +569,56 @@ class IssuesTest extends TestCase
         $this->getJson("/api/v1/issues/{$issue->id}")->assertForbidden();
         $this->patchJson("/api/v1/issues/{$issue->id}", ['status' => 'resolved'])->assertForbidden();
         $this->postJson("/api/v1/issues/{$issue->id}/escalate", [
+            'reason' => 'Cross-compound escalation should be blocked.',
+        ])->assertForbidden();
+    }
+
+    public function test_membership_scoped_compound_admin_cannot_access_or_mutate_other_compound_issue_when_compound_id_is_null(): void
+    {
+        $compoundA = Compound::factory()->create();
+        $compoundB = Compound::factory()->create();
+        $buildingA = Building::factory()->for($compoundA)->create();
+        $buildingB = Building::factory()->for($compoundB)->create();
+        $unitA = Unit::factory()->for($compoundA)->for($buildingA)->create(['floor_id' => null]);
+
+        $scopedAdmin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => null,
+            'status' => AccountStatus::Active->value,
+        ]);
+        $unitA->memberships()->create([
+            'user_id' => $scopedAdmin->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'starts_at' => now()->toDateString(),
+            'verification_status' => VerificationStatus::Verified->value,
+        ]);
+
+        $reporterA = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+        $reporterB = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+
+        $issueA = Issue::factory()->create([
+            'compound_id' => $compoundA->id,
+            'building_id' => $buildingA->id,
+            'reported_by' => $reporterA->id,
+            'status' => 'in_progress',
+        ]);
+        $issueB = Issue::factory()->create([
+            'compound_id' => $compoundB->id,
+            'building_id' => $buildingB->id,
+            'reported_by' => $reporterB->id,
+            'status' => 'in_progress',
+        ]);
+
+        Sanctum::actingAs($scopedAdmin);
+
+        $this->getJson('/api/v1/issues')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $issueA->id);
+
+        $this->getJson("/api/v1/issues/{$issueB->id}")->assertForbidden();
+        $this->patchJson("/api/v1/issues/{$issueB->id}", ['status' => 'resolved'])->assertForbidden();
+        $this->postJson("/api/v1/issues/{$issueB->id}/escalate", [
             'reason' => 'Cross-compound escalation should be blocked.',
         ])->assertForbidden();
     }
@@ -657,5 +707,14 @@ class IssuesTest extends TestCase
                 'floor_id' => null,
                 'unit_number' => 'A-101',
             ]);
+    }
+
+    private function makeScopedAdminForCompound(Compound $compound): User
+    {
+        return User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compound->id,
+            'status' => AccountStatus::Active->value,
+        ]);
     }
 }

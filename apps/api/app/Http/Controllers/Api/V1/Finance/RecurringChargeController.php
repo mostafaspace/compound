@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers\Api\V1\Finance;
 
-use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Finance\StoreRecurringChargeRequest;
 use App\Http\Resources\Finance\RecurringChargeResource;
 use App\Models\Finance\RecurringCharge;
 use App\Models\User;
+use App\Services\CompoundContextService;
 use App\Services\FinanceService;
 use App\Support\AuditLogger;
 use Illuminate\Http\JsonResponse;
@@ -18,6 +18,7 @@ use Symfony\Component\HttpFoundation\Response;
 class RecurringChargeController extends Controller
 {
     public function __construct(
+        private readonly CompoundContextService $compoundContext,
         private readonly FinanceService $financeService,
         private readonly AuditLogger $auditLogger,
     ) {}
@@ -27,16 +28,11 @@ class RecurringChargeController extends Controller
         /** @var User $actor */
         $actor = $request->user();
         $requestedCompoundId = $request->filled('compound_id') ? $request->string('compound_id')->toString() : null;
-
-        if (filled($actor->compound_id) && $requestedCompoundId !== null && $requestedCompoundId !== $actor->compound_id) {
-            abort(Response::HTTP_FORBIDDEN);
-        }
-
-        $compoundId = filled($actor->compound_id) ? $actor->compound_id : $requestedCompoundId;
+        $compoundIds = $this->compoundContext->resolveRequestedAccessibleCompoundIds($actor, $requestedCompoundId);
 
         $charges = RecurringCharge::query()
             ->with('chargeType')
-            ->when($compoundId, fn ($query) => $query->where('compound_id', $compoundId))
+            ->when($compoundIds !== null, fn ($query) => $query->whereIn('compound_id', $compoundIds))
             ->when(
                 $request->filled('is_active'),
                 fn ($query) => $query->where('is_active', filter_var($request->input('is_active'), FILTER_VALIDATE_BOOLEAN)),
@@ -53,13 +49,9 @@ class RecurringChargeController extends Controller
         $actor = $request->user();
         $validated = $request->validated();
         $requestedCompoundId = $validated['compound_id'] ?? null;
-
-        if (filled($actor->compound_id)) {
-            abort_if($requestedCompoundId !== $actor->compound_id, Response::HTTP_FORBIDDEN);
-            $validated['compound_id'] = $actor->compound_id;
-        } else {
-            abort_if(! filled($requestedCompoundId), Response::HTTP_UNPROCESSABLE_ENTITY);
-        }
+        $compoundId = $this->compoundContext->resolveRequestedAccessibleCompoundId($actor, $requestedCompoundId);
+        abort_if(! filled($compoundId), Response::HTTP_UNPROCESSABLE_ENTITY);
+        $validated['compound_id'] = $compoundId;
 
         $charge = $this->financeService->createRecurringCharge(
             data: $validated,
@@ -94,10 +86,6 @@ class RecurringChargeController extends Controller
 
     private function ensureFinanceCompoundAccess(User $actor, string $compoundId): void
     {
-        if ($actor->role === UserRole::SuperAdmin || ! filled($actor->compound_id)) {
-            return;
-        }
-
-        abort_if($actor->compound_id !== $compoundId, Response::HTTP_FORBIDDEN);
+        $this->compoundContext->ensureUserCanAccessCompound($actor, $compoundId);
     }
 }

@@ -16,6 +16,25 @@ use Illuminate\Http\Request;
 
 class OrgChartController extends Controller
 {
+    /**
+     * @var list<UserRole>
+     */
+    private const ADMIN_ROLES = [
+        UserRole::SuperAdmin,
+        UserRole::CompoundAdmin,
+        UserRole::BoardMember,
+        UserRole::FinanceReviewer,
+        UserRole::SupportAgent,
+    ];
+
+    /**
+     * @var list<UserRole>
+     */
+    private const RESIDENT_ROLES = [
+        UserRole::ResidentOwner,
+        UserRole::ResidentTenant,
+    ];
+
     public function __construct(private readonly CompoundContextService $compoundContext) {}
 
     public function show(Request $request, Compound $compound): JsonResponse
@@ -25,13 +44,7 @@ class OrgChartController extends Controller
         /** @var User $viewer */
         $viewer = $request->user();
 
-        $isAdmin = in_array($viewer->role, [
-            UserRole::SuperAdmin,
-            UserRole::CompoundAdmin,
-            UserRole::BoardMember,
-            UserRole::FinanceReviewer,
-            UserRole::SupportAgent,
-        ], strict: true);
+        $isAdmin = $viewer->hasAnyEffectiveRole(self::ADMIN_ROLES);
 
         $visibilityFilter = $isAdmin
             ? null
@@ -108,13 +121,7 @@ class OrgChartController extends Controller
         /** @var User $viewer */
         $viewer = $request->user();
 
-        $isAdmin = in_array($viewer->role, [
-            UserRole::SuperAdmin,
-            UserRole::CompoundAdmin,
-            UserRole::BoardMember,
-            UserRole::FinanceReviewer,
-            UserRole::SupportAgent,
-        ], strict: true);
+        $isAdmin = $viewer->hasAnyEffectiveRole(self::ADMIN_ROLES);
 
         $baseQuery = fn () => RepresentativeAssignment::query()->with(['user'])->active();
 
@@ -179,7 +186,7 @@ class OrgChartController extends Controller
         /** @var User $viewer */
         $viewer = $request->user();
 
-        if (! in_array($viewer->role, [UserRole::ResidentOwner, UserRole::ResidentTenant], true)) {
+        if (! $this->isResidentViewer($viewer)) {
             $this->compoundContext->ensureCompoundAccess($request, $compoundId);
 
             return;
@@ -198,7 +205,7 @@ class OrgChartController extends Controller
         /** @var User $viewer */
         $viewer = $request->user();
 
-        if (! in_array($viewer->role, [UserRole::ResidentOwner, UserRole::ResidentTenant], true)) {
+        if (! $this->isResidentViewer($viewer)) {
             $this->compoundContext->ensureCompoundAccess($request, $unit->compound_id);
 
             return;
@@ -210,5 +217,14 @@ class OrgChartController extends Controller
             ->exists();
 
         abort_unless($hasMembership, 403);
+    }
+
+    private function isResidentViewer(User $viewer): bool
+    {
+        if ($viewer->hasAnyEffectiveRole(self::ADMIN_ROLES)) {
+            return false;
+        }
+
+        return $viewer->hasAnyEffectiveRole(self::RESIDENT_ROLES);
     }
 }

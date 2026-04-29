@@ -17,6 +17,7 @@ class ExternalNotificationService
 
     public function __construct(
         private readonly NotificationService $notificationService,
+        private readonly CompoundContextService $compoundContext,
     ) {
         $this->channels = [
             NotificationChannel::Push->value  => app(\App\Services\Channels\MockPushChannel::class),
@@ -46,7 +47,7 @@ class ExternalNotificationService
             return;
         }
 
-        $compoundId = $user->compound_id ?? null;
+        $compoundId = $this->compoundContext->resolveUserCompoundId($user);
         $locale     = app()->getLocale() ?? 'en';
 
         foreach (NotificationChannel::cases() as $channel) {
@@ -135,7 +136,7 @@ class ExternalNotificationService
 
         $user       = $notification->user;
         $channel    = $log->channel;
-        $compoundId = $user->compound_id; // ULID string or null
+        $compoundId = $this->compoundContext->resolveUserCompoundId($user);
         $locale     = app()->getLocale() ?? 'en';
 
         $template = NotificationTemplate::query()

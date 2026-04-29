@@ -5,10 +5,12 @@ namespace App\Http\Controllers\Api\V1\Finance;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Finance\GatewayTransactionResource;
 use App\Http\Resources\Finance\PaymentSessionResource;
+use App\Enums\UserRole;
 use App\Models\CompoundSetting;
 use App\Models\Finance\GatewayTransaction;
 use App\Models\Finance\PaymentSession;
 use App\Models\Finance\UnitAccount;
+use App\Models\User;
 use App\Services\CompoundContextService;
 use App\Services\Gateways\MockPaymentGateway;
 use App\Services\OnlinePaymentService;
@@ -30,13 +32,16 @@ class PaymentSessionController extends Controller
 
     public function index(Request $request): AnonymousResourceCollection
     {
-        $compoundId = $this->compoundContext->resolve($request);
+        /** @var User $actor */
+        $actor = $request->user();
+        $requestedCompoundId = $request->filled('compound_id') ? $request->string('compound_id')->toString() : null;
+        $compoundIds = $this->compoundContext->resolveRequestedAccessibleCompoundIds($actor, $requestedCompoundId);
 
         $sessions = PaymentSession::query()
             ->with(['unitAccount.unit', 'initiatedBy'])
-            ->when($compoundId, fn ($q) => $q->whereHas(
+            ->when($compoundIds !== null, fn ($q) => $q->whereHas(
                 'unitAccount.unit',
-                fn ($u) => $u->where('compound_id', $compoundId),
+                fn ($u) => $u->whereIn('compound_id', $compoundIds),
             ))
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
             ->latest()
@@ -49,13 +54,16 @@ class PaymentSessionController extends Controller
 
     public function transactions(Request $request): AnonymousResourceCollection
     {
-        $compoundId = $this->compoundContext->resolve($request);
+        /** @var User $actor */
+        $actor = $request->user();
+        $requestedCompoundId = $request->filled('compound_id') ? $request->string('compound_id')->toString() : null;
+        $compoundIds = $this->compoundContext->resolveRequestedAccessibleCompoundIds($actor, $requestedCompoundId);
 
         $txs = GatewayTransaction::query()
             ->with(['paymentSession.unitAccount.unit'])
-            ->when($compoundId, fn ($q) => $q->whereHas(
+            ->when($compoundIds !== null, fn ($q) => $q->whereHas(
                 'paymentSession.unitAccount.unit',
-                fn ($u) => $u->where('compound_id', $compoundId),
+                fn ($u) => $u->whereIn('compound_id', $compoundIds),
             ))
             ->latest()
             ->paginate();
@@ -141,8 +149,13 @@ class PaymentSessionController extends Controller
     private function ensureAccountAccess(Request $request, UnitAccount $account): void
     {
         $user = $request->user();
-        $roles = ['super_admin', 'compound_admin', 'board_member', 'finance_reviewer', 'support_agent'];
-        if (in_array($user->role?->value, $roles, true)) {
+        if ($user->hasAnyEffectiveRole([
+            'super_admin',
+            'compound_admin',
+            'board_member',
+            'finance_reviewer',
+            'support_agent',
+        ])) {
             return;
         }
         // Resident: must be an active (not ended) member of the unit
@@ -160,13 +173,12 @@ class PaymentSessionController extends Controller
 
     private function ensureTransactionCompoundAccess(Request $request, GatewayTransaction $tx): void
     {
-        $compoundId = $this->compoundContext->resolve($request);
-        if (! $compoundId) {
-            return;
-        }
+        /** @var User $actor */
+        $actor = $request->user();
         $txCompound = $tx->paymentSession?->unitAccount?->unit?->compound_id;
-        if ($txCompound && $txCompound !== $compoundId) {
-            abort(Response::HTTP_FORBIDDEN);
+
+        if ($txCompound) {
+            $this->compoundContext->ensureUserCanAccessCompound($actor, $txCompound);
         }
     }
 
@@ -188,4 +200,5 @@ class PaymentSessionController extends Controller
             abort(422, 'Online payments are not enabled for this compound.');
         }
     }
+
 }

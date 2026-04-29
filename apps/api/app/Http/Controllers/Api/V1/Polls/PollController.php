@@ -11,6 +11,7 @@ use App\Models\Polls\Poll;
 use App\Models\Polls\PollOption;
 use App\Models\Polls\PollVote;
 use App\Models\User;
+use App\Services\CompoundContextService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -19,15 +20,24 @@ use Illuminate\Validation\Rule;
 
 class PollController extends Controller
 {
+    public function __construct(
+        private readonly CompoundContextService $compoundContext,
+    ) {}
+
+    /**
+     * @var list<UserRole>
+     */
+    private const ADMIN_ROLES = [
+        UserRole::SuperAdmin,
+        UserRole::CompoundAdmin,
+        UserRole::BoardMember,
+        UserRole::FinanceReviewer,
+        UserRole::SupportAgent,
+    ];
+
     private function isAdmin(User $user): bool
     {
-        return in_array($user->role->value ?? $user->role, [
-            UserRole::SuperAdmin->value,
-            UserRole::CompoundAdmin->value,
-            UserRole::BoardMember->value,
-            UserRole::FinanceReviewer->value,
-            UserRole::SupportAgent->value,
-        ]);
+        return $user->hasAnyEffectiveRole(self::ADMIN_ROLES);
     }
 
     public function index(Request $request): AnonymousResourceCollection
@@ -55,10 +65,19 @@ class PollController extends Controller
                 ->values();
             $query->whereIn('compound_id', $verifiedCompoundIds);
         } else {
-            if (filled($user->compound_id)) {
-                $query->where('compound_id', $user->compound_id);
-            } elseif (isset($validated['compoundId'])) {
-                $query->where('compound_id', $validated['compoundId']);
+            $managedCompoundId = $this->compoundContext->resolveManagedCompoundId($user);
+
+            if ($user->isEffectiveSuperAdmin()) {
+                if (isset($validated['compoundId'])) {
+                    $query->where('compound_id', $validated['compoundId']);
+                }
+            } else {
+                abort_unless($managedCompoundId !== null, 403);
+                if (isset($validated['compoundId']) && $validated['compoundId'] !== $managedCompoundId) {
+                    abort(403);
+                }
+
+                $query->where('compound_id', $managedCompoundId);
             }
             if (isset($validated['status'])) {
                 $query->where('status', $validated['status']);
@@ -90,8 +109,11 @@ class PollController extends Controller
         ]);
 
         $user = $request->user();
-        if (filled($user->compound_id)) {
-            abort_if($validated['compoundId'] !== $user->compound_id, 403);
+        if (! $user->isEffectiveSuperAdmin()) {
+            $managedCompoundId = $this->compoundContext->resolveManagedCompoundId($user);
+
+            abort_unless($managedCompoundId !== null, 403);
+            abort_if($validated['compoundId'] !== $managedCompoundId, 403);
         }
 
         $poll = Poll::create([
@@ -326,9 +348,22 @@ class PollController extends Controller
 
     private function authorizePollAccess(User $user, Poll $poll): void
     {
-        if (filled($user->compound_id) && $poll->compound_id !== $user->compound_id) {
-            abort(403);
+        if ($this->isAdmin($user)) {
+            if ($user->isEffectiveSuperAdmin()) {
+                return;
+            }
+
+            $this->compoundContext->ensureManagedCompoundAccess($user, $poll->compound_id);
+
+            return;
         }
+
+        $hasMembership = $user->unitMemberships()
+            ->activeForAccess()
+            ->whereHas('unit', fn ($query) => $query->where('compound_id', $poll->compound_id))
+            ->exists();
+
+        abort_unless($hasMembership, 403);
     }
 
     /** @return array{0: bool, 1: string|null} */

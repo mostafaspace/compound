@@ -38,7 +38,9 @@ class ResidentInvitationController extends Controller
         $request = request();
         $status = $request->string('status')->toString();
         $search = $request->string('q')->toString();
-        $compoundId = $this->compoundContext->resolve($request);
+        $compoundId = $request->user() instanceof User
+            ? $this->compoundContext->resolveManagedCompoundId($request->user())
+            : null;
 
         $invitations = ResidentInvitation::query()
             ->with(['user', 'unit'])
@@ -243,15 +245,18 @@ class ResidentInvitationController extends Controller
     private function resolveManagedUnit(Request $request, ?string $unitId): ?Unit
     {
         $user = $request->user();
+        $managedCompoundId = $user instanceof User
+            ? $this->compoundContext->resolveManagedCompoundId($user)
+            : null;
 
-        if (! filled($user?->compound_id)) {
+        if (! filled($managedCompoundId)) {
             return $unitId !== null ? Unit::query()->findOrFail($unitId) : null;
         }
 
         abort_unless($unitId !== null, Response::HTTP_UNPROCESSABLE_ENTITY, 'A unitId is required for compound-scoped invitations.');
 
         $unit = Unit::query()->findOrFail($unitId);
-        abort_if($unit->compound_id !== $user->compound_id, Response::HTTP_FORBIDDEN);
+        abort_if($unit->compound_id !== $managedCompoundId, Response::HTTP_FORBIDDEN);
 
         return $unit;
     }
@@ -260,12 +265,12 @@ class ResidentInvitationController extends Controller
     {
         $user = $request->user();
 
-        if ($user === null || $user->role === UserRole::SuperAdmin || ! filled($user->compound_id)) {
+        if ($user === null || $user->isEffectiveSuperAdmin()) {
             return;
         }
 
         $residentInvitation->loadMissing('unit');
         abort_unless($residentInvitation->unit !== null, Response::HTTP_FORBIDDEN);
-        abort_if($residentInvitation->unit->compound_id !== $user->compound_id, Response::HTTP_FORBIDDEN);
+        $this->compoundContext->ensureManagedCompoundAccess($user, $residentInvitation->unit->compound_id);
     }
 }

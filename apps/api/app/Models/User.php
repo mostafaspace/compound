@@ -29,12 +29,95 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, Notifiable, HasRoles;
 
     /**
+     * @return list<string>
+     */
+    public static function authorizationRelations(): array
+    {
+        return ['roles', 'permissions', 'scopeAssignments'];
+    }
+
+    /**
      * Tell Spatie which guard this model uses so roles/permissions are matched
      * against the 'sanctum' guard (the app's API authentication driver).
      */
     public function guardName(): string
     {
         return 'sanctum';
+    }
+
+    public function hasEffectiveRole(UserRole|string $role): bool
+    {
+        $roleName = $role instanceof UserRole ? $role->value : $role;
+
+        foreach ($this->effectiveRoleCandidates($roleName) as $candidate) {
+            if (in_array($candidate, $this->effectiveRoleNames(), strict: true)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  iterable<UserRole|string>  $roles
+     */
+    public function hasAnyEffectiveRole(iterable $roles): bool
+    {
+        foreach ($roles as $role) {
+            if ($this->hasEffectiveRole($role)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function isEffectiveSuperAdmin(): bool
+    {
+        return $this->hasEffectiveRole(UserRole::SuperAdmin);
+    }
+
+    public function loadAuthorizationSnapshot(): static
+    {
+        return $this->loadMissing(self::authorizationRelations());
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function effectiveRoleNames(): array
+    {
+        $assignedRoles = $this->relationLoaded('roles')
+            ? $this->roles->pluck('name')->all()
+            : $this->roles()->pluck('name')->all();
+
+        if ($assignedRoles !== []) {
+            return $this->expandEffectiveRoleNames($assignedRoles);
+        }
+
+        $legacyRole = $this->role instanceof UserRole ? $this->role->value : $this->role;
+
+        return $legacyRole === null
+            ? []
+            : $this->expandEffectiveRoleNames([$legacyRole]);
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function serializedRoleNames(): array
+    {
+        $assignedRoles = $this->relationLoaded('roles')
+            ? $this->getRoleNames()->values()->all()
+            : $this->roles()->pluck('name')->all();
+
+        if ($assignedRoles !== []) {
+            return array_values($assignedRoles);
+        }
+
+        $legacyRole = $this->role instanceof UserRole ? $this->role->value : $this->role;
+
+        return $legacyRole === null ? [] : [$legacyRole];
     }
 
     /**
@@ -137,5 +220,29 @@ class User extends Authenticatable
     public function scopeAssignments(): HasMany
     {
         return $this->hasMany(UserScopeAssignment::class);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function effectiveRoleCandidates(string $roleName): array
+    {
+        return match ($roleName) {
+            UserRole::CompoundAdmin->value => [UserRole::CompoundAdmin->value, 'compound_head'],
+            default => [$roleName],
+        };
+    }
+
+    /**
+     * @param  list<string>  $roleNames
+     * @return list<string>
+     */
+    private function expandEffectiveRoleNames(array $roleNames): array
+    {
+        if (in_array('compound_head', $roleNames, strict: true)) {
+            $roleNames[] = UserRole::CompoundAdmin->value;
+        }
+
+        return array_values(array_unique($roleNames));
     }
 }
