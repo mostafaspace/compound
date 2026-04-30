@@ -54,18 +54,12 @@ class VisitorRequestController extends Controller
         /** @var User $user */
         $user = $request->user();
         $status = $request->string('status')->toString();
-        $compoundId = $this->isStaff($user)
-            ? $this->resolveStaffCompoundScope($user)
-            : null;
 
         $visitorRequests = VisitorRequest::query()
             ->with(['host', 'unit.building.compound', 'pass'])
             ->when(! $this->isStaff($user), fn ($query) => $query->where('host_user_id', $user->id))
             ->when($status !== '' && $status !== 'all', fn ($query) => $query->where('status', $status))
-            // Compound isolation: staff only see requests for their compound.
-            ->when($compoundId !== null, fn ($query) => $query->whereHas(
-                'unit.building', fn ($bq) => $bq->where('compound_id', $compoundId)
-            ))
+            ->tap(fn ($query) => $this->compoundContext->scopePropertyQuery($query, $user))
             ->latest('visit_starts_at')
             ->paginate();
 
@@ -77,8 +71,12 @@ class VisitorRequestController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        abort_unless($this->isStaff($user) || $visitorRequest->host_user_id === $user->id, Response::HTTP_FORBIDDEN);
-        
+        if ($this->isStaff($user)) {
+            $this->ensureStaffCanAccessVisitorRequest($request, $visitorRequest);
+        } else {
+            abort_unless($visitorRequest->host_user_id === $user->id, Response::HTTP_FORBIDDEN);
+        }
+
         $visitorRequest->load(['host', 'unit.building.compound', 'pass']);
 
         return VisitorRequestResource::make($visitorRequest);
@@ -269,16 +267,7 @@ class VisitorRequestController extends Controller
     private function canHostUnit(User $user, string $unitId): bool
     {
         if ($this->isStaff($user)) {
-            $compoundId = $this->resolveStaffCompoundScope($user);
-
-            if (filled($compoundId)) {
-                return Unit::query()
-                    ->whereKey($unitId)
-                    ->where('compound_id', $compoundId)
-                    ->exists();
-            }
-
-            return true;
+            return $this->compoundContext->userCanAccessUnit($user, $unitId);
         }
 
         return UnitMembership::query()
@@ -385,31 +374,7 @@ class VisitorRequestController extends Controller
     {
         /** @var User $user */
         $user = $request->user();
-        $compoundId = $this->resolveStaffCompoundScope($user);
 
-        if (! filled($compoundId)) {
-            return;
-        }
-
-        $visitorRequest->loadMissing('unit');
-
-        abort_unless($visitorRequest->unit?->compound_id === $compoundId, Response::HTTP_FORBIDDEN);
-    }
-
-    private function resolveStaffCompoundScope(User $user): ?string
-    {
-        if ($user->isEffectiveSuperAdmin()) {
-            return null;
-        }
-
-        if ($user->hasEffectiveRole(UserRole::CompoundAdmin)) {
-            $managedCompoundId = $this->compoundContext->resolveManagedCompoundId($user);
-
-            abort_if($managedCompoundId === null, Response::HTTP_FORBIDDEN);
-
-            return $managedCompoundId;
-        }
-
-        return $user->compound_id;
+        abort_unless($this->compoundContext->userCanAccessUnit($user, $visitorRequest->unit_id), Response::HTTP_FORBIDDEN);
     }
 }

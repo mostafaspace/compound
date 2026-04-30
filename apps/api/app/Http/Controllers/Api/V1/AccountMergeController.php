@@ -24,12 +24,15 @@ class AccountMergeController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $compoundId = $this->context->resolve($request);
+        /** @var User $actor */
+        $actor = $request->user();
+        $requestedCompoundId = $request->header('X-Compound-Id') ?: $request->query('compoundId');
+        $compoundIds = $this->context->resolveRequestedAccessibleCompoundIds($actor, $requestedCompoundId);
 
         $merges = AccountMerge::query()
             ->with(['sourceUser', 'targetUser', 'initiator'])
-            ->when($compoundId !== null, function ($q) use ($compoundId): void {
-                $q->whereHas('sourceUser', fn ($u) => $this->context->scopeUsersToCompound($u, $compoundId));
+            ->when($compoundIds !== null, function ($q) use ($compoundIds): void {
+                $q->whereHas('sourceUser', fn ($u) => $this->context->scopeUsersToCompounds($u, $compoundIds));
             })
             ->latest()
             ->paginate(25);
@@ -51,12 +54,10 @@ class AccountMergeController extends Controller
         $source = User::findOrFail($validated['source_user_id']);
         $target = User::findOrFail($validated['target_user_id']);
 
-        $compoundId = $this->context->resolve($request);
-
-        if ($compoundId !== null) {
-            $this->context->ensureUserAccess($request, $source);
-            $this->context->ensureUserAccess($request, $target);
-        }
+        /** @var User $actor */
+        $actor = $request->user();
+        $this->context->ensureUserCanAccessCompound($actor, $source->compound_id);
+        $this->context->ensureUserCanAccessCompound($actor, $target->compound_id);
 
         // Block if either user already has a pending merge
         $existingPending = AccountMerge::query()
@@ -88,13 +89,15 @@ class AccountMergeController extends Controller
     /**
      * Show a merge record.
      */
-    public function show(AccountMerge $accountMerge): JsonResponse
+    public function show(Request $request, AccountMerge $accountMerge): JsonResponse
     {
-        $accountMerge->load(['sourceUser', 'targetUser', 'initiator']);
-
+        /** @var User $actor */
+        $actor = $request->user();
         if ($accountMerge->sourceUser !== null) {
-            $this->context->ensureUserAccess(request(), $accountMerge->sourceUser);
+            $this->context->ensureUserCanAccessCompound($actor, $accountMerge->sourceUser->compound_id);
         }
+
+        $accountMerge->load(['sourceUser', 'targetUser', 'initiator']);
 
         return response()->json($this->formatMerge($accountMerge));
     }
@@ -104,10 +107,10 @@ class AccountMergeController extends Controller
      */
     public function confirm(Request $request, AccountMerge $accountMerge): JsonResponse
     {
-        $compoundId = $this->context->resolve($request);
-
-        if ($compoundId !== null && $accountMerge->sourceUser !== null) {
-            $this->context->ensureUserAccess($request, $accountMerge->sourceUser);
+        /** @var User $actor */
+        $actor = $request->user();
+        if ($accountMerge->sourceUser !== null) {
+            $this->context->ensureUserCanAccessCompound($actor, $accountMerge->sourceUser->compound_id);
         }
 
         $this->service->execute($accountMerge, $request->user());
@@ -120,8 +123,10 @@ class AccountMergeController extends Controller
      */
     public function cancel(Request $request, AccountMerge $accountMerge): JsonResponse
     {
+        /** @var User $actor */
+        $actor = $request->user();
         if ($accountMerge->sourceUser !== null) {
-            $this->context->ensureUserAccess($request, $accountMerge->sourceUser);
+            $this->context->ensureUserCanAccessCompound($actor, $accountMerge->sourceUser->compound_id);
         }
 
         if ($accountMerge->status !== AccountMergeStatus::Pending) {

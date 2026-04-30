@@ -30,11 +30,14 @@ class ImportBatchController extends Controller
 
     public function index(Request $request): AnonymousResourceCollection
     {
-        $compoundId = $this->compoundContext->resolve($request);
+        /** @var User $actor */
+        $actor = $request->user();
+        $requestedCompoundId = $request->header('X-Compound-Id') ?: $request->query('compoundId');
+        $compoundIds = $this->compoundContext->resolveRequestedAccessibleCompoundIds($actor, $requestedCompoundId);
 
         $batches = ImportBatch::query()
             ->with(['compound', 'actor'])
-            ->when($compoundId, fn ($q) => $q->where('compound_id', $compoundId))
+            ->when($compoundIds !== null, fn ($q) => $q->whereIn('compound_id', $compoundIds))
             ->when($request->filled('type'), fn ($q) => $q->where('type', $request->string('type')->toString()))
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')->toString()))
             ->latest()
@@ -56,16 +59,11 @@ class ImportBatchController extends Controller
             'dry_run' => ['sometimes', 'boolean'],
         ]);
 
-        $compound = Compound::query()->findOrFail($validated['compound_id']);
-
-        // Compound-scoped users may only import into their own compound
-        $compoundId = $this->compoundContext->resolve($request);
-        if ($compoundId !== null) {
-            abort_unless($compound->id === $compoundId, Response::HTTP_FORBIDDEN);
-        }
-
         /** @var User $actor */
         $actor = $request->user();
+        $this->compoundContext->ensureUserCanAccessCompound($actor, $validated['compound_id']);
+
+        $compound = Compound::query()->findOrFail($validated['compound_id']);
         $type = ImportBatchType::from($validated['type']);
         $dryRun = (bool) ($validated['dry_run'] ?? true);
 
@@ -88,10 +86,9 @@ class ImportBatchController extends Controller
 
     public function show(Request $request, ImportBatch $importBatch): ImportBatchResource
     {
-        $compoundId = $this->compoundContext->resolve($request);
-        if ($compoundId !== null) {
-            abort_unless($importBatch->compound_id === $compoundId, Response::HTTP_FORBIDDEN);
-        }
+        /** @var User $actor */
+        $actor = $request->user();
+        $this->compoundContext->ensureUserCanAccessCompound($actor, $importBatch->compound_id);
 
         $importBatch->load(['compound', 'actor']);
 

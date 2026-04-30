@@ -6,6 +6,7 @@ use App\Enums\BudgetStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Finance\BudgetResource;
 use App\Models\Finance\Budget;
+use App\Models\User;
 use App\Services\CompoundContextService;
 use App\Support\AuditLogger;
 use Illuminate\Http\JsonResponse;
@@ -23,13 +24,13 @@ class BudgetController extends Controller
 
     public function index(Request $request): AnonymousResourceCollection
     {
-        $compoundId = $this->compoundContextService->resolve($request);
+        /** @var User $actor */
+        $actor = $request->user();
+        $compoundIds = $this->compoundContextService->resolveAccessibleCompoundIds($actor);
 
-        $query = Budget::query()->with('categories')->latest();
-
-        if ($compoundId) {
-            $query->where('compound_id', $compoundId);
-        }
+        $query = Budget::query()->with('categories')
+            ->when($compoundIds !== null, fn ($q) => $q->whereIn('compound_id', $compoundIds))
+            ->latest();
 
         if ($request->filled('status')) {
             $query->where('status', $request->input('status'));
@@ -53,7 +54,7 @@ class BudgetController extends Controller
             'notes'        => ['nullable', 'string'],
         ]);
 
-        $this->compoundContextService->ensureCompoundAccess($request, $data['compound_id']);
+        $this->compoundContextService->ensureUserCanAccessCompound($request->user(), $data['compound_id']);
 
         $data['created_by'] = $request->user()->id;
 
@@ -68,14 +69,14 @@ class BudgetController extends Controller
 
     public function show(Request $request, Budget $budget): BudgetResource
     {
-        $this->compoundContextService->ensureCompoundAccess($request, $budget->compound_id);
+        $this->compoundContextService->ensureUserCanAccessCompound($request->user(), $budget->compound_id);
 
         return new BudgetResource($budget->load('categories'));
     }
 
     public function update(Request $request, Budget $budget): BudgetResource
     {
-        $this->compoundContextService->ensureCompoundAccess($request, $budget->compound_id);
+        $this->compoundContextService->ensureUserCanAccessCompound($request->user(), $budget->compound_id);
 
         abort_if($budget->status === BudgetStatus::Closed, Response::HTTP_UNPROCESSABLE_ENTITY, 'Cannot edit a closed budget.');
 
@@ -93,7 +94,7 @@ class BudgetController extends Controller
 
     public function activate(Request $request, Budget $budget): BudgetResource
     {
-        $this->compoundContextService->ensureCompoundAccess($request, $budget->compound_id);
+        $this->compoundContextService->ensureUserCanAccessCompound($request->user(), $budget->compound_id);
 
         abort_if($budget->status !== BudgetStatus::Draft, Response::HTTP_UNPROCESSABLE_ENTITY, 'Only draft budgets can be activated.');
 
@@ -106,7 +107,7 @@ class BudgetController extends Controller
 
     public function close(Request $request, Budget $budget): BudgetResource
     {
-        $this->compoundContextService->ensureCompoundAccess($request, $budget->compound_id);
+        $this->compoundContextService->ensureUserCanAccessCompound($request->user(), $budget->compound_id);
 
         abort_if($budget->status === BudgetStatus::Closed, Response::HTTP_UNPROCESSABLE_ENTITY, 'Budget is already closed.');
 
@@ -124,7 +125,7 @@ class BudgetController extends Controller
 
     public function storeCategory(Request $request, Budget $budget): JsonResponse
     {
-        $this->compoundContextService->ensureCompoundAccess($request, $budget->compound_id);
+        $this->compoundContextService->ensureUserCanAccessCompound($request->user(), $budget->compound_id);
 
         abort_if($budget->status === BudgetStatus::Closed, Response::HTTP_UNPROCESSABLE_ENTITY, 'Cannot add categories to a closed budget.');
 
@@ -143,7 +144,7 @@ class BudgetController extends Controller
 
     public function updateCategory(Request $request, Budget $budget, \App\Models\Finance\BudgetCategory $category): \App\Http\Resources\Finance\BudgetCategoryResource
     {
-        $this->compoundContextService->ensureCompoundAccess($request, $budget->compound_id);
+        $this->compoundContextService->ensureUserCanAccessCompound($request->user(), $budget->compound_id);
 
         abort_if($budget->status === BudgetStatus::Closed, Response::HTTP_UNPROCESSABLE_ENTITY, 'Cannot edit categories on a closed budget.');
         abort_if($category->budget_id !== $budget->id, Response::HTTP_NOT_FOUND);

@@ -22,21 +22,25 @@ class OperationalAnalyticsController extends Controller
             'to'         => ['nullable', 'date', 'after_or_equal:from'],
         ]);
 
-        $compoundId = $this->context->resolve($request);
+        /** @var \App\Models\User $actor */
+        $actor = $request->user();
+        $requestedCompoundId = $request->header('X-Compound-Id') ?: $request->query('compoundId');
+        $compoundIds = $this->context->resolveRequestedAccessibleCompoundIds($actor, $requestedCompoundId);
+
         $buildingId = $validated['buildingId'] ?? null;
         $from       = $validated['from'] ?? null;
         $to         = isset($validated['to']) ? $validated['to'].' 23:59:59' : null;
 
         return response()->json([
             'data' => [
-                'users'         => $this->userMetrics($compoundId, $from, $to),
-                'invitations'   => $this->invitationMetrics($compoundId, $from, $to),
-                'verifications' => $this->verificationMetrics($compoundId, $from, $to),
-                'documents'     => $this->documentMetrics($compoundId, $from, $to),
-                'visitors'      => $this->visitorMetrics($compoundId, $buildingId, $from, $to),
-                'issues'        => $this->issueMetrics($compoundId, $buildingId, $from, $to),
-                'announcements' => $this->announcementMetrics($compoundId, $from, $to),
-                'votes'         => $this->voteMetrics($compoundId, $buildingId, $from, $to),
+                'users'         => $this->userMetrics($compoundIds, $from, $to),
+                'invitations'   => $this->invitationMetrics($compoundIds, $from, $to),
+                'verifications' => $this->verificationMetrics($compoundIds, $from, $to),
+                'documents'     => $this->documentMetrics($compoundIds, $from, $to),
+                'visitors'      => $this->visitorMetrics($compoundIds, $buildingId, $from, $to),
+                'issues'        => $this->issueMetrics($compoundIds, $buildingId, $from, $to),
+                'announcements' => $this->announcementMetrics($compoundIds, $from, $to),
+                'votes'         => $this->voteMetrics($compoundIds, $buildingId, $from, $to),
                 'generatedAt'   => now()->toIso8601String(),
             ],
         ]);
@@ -44,10 +48,11 @@ class OperationalAnalyticsController extends Controller
 
     // ─── Metric helpers ──────────────────────────────────────────────────────
 
-    private function userMetrics(?string $compoundId, ?string $from, ?string $to): array
+    /** @param list<string>|null $compoundIds */
+    private function userMetrics(?array $compoundIds, ?string $from, ?string $to): array
     {
         $counts = DB::table('users')
-            ->when($compoundId, fn ($q) => $q->where('compound_id', $compoundId))
+            ->when($compoundIds !== null, fn ($q) => $q->whereIn('compound_id', $compoundIds))
             ->when($from, fn ($q) => $q->where('created_at', '>=', $from))
             ->when($to,   fn ($q) => $q->where('created_at', '<=', $to))
             ->select('status', DB::raw('count(*) as count'))
@@ -64,11 +69,12 @@ class OperationalAnalyticsController extends Controller
         ];
     }
 
-    private function invitationMetrics(?string $compoundId, ?string $from, ?string $to): array
+    /** @param list<string>|null $compoundIds */
+    private function invitationMetrics(?array $compoundIds, ?string $from, ?string $to): array
     {
         $counts = DB::table('resident_invitations as ri')
             ->leftJoin('units', 'units.id', '=', 'ri.unit_id')
-            ->when($compoundId, fn ($q) => $q->where('units.compound_id', $compoundId))
+            ->when($compoundIds !== null, fn ($q) => $q->whereIn('units.compound_id', $compoundIds))
             ->when($from, fn ($q) => $q->where('ri.created_at', '>=', $from))
             ->when($to,   fn ($q) => $q->where('ri.created_at', '<=', $to))
             ->select('ri.status', DB::raw('count(*) as count'))
@@ -84,11 +90,12 @@ class OperationalAnalyticsController extends Controller
         ];
     }
 
-    private function verificationMetrics(?string $compoundId, ?string $from, ?string $to): array
+    /** @param list<string>|null $compoundIds */
+    private function verificationMetrics(?array $compoundIds, ?string $from, ?string $to): array
     {
         $counts = DB::table('verification_requests as vr')
             ->join('users as u', 'u.id', '=', 'vr.user_id')
-            ->when($compoundId, fn ($q) => $q->where('u.compound_id', $compoundId))
+            ->when($compoundIds !== null, fn ($q) => $q->whereIn('u.compound_id', $compoundIds))
             ->when($from, fn ($q) => $q->where('vr.created_at', '>=', $from))
             ->when($to,   fn ($q) => $q->where('vr.created_at', '<=', $to))
             ->select('vr.status', DB::raw('count(*) as count'))
@@ -104,11 +111,12 @@ class OperationalAnalyticsController extends Controller
         ];
     }
 
-    private function documentMetrics(?string $compoundId, ?string $from, ?string $to): array
+    /** @param list<string>|null $compoundIds */
+    private function documentMetrics(?array $compoundIds, ?string $from, ?string $to): array
     {
         $counts = DB::table('user_documents as ud')
             ->join('users as u', 'u.id', '=', 'ud.user_id')
-            ->when($compoundId, fn ($q) => $q->where('u.compound_id', $compoundId))
+            ->when($compoundIds !== null, fn ($q) => $q->whereIn('u.compound_id', $compoundIds))
             ->when($from, fn ($q) => $q->where('ud.created_at', '>=', $from))
             ->when($to,   fn ($q) => $q->where('ud.created_at', '<=', $to))
             ->select('ud.status', DB::raw('count(*) as count'))
@@ -123,12 +131,13 @@ class OperationalAnalyticsController extends Controller
         ];
     }
 
-    private function visitorMetrics(?string $compoundId, ?string $buildingId, ?string $from, ?string $to): array
+    /** @param list<string>|null $compoundIds */
+    private function visitorMetrics(?array $compoundIds, ?string $buildingId, ?string $from, ?string $to): array
     {
         $counts = DB::table('visitor_requests as vr')
             ->join('units', 'units.id', '=', 'vr.unit_id')
             ->join('buildings', 'buildings.id', '=', 'units.building_id')
-            ->when($compoundId, fn ($q) => $q->where('buildings.compound_id', $compoundId))
+            ->when($compoundIds !== null, fn ($q) => $q->whereIn('buildings.compound_id', $compoundIds))
             ->when($buildingId, fn ($q) => $q->where('buildings.id', $buildingId))
             ->when($from, fn ($q) => $q->where('vr.created_at', '>=', $from))
             ->when($to,   fn ($q) => $q->where('vr.created_at', '<=', $to))
@@ -146,10 +155,11 @@ class OperationalAnalyticsController extends Controller
         ];
     }
 
-    private function issueMetrics(?string $compoundId, ?string $buildingId, ?string $from, ?string $to): array
+    /** @param list<string>|null $compoundIds */
+    private function issueMetrics(?array $compoundIds, ?string $buildingId, ?string $from, ?string $to): array
     {
         $counts = DB::table('issues')
-            ->when($compoundId, fn ($q) => $q->where('compound_id', $compoundId))
+            ->when($compoundIds !== null, fn ($q) => $q->whereIn('compound_id', $compoundIds))
             ->when($buildingId, fn ($q) => $q->where('building_id', $buildingId))
             ->when($from, fn ($q) => $q->where('created_at', '>=', $from))
             ->when($to,   fn ($q) => $q->where('created_at', '<=', $to))
@@ -167,10 +177,11 @@ class OperationalAnalyticsController extends Controller
         ];
     }
 
-    private function announcementMetrics(?string $compoundId, ?string $from, ?string $to): array
+    /** @param list<string>|null $compoundIds */
+    private function announcementMetrics(?array $compoundIds, ?string $from, ?string $to): array
     {
         $base = DB::table('announcements')
-            ->when($compoundId, fn ($q) => $q->where('compound_id', $compoundId))
+            ->when($compoundIds !== null, fn ($q) => $q->whereIn('compound_id', $compoundIds))
             ->when($from, fn ($q) => $q->where('created_at', '>=', $from))
             ->when($to,   fn ($q) => $q->where('created_at', '<=', $to));
 
@@ -201,10 +212,11 @@ class OperationalAnalyticsController extends Controller
         ];
     }
 
-    private function voteMetrics(?string $compoundId, ?string $buildingId, ?string $from, ?string $to): array
+    /** @param list<string>|null $compoundIds */
+    private function voteMetrics(?array $compoundIds, ?string $buildingId, ?string $from, ?string $to): array
     {
         $base = DB::table('votes')
-            ->when($compoundId, fn ($q) => $q->where('compound_id', $compoundId))
+            ->when($compoundIds !== null, fn ($q) => $q->whereIn('compound_id', $compoundIds))
             ->when($buildingId, fn ($q) => $q->where('building_id', $buildingId))
             ->when($from, fn ($q) => $q->where('created_at', '>=', $from))
             ->when($to,   fn ($q) => $q->where('created_at', '<=', $to));

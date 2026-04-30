@@ -81,7 +81,6 @@ export async function requireAdminUser(
   const user = await loader();
 
   if (!user || !canAccessAdmin(user, allowedRoles)) {
-    await clearAuthToken();
     redirect("/login");
   }
 

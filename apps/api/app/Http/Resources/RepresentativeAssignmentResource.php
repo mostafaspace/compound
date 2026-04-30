@@ -22,19 +22,27 @@ class RepresentativeAssignmentResource extends JsonResource
             'buildingId' => $this->building_id,
             'floorId' => $this->floor_id,
             'userId' => $this->user_id,
-            'user' => UserResource::make($this->whenLoaded('user')),
+            'user' => $this->relationLoaded('user') && $this->user
+                ? UserResource::make($this->user)->resolve($request)
+                : null,
             'role' => $this->role->value,
             'roleKey' => $this->role->value,
             'scopeLevel' => $this->role->scopeLevel(),
-            'building' => BuildingResource::make($this->whenLoaded('building')),
-            'floor' => FloorResource::make($this->whenLoaded('floor')),
+            'building' => $this->relationLoaded('building') && $this->building
+                ? BuildingResource::make($this->building)->resolve($request)
+                : null,
+            'floor' => $this->relationLoaded('floor') && $this->floor
+                ? FloorResource::make($this->floor)->resolve($request)
+                : null,
             'startsAt' => $this->starts_at?->toDateString(),
             'endsAt' => $this->ends_at?->toDateString(),
             'isActive' => $this->is_active,
             'contactVisibility' => $this->contact_visibility->value,
             'contactVisibilityKey' => $this->contact_visibility->value,
             'appointedBy' => $this->appointed_by,
-            'appointedByUser' => UserResource::make($this->whenLoaded('appointedByUser')),
+            'appointedByUser' => $this->relationLoaded('appointedByUser') && $this->appointedByUser
+                ? UserResource::make($this->appointedByUser)->resolve($request)
+                : null,
             'notes' => $this->notes,
             'createdAt' => $this->created_at?->toJSON(),
             'updatedAt' => $this->updated_at?->toJSON(),

@@ -27,11 +27,13 @@ class IssueController extends Controller
         $query = Issue::with(['reporter', 'assignee', 'unit', 'building'])
             ->latest();
 
-        // Compound isolation: scope to the resolved compound (null = super-admin sees all).
-        $compoundId = $this->compoundContext->resolve($request);
-        if ($compoundId !== null) {
-            $query->where('compound_id', $compoundId);
-        }
+        // Compound isolation: scope to the resolved compounds (null = super-admin sees all).
+        /** @var User $actor */
+        $actor = $request->user();
+        $requestedCompoundId = $request->header('X-Compound-Id') ?: $request->query('compoundId');
+        $compoundIds = $this->compoundContext->resolveRequestedAccessibleCompoundIds($actor, $requestedCompoundId);
+
+        $query->when($compoundIds !== null, fn ($q) => $q->whereIn('compound_id', $compoundIds));
 
         if ($request->has('status') && $request->input('status') !== 'all') {
             $query->where('status', $request->input('status'));

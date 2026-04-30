@@ -191,17 +191,12 @@ class VerificationRequestController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        $managedCompoundId = $this->compoundContext->resolveManagedCompoundId($user);
-
-        if ($managedCompoundId === null) {
-            return $query;
-        }
-
-        return $query->where(function ($scoped) use ($managedCompoundId): void {
-            $scoped
-                ->whereHas('unit', fn ($unitQuery) => $unitQuery->where('compound_id', $managedCompoundId))
-                ->orWhereHas('residentInvitation.unit', fn ($unitQuery) => $unitQuery->where('compound_id', $managedCompoundId))
-                ->orWhereHas('user.unitMemberships.unit', fn ($unitQuery) => $unitQuery->where('compound_id', $managedCompoundId));
+        return $query->where(function ($q) use ($user): void {
+            $q->whereHas('unit', fn ($sub) => $this->compoundContext->scopePropertyQuery($sub, $user))
+                ->orWhereHas('residentInvitation.unit', fn ($sub) => $this->compoundContext->scopePropertyQuery($sub, $user))
+                ->orWhereHas('user', function ($subUser) use ($user): void {
+                    $subUser->whereHas('unitMemberships.unit', fn ($subUnit) => $this->compoundContext->scopePropertyQuery($subUnit, $user));
+                });
         });
     }
 
@@ -210,16 +205,22 @@ class VerificationRequestController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        $managedCompoundId = $this->compoundContext->resolveManagedCompoundId($user);
+        // Use the same logic as scoping to verify individual access
+        $canAccess = false;
 
-        if ($managedCompoundId === null) {
-            return;
+        if ($verificationRequest->unit_id) {
+            $canAccess = $this->compoundContext->userCanAccessUnit($user, $verificationRequest->unit_id);
+        } elseif ($verificationRequest->residentInvitation?->unit_id) {
+            $canAccess = $this->compoundContext->userCanAccessUnit($user, $verificationRequest->residentInvitation->unit_id);
+        } else {
+            // Check if they can access any of the user's unit memberships
+            $verificationRequest->loadMissing('user.unitMemberships.unit');
+            $canAccess = $verificationRequest->user->unitMemberships->contains(function ($m) use ($user) {
+                return $m->unit_id && $this->compoundContext->userCanAccessUnit($user, $m->unit_id);
+            });
         }
 
-        abort_unless(
-            $this->verificationRequestBelongsToCompound($verificationRequest, $managedCompoundId),
-            Response::HTTP_FORBIDDEN,
-        );
+        abort_unless($canAccess, Response::HTTP_FORBIDDEN);
     }
 
     private function verificationRequestBelongsToCompound(VerificationRequest $verificationRequest, string $compoundId): bool

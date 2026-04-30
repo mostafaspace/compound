@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Finance\ReserveFundMovementResource;
 use App\Http\Resources\Finance\ReserveFundResource;
 use App\Models\Finance\ReserveFund;
+use App\Models\User;
 use App\Services\CompoundContextService;
 use App\Support\AuditLogger;
 use Illuminate\Http\JsonResponse;
@@ -23,13 +24,13 @@ class ReserveFundController extends Controller
 
     public function index(Request $request): AnonymousResourceCollection
     {
-        $compoundId = $this->compoundContextService->resolve($request);
+        /** @var User $actor */
+        $actor = $request->user();
+        $compoundIds = $this->compoundContextService->resolveAccessibleCompoundIds($actor);
 
-        $query = ReserveFund::query()->latest();
-
-        if ($compoundId) {
-            $query->where('compound_id', $compoundId);
-        }
+        $query = ReserveFund::query()
+            ->when($compoundIds !== null, fn ($q) => $q->whereIn('compound_id', $compoundIds))
+            ->latest();
 
         return ReserveFundResource::collection($query->paginate(50));
     }
@@ -43,7 +44,7 @@ class ReserveFundController extends Controller
             'currency'    => ['nullable', 'string', 'size:3'],
         ]);
 
-        $this->compoundContextService->ensureCompoundAccess($request, $data['compound_id']);
+        $this->compoundContextService->ensureUserCanAccessCompound($request->user(), $data['compound_id']);
 
         $fund = ReserveFund::create($data);
 
@@ -56,14 +57,14 @@ class ReserveFundController extends Controller
 
     public function show(Request $request, ReserveFund $reserveFund): ReserveFundResource
     {
-        $this->compoundContextService->ensureCompoundAccess($request, $reserveFund->compound_id);
+        $this->compoundContextService->ensureUserCanAccessCompound($request->user(), $reserveFund->compound_id);
 
         return new ReserveFundResource($reserveFund);
     }
 
     public function update(Request $request, ReserveFund $reserveFund): ReserveFundResource
     {
-        $this->compoundContextService->ensureCompoundAccess($request, $reserveFund->compound_id);
+        $this->compoundContextService->ensureUserCanAccessCompound($request->user(), $reserveFund->compound_id);
 
         $data = $request->validate([
             'name'        => ['sometimes', 'string', 'max:255'],
@@ -80,7 +81,7 @@ class ReserveFundController extends Controller
 
     public function storeMovement(Request $request, ReserveFund $reserveFund): JsonResponse
     {
-        $this->compoundContextService->ensureCompoundAccess($request, $reserveFund->compound_id);
+        $this->compoundContextService->ensureUserCanAccessCompound($request->user(), $reserveFund->compound_id);
 
         $data = $request->validate([
             'type'        => ['required', Rule::in(['deposit', 'withdrawal', 'transfer'])],
@@ -111,7 +112,7 @@ class ReserveFundController extends Controller
 
     public function movements(Request $request, ReserveFund $reserveFund): AnonymousResourceCollection
     {
-        $this->compoundContextService->ensureCompoundAccess($request, $reserveFund->compound_id);
+        $this->compoundContextService->ensureUserCanAccessCompound($request->user(), $reserveFund->compound_id);
 
         $movements = $reserveFund->movements()
             ->with('creator')

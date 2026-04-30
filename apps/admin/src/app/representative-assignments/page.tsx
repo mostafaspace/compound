@@ -3,7 +3,8 @@ import { getLocale, getTranslations } from "next-intl/server";
 
 import { LogoutButton } from "@/components/logout-button";
 import { getCurrentUser, getCompounds } from "@/lib/api";
-import { listAllRepresentativeAssignments } from "@/lib/orgchart";
+import { hasEffectiveRole } from "@/lib/auth-access";
+import { listAllRepresentativeAssignments } from "@/lib/orgchart-actions";
 import { getCompoundContext, requireAdminUser } from "@/lib/session";
 
 import {
@@ -59,7 +60,7 @@ export default async function OrgChartPage({ searchParams }: OrgChartPageProps) 
   const locale = await getLocale();
   const t = await getTranslations("OrgChart");
   const params = searchParams ? await searchParams : {};
-  const isSuperAdmin = currentUser.role === "super_admin";
+  const isSuperAdmin = hasEffectiveRole(currentUser, "super_admin");
 
   const [assignments, compounds, activeCompoundId] = await Promise.all([
     listAllRepresentativeAssignments(),

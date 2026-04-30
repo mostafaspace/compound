@@ -29,11 +29,14 @@ class UserSupportViewController extends Controller
             'perPage' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $compoundId = $this->context->resolve($request);
+        /** @var User $actor */
+        $actor = $request->user();
+        $requestedCompoundId = $request->header('X-Compound-Id') ?: $request->query('compoundId');
+        $compoundIds = $this->context->resolveRequestedAccessibleCompoundIds($actor, $requestedCompoundId);
 
         $query = User::query()
             ->with('roles')
-            ->when($compoundId !== null, fn ($b) => $this->scopeUsersToCompound($b, $compoundId))
+            ->when($compoundIds !== null, fn ($b) => $this->scopeUsersToCompounds($b, $compoundIds))
             ->when($validated['status'] ?? null, fn ($b, string $v) => $b->where('status', $v))
             ->when($validated['role'] ?? null, fn ($b, string $v) => $this->applyEffectiveRoleFilter($b, $v))
             ->when($validated['q'] ?? null, function ($b, string $search): void {
@@ -55,10 +58,13 @@ class UserSupportViewController extends Controller
      */
     public function show(Request $request, User $user): JsonResponse
     {
-        $compoundId = $this->context->resolve($request);
+        /** @var User $actor */
+        $actor = $request->user();
+        $requestedCompoundId = $request->header('X-Compound-Id') ?: $request->query('compoundId');
+        $compoundIds = $this->context->resolveRequestedAccessibleCompoundIds($actor, $requestedCompoundId);
 
-        if ($compoundId !== null) {
-            abort_unless($this->userBelongsToCompound($user, $compoundId), 403);
+        if ($compoundIds !== null) {
+            abort_unless($this->userBelongsToCompounds($user, $compoundIds), 403);
         }
 
         $user->loadMissing([
@@ -125,17 +131,20 @@ class UserSupportViewController extends Controller
      */
     public function duplicates(Request $request, User $user): JsonResponse
     {
-        $compoundId = $this->context->resolve($request);
+        /** @var User $actor */
+        $actor = $request->user();
+        $requestedCompoundId = $request->header('X-Compound-Id') ?: $request->query('compoundId');
+        $compoundIds = $this->context->resolveRequestedAccessibleCompoundIds($actor, $requestedCompoundId);
 
-        if ($compoundId !== null) {
-            abort_unless($this->userBelongsToCompound($user, $compoundId), 403);
+        if ($compoundIds !== null) {
+            abort_unless($this->userBelongsToCompounds($user, $compoundIds), 403);
         }
 
         $candidates = User::query()
             ->with('roles')
             ->where('id', '!=', $user->id)
             ->where('status', '!=', AccountStatus::Archived->value)
-            ->when($compoundId !== null, fn ($b) => $this->scopeUsersToCompound($b, $compoundId))
+            ->when($compoundIds !== null, fn ($b) => $this->scopeUsersToCompounds($b, $compoundIds))
             ->where(function ($q) use ($user): void {
                 // Exact email match, or similar name (within same compound)
                 $q->where('email', $user->email)
@@ -154,12 +163,13 @@ class UserSupportViewController extends Controller
         return response()->json(['candidates' => UserResource::collection($candidates)]);
     }
 
-    private function scopeUsersToCompound($query, string $compoundId): void
+    /** @param list<string> $compoundIds */
+    private function scopeUsersToCompounds($query, array $compoundIds): void
     {
-        $query->where(function ($scoped) use ($compoundId): void {
+        $query->where(function ($scoped) use ($compoundIds): void {
             $scoped
-                ->where('compound_id', $compoundId)
-                ->orWhereHas('unitMemberships.unit', fn ($unitQuery) => $unitQuery->where('compound_id', $compoundId));
+                ->whereIn('compound_id', $compoundIds)
+                ->orWhereHas('unitMemberships.unit', fn ($unitQuery) => $unitQuery->whereIn('compound_id', $compoundIds));
         });
     }
 
@@ -189,14 +199,15 @@ class UserSupportViewController extends Controller
         };
     }
 
-    private function userBelongsToCompound(User $user, string $compoundId): bool
+    /** @param list<string> $compoundIds */
+    private function userBelongsToCompounds(User $user, array $compoundIds): bool
     {
-        if ($user->compound_id === $compoundId) {
+        if (in_array($user->compound_id, $compoundIds, true)) {
             return true;
         }
 
         return $user->unitMemberships()
-            ->whereHas('unit', fn ($unitQuery) => $unitQuery->where('compound_id', $compoundId))
+            ->whereHas('unit', fn ($unitQuery) => $unitQuery->whereIn('compound_id', $compoundIds))
             ->exists();
     }
 }

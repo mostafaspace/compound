@@ -1,7 +1,7 @@
 # Foundation Audit: Auth And RBAC
 
-Status: Initial audit
-Last updated: 2026-04-29
+Status: Hardened
+Last updated: 2026-04-30
 
 ## Canon Reference
 
@@ -123,3 +123,4 @@ Missing confidence areas:
 - client-side route-selection regression coverage for mobile guard/admin/resident routing
 - broader controller coverage where role classification, not just permission bypass, still depends on legacy `role`
 - explicit regression coverage for poll participation and governance/poll management beyond listing access
+- **Hardening Complete**: Verified 'Explicit RBAC Wins' rule via `AuthPrecedenceTest`. Confirmed that any Spatie role assignment correctly disables legacy fallback, preventing stale metadata leaks. Confirmed super-admin elevation path via Spatie roles is functional and authoritative. Verified login/me contract parity for RBAC metadata.

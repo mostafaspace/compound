@@ -221,6 +221,40 @@ class OrgChartTest extends TestCase
         $response->assertJsonPath('data.buildings.0.representatives.0.role', 'building_representative');
     }
 
+    public function test_org_chart_cached_payload_stays_plain_json_shape(): void
+    {
+        $compound = Compound::factory()->create();
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compound->id,
+        ]);
+        Sanctum::actingAs($admin);
+
+        $building = Building::factory()->for($compound)->create([
+            'name' => 'Building A',
+        ]);
+        $president = User::factory()->create(['name' => 'Ahmad President']);
+
+        RepresentativeAssignment::factory()->create([
+            'compound_id' => $compound->id,
+            'user_id' => $president->id,
+            'role' => RepresentativeRole::President->value,
+        ]);
+
+        $this->getJson("/api/v1/compounds/{$compound->id}/org-chart")
+            ->assertOk()
+            ->assertJsonPath('data.compound.representatives.0.user.name', 'Ahmad President')
+            ->assertJsonPath('data.buildings.0.name', 'Building A');
+
+        $cachedResponse = $this->getJson("/api/v1/compounds/{$compound->id}/org-chart")
+            ->assertOk()
+            ->assertJsonPath('data.compound.representatives.0.user.name', 'Ahmad President')
+            ->assertJsonPath('data.buildings.0.name', 'Building A');
+
+        $cachedResponse->assertJsonMissingPath('data.compound.representatives.__PHP_Incomplete_Class_Name');
+        $cachedResponse->assertJsonMissingPath('data.buildings.__PHP_Incomplete_Class_Name');
+    }
+
     public function test_org_chart_excludes_admins_only_contacts_from_residents(): void
     {
         $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
@@ -275,6 +309,58 @@ class OrgChartTest extends TestCase
             ->assertJsonCount(1, 'data.compound.representatives');
     }
 
+    public function test_org_chart_resident_visibility_is_scoped_per_viewer_and_not_shared_through_cache(): void
+    {
+        $compound = Compound::factory()->create();
+        $buildingA = Building::factory()->for($compound)->create(['sort_order' => 1]);
+        $buildingB = Building::factory()->for($compound)->create(['sort_order' => 2]);
+
+        $unitA = Unit::factory()->create([
+            'compound_id' => $compound->id,
+            'building_id' => $buildingA->id,
+            'floor_id' => null,
+        ]);
+        $unitB = Unit::factory()->create([
+            'compound_id' => $compound->id,
+            'building_id' => $buildingB->id,
+            'floor_id' => null,
+        ]);
+
+        $residentA = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+        $residentB = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+
+        UnitMembership::query()->create([
+            'unit_id' => $unitA->id,
+            'user_id' => $residentA->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'starts_at' => now()->subDay()->toDateString(),
+            'is_primary' => true,
+            'verification_status' => VerificationStatus::Verified->value,
+        ]);
+        UnitMembership::query()->create([
+            'unit_id' => $unitB->id,
+            'user_id' => $residentB->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'starts_at' => now()->subDay()->toDateString(),
+            'is_primary' => true,
+            'verification_status' => VerificationStatus::Verified->value,
+        ]);
+
+        RepresentativeAssignment::factory()->forBuilding($buildingA)->create([
+            'contact_visibility' => ContactVisibility::BuildingResidents->value,
+        ]);
+
+        Sanctum::actingAs($residentA);
+        $this->getJson("/api/v1/compounds/{$compound->id}/org-chart")
+            ->assertOk()
+            ->assertJsonCount(1, 'data.buildings.0.representatives');
+
+        Sanctum::actingAs($residentB);
+        $this->getJson("/api/v1/compounds/{$compound->id}/org-chart")
+            ->assertOk()
+            ->assertJsonCount(0, 'data.buildings.0.representatives');
+    }
+
     public function test_org_chart_treats_compound_head_assignment_as_effective_admin_even_when_legacy_role_is_stale(): void
     {
         $compound = Compound::factory()->create();
@@ -295,6 +381,45 @@ class OrgChartTest extends TestCase
         $this->getJson("/api/v1/compounds/{$compound->id}/org-chart")
             ->assertOk()
             ->assertJsonCount(1, 'data.compound.representatives');
+    }
+
+    public function test_org_chart_person_detail_allows_membership_scoped_admin_access_to_same_compound_user(): void
+    {
+        $compound = Compound::factory()->create();
+        $building = Building::factory()->for($compound)->create();
+        $unit = Unit::factory()->create([
+            'compound_id' => $compound->id,
+            'building_id' => $building->id,
+            'floor_id' => null,
+        ]);
+
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => null,
+        ]);
+        $target = User::factory()->create([
+            'role' => UserRole::ResidentOwner->value,
+            'compound_id' => null,
+            'email' => 'resident@example.com',
+        ]);
+
+        UnitMembership::factory()->create([
+            'user_id' => $admin->id,
+            'unit_id' => $unit->id,
+            'verification_status' => VerificationStatus::Verified->value,
+        ]);
+        UnitMembership::factory()->create([
+            'user_id' => $target->id,
+            'unit_id' => $unit->id,
+            'verification_status' => VerificationStatus::Verified->value,
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $this->getJson("/api/v1/org-chart/person/{$target->id}")
+            ->assertOk()
+            ->assertJsonPath('data.id', $target->id)
+            ->assertJsonPath('data.email', 'resident@example.com');
     }
 
     // ── Responsible Party ──────────────────────────────────────────────────

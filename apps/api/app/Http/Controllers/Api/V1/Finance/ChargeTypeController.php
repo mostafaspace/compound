@@ -40,6 +40,8 @@ class ChargeTypeController extends Controller
         /** @var User $actor */
         $actor = $request->user();
 
+        abort_unless($actor->isEffectiveSuperAdmin(), Response::HTTP_FORBIDDEN, 'Only super-admins can create global charge types.');
+
         $chargeType = $this->financeService->createChargeType(
             data: $request->validated(),
             actor: $actor,
@@ -59,6 +61,8 @@ class ChargeTypeController extends Controller
     {
         /** @var User $actor */
         $actor = $request->user();
+
+        abort_unless($actor->isEffectiveSuperAdmin(), Response::HTTP_FORBIDDEN, 'Only super-admins can update global charge types.');
 
         $chargeType = $this->financeService->updateChargeType(
             chargeType: $chargeType,

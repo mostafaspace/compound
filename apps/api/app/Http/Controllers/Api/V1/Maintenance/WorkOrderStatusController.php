@@ -7,12 +7,20 @@ use App\Models\Maintenance\WorkOrder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
+use App\Services\CompoundContextService;
+
 // CM-83 / CM-118: Work order lifecycle transitions
 class WorkOrderStatusController extends Controller
 {
+    public function __construct(private readonly CompoundContextService $context) {}
+
     /** Draft → Requested */
     public function submit(Request $request, WorkOrder $workOrder): JsonResponse
     {
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+        $this->context->ensureUserCanAccessCompound($user, $workOrder->compound_id);
+
         abort_if($workOrder->status !== 'draft', 422, 'Only draft work orders can be submitted.');
 
         $workOrder->update(['status' => 'requested']);
@@ -23,14 +31,15 @@ class WorkOrderStatusController extends Controller
     /** Requested/Quoted → Approved */
     public function approve(Request $request, WorkOrder $workOrder): JsonResponse
     {
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+        $this->context->ensureUserCanAccessCompound($user, $workOrder->compound_id);
+
         abort_if(! in_array($workOrder->status, ['requested', 'quoted'], true), 422, 'Work order must be in requested or quoted status to approve.');
 
         $validated = $request->validate([
             'approvedCost' => ['nullable', 'numeric', 'min:0'],
         ]);
-
-        /** @var \App\Models\User $user */
-        $user = $request->user();
 
         $workOrder->update([
             'status'       => 'approved',
@@ -45,6 +54,10 @@ class WorkOrderStatusController extends Controller
     /** Requested/Quoted → Rejected */
     public function reject(Request $request, WorkOrder $workOrder): JsonResponse
     {
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+        $this->context->ensureUserCanAccessCompound($user, $workOrder->compound_id);
+
         abort_if(! in_array($workOrder->status, ['requested', 'quoted'], true), 422, 'Work order must be in requested or quoted status to reject.');
 
         $validated = $request->validate([
@@ -60,8 +73,12 @@ class WorkOrderStatusController extends Controller
     }
 
     /** Approved → In Progress */
-    public function start(WorkOrder $workOrder): JsonResponse
+    public function start(Request $request, WorkOrder $workOrder): JsonResponse
     {
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+        $this->context->ensureUserCanAccessCompound($user, $workOrder->compound_id);
+
         abort_if($workOrder->status !== 'approved', 422, 'Work order must be approved before starting.');
 
         $workOrder->update([
@@ -75,6 +92,10 @@ class WorkOrderStatusController extends Controller
     /** In Progress → Completed */
     public function complete(Request $request, WorkOrder $workOrder): JsonResponse
     {
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+        $this->context->ensureUserCanAccessCompound($user, $workOrder->compound_id);
+
         abort_if($workOrder->status !== 'in_progress', 422, 'Work order must be in progress to complete.');
 
         $validated = $request->validate([
@@ -95,10 +116,11 @@ class WorkOrderStatusController extends Controller
     /** Any non-terminal → Cancelled */
     public function cancel(Request $request, WorkOrder $workOrder): JsonResponse
     {
-        abort_if(in_array($workOrder->status, ['completed', 'cancelled', 'rejected'], true), 422, 'Work order is already closed.');
-
         /** @var \App\Models\User $user */
         $user = $request->user();
+        $this->context->ensureUserCanAccessCompound($user, $workOrder->compound_id);
+
+        abort_if(in_array($workOrder->status, ['completed', 'cancelled', 'rejected'], true), 422, 'Work order is already closed.');
 
         $workOrder->update([
             'status'       => 'cancelled',

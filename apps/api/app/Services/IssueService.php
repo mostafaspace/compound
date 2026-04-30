@@ -308,21 +308,7 @@ class IssueService
             UserRole::FinanceReviewer,
             UserRole::SupportAgent,
         ])) {
-            if ($user->isEffectiveSuperAdmin()) {
-                return true;
-            }
-
-            if ($user->hasEffectiveRole(UserRole::CompoundAdmin)) {
-                $managedCompoundId = $this->compoundContext->resolveManagedCompoundId($user);
-
-                return $managedCompoundId !== null && $managedCompoundId === $issue->compound_id;
-            }
-
-            if (! filled($user->compound_id)) {
-                return true;
-            }
-
-            return $user->compound_id === $issue->compound_id;
+            return $this->compoundContext->userCanAccessCompoundById($user, $issue->compound_id);
         }
 
         return $issue->reported_by === $user->id;

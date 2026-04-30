@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Security\SecurityDevice;
+use App\Models\User;
 use App\Services\CompoundContextService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -16,13 +17,14 @@ class SecurityDeviceController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $compoundId = $this->context->resolve($request);
+        /** @var User $actor */
+        $actor = $request->user();
+        $requestedCompoundId = $request->header('X-Compound-Id');
+        $compoundIds = $this->context->resolveRequestedAccessibleCompoundIds($actor, $requestedCompoundId);
 
-        $query = SecurityDevice::with('registeredBy')->latest();
-
-        if ($compoundId !== null) {
-            $query->where('compound_id', $compoundId);
-        }
+        $query = SecurityDevice::with('registeredBy')
+            ->when($compoundIds !== null, fn ($q) => $q->whereIn('compound_id', $compoundIds))
+            ->latest();
 
         if ($request->has('status') && $request->input('status') !== 'all') {
             $query->where('status', $request->input('status'));
@@ -33,19 +35,19 @@ class SecurityDeviceController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        $compoundId = $this->context->resolve($request);
-
         $validated = $request->validate([
-            'compoundId'  => ['nullable', 'string', 'max:26'],
+            'compoundId'  => ['required', 'string', 'max:26'],
             'name'        => ['required', 'string', 'max:120'],
             'appVersion'  => ['nullable', 'string', 'max:20'],
         ]);
 
-        /** @var \App\Models\User $user */
+        $this->context->ensureUserCanAccessCompound($request->user(), $validated['compoundId']);
+
+        /** @var User $user */
         $user = $request->user();
 
         $device = SecurityDevice::create([
-            'compound_id'       => $compoundId ?? $validated['compoundId'],
+            'compound_id'       => $validated['compoundId'],
             'name'              => $validated['name'],
             'device_identifier' => Str::random(64),
             'app_version'       => $validated['appVersion'] ?? null,
@@ -56,13 +58,17 @@ class SecurityDeviceController extends Controller
         return response()->json(['data' => $device->load('registeredBy')], 201);
     }
 
-    public function show(SecurityDevice $securityDevice): JsonResponse
+    public function show(Request $request, SecurityDevice $securityDevice): JsonResponse
     {
+        $this->context->ensureUserCanAccessCompound($request->user(), $securityDevice->compound_id);
+
         return response()->json(['data' => $securityDevice->load(['registeredBy', 'revokedBy'])]);
     }
 
     public function heartbeat(Request $request, SecurityDevice $securityDevice): JsonResponse
     {
+        $this->context->ensureUserCanAccessCompound($request->user(), $securityDevice->compound_id);
+
         abort_if($securityDevice->status !== 'active', 403, 'Device is revoked.');
 
         $validated = $request->validate([
@@ -79,9 +85,11 @@ class SecurityDeviceController extends Controller
 
     public function revoke(Request $request, SecurityDevice $securityDevice): JsonResponse
     {
+        $this->context->ensureUserCanAccessCompound($request->user(), $securityDevice->compound_id);
+
         abort_if($securityDevice->status === 'revoked', 422, 'Device is already revoked.');
 
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = $request->user();
 
         $securityDevice->update([

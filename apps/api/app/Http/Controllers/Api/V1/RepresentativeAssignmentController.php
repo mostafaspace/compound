@@ -11,6 +11,7 @@ use App\Models\Property\Compound;
 use App\Models\RepresentativeAssignment;
 use App\Models\User;
 use App\Services\CompoundContextService;
+use App\Services\OrgChartService;
 use App\Support\AuditLogger;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -22,6 +23,7 @@ class RepresentativeAssignmentController extends Controller
     public function __construct(
         private readonly AuditLogger $auditLogger,
         private readonly CompoundContextService $compoundContext,
+        private readonly OrgChartService $orgChartService,
     ) {}
 
     public function index(Request $request, Compound $compound): AnonymousResourceCollection
@@ -82,6 +84,8 @@ class RepresentativeAssignmentController extends Controller
             ]);
         });
 
+        $this->orgChartService->invalidateCache($compound->id);
+
         $this->auditLogger->record('org_chart.representative_assigned', actor: $actor, request: $request, metadata: [
             'assignment_id' => $assignment->id,
             'compound_id' => $compound->id,
@@ -117,6 +121,8 @@ class RepresentativeAssignmentController extends Controller
             'starts_at' => $validated['startsAt'] ?? null,
         ], fn ($v) => $v !== null))->save();
 
+        $this->orgChartService->invalidateCache($representativeAssignment->compound_id);
+
         /** @var User $actor */
         $actor = $request->user();
 
@@ -144,6 +150,8 @@ class RepresentativeAssignmentController extends Controller
             'is_active' => false,
             'ends_at' => now()->toDateString(),
         ])->save();
+
+        $this->orgChartService->invalidateCache($representativeAssignment->compound_id);
 
         /** @var User $actor */
         $actor = $request->user();

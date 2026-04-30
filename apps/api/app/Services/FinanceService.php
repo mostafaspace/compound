@@ -370,10 +370,10 @@ class FinanceService
                 ->whereHas('unit', fn ($q) => $q->where('compound_id', $charge->compound_id))
                 ->get(),
             'floor' => UnitAccount::query()
-                ->whereHas('unit', fn ($q) => $q->whereIn('floor_id', $charge->target_ids ?? []))
+                ->whereHas('unit', fn ($q) => $q->where('compound_id', $charge->compound_id)->whereIn('floor_id', $charge->target_ids ?? []))
                 ->get(),
             'unit' => UnitAccount::query()
-                ->whereHas('unit', fn ($q) => $q->whereIn('id', $charge->target_ids ?? []))
+                ->whereHas('unit', fn ($q) => $q->where('compound_id', $charge->compound_id)->whereIn('id', $charge->target_ids ?? []))
                 ->get(),
             default => collect(),
         };

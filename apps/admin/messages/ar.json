@@ -63,9 +63,10 @@
     }
   },
   "Dashboard": {
-    "eyebrow": "عمليات المجمع",
-    "title": "مركز التحكم الإنتاجي",
-    "signedInAs": "تم تسجيل الدخول باسم {name} / {role}",
+  "eyebrow": "عمليات المجمع",
+  "title": "مركز التحكم الإنتاجي",
+  "modules": "الوحدات",
+  "signedInAs": "تم تسجيل الدخول باسم {name} / {role}",
     "actions": {
       "reviewQueue": "مراجعة قائمة الانتظار",
       "systemStatus": "حالة النظام"

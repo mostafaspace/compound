@@ -4,6 +4,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 
 import { LogoutButton } from "@/components/logout-button";
 import { getCompounds, getCurrentUser, getSystemStatus, getVotes } from "@/lib/api";
+import { hasEffectiveRole } from "@/lib/auth-access";
 import { getCompoundContext, requireAdminUser } from "@/lib/session";
 
 import { activateVoteAction, cancelVoteAction, createVoteAction } from "./actions";
@@ -42,7 +43,7 @@ export default async function GovernancePage({ searchParams }: GovernancePagePro
   ]);
   const isDegraded = systemStatus?.status !== "ok";
   const showDegradedWarning = isDegraded && votes.length === 0;
-  const isSuperAdmin = currentUser?.role === "super_admin";
+  const isSuperAdmin = currentUser ? hasEffectiveRole(currentUser, "super_admin") : false;
   const defaultCompoundId = activeCompoundId ?? compounds[0]?.id ?? "";
   const lockedCompound = compounds.find((compound) => compound.id === defaultCompoundId) ?? compounds[0] ?? null;
   const canCreateVote = isSuperAdmin ? compounds.length > 0 : Boolean(lockedCompound);

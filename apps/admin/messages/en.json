@@ -63,9 +63,10 @@
     }
   },
   "Dashboard": {
-    "eyebrow": "Compound operations",
-    "title": "Production control center",
-    "signedInAs": "Signed in as {name} / {role}",
+  "eyebrow": "Compound operations",
+  "title": "Production control center",
+  "modules": "Modules",
+  "signedInAs": "Signed in as {name} / {role}",
     "actions": {
       "reviewQueue": "Review queue",
       "systemStatus": "System status"

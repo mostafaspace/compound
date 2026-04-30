@@ -4,7 +4,8 @@ import { notFound } from "next/navigation";
 import { OrgChartView } from "@/components/orgchart-view";
 import { SiteNav } from "@/components/site-nav";
 import { getCompound, getCurrentUser } from "@/lib/api";
-import { getCompoundOrgChart } from "@/lib/orgchart";
+import { hasEffectiveRole } from "@/lib/auth-access";
+import { getCompoundOrgChart } from "@/lib/orgchart-actions";
 import { requireAdminUser } from "@/lib/session";
 
 interface OrgChartPageProps {
@@ -15,12 +16,8 @@ interface OrgChartPageProps {
 
 export default async function OrgChartPage({ params }: OrgChartPageProps) {
   const { compoundId } = await params;
-  const currentUser = await getCurrentUser();
-  const canManage = currentUser?.role === "super_admin" || currentUser?.role === "compound_admin";
-
-  if (canManage) {
-    await requireAdminUser(getCurrentUser);
-  }
+  const currentUser = await requireAdminUser(getCurrentUser);
+  const canManage = hasEffectiveRole(currentUser, "super_admin") || hasEffectiveRole(currentUser, "compound_admin");
 
   const [compound, orgChart] = await Promise.all([getCompound(compoundId), getCompoundOrgChart(compoundId)]);
 

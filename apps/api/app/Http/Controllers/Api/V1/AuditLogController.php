@@ -20,7 +20,7 @@ class AuditLogController extends Controller
     {
         $validated = $request->validate([
             'action'        => ['nullable', 'string', 'max:160'],
-            'actorId'       => ['nullable', 'integer', 'min:1'],
+            'actorId'       => ['nullable', 'string', 'max:200'],
             'from'          => ['nullable', 'date'],
             'method'        => ['nullable', 'string', 'max:10'],
             'module'        => ['nullable', 'string', 'max:80'],
@@ -49,18 +49,21 @@ class AuditLogController extends Controller
             'entity_id'   => ['required', 'string', 'max:200'],
         ]);
 
-        $compoundId = $this->compoundContext->resolve($request);
+        /** @var User $actor */
+        $actor = $request->user();
+        $requestedCompoundId = $request->header('X-Compound-Id') ?: $request->query('compoundId');
+        $compoundIds = $this->compoundContext->resolveRequestedAccessibleCompoundIds($actor, $requestedCompoundId);
 
         $query = AuditLog::query()
             ->with('actor')
             ->where('auditable_type', $validated['entity_type'])
             ->where('auditable_id', $validated['entity_id'])
-            ->when($compoundId !== null, function ($builder) use ($compoundId): void {
-                $builder->where(function ($scoped) use ($compoundId): void {
+            ->when($compoundIds !== null, function ($builder) use ($compoundIds): void {
+                $builder->where(function ($scoped) use ($compoundIds): void {
                     $scoped
-                        ->whereHas('actor', fn ($q) => $this->scopeUsersToCompound($q, $compoundId))
-                        ->orWhere('metadata->compound_id', $compoundId)
-                        ->orWhere('metadata->compoundId', $compoundId);
+                        ->whereHas('actor', fn ($q) => $q->whereIn('compound_id', $compoundIds))
+                        ->orWhereIn('metadata->compound_id', $compoundIds)
+                        ->orWhereIn('metadata->compoundId', $compoundIds);
                 });
             })
             ->oldest();
@@ -75,7 +78,7 @@ class AuditLogController extends Controller
     {
         $validated = $request->validate([
             'action'        => ['nullable', 'string', 'max:160'],
-            'actorId'       => ['nullable', 'integer', 'min:1'],
+            'actorId'       => ['nullable', 'string', 'max:200'],
             'from'          => ['nullable', 'date'],
             'method'        => ['nullable', 'string', 'max:10'],
             'module'        => ['nullable', 'string', 'max:80'],
@@ -142,20 +145,23 @@ class AuditLogController extends Controller
      */
     private function buildBaseQuery(Request $request, array $validated): \Illuminate\Database\Eloquent\Builder
     {
-        $compoundId = $this->compoundContext->resolve($request);
+        /** @var User $actor */
+        $actor = $request->user();
+        $requestedCompoundId = $request->header('X-Compound-Id') ?: $request->query('compoundId');
+        $compoundIds = $this->compoundContext->resolveRequestedAccessibleCompoundIds($actor, $requestedCompoundId);
 
         return AuditLog::query()
             ->with('actor')
-            ->when($compoundId !== null, function ($builder) use ($compoundId): void {
-                $builder->where(function ($scoped) use ($compoundId): void {
+            ->when($compoundIds !== null, function ($builder) use ($compoundIds): void {
+                $builder->where(function ($scoped) use ($compoundIds): void {
                     $scoped
-                        ->whereHas('actor', fn ($actorQuery) => $this->scopeUsersToCompound($actorQuery, $compoundId))
-                        ->orWhere('metadata->compound_id', $compoundId)
-                        ->orWhere('metadata->compoundId', $compoundId);
+                        ->whereHas('actor', fn ($actorQuery) => $this->compoundContext->scopeUsersToCompounds($actorQuery, $compoundIds))
+                        ->orWhereIn('metadata->compound_id', $compoundIds)
+                        ->orWhereIn('metadata->compoundId', $compoundIds);
                 });
             })
             ->when($validated['action'] ?? null, fn ($b, string $v) => $b->where('action', $v))
-            ->when($validated['actorId'] ?? null, fn ($b, int $v) => $b->where('actor_id', $v))
+            ->when($validated['actorId'] ?? null, fn ($b, string $v) => $b->where('actor_id', $v))
             ->when($validated['method'] ?? null, fn ($b, string $v) => $b->where('method', $v))
             ->when($validated['severity'] ?? null, fn ($b, string $v) => $b->where('severity', $v))
             ->when($validated['module'] ?? null, fn ($b, string $v) => $b->where('action', 'like', $v.'.%'))
@@ -177,14 +183,5 @@ class AuditLogController extends Controller
                 });
             })
             ->latest();
-    }
-
-    private function scopeUsersToCompound($query, string $compoundId): void
-    {
-        $query->where(function ($scoped) use ($compoundId): void {
-            $scoped
-                ->where('compound_id', $compoundId)
-                ->orWhereHas('unitMemberships.unit', fn ($unitQuery) => $unitQuery->where('compound_id', $compoundId));
-        });
     }
 }

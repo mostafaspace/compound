@@ -8,11 +8,19 @@ use App\Models\Maintenance\WorkOrderEstimate;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
+use App\Services\CompoundContextService;
+
 // CM-83 / CM-118: Vendor estimates for work orders
 class WorkOrderEstimateController extends Controller
 {
+    public function __construct(private readonly CompoundContextService $context) {}
+
     public function store(Request $request, WorkOrder $workOrder): JsonResponse
     {
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+        $this->context->ensureUserCanAccessCompound($user, $workOrder->compound_id);
+
         abort_if(in_array($workOrder->status, ['completed', 'cancelled', 'rejected'], true), 422, 'Cannot add estimates to a closed work order.');
 
         $validated = $request->validate([
@@ -20,9 +28,6 @@ class WorkOrderEstimateController extends Controller
             'amount'   => ['required', 'numeric', 'min:0'],
             'notes'    => ['nullable', 'string', 'max:2000'],
         ]);
-
-        /** @var \App\Models\User $user */
-        $user = $request->user();
 
         $estimate = WorkOrderEstimate::create([
             'work_order_id' => $workOrder->id,
@@ -46,6 +51,10 @@ class WorkOrderEstimateController extends Controller
 
     public function review(Request $request, WorkOrder $workOrder, WorkOrderEstimate $estimate): JsonResponse
     {
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+        $this->context->ensureUserCanAccessCompound($user, $workOrder->compound_id);
+
         abort_if((string) $estimate->work_order_id !== (string) $workOrder->id, 404);
         abort_if($estimate->status !== 'pending', 422, 'Estimate has already been reviewed.');
 
@@ -53,9 +62,6 @@ class WorkOrderEstimateController extends Controller
             'status'      => ['required', 'string', 'in:approved,rejected'],
             'reviewNotes' => ['nullable', 'string', 'max:1000'],
         ]);
-
-        /** @var \App\Models\User $user */
-        $user = $request->user();
 
         $estimate->update([
             'status'       => $validated['status'],

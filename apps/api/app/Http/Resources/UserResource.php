@@ -23,7 +23,7 @@ class UserResource extends JsonResource
             'phone' => $this->phone,
             'photoUrl' => $this->photo_url,
             'compoundId' => $this->compound_id,
-            'role' => $this->role->value,
+            'role' => $this->effective_role,
             'status' => $this->status->value,
             'emailVerifiedAt' => $this->email_verified_at?->toJSON(),
             'lastLoginAt'     => $this->last_login_at?->toJSON(),

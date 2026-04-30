@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Enums\ContactVisibility;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RepresentativeAssignmentResource;
@@ -10,6 +9,7 @@ use App\Models\Property\Compound;
 use App\Models\Property\Unit;
 use App\Models\RepresentativeAssignment;
 use App\Models\User;
+use App\Services\OrgChartService;
 use App\Services\CompoundContextService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -35,7 +35,10 @@ class OrgChartController extends Controller
         UserRole::ResidentTenant,
     ];
 
-    public function __construct(private readonly CompoundContextService $compoundContext) {}
+    public function __construct(
+        private readonly CompoundContextService $compoundContext,
+        private readonly OrgChartService $orgChartService,
+    ) {}
 
     public function show(Request $request, Compound $compound): JsonResponse
     {
@@ -44,74 +47,109 @@ class OrgChartController extends Controller
         /** @var User $viewer */
         $viewer = $request->user();
 
-        $isAdmin = $viewer->hasAnyEffectiveRole(self::ADMIN_ROLES);
+        $tree = $this->orgChartService->getTree($compound, $viewer);
 
-        $visibilityFilter = $isAdmin
-            ? null
-            : [ContactVisibility::AllResidents->value];
+        return response()->json(['data' => $tree]);
+    }
 
-        $assignments = RepresentativeAssignment::query()
-            ->with(['user', 'building', 'floor'])
+    public function personDetail(Request $request, User $user): JsonResponse
+    {
+        $this->compoundContext->ensureUserAccess($request, $user);
+
+        $managedScopes = RepresentativeAssignment::query()
             ->active()
-            ->forCompound($compound->id)
-            ->when($visibilityFilter !== null, fn ($q) => $q->whereIn('contact_visibility', $visibilityFilter))
-            ->get();
-
-        $compoundLevel = $assignments->filter(fn ($a) => $a->building_id === null && $a->floor_id === null);
-        $buildingLevel = $assignments->filter(fn ($a) => $a->building_id !== null && $a->floor_id === null);
-        $floorLevel = $assignments->filter(fn ($a) => $a->floor_id !== null);
-
-        $buildings = $compound->buildings()
-            ->with('floors')
-            ->orderBy('sort_order')
+            ->where('user_id', $user->id)
             ->get()
-            ->map(function ($building) use ($buildingLevel, $floorLevel, $isAdmin, $viewer): array {
-                $buildingAssignments = $buildingLevel->filter(fn ($a) => $a->building_id === $building->id);
-
-                if (! $isAdmin) {
-                    $buildingAssignments = $buildingAssignments->filter(fn ($a) => $this->canViewContact($a, $viewer));
-                }
-
-                $floors = $building->floors
-                    ->sortBy('sort_order')
-                    ->map(function ($floor) use ($floorLevel, $isAdmin, $viewer): array {
-                        $floorAssignments = $floorLevel->filter(fn ($a) => $a->floor_id === $floor->id);
-
-                        if (! $isAdmin) {
-                            $floorAssignments = $floorAssignments->filter(fn ($a) => $this->canViewContact($a, $viewer));
-                        }
-
-                        return [
-                            'id' => $floor->id,
-                            'label' => $floor->label,
-                            'levelNumber' => $floor->level_number,
-                            'representatives' => RepresentativeAssignmentResource::collection($floorAssignments->values()),
-                        ];
-                    })->values();
-
-                return [
-                    'id' => $building->id,
-                    'name' => $building->name,
-                    'code' => $building->code,
-                    'representatives' => RepresentativeAssignmentResource::collection($buildingAssignments->values()),
-                    'floors' => $floors,
-                ];
-            });
-
-        $compoundRepresentatives = $isAdmin
-            ? $compoundLevel
-            : $compoundLevel->filter(fn ($a) => $this->canViewContact($a, $viewer));
+            ->map(fn (RepresentativeAssignment $assignment) => [
+                'role' => $assignment->role->value,
+                'scope' => $assignment->role->scopeLevel(),
+                'building_id' => $assignment->building_id,
+                'floor_id' => $assignment->floor_id,
+            ])
+            ->values();
 
         return response()->json([
             'data' => [
-                'compound' => [
-                    'id' => $compound->id,
-                    'name' => $compound->name,
-                    'representatives' => RepresentativeAssignmentResource::collection($compoundRepresentatives->values()),
-                ],
-                'buildings' => $buildings,
-            ],
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'photo_url' => $user->photo_url,
+                'roles' => $user->roles()->pluck('name'),
+                'managed_scopes' => $managedScopes,
+            ]
         ]);
+    }
+
+    public function assignBuildingHead(Request $request, \App\Models\Property\Building $building): JsonResponse
+    {
+        /** @var User $actor */
+        $actor = $request->user();
+        $this->compoundContext->ensureCompoundAccess($request, $building->compound_id);
+
+        $request->validate([
+            'userId' => 'required|exists:users,id',
+        ]);
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($building, $request, $actor) {
+            // Expire old building reps
+            RepresentativeAssignment::query()
+                ->active()
+                ->forBuilding($building->id)
+                ->where('role', 'building_representative')
+                ->update(['is_active' => false, 'ends_at' => now()]);
+
+            // Create new
+            RepresentativeAssignment::create([
+                'compound_id' => $building->compound_id,
+                'building_id' => $building->id,
+                'user_id' => $request->integer('userId'),
+                'role' => 'building_representative',
+                'starts_at' => now(),
+                'is_active' => true,
+                'appointed_by' => $actor->id,
+            ]);
+
+            $this->orgChartService->invalidateCache($building->compound_id);
+        });
+
+        return response()->json(['message' => 'Building head assigned successfully.']);
+    }
+
+    public function assignFloorRepresentative(Request $request, \App\Models\Property\Floor $floor): JsonResponse
+    {
+        /** @var User $actor */
+        $actor = $request->user();
+        $this->compoundContext->ensureCompoundAccess($request, $floor->building->compound_id);
+
+        $request->validate([
+            'userId' => 'required|exists:users,id',
+        ]);
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($floor, $request, $actor) {
+            // Expire old floor reps
+            RepresentativeAssignment::query()
+                ->active()
+                ->forFloor($floor->id)
+                ->where('role', 'floor_representative')
+                ->update(['is_active' => false, 'ends_at' => now()]);
+
+            // Create new
+            RepresentativeAssignment::create([
+                'compound_id' => $floor->building->compound_id,
+                'building_id' => $floor->building_id,
+                'floor_id' => $floor->id,
+                'user_id' => $request->integer('userId'),
+                'role' => 'floor_representative',
+                'starts_at' => now(),
+                'is_active' => true,
+                'appointed_by' => $actor->id,
+            ]);
+
+            $this->orgChartService->invalidateCache($floor->building->compound_id);
+        });
+
+        return response()->json(['message' => 'Floor representative assigned successfully.']);
     }
 
     public function responsibleParty(Request $request, Unit $unit): JsonResponse
@@ -173,12 +211,7 @@ class OrgChartController extends Controller
 
     private function canViewContact(RepresentativeAssignment $assignment, User $viewer): bool
     {
-        return match ($assignment->contact_visibility) {
-            ContactVisibility::AllResidents => true,
-            ContactVisibility::AdminsOnly => false,
-            ContactVisibility::BuildingResidents => true,
-            ContactVisibility::FloorResidents => true,
-        };
+        return $this->orgChartService->canViewerSeeAssignment($assignment, $viewer);
     }
 
     private function ensureViewerCanAccessCompound(Request $request, string $compoundId): void

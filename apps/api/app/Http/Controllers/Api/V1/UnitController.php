@@ -36,21 +36,28 @@ class UnitController extends Controller
     public function lookup(IndexUnitsRequest $request): AnonymousResourceCollection
     {
         $validated = $request->validated();
-        $scopedCompoundId = $this->compoundContext->resolve($request);
-
-        if (filled($scopedCompoundId) && filled($validated['compoundId'] ?? null) && $validated['compoundId'] !== $scopedCompoundId) {
-            abort(Response::HTTP_FORBIDDEN);
-        }
+        $actor = $request->user();
+        $accessibleCompoundIds = $this->compoundContext->resolveRequestedAccessibleCompoundIds(
+            $actor,
+            $validated['compoundId'] ?? null,
+        );
+        $hasExplicitScopeAssignments = $actor->scopeAssignments()->exists();
 
         $units = Unit::query()
             ->with(['compound', 'building', 'floor', 'memberships.user'])
             ->when(! $request->boolean('includeArchived'), function (Builder $query): void {
                 $query->whereNull('archived_at')->where('status', '!=', UnitStatus::Archived->value);
             })
-            ->when($scopedCompoundId, fn (Builder $query, string $compoundId) => $query->where('compound_id', $compoundId))
-            ->when($validated['compoundId'] ?? null, fn (Builder $query, string $compoundId) => $query->where('compound_id', $compoundId))
-            ->when($validated['buildingId'] ?? null, fn (Builder $query, string $buildingId) => $query->where('building_id', $buildingId))
-            ->when($validated['floorId'] ?? null, fn (Builder $query, string $floorId) => $query->where('floor_id', $floorId))
+            ->when($accessibleCompoundIds !== null, fn (Builder $query) => $query->whereIn('compound_id', $accessibleCompoundIds))
+            ->when($hasExplicitScopeAssignments, fn (Builder $query) => $this->compoundContext->scopePropertyQuery($query, $actor))
+            ->when($validated['buildingId'] ?? null, function (Builder $query, string $buildingId) use ($request): void {
+                $this->compoundContext->ensureUserCanAccessBuilding($request->user(), $buildingId);
+                $query->where('building_id', $buildingId);
+            })
+            ->when($validated['floorId'] ?? null, function (Builder $query, string $floorId) use ($request): void {
+                $this->compoundContext->ensureUserCanAccessFloor($request->user(), $floorId);
+                $query->where('floor_id', $floorId);
+            })
             ->when($validated['status'] ?? null, fn (Builder $query, string $status) => $query->where('status', $status))
             ->when($validated['type'] ?? null, fn (Builder $query, string $type) => $query->where('type', $type))
             ->when($validated['search'] ?? null, function (Builder $query, string $search): void {
@@ -93,7 +100,7 @@ class UnitController extends Controller
 
     public function index(Request $request, Building $building): AnonymousResourceCollection
     {
-        $this->compoundContext->ensureCompoundAccess($request, $building->compound_id);
+        $this->compoundContext->ensureUserCanAccessBuilding($request->user(), $building->id);
 
         $units = $building->units()
             ->orderBy('unit_number')
@@ -104,7 +111,7 @@ class UnitController extends Controller
 
     public function import(ImportUnitsRequest $request, Building $building): JsonResponse
     {
-        $this->compoundContext->ensureCompoundAccess($request, $building->compound_id);
+        $this->compoundContext->ensureUserCanAccessBuilding($request->user(), $building->id);
 
         $dryRun = $request->boolean('dryRun');
         $parsed = $this->parseUnitCsv($request->file('file')->getRealPath());
@@ -212,7 +219,7 @@ class UnitController extends Controller
 
     public function export(Request $request, Building $building): StreamedResponse
     {
-        $this->compoundContext->ensureCompoundAccess($request, $building->compound_id);
+        $this->compoundContext->ensureUserCanAccessBuilding($request->user(), $building->id);
 
         $this->auditLogger->record('property.units_exported', actor: $request->user(), request: $request, metadata: [
             'building_id' => $building->id,
@@ -250,7 +257,7 @@ class UnitController extends Controller
 
     public function store(StoreUnitRequest $request, Building $building): JsonResponse
     {
-        $this->compoundContext->ensureCompoundAccess($request, $building->compound_id);
+        $this->compoundContext->ensureUserCanAccessBuilding($request->user(), $building->id);
 
         $validated = $request->validated();
 
@@ -271,7 +278,7 @@ class UnitController extends Controller
 
     public function show(Request $request, Unit $unit): UnitResource
     {
-        $this->compoundContext->ensureCompoundAccess($request, $unit->compound_id);
+        abort_unless($this->compoundContext->userCanAccessUnit($request->user(), $unit->id), Response::HTTP_FORBIDDEN);
 
         return UnitResource::make($unit->load(['compound', 'building', 'floor', 'memberships.user']));
     }
@@ -295,7 +302,11 @@ class UnitController extends Controller
 
     public function update(UpdateUnitRequest $request, Unit $unit): UnitResource
     {
-        $this->compoundContext->ensureCompoundAccess($request, $unit->compound_id);
+        $this->compoundContext->ensureUserCanAccessBuilding($request->user(), $unit->building_id);
+
+        if ($unit->floor_id) {
+            $this->compoundContext->ensureUserCanAccessFloor($request->user(), $unit->floor_id);
+        }
 
         $validated = $request->validated();
 
@@ -313,7 +324,11 @@ class UnitController extends Controller
 
     public function archive(ArchivePropertyRequest $request, Unit $unit): UnitResource
     {
-        $this->compoundContext->ensureCompoundAccess($request, $unit->compound_id);
+        $this->compoundContext->ensureUserCanAccessBuilding($request->user(), $unit->building_id);
+
+        if ($unit->floor_id) {
+            $this->compoundContext->ensureUserCanAccessFloor($request->user(), $unit->floor_id);
+        }
 
         $validated = $request->validated();
 

@@ -179,8 +179,18 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         // Org chart and responsible-party lookup — visible to all authenticated users
         Route::get('/compounds/{compound}/org-chart', [OrgChartController::class, 'show'])
             ->name('compounds.org-chart');
+        Route::get('/org-chart/person/{user}', [OrgChartController::class, 'personDetail'])
+            ->name('org-chart.person-detail');
         Route::get('/units/{unit}/responsible-party', [OrgChartController::class, 'responsibleParty'])
             ->name('units.responsible-party');
+
+        // Mutation endpoints for Org Chart (Admin only)
+        Route::middleware('role:manage_users')->group(function (): void {
+            Route::patch('/org-chart/building/{building}/head', [OrgChartController::class, 'assignBuildingHead'])
+                ->name('org-chart.assign-building-head');
+            Route::patch('/org-chart/floor/{floor}/representative', [OrgChartController::class, 'assignFloorRepresentative'])
+                ->name('org-chart.assign-floor-representative');
+        });
     });
 
     Route::middleware(['auth:sanctum', 'role:view_users'])

@@ -15,38 +15,24 @@ class MeetingController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $compoundId = $this->context->resolve($request);
+        /** @var \App\Models\User $actor */
+        $actor = $request->user();
+        $requestedCompoundId = $request->header('X-Compound-Id') ?: $request->query('compoundId');
+        $compoundIds = $this->context->resolveRequestedAccessibleCompoundIds($actor, $requestedCompoundId);
 
         $query = Meeting::with(['creator'])
-            ->latest('scheduled_at');
-
-        if ($compoundId !== null) {
-            $query->where('compound_id', $compoundId);
-        }
-
-        if ($request->has('status') && $request->input('status') !== 'all') {
-            $query->where('status', $request->input('status'));
-        }
-
-        if ($request->has('scope') && $request->input('scope') !== 'all') {
-            $query->where('scope', $request->input('scope'));
-        }
-
-        if ($request->has('from')) {
-            $query->where('scheduled_at', '>=', $request->input('from'));
-        }
-
-        if ($request->has('to')) {
-            $query->where('scheduled_at', '<=', $request->input('to').' 23:59:59');
-        }
+            ->latest('scheduled_at')
+            ->when($compoundIds !== null, fn ($q) => $q->whereIn('compound_id', $compoundIds))
+            ->when($request->filled('status') && $request->input('status') !== 'all', fn ($q) => $q->where('status', $request->input('status')))
+            ->when($request->filled('scope') && $request->input('scope') !== 'all', fn ($q) => $q->where('scope', $request->input('scope')))
+            ->when($request->filled('from'), fn ($q) => $q->where('scheduled_at', '>=', $request->input('from')))
+            ->when($request->filled('to'), fn ($q) => $q->where('scheduled_at', '<=', $request->input('to').' 23:59:59'));
 
         return response()->json(['data' => $query->paginate(20)]);
     }
 
     public function store(Request $request): JsonResponse
     {
-        $compoundId = $this->context->resolve($request);
-
         $validated = $request->validate([
             'compoundId'      => ['nullable', 'string', 'max:26'],
             'title'           => ['required', 'string', 'max:200'],
@@ -62,8 +48,13 @@ class MeetingController extends Controller
         /** @var \App\Models\User $user */
         $user = $request->user();
 
+        $requestedCompoundId = $validated['compoundId'] ?: $request->header('X-Compound-Id') ?: $request->query('compoundId');
+        $compoundId = $this->context->resolveRequestedAccessibleCompoundId($user, $requestedCompoundId);
+
+        abort_unless(filled($compoundId), 422, 'A valid compoundId is required to schedule a meeting.');
+
         $meeting = Meeting::create([
-            'compound_id'     => $compoundId ?? $validated['compoundId'],
+            'compound_id'     => $compoundId,
             'title'           => $validated['title'],
             'description'     => $validated['description'] ?? null,
             'scope'           => $validated['scope'],
@@ -79,8 +70,10 @@ class MeetingController extends Controller
         return response()->json(['data' => $meeting->load('creator')], 201);
     }
 
-    public function show(Meeting $meeting): JsonResponse
+    public function show(Request $request, Meeting $meeting): JsonResponse
     {
+        $this->context->ensureUserCanAccessCompound($request->user(), $meeting->compound_id);
+
         return response()->json([
             'data' => $meeting->load([
                 'creator',
@@ -95,6 +88,7 @@ class MeetingController extends Controller
 
     public function update(Request $request, Meeting $meeting): JsonResponse
     {
+        $this->context->ensureUserCanAccessCompound($request->user(), $meeting->compound_id);
         abort_if($meeting->status === 'cancelled', 422, 'Cannot update a cancelled meeting.');
 
         $validated = $request->validate([
@@ -133,6 +127,7 @@ class MeetingController extends Controller
 
     public function cancel(Request $request, Meeting $meeting): JsonResponse
     {
+        $this->context->ensureUserCanAccessCompound($request->user(), $meeting->compound_id);
         abort_if(in_array($meeting->status, ['cancelled', 'completed'], true), 422, 'Meeting cannot be cancelled.');
 
         /** @var \App\Models\User $user */

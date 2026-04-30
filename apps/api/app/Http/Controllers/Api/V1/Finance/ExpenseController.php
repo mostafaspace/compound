@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Finance\ExpenseResource;
 use App\Models\Finance\BudgetCategory;
 use App\Models\Finance\Expense;
+use App\Models\User;
 use App\Services\CompoundContextService;
 use App\Support\AuditLogger;
 use Illuminate\Http\JsonResponse;
@@ -25,15 +26,14 @@ class ExpenseController extends Controller
 
     public function index(Request $request): AnonymousResourceCollection
     {
-        $compoundId = $this->compoundContextService->resolve($request);
+        /** @var User $actor */
+        $actor = $request->user();
+        $compoundIds = $this->compoundContextService->resolveAccessibleCompoundIds($actor);
 
         $query = Expense::query()
             ->with(['budgetCategory', 'vendor', 'submitter', 'approver'])
+            ->when($compoundIds !== null, fn ($q) => $q->whereIn('compound_id', $compoundIds))
             ->latest('expense_date');
-
-        if ($compoundId) {
-            $query->where('compound_id', $compoundId);
-        }
 
         if ($request->filled('status')) {
             $query->where('status', $request->input('status'));
@@ -55,16 +55,15 @@ class ExpenseController extends Controller
      */
     public function publicSummary(Request $request): AnonymousResourceCollection
     {
-        $compoundId = $this->compoundContextService->resolve($request);
+        /** @var User $actor */
+        $actor = $request->user();
+        $compoundIds = $this->compoundContextService->resolveAccessibleCompoundIds($actor);
 
         $query = Expense::query()
             ->with(['budgetCategory', 'vendor'])
             ->where('status', ExpenseStatus::Approved)
+            ->when($compoundIds !== null, fn ($q) => $q->whereIn('compound_id', $compoundIds))
             ->latest('expense_date');
-
-        if ($compoundId) {
-            $query->where('compound_id', $compoundId);
-        }
 
         if ($request->filled('period_year')) {
             $query->whereYear('expense_date', (int) $request->input('period_year'));
@@ -86,7 +85,7 @@ class ExpenseController extends Controller
             'expense_date'       => ['required', 'date'],
         ]);
 
-        $this->compoundContextService->ensureCompoundAccess($request, $data['compound_id']);
+        $this->compoundContextService->ensureUserCanAccessCompound($request->user(), $data['compound_id']);
 
         // Ensure budget category belongs to this compound's budget
         if (! empty($data['budget_category_id'])) {
@@ -111,14 +110,14 @@ class ExpenseController extends Controller
 
     public function show(Request $request, Expense $expense): ExpenseResource
     {
-        $this->compoundContextService->ensureCompoundAccess($request, $expense->compound_id);
+        $this->compoundContextService->ensureUserCanAccessCompound($request->user(), $expense->compound_id);
 
         return new ExpenseResource($expense->load(['budgetCategory', 'vendor', 'submitter', 'approver', 'approvals.actor']));
     }
 
     public function approve(Request $request, Expense $expense): ExpenseResource
     {
-        $this->compoundContextService->ensureCompoundAccess($request, $expense->compound_id);
+        $this->compoundContextService->ensureUserCanAccessCompound($request->user(), $expense->compound_id);
 
         abort_if($expense->status !== ExpenseStatus::PendingApproval, Response::HTTP_UNPROCESSABLE_ENTITY, 'Expense is not pending approval.');
 
@@ -150,7 +149,7 @@ class ExpenseController extends Controller
 
     public function reject(Request $request, Expense $expense): ExpenseResource
     {
-        $this->compoundContextService->ensureCompoundAccess($request, $expense->compound_id);
+        $this->compoundContextService->ensureUserCanAccessCompound($request->user(), $expense->compound_id);
 
         abort_if($expense->status !== ExpenseStatus::PendingApproval, Response::HTTP_UNPROCESSABLE_ENTITY, 'Expense is not pending approval.');
 

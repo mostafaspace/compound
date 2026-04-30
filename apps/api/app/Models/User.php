@@ -45,17 +45,20 @@ class User extends Authenticatable
         return 'sanctum';
     }
 
+    /**
+     * Returns the authoritative role name for the user.
+     * Prefers Spatie roles, falls back to the legacy role column.
+     */
+    public function getEffectiveRoleAttribute(): string
+    {
+        return $this->effectiveRoleNames()[0] ?? ($this->role instanceof UserRole ? $this->role->value : (string) $this->role);
+    }
+
     public function hasEffectiveRole(UserRole|string $role): bool
     {
         $roleName = $role instanceof UserRole ? $role->value : $role;
 
-        foreach ($this->effectiveRoleCandidates($roleName) as $candidate) {
-            if (in_array($candidate, $this->effectiveRoleNames(), strict: true)) {
-                return true;
-            }
-        }
-
-        return false;
+        return in_array($roleName, $this->effectiveRoleNames(), true);
     }
 
     /**

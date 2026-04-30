@@ -1,3 +1,6 @@
+import type { AssignableUserLike, OrgChartPersonDetail, OrgChartRepresentativeLike } from "./orgchart-utils";
+export { buildOrgChartTree, formatAssignableUserLabel, mergeRepresentativeWithPersonDetail, parseAssignmentUserId } from "./orgchart-utils";
+
 // Type definitions (will be moved to @compound/contracts later)
 export type RepresentativeRole =
   | "floor_representative"
@@ -49,19 +52,44 @@ export interface UpdateRepresentativeAssignmentInput {
 
 export interface OrgChartRepresentative {
   id: string;
+  compoundId?: string;
+  buildingId?: string | null;
+  floorId?: string | null;
   userId: number;
-  user: { id: number; name: string; photoUrl?: string | null };
+  user: { 
+    id: number; 
+    name: string; 
+    email?: string;
+    phone?: string;
+    photoUrl?: string | null 
+  };
   role: RepresentativeRole;
   scopeLevel: "compound" | "building" | "floor";
   contactVisibility: ContactVisibility;
   isActive: boolean;
 }
 
+export type OrgChartRepresentativeSnapshot = OrgChartRepresentativeLike;
+export type { OrgChartPersonDetail };
+export interface OrgChartAssignableUser extends AssignableUserLike {}
+
+export interface OrgChartResident {
+  id: number;
+  name: string;
+  photoUrl?: string | null;
+}
+
+export interface OrgChartUnit {
+  id: string;
+  unitNumber: string;
+  residents: OrgChartResident[];
+}
+
 export interface OrgChartFloor {
   id: string;
   label: string;
-  levelNumber: number;
   representatives: OrgChartRepresentative[];
+  units: OrgChartUnit[];
 }
 
 export interface OrgChartBuilding {
@@ -97,15 +125,3 @@ export interface ListRepresentativesFilters {
   buildingId?: string;
   floorId?: string;
 }
-
-// Re-export server actions
-export {
-  getCompoundOrgChart,
-  getResponsibleParty,
-  listRepresentativeAssignments,
-  listAllRepresentativeAssignments,
-  createRepresentativeAssignment,
-  getRepresentativeAssignment,
-  updateRepresentativeAssignment,
-  expireRepresentativeAssignment,
-} from "./orgchart-actions";

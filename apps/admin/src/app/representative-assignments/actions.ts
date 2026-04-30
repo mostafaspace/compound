@@ -7,7 +7,7 @@ import { getCompounds } from "@/lib/api";
 import {
   createRepresentativeAssignment,
   expireRepresentativeAssignment,
-} from "@/lib/orgchart";
+} from "@/lib/orgchart-actions";
 import type { RepresentativeRole } from "@/lib/orgchart";
 import { getCompoundContext } from "@/lib/session";
 

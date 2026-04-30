@@ -3,6 +3,9 @@
 namespace App\Services;
 
 use App\Enums\UserRole;
+use App\Models\Property\Building;
+use App\Models\Property\Floor;
+use App\Models\Property\Unit;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -45,33 +48,10 @@ class CompoundContextService
             return null;
         }
 
-        // Super-admin: honour an explicit compound header or query parameter.
-        if ($this->isEffectiveSuperAdmin($user)) {
-            $header = $request->header('X-Compound-Id');
-            if (filled($header)) {
-                return $header;
-            }
-
-            $param = $request->query('compoundId');
-            if (filled($param)) {
-                return $param;
-            }
-        }
-
-        if ($user->hasEffectiveRole(UserRole::CompoundAdmin)) {
-            $managedCompoundId = $this->resolveManagedCompoundId($user);
-
-            abort_unless($managedCompoundId !== null, Response::HTTP_FORBIDDEN);
-
-            return $managedCompoundId;
-        }
-
-        // Other compound-scoped staff: hard-lock to their assigned compound.
-        if ($user->compound_id !== null) {
-            return $user->compound_id;
-        }
-
-        return null;
+        return $this->resolveRequestedAccessibleCompoundId(
+            $user,
+            $request->header('X-Compound-Id') ?? $request->query('compoundId')
+        );
     }
 
     /**
@@ -92,17 +72,7 @@ class CompoundContextService
             return false;
         }
 
-        if ($this->isEffectiveSuperAdmin($user)) {
-            return true;
-        }
-
-        if ($user->hasEffectiveRole(UserRole::CompoundAdmin)) {
-            $managedCompoundId = $this->resolveManagedCompoundId($user);
-
-            return $managedCompoundId !== null && $managedCompoundId === $compoundId;
-        }
-
-        return filled($user->compound_id) && $user->compound_id === $compoundId;
+        return $this->userCanAccessCompoundById($user, $compoundId);
     }
 
     public function ensureCompoundAccess(Request $request, string $compoundId): void
@@ -151,6 +121,23 @@ class CompoundContextService
                 ->where('compound_id', $compoundId)
                 ->orWhereHas('unitMemberships.unit', fn ($unitQuery) => $unitQuery->where('compound_id', $compoundId));
         });
+    }
+
+    /**
+     * @param  array<string>  $compoundIds
+     */
+    public function scopeUsersToCompounds($query, array $compoundIds): void
+    {
+        $query->where(function ($scoped) use ($compoundIds): void {
+            $scoped
+                ->whereIn('compound_id', $compoundIds)
+                ->orWhereHas('unitMemberships.unit', fn ($unitQuery) => $unitQuery->whereIn('compound_id', $compoundIds));
+        });
+    }
+
+    public function scopePropertyQuery(\Illuminate\Database\Eloquent\Builder $query, User $user): void
+    {
+        $this->scopeResolver->scopePropertyQuery($query, $user);
     }
 
     public function resolveUserCompoundId(User $user): ?string
@@ -321,6 +308,144 @@ class CompoundContextService
     public function ensureGlobalCompoundAccess(Request $request): void
     {
         abort_unless($this->canManageAllCompounds($request), Response::HTTP_FORBIDDEN);
+    }
+
+    /**
+     * Resolve all building IDs the user can operate within.
+     *
+     * Returns null for global access (within the compound context).
+     *
+     * @return list<string>|null
+     */
+    public function resolveAccessibleBuildingIds(User $user, ?string $compoundId = null): ?array
+    {
+        if ($this->isEffectiveSuperAdmin($user)) {
+            return null;
+        }
+
+        $buildingIds = $this->scopeResolver->resolveBuildingIds($user, $compoundId);
+
+        if ($buildingIds !== []) {
+            return $buildingIds;
+        }
+
+        $managedCompoundId = $this->resolveManagedCompoundId($user);
+
+        if ($managedCompoundId === null) {
+            return [];
+        }
+
+        if ($compoundId !== null && $compoundId !== $managedCompoundId) {
+            return [];
+        }
+
+        return Building::query()
+            ->where('compound_id', $managedCompoundId)
+            ->pluck('id')
+            ->all();
+    }
+
+    /**
+     * Returns null for global access or a narrowed list of building IDs the user can access.
+     *
+     * @return list<string>|null
+     */
+    public function resolveRequestedAccessibleBuildingIds(User $user, ?string $requestedBuildingId = null, ?string $compoundId = null): ?array
+    {
+        $accessibleBuildingIds = $this->resolveAccessibleBuildingIds($user, $compoundId);
+
+        if ($accessibleBuildingIds === null) {
+            return $requestedBuildingId === null ? null : [$requestedBuildingId];
+        }
+
+        if ($requestedBuildingId !== null) {
+            abort_unless(in_array($requestedBuildingId, $accessibleBuildingIds, true), Response::HTTP_FORBIDDEN);
+
+            return [$requestedBuildingId];
+        }
+
+        return $accessibleBuildingIds;
+    }
+
+    public function userCanAccessBuildingById(User $user, string $buildingId): bool
+    {
+        $accessibleBuildingIds = $this->resolveAccessibleBuildingIds($user);
+
+        return $accessibleBuildingIds === null || in_array($buildingId, $accessibleBuildingIds, true);
+    }
+
+    public function ensureUserCanAccessBuilding(User $user, string $buildingId): void
+    {
+        abort_unless($this->userCanAccessBuildingById($user, $buildingId), Response::HTTP_FORBIDDEN);
+    }
+
+    /**
+     * Resolve all floor IDs the user can operate within.
+     *
+     * Returns null for global access.
+     *
+     * @return list<string>|null
+     */
+    public function resolveAccessibleFloorIds(User $user, ?string $buildingId = null): ?array
+    {
+        if ($this->isEffectiveSuperAdmin($user)) {
+            return null;
+        }
+
+        $floorIds = $this->scopeResolver->resolveFloorIds($user, $buildingId);
+
+        if ($floorIds !== []) {
+            return $floorIds;
+        }
+
+        $managedCompoundId = $this->resolveManagedCompoundId($user);
+
+        if ($managedCompoundId === null) {
+            return [];
+        }
+
+        $query = Floor::query()
+            ->whereHas('building', fn ($buildingQuery) => $buildingQuery->where('compound_id', $managedCompoundId));
+
+        if ($buildingId !== null) {
+            $query->where('building_id', $buildingId);
+        }
+
+        return $query->pluck('id')->all();
+    }
+
+    public function userCanAccessFloorById(User $user, string $floorId): bool
+    {
+        $accessibleFloorIds = $this->resolveAccessibleFloorIds($user);
+
+        return $accessibleFloorIds === null || in_array($floorId, $accessibleFloorIds, true);
+    }
+
+    public function ensureUserCanAccessFloor(User $user, string $floorId): void
+    {
+        abort_unless($this->userCanAccessFloorById($user, $floorId), Response::HTTP_FORBIDDEN);
+    }
+
+    public function userCanAccessUnit(User $user, string $unitId): bool
+    {
+        if ($this->isEffectiveSuperAdmin($user)) {
+            return true;
+        }
+
+        if ($this->scopeResolver->userCanAccessResource($user, 'unit', $unitId)) {
+            return true;
+        }
+
+        $managedCompoundId = $this->resolveManagedCompoundId($user);
+
+        if ($managedCompoundId === null) {
+            return false;
+        }
+
+        return Unit::query()
+            ->where('id', $unitId)
+            ->where('compound_id', $managedCompoundId)
+            ->exists();
     }
 
     public function resolveManagedCompound(

@@ -53,17 +53,32 @@ class PollController extends Controller
         $query = Poll::query()->with('options');
 
         if (! $isAdmin) {
-            // Residents only see active polls in their verified compounds
+            // Residents only see active polls in their verified units/buildings/compounds
             $query->where('status', PollStatus::Active->value);
-            $verifiedCompoundIds = $user->unitMemberships()
+            
+            $memberships = $user->unitMemberships()
                 ->activeForAccess()
-                ->with('unit:id,compound_id')
-                ->get()
-                ->pluck('unit.compound_id')
-                ->unique()
-                ->filter()
-                ->values();
-            $query->whereIn('compound_id', $verifiedCompoundIds);
+                ->with('unit')
+                ->get();
+                
+            $verifiedCompoundIds = $memberships->pluck('unit.compound_id')->unique()->filter()->values()->all();
+            $verifiedBuildingIds = $memberships->pluck('unit.building_id')->unique()->filter()->values()->all();
+
+            $query->where(function ($q) use ($verifiedCompoundIds, $verifiedBuildingIds) {
+                // Polls scoped to compound level
+                $q->where(function ($sq) use ($verifiedCompoundIds) {
+                    $sq->where('scope', 'compound')
+                       ->whereIn('compound_id', $verifiedCompoundIds);
+                });
+                
+                // Polls scoped to building level
+                if (!empty($verifiedBuildingIds)) {
+                    $q->orWhere(function ($sq) use ($verifiedBuildingIds) {
+                        $sq->where('scope', 'building')
+                           ->whereIn('building_id', $verifiedBuildingIds);
+                    });
+                }
+            });
         } else {
             $managedCompoundId = $this->compoundContext->resolveManagedCompoundId($user);
 
@@ -358,12 +373,16 @@ class PollController extends Controller
             return;
         }
 
-        $hasMembership = $user->unitMemberships()
+        $query = $user->unitMemberships()
             ->activeForAccess()
-            ->whereHas('unit', fn ($query) => $query->where('compound_id', $poll->compound_id))
-            ->exists();
+            ->whereHas('unit', function ($q) use ($poll) {
+                $q->where('compound_id', $poll->compound_id);
+                if ($poll->scope === 'building' && $poll->building_id) {
+                    $q->where('building_id', $poll->building_id);
+                }
+            });
 
-        abort_unless($hasMembership, 403);
+        abort_unless($query->exists(), 403);
     }
 
     /** @return array{0: bool, 1: string|null} */

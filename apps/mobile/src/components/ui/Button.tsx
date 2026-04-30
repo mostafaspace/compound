@@ -9,7 +9,7 @@ import {
   useColorScheme,
   StyleProp
 } from 'react-native';
-import { colors, spacing } from '../../theme';
+import { colors, spacing, shadows } from '../../theme';
 
 interface ButtonProps {
   onPress: () => void;
@@ -44,11 +44,7 @@ export const Button: React.FC<ButtonProps> = ({
       case 'primary':
         base.push({ 
           backgroundColor: isDark ? colors.cta.dark : colors.cta.light,
-          shadowColor: isDark ? colors.cta.dark : colors.cta.light,
-          shadowOffset: { width: 0, height: 12 },
-          shadowOpacity: 0.3,
-          shadowRadius: 20,
-          elevation: 8,
+          ...shadows.premium,
         });
         break;
       case 'secondary':
@@ -56,7 +52,7 @@ export const Button: React.FC<ButtonProps> = ({
           backgroundColor: isDark ? colors.surface.dark : colors.surface.light, 
           borderWidth: 1, 
           borderColor: isDark ? colors.border.dark : colors.border.light,
-          elevation: 1,
+          ...shadows.md,
         });
         break;
       case 'outline':
@@ -79,7 +75,7 @@ export const Button: React.FC<ButtonProps> = ({
     if (textStyle) base.push(textStyle);
     
     if (variant === 'primary') {
-      base.push({ color: '#ffffff' }); // White on Gold
+      base.push({ color: '#ffffff' });
     } else if (variant === 'outline' || variant === 'ghost') {
       base.push({ color: isDark ? colors.text.primary.dark : colors.text.primary.light });
     } else {

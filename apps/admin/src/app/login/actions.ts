@@ -7,12 +7,14 @@ import { hasEffectiveRole, setAuthToken, setCompoundContext } from "@/lib/sessio
 
 export async function loginAction(formData: FormData) {
   let destination = "/";
+  const email = String(formData.get("email") ?? "");
+  const password = String(formData.get("password") ?? "");
 
   try {
     const result = await login({
       deviceName: "Compound admin web",
-      email: String(formData.get("email") ?? ""),
-      password: String(formData.get("password") ?? ""),
+      email,
+      password,
     });
 
     await setAuthToken(result.token);
@@ -22,6 +24,8 @@ export async function loginAction(formData: FormData) {
     if (hasEffectiveRole(result.user, "compound_admin") && result.user.compoundId) {
       await setCompoundContext(result.user.compoundId);
       destination = `/compounds/${result.user.compoundId}`;
+    } else {
+      await setCompoundContext(null);
     }
   } catch {
     redirect("/login?error=invalid");

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\Security\SecurityShift;
 use App\Models\Security\SecurityShiftAssignment;
+use App\Models\User;
 use App\Services\CompoundContextService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -16,14 +17,14 @@ class SecurityShiftController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $compoundId = $this->context->resolve($request);
+        /** @var User $actor */
+        $actor = $request->user();
+        $requestedCompoundId = $request->header('X-Compound-Id');
+        $compoundIds = $this->context->resolveRequestedAccessibleCompoundIds($actor, $requestedCompoundId);
 
         $query = SecurityShift::with(['creator', 'closer'])
+            ->when($compoundIds !== null, fn ($q) => $q->whereIn('compound_id', $compoundIds))
             ->latest();
-
-        if ($compoundId !== null) {
-            $query->where('compound_id', $compoundId);
-        }
 
         if ($request->has('status') && $request->input('status') !== 'all') {
             $query->where('status', $request->input('status'));
@@ -34,19 +35,19 @@ class SecurityShiftController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        $compoundId = $this->context->resolve($request);
-
         $validated = $request->validate([
-            'compoundId'     => ['nullable', 'string', 'max:26'],
+            'compoundId'     => ['required', 'string', 'max:26'],
             'name'           => ['required', 'string', 'max:120'],
             'handoverNotes'  => ['nullable', 'string', 'max:5000'],
         ]);
 
-        /** @var \App\Models\User $user */
+        $this->context->ensureUserCanAccessCompound($request->user(), $validated['compoundId']);
+
+        /** @var User $user */
         $user = $request->user();
 
         $shift = SecurityShift::create([
-            'compound_id'    => $compoundId ?? $validated['compoundId'],
+            'compound_id'    => $validated['compoundId'],
             'name'           => $validated['name'],
             'handover_notes' => $validated['handoverNotes'] ?? null,
             'status'         => 'draft',
@@ -56,8 +57,10 @@ class SecurityShiftController extends Controller
         return response()->json(['data' => $shift->load('creator')], 201);
     }
 
-    public function show(SecurityShift $securityShift): JsonResponse
+    public function show(Request $request, SecurityShift $securityShift): JsonResponse
     {
+        $this->context->ensureUserCanAccessCompound($request->user(), $securityShift->compound_id);
+
         return response()->json([
             'data' => $securityShift->load(['creator', 'closer', 'assignments.guardUser', 'assignments.gate']),
         ]);
@@ -65,6 +68,8 @@ class SecurityShiftController extends Controller
 
     public function update(Request $request, SecurityShift $securityShift): JsonResponse
     {
+        $this->context->ensureUserCanAccessCompound($request->user(), $securityShift->compound_id);
+
         $validated = $request->validate([
             'name'          => ['sometimes', 'required', 'string', 'max:120'],
             'handoverNotes' => ['nullable', 'string', 'max:5000'],
@@ -85,6 +90,8 @@ class SecurityShiftController extends Controller
 
     public function activate(Request $request, SecurityShift $securityShift): JsonResponse
     {
+        $this->context->ensureUserCanAccessCompound($request->user(), $securityShift->compound_id);
+
         abort_if($securityShift->status !== 'draft', 422, 'Only draft shifts can be activated.');
 
         $securityShift->update([
@@ -97,13 +104,15 @@ class SecurityShiftController extends Controller
 
     public function close(Request $request, SecurityShift $securityShift): JsonResponse
     {
+        $this->context->ensureUserCanAccessCompound($request->user(), $securityShift->compound_id);
+
         abort_if($securityShift->status !== 'active', 422, 'Only active shifts can be closed.');
 
         $request->validate([
             'handoverNotes' => ['nullable', 'string', 'max:5000'],
         ]);
 
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = $request->user();
 
         $securityShift->update([
@@ -128,6 +137,8 @@ class SecurityShiftController extends Controller
     // POST /security/shifts/{shift}/assignments — assign a guard to the shift
     public function assign(Request $request, SecurityShift $securityShift): JsonResponse
     {
+        $this->context->ensureUserCanAccessCompound($request->user(), $securityShift->compound_id);
+
         abort_if($securityShift->status === 'closed', 422, 'Cannot assign guards to a closed shift.');
 
         $validated = $request->validate([
@@ -148,6 +159,8 @@ class SecurityShiftController extends Controller
     // POST /security/shifts/{shift}/assignments/{assignment}/checkin
     public function checkin(Request $request, SecurityShift $securityShift, SecurityShiftAssignment $assignment): JsonResponse
     {
+        $this->context->ensureUserCanAccessCompound($request->user(), $securityShift->compound_id);
+
         abort_if((string) $assignment->shift_id !== (string) $securityShift->id, 404);
         abort_if($assignment->checked_in_at !== null, 422, 'Already checked in.');
 
@@ -162,6 +175,8 @@ class SecurityShiftController extends Controller
     // POST /security/shifts/{shift}/assignments/{assignment}/checkout
     public function checkout(Request $request, SecurityShift $securityShift, SecurityShiftAssignment $assignment): JsonResponse
     {
+        $this->context->ensureUserCanAccessCompound($request->user(), $securityShift->compound_id);
+
         abort_if((string) $assignment->shift_id !== (string) $securityShift->id, 404);
         abort_if($assignment->checked_out_at !== null, 422, 'Already checked out.');
 

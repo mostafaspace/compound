@@ -38,11 +38,13 @@ class AnnouncementController extends Controller
 
         $query = Announcement::query()->with('author')->latest();
 
-        // Compound isolation: scope to the resolved compound (null = super-admin sees all).
-        $compoundId = $this->compoundContext->resolve($request);
-        if ($compoundId !== null) {
-            $query->where('compound_id', $compoundId);
-        }
+        // Compound isolation: scope to the resolved compounds (null = super-admin sees all).
+        /** @var User $actor */
+        $actor = $request->user();
+        $requestedCompoundId = $request->header('X-Compound-Id') ?: $request->query('compoundId');
+        $compoundIds = $this->compoundContext->resolveRequestedAccessibleCompoundIds($actor, $requestedCompoundId);
+
+        $query->when($compoundIds !== null, fn ($q) => $q->whereIn('compound_id', $compoundIds));
 
         if ($request->filled('status') && $request->input('status') !== 'all') {
             if ($request->input('status') === AnnouncementStatus::Expired->value) {
@@ -138,15 +140,14 @@ class AnnouncementController extends Controller
     public function store(StoreAnnouncementRequest $request): AnnouncementResource
     {
         $payload = $request->payload();
-        $requestedCompoundId = $payload['compound_id'] ?: $this->compoundContext->resolve($request);
+        $requestedCompoundId = $payload['compound_id'] ?: $request->header('X-Compound-Id') ?: $request->query('compoundId');
 
-        abort_unless(filled($requestedCompoundId), 422, 'A compoundId is required to create an announcement.');
-
-        $payload['compound_id'] = $this->compoundContext->resolveManagedCompound(
-            $request,
+        $payload['compound_id'] = $this->compoundContext->resolveRequestedAccessibleCompoundId(
+            $request->user(),
             $requestedCompoundId,
-            false,
         );
+
+        abort_unless(filled($payload['compound_id']), 422, 'A valid compoundId is required to create an announcement.');
 
         $this->validateAnnouncementTargets(
             $payload['compound_id'],
@@ -402,7 +403,7 @@ class AnnouncementController extends Controller
             return true;
         }
 
-        return $this->compoundContext->resolveManagedCompoundId($user) === $announcement->compound_id;
+        return $this->compoundContext->userCanAccessCompoundById($user, $announcement->compound_id);
     }
 
     private function ensureAnnouncementAdminAccess(Request $request, string $compoundId): void
@@ -411,11 +412,11 @@ class AnnouncementController extends Controller
 
         $user = $request->user();
 
-        if ($user === null || $user->isEffectiveSuperAdmin()) {
-            return;
+        if ($user === null) {
+            abort(Response::HTTP_UNAUTHORIZED);
         }
 
-        $this->compoundContext->ensureManagedCompoundAccess($user, $compoundId);
+        $this->compoundContext->ensureUserCanAccessCompound($user, $compoundId);
     }
 
     /**

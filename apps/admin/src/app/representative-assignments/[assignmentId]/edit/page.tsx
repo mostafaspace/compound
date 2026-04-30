@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { EditAssignmentForm } from "@/components/edit-assignment-form";
-import { getRepresentativeAssignment } from "@/lib/orgchart";
+import { getRepresentativeAssignment } from "@/lib/orgchart-actions";
 
 interface EditRepresentativePageProps {
   params: Promise<{

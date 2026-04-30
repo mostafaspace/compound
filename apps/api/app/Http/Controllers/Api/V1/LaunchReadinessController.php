@@ -68,14 +68,76 @@ class LaunchReadinessController extends Controller
     private function launchChecks(): array
     {
         return [
-            'seed_data'          => $this->seedDataCheck(),
-            'audit_log'          => $this->auditLogCheck(),
-            'compounds'          => $this->compoundsCheck(),
+            'seed_data'           => $this->seedDataCheck(),
+            'property_health'     => $this->propertyHealthCheck(),
+            'finance_readiness'   => $this->financeReadinessCheck(),
+            'audit_log'           => $this->auditLogCheck(),
             'notification_config' => $this->notificationConfigCheck(),
-            'privacy_config'     => $this->privacyConfigCheck(),
-            'debug_mode'         => $this->debugModeCheck(),
-            'scheduled_jobs'     => $this->scheduledJobsCheck(),
+            'privacy_config'      => $this->privacyConfigCheck(),
+            'debug_mode'          => $this->debugModeCheck(),
+            'scheduled_jobs'      => $this->scheduledJobsCheck(),
         ];
+    }
+
+    /**
+     * Deep check of property hierarchy integrity.
+     */
+    private function propertyHealthCheck(): array
+    {
+        try {
+            $compounds = Compound::where('status', 'active')->get();
+            $emptyCompounds = [];
+
+            foreach ($compounds as $compound) {
+                $hasBuildings = $compound->buildings()->exists();
+                $hasUnits = $compound->units()->exists();
+
+                if (! $hasBuildings || ! $hasUnits) {
+                    $emptyCompounds[] = [
+                        'name' => $compound->name,
+                        'hasBuildings' => $hasBuildings,
+                        'hasUnits' => $hasUnits,
+                    ];
+                }
+            }
+
+            return [
+                'status' => empty($emptyCompounds) ? 'pass' : 'fail',
+                'emptyCompounds' => $emptyCompounds,
+                'message' => empty($emptyCompounds) ? null : 'Some active compounds are missing buildings or units.',
+            ];
+        } catch (Throwable $e) {
+            return ['status' => 'fail', 'message' => mb_substr($e->getMessage(), 0, 160)];
+        }
+    }
+
+    /**
+     * Check if active compounds have finance configuration.
+     */
+    private function financeReadinessCheck(): array
+    {
+        try {
+            $compounds = Compound::where('status', 'active')->get();
+            $missingChargeTypes = [];
+
+            foreach ($compounds as $compound) {
+                $hasCharges = DB::table('charge_types')
+                    ->where('compound_id', $compound->id)
+                    ->exists();
+
+                if (! $hasCharges) {
+                    $missingChargeTypes[] = $compound->name;
+                }
+            }
+
+            return [
+                'status' => empty($missingChargeTypes) ? 'pass' : 'warn',
+                'missingChargeTypes' => $missingChargeTypes,
+                'note' => empty($missingChargeTypes) ? null : 'Active compounds without charge types found.',
+            ];
+        } catch (Throwable $e) {
+            return ['status' => 'fail', 'message' => mb_substr($e->getMessage(), 0, 160)];
+        }
     }
 
     /**
@@ -140,24 +202,6 @@ class LaunchReadinessController extends Controller
         }
     }
 
-    /**
-     * @return array<string, mixed>
-     */
-    private function compoundsCheck(): array
-    {
-        try {
-            $total  = Compound::query()->count();
-            $active = Compound::query()->where('status', 'active')->count();
-
-            return [
-                'status'  => $total > 0 ? 'pass' : 'fail',
-                'total'   => $total,
-                'active'  => $active,
-            ];
-        } catch (Throwable $e) {
-            return ['status' => 'fail', 'message' => mb_substr($e->getMessage(), 0, 160)];
-        }
-    }
 
     /**
      * @return array<string, mixed>

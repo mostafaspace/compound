@@ -16,30 +16,18 @@ class WorkOrderController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $compoundId = $this->context->resolve($request);
+        /** @var \App\Models\User $actor */
+        $actor = $request->user();
+        $requestedCompoundId = $request->header('X-Compound-Id') ?: $request->query('compoundId');
+        $compoundIds = $this->context->resolveRequestedAccessibleCompoundIds($actor, $requestedCompoundId);
 
         $query = WorkOrder::with(['vendor', 'creator', 'assignee', 'building', 'issue'])
-            ->latest();
-
-        if ($compoundId !== null) {
-            $query->where('compound_id', $compoundId);
-        }
-
-        if ($request->filled('status') && $request->input('status') !== 'all') {
-            $query->where('status', $request->input('status'));
-        }
-
-        if ($request->filled('priority')) {
-            $query->where('priority', $request->input('priority'));
-        }
-
-        if ($request->filled('category')) {
-            $query->where('category', $request->input('category'));
-        }
-
-        if ($request->filled('vendor_id')) {
-            $query->where('vendor_id', $request->input('vendor_id'));
-        }
+            ->latest()
+            ->when($compoundIds !== null, fn ($q) => $q->whereIn('compound_id', $compoundIds))
+            ->when($request->filled('status') && $request->input('status') !== 'all', fn ($q) => $q->where('status', $request->input('status')))
+            ->when($request->filled('priority'), fn ($q) => $q->where('priority', $request->input('priority')))
+            ->when($request->filled('category'), fn ($q) => $q->where('category', $request->input('category')))
+            ->when($request->filled('vendor_id'), fn ($q) => $q->where('vendor_id', $request->input('vendor_id')));
 
         return response()->json(['data' => $query->paginate(20)]);
     }
@@ -62,6 +50,7 @@ class WorkOrderController extends Controller
 
         /** @var \App\Models\User $user */
         $user = $request->user();
+        $this->context->ensureUserCanAccessCompound($user, $validated['compoundId']);
 
         $workOrder = WorkOrder::create([
             'compound_id'          => $validated['compoundId'],
@@ -82,8 +71,12 @@ class WorkOrderController extends Controller
         return response()->json(['data' => $workOrder->load(['vendor', 'creator', 'building', 'issue'])], 201);
     }
 
-    public function show(WorkOrder $workOrder): JsonResponse
+    public function show(Request $request, WorkOrder $workOrder): JsonResponse
     {
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+        $this->context->ensureUserCanAccessCompound($user, $workOrder->compound_id);
+
         return response()->json([
             'data' => $workOrder->load(['vendor', 'creator', 'assignee', 'approver', 'building', 'unit', 'issue', 'estimates.vendor', 'estimates.submitter', 'expense']),
         ]);
@@ -91,6 +84,10 @@ class WorkOrderController extends Controller
 
     public function update(Request $request, WorkOrder $workOrder): JsonResponse
     {
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+        $this->context->ensureUserCanAccessCompound($user, $workOrder->compound_id);
+
         abort_if(in_array($workOrder->status, ['completed', 'cancelled', 'rejected'], true), 422, 'Cannot update a closed work order.');
 
         $validated = $request->validate([

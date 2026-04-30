@@ -169,16 +169,11 @@ class UserDocumentController extends Controller
 
     private function scopeReviewerDocuments(mixed $query, User $user): mixed
     {
-        $managedCompoundId = $this->compoundContext->resolveManagedCompoundId($user);
-
-        if ($managedCompoundId === null) {
-            return $query;
-        }
-
-        return $query->where(function ($scoped) use ($managedCompoundId): void {
-            $scoped
-                ->whereHas('unit', fn ($unitQuery) => $unitQuery->where('compound_id', $managedCompoundId))
-                ->orWhereHas('user.unitMemberships.unit', fn ($unitQuery) => $unitQuery->where('compound_id', $managedCompoundId));
+        return $query->where(function ($q) use ($user): void {
+            $q->whereHas('unit', fn ($sub) => $this->compoundContext->scopePropertyQuery($sub, $user))
+                ->orWhereHas('user', function ($subUser) use ($user): void {
+                    $subUser->whereHas('unitMemberships.unit', fn ($subUnit) => $this->compoundContext->scopePropertyQuery($subUnit, $user));
+                });
         });
     }
 
@@ -216,16 +211,20 @@ class UserDocumentController extends Controller
             return;
         }
 
-        $managedCompoundId = $this->compoundContext->resolveManagedCompoundId($user);
+        // Use the same logic as scoping to verify individual access
+        $canAccess = false;
 
-        if ($managedCompoundId === null) {
-            return;
+        if ($userDocument->unit_id) {
+            $canAccess = $this->compoundContext->userCanAccessUnit($user, $userDocument->unit_id);
+        } else {
+            // Check if they can access any of the user's unit memberships
+            $userDocument->loadMissing('user.unitMemberships.unit');
+            $canAccess = $userDocument->user->unitMemberships->contains(function ($m) use ($user) {
+                return $m->unit_id && $this->compoundContext->userCanAccessUnit($user, $m->unit_id);
+            });
         }
 
-        abort_unless(
-            $this->documentBelongsToCompound($userDocument, $managedCompoundId),
-            Response::HTTP_FORBIDDEN,
-        );
+        abort_unless($canAccess, Response::HTTP_FORBIDDEN);
     }
 
     private function ensureScopedUserCanAccessCompound(Request $request, string $compoundId): void

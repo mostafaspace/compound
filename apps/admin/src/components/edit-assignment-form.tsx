@@ -1,10 +1,10 @@
 "use client";
 
 import type { ContactVisibility, RepresentativeAssignment } from "@/lib/orgchart";
+import { expireRepresentativeAssignment, updateRepresentativeAssignment } from "@/lib/orgchart-actions";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { updateRepresentativeAssignment, expireRepresentativeAssignment } from "@/lib/orgchart";
 import { CONTACT_VISIBILITY } from "./representative-assignment-form";
 
 interface EditAssignmentFormProps {

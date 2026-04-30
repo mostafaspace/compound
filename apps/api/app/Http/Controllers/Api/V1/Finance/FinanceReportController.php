@@ -9,6 +9,7 @@ use App\Http\Resources\Finance\UnitAccountResource;
 use App\Models\Finance\LedgerEntry;
 use App\Models\Finance\PaymentSubmission;
 use App\Models\Finance\UnitAccount;
+use App\Models\User;
 use App\Services\CompoundContextService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -24,11 +25,13 @@ class FinanceReportController extends Controller
      */
     public function summary(Request $request): JsonResponse
     {
-        $compoundId = $this->compoundContext->resolve($request);
+        /** @var User $actor */
+        $actor = $request->user();
+        $compoundIds = $this->compoundContext->resolveAccessibleCompoundIds($actor);
 
         $accountScope = UnitAccount::query()
-            ->when($compoundId, fn ($q) => $q->whereHas(
-                'unit', fn ($uq) => $uq->where('compound_id', $compoundId)
+            ->when($compoundIds !== null, fn ($q) => $q->whereHas(
+                'unit', fn ($uq) => $uq->whereIn('compound_id', $compoundIds)
             ));
 
         $accountIds = $accountScope->pluck('id');
@@ -96,13 +99,16 @@ class FinanceReportController extends Controller
             'currency'      => ['nullable', 'string', 'max:3'],
         ]);
 
-        $status     = $validated['balanceStatus'] ?? 'all';
-        $compoundId = $this->compoundContext->resolve($request);
+        $status = $validated['balanceStatus'] ?? 'all';
+
+        /** @var User $actor */
+        $actor = $request->user();
+        $compoundIds = $this->compoundContext->resolveAccessibleCompoundIds($actor);
 
         $accounts = UnitAccount::query()
             ->with(['unit.building', 'unit.compound'])
-            ->when($compoundId, fn ($q) => $q->whereHas(
-                'unit', fn ($uq) => $uq->where('compound_id', $compoundId)
+            ->when($compoundIds !== null, fn ($q) => $q->whereHas(
+                'unit', fn ($uq) => $uq->whereIn('compound_id', $compoundIds)
             ))
             ->when($status === 'positive', fn ($q) => $q->where('balance', '>', 0))
             ->when($status === 'zero',     fn ($q) => $q->where('balance', '=', 0))
@@ -126,11 +132,13 @@ class FinanceReportController extends Controller
      */
     public function paymentMethodBreakdown(Request $request): JsonResponse
     {
-        $compoundId = $this->compoundContext->resolve($request);
+        /** @var User $actor */
+        $actor = $request->user();
+        $compoundIds = $this->compoundContext->resolveAccessibleCompoundIds($actor);
 
         $accountIds = UnitAccount::query()
-            ->when($compoundId, fn ($q) => $q->whereHas(
-                'unit', fn ($uq) => $uq->where('compound_id', $compoundId)
+            ->when($compoundIds !== null, fn ($q) => $q->whereHas(
+                'unit', fn ($uq) => $uq->whereIn('compound_id', $compoundIds)
             ))
             ->pluck('id');
 

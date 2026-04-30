@@ -89,9 +89,9 @@ export default async function Home() {
       {/* KPI cards */}
       <section className="mx-auto grid max-w-7xl gap-5 px-5 py-6 md:grid-cols-2 lg:grid-cols-4 lg:px-8">
         {workstreams.map((item) => (
-          <article className="rounded-lg border border-line bg-panel p-5" key={item.key}>
+          <article className="rounded-xl border border-line bg-panel p-5 shadow-premium-md transition hover:shadow-premium-lg" key={item.key}>
             <p className="text-sm font-medium text-muted">{t(`workstreams.${item.key}.label`)}</p>
-            <p className={`mt-4 text-4xl font-semibold ${item.tone}`}>{item.value}</p>
+            <p className={`mt-4 text-4xl font-semibold tracking-tight ${item.tone}`}>{item.value}</p>
             <p className="mt-2 text-sm text-muted">{t(`workstreams.${item.key}.detail`)}</p>
           </article>
         ))}
@@ -105,7 +105,7 @@ export default async function Home() {
             <Link
               key={m.href}
               href={m.href}
-              className="flex flex-col items-center gap-2 rounded-xl border border-line bg-panel px-3 py-4 text-center transition hover:border-brand hover:bg-background"
+              className="glass flex flex-col items-center gap-2 rounded-xl px-3 py-4 text-center transition hover:border-brand hover:shadow-premium-md hover:-translate-y-0.5"
             >
               <span className="text-2xl" aria-hidden="true">{m.icon}</span>
               <span className="text-xs font-medium text-foreground leading-tight">{nav(m.key)}</span>
@@ -116,13 +116,19 @@ export default async function Home() {
 
       {/* Priority queue + system status */}
       <section className="mx-auto grid max-w-7xl gap-5 px-5 pb-8 md:grid-cols-[1.4fr_0.9fr] lg:px-8">
-        <div id="priority-queue" className="rounded-lg border border-line bg-panel p-5">
+        <div id="priority-queue" className="rounded-xl border border-line bg-panel p-6 shadow-premium-lg">
           <div className="flex items-center justify-between gap-4 border-b border-line pb-4">
             <div>
-              <h2 className="text-xl font-semibold">{t("priorityQueue.title")}</h2>
+              <h2 className="text-xl font-bold tracking-tight">{t("priorityQueue.title")}</h2>
               <p className="mt-1 text-sm text-muted">{t("priorityQueue.subtitle")}</p>
             </div>
-            <span className="rounded-lg bg-[#e6f3ef] px-3 py-1 text-sm font-semibold text-brand">{t("priorityQueue.live")}</span>
+            <span className="relative flex h-6 items-center gap-2 rounded-full bg-brand/10 px-3 text-xs font-bold uppercase tracking-wider text-brand">
+              <span className="relative flex size-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand opacity-75"></span>
+                <span className="relative inline-flex size-2 rounded-full bg-brand"></span>
+              </span>
+              {t("priorityQueue.live")}
+            </span>
           </div>
           <ol className="mt-4 divide-y divide-line">
             {priorityQueue.map((item, index) => (

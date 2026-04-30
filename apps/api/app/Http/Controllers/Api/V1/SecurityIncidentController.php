@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Security\SecurityIncident;
+use App\Models\User;
 use App\Services\CompoundContextService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -24,13 +25,14 @@ class SecurityIncidentController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $compoundId = $this->context->resolve($request);
+        /** @var User $actor */
+        $actor = $request->user();
+        $requestedCompoundId = $request->header('X-Compound-Id');
+        $compoundIds = $this->context->resolveRequestedAccessibleCompoundIds($actor, $requestedCompoundId);
 
-        $query = SecurityIncident::with(['gate', 'shift', 'reporter'])->latest('occurred_at');
-
-        if ($compoundId !== null) {
-            $query->where('compound_id', $compoundId);
-        }
+        $query = SecurityIncident::with(['gate', 'shift', 'reporter'])
+            ->when($compoundIds !== null, fn ($q) => $q->whereIn('compound_id', $compoundIds))
+            ->latest('occurred_at');
 
         if ($request->has('type') && $request->input('type') !== 'all') {
             $query->where('type', $request->input('type'));
@@ -57,10 +59,8 @@ class SecurityIncidentController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        $compoundId = $this->context->resolve($request);
-
         $validated = $request->validate([
-            'compoundId'  => ['nullable', 'string', 'max:26'],
+            'compoundId'  => ['required', 'string', 'max:26'],
             'gateId'      => ['nullable', 'string', 'max:26', 'exists:security_gates,id'],
             'shiftId'     => ['nullable', 'string', 'max:26', 'exists:security_shifts,id'],
             'type'        => ['required', 'string', 'in:'.implode(',', self::INCIDENT_TYPES)],
@@ -71,11 +71,13 @@ class SecurityIncidentController extends Controller
             'occurredAt'  => ['required', 'date'],
         ]);
 
-        /** @var \App\Models\User $user */
+        $this->context->ensureUserCanAccessCompound($request->user(), $validated['compoundId']);
+
+        /** @var User $user */
         $user = $request->user();
 
         $incident = SecurityIncident::create([
-            'compound_id' => $compoundId ?? $validated['compoundId'],
+            'compound_id' => $validated['compoundId'],
             'gate_id'     => $validated['gateId'] ?? null,
             'shift_id'    => $validated['shiftId'] ?? null,
             'reported_by' => $user->id,
@@ -90,13 +92,17 @@ class SecurityIncidentController extends Controller
         return response()->json(['data' => $incident->load(['gate', 'shift', 'reporter'])], 201);
     }
 
-    public function show(SecurityIncident $securityIncident): JsonResponse
+    public function show(Request $request, SecurityIncident $securityIncident): JsonResponse
     {
+        $this->context->ensureUserCanAccessCompound($request->user(), $securityIncident->compound_id);
+
         return response()->json(['data' => $securityIncident->load(['gate', 'shift', 'reporter', 'compound'])]);
     }
 
     public function resolve(Request $request, SecurityIncident $securityIncident): JsonResponse
     {
+        $this->context->ensureUserCanAccessCompound($request->user(), $securityIncident->compound_id);
+
         abort_if($securityIncident->resolved_at !== null, 422, 'Incident is already resolved.');
 
         $request->validate([

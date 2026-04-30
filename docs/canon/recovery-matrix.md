@@ -1,7 +1,7 @@
 # Compound Recovery Matrix
 
 Status: Canonical
-Last updated: 2026-04-29
+Last updated: 2026-04-30
 
 | Subsystem | Canon Reference | Current Code Status | Risk Level | Major Gaps | Recovery Priority | Notes |
 |---|---|---|---|---|---|---|
@@ -13,6 +13,6 @@ Last updated: 2026-04-29
 | Issues And Escalation | `product-spec.md`, `domain-rules.md` | Implemented partially | Medium | Routing and history trust | P1 | Issue access now respects membership-scoped compound-admin boundaries instead of treating `compound_id = null` admins as global, but broader workflow and history trust still depend on deeper audit |
 | Announcements And Notifications | `product-spec.md`, `domain-rules.md` | Implemented partially | Medium | Audience scoping and delivery state | P1 | Effective-role audience targeting, membership-scoped notification template resolution, managed-compound announcement admin scoping, membership-scoped notification-template admin boundaries, and stale-recipient-compound delivery retry access now have regression coverage, but broader delivery-state trust still depends on auth, preferences, and scope audit depth |
 | Finance | `product-spec.md`, `domain-rules.md` | Implemented partially | Critical | Ledger integrity, payment audit, unit balances | P0 | Managed-compound regressions now cover payment-submission review, unit-account admin flows, payment-session/refund admin flows, and recurring-charge/collection-campaign admin scoping for membership-scoped compound admins; scope-assigned finance reviewers with no direct `compound_id` are now locked to their assigned compounds too, but expenses and full ledger trust still need deeper audit |
-| Governance / Polls / Org Chart | `product-spec.md`, `domain-rules.md` | Implemented partially | High | Eligibility, assignment trust, behavior drift | P1 | Vote and poll admin scoping now respects effective managed compound scope even when stale non-null profile compound data disagrees with active membership scope, resident poll detail access has compound-membership regression coverage, and poll-type administration no longer lets membership-scoped governance admins drift into foreign or global management; broader governance surface audit is still open |
-| Design System And UX Consistency | `design-system.md` | Conflicting across platforms | High | Web/mobile drift | P0 | Canon already created |
+| Governance / Polls / Org Chart | `product-spec.md`, `domain-rules.md` | Implemented partially | High | Eligibility, assignment trust, behavior drift | P1 | Vote and poll admin scoping now respects effective managed compound scope even when stale non-null profile compound data disagrees with active membership scope, resident poll detail access has compound-membership regression coverage, and poll-type administration no longer lets membership-scoped governance admins drift into foreign or global management; org-chart privacy and membership-scoped access are now regression-covered, but broader UI/UX verification is still pending |
+| Design System And UX Consistency | `design-system.md` | Conflicting across platforms | High | Web/mobile drift | P0 | Canon already created; targeted org-chart typecheck blockers are cleared, but broader cross-platform parity is still not production-trusted |
 | Launch Readiness And QA | `engineering-workflow.md`, `definition-of-done.md` | Unsafe to trust | High | False done states and evidence drift | P0 | Process recovery slice |

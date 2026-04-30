@@ -7,6 +7,7 @@ import type {
   UserNotification,
 } from "@compound/contracts";
 import { notificationCategoryValues } from "@compound/contracts";
+import { usePathname } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useMemo, useState, useTransition } from "react";
 
@@ -92,6 +93,7 @@ export function NotificationCenter({
   initialUnreadCount,
   userId,
 }: NotificationCenterProps) {
+  const pathname = usePathname();
   const locale = useLocale();
   const t = useTranslations("Notifications");
   const [isOpen, setIsOpen] = useState(false);
@@ -103,6 +105,7 @@ export function NotificationCenter({
   const [readFilter, setReadFilter] = useState<"all" | "unread">("all");
   const [connectionState, setConnectionState] = useState<"live" | "polling">("polling");
   const [isPending, startTransition] = useTransition();
+  const isPublicPage = pathname === "/login" || pathname.startsWith("/resident-invitations/");
 
   const visibleNotifications = useMemo(() => {
     return notifications.filter((notification) => {
@@ -114,6 +117,10 @@ export function NotificationCenter({
   }, [category, notifications, readFilter]);
 
   useEffect(() => {
+    if (isPublicPage) {
+      return;
+    }
+
     const refresh = () => {
       startTransition(async () => {
         const nextState = await refreshNotificationsAction({ category, read: readFilter });
@@ -125,9 +132,14 @@ export function NotificationCenter({
     const interval = window.setInterval(refresh, 30_000);
 
     return () => window.clearInterval(interval);
-  }, [category, readFilter]);
+  }, [category, isPublicPage, readFilter]);
 
   useEffect(() => {
+    if (isPublicPage) {
+      setConnectionState("polling");
+      return;
+    }
+
     const subscription = subscribeToUserNotifications(
       userId,
       (notification) => {
@@ -139,7 +151,11 @@ export function NotificationCenter({
     );
 
     return () => subscription?.disconnect();
-  }, [userId]);
+  }, [isPublicPage, userId]);
+
+  if (isPublicPage) {
+    return null;
+  }
 
   function refreshNow() {
     startTransition(async () => {

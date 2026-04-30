@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { RepresentativesList } from "@/components/representatives-list";
 import { SiteNav } from "@/components/site-nav";
 import { getCompound, getCurrentUser } from "@/lib/api";
-import { listRepresentativeAssignments } from "@/lib/orgchart";
+import { listRepresentativeAssignments } from "@/lib/orgchart-actions";
 import { requireAdminUser } from "@/lib/session";
 
 interface RepresentativesPageProps {

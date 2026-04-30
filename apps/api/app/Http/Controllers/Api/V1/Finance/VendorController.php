@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Finance;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Finance\VendorResource;
 use App\Models\Finance\Vendor;
+use App\Models\User;
 use App\Services\CompoundContextService;
 use App\Support\AuditLogger;
 use Illuminate\Http\JsonResponse;
@@ -22,13 +23,13 @@ class VendorController extends Controller
 
     public function index(Request $request): AnonymousResourceCollection
     {
-        $compoundId = $this->compoundContextService->resolve($request);
+        /** @var User $actor */
+        $actor = $request->user();
+        $compoundIds = $this->compoundContextService->resolveAccessibleCompoundIds($actor);
 
-        $query = Vendor::query()->latest();
-
-        if ($compoundId) {
-            $query->where('compound_id', $compoundId);
-        }
+        $query = Vendor::query()
+            ->when($compoundIds !== null, fn ($q) => $q->whereIn('compound_id', $compoundIds))
+            ->latest();
 
         if ($request->boolean('active_only', false)) {
             $query->where('is_active', true);
@@ -49,7 +50,7 @@ class VendorController extends Controller
             'notes'        => ['nullable', 'string'],
         ]);
 
-        $this->compoundContextService->ensureCompoundAccess($request, $data['compound_id']);
+        $this->compoundContextService->ensureUserCanAccessCompound($request->user(), $data['compound_id']);
 
         $vendor = Vendor::create($data);
 
@@ -62,14 +63,14 @@ class VendorController extends Controller
 
     public function show(Request $request, Vendor $vendor): VendorResource
     {
-        $this->compoundContextService->ensureCompoundAccess($request, $vendor->compound_id);
+        $this->compoundContextService->ensureUserCanAccessCompound($request->user(), $vendor->compound_id);
 
         return new VendorResource($vendor);
     }
 
     public function update(Request $request, Vendor $vendor): VendorResource
     {
-        $this->compoundContextService->ensureCompoundAccess($request, $vendor->compound_id);
+        $this->compoundContextService->ensureUserCanAccessCompound($request->user(), $vendor->compound_id);
 
         $data = $request->validate([
             'name'         => ['sometimes', 'string', 'max:255'],

@@ -77,6 +77,23 @@ class PropertyRegistryTest extends TestCase
             ->assertJsonPath('data.0.id', $compoundA->id);
     }
 
+    public function test_compound_admin_with_no_direct_or_membership_scope_sees_no_compounds_in_index(): void
+    {
+        Compound::factory()->create(['name' => 'Compound A']);
+        Compound::factory()->create(['name' => 'Compound B']);
+
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => null,
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $this->getJson('/api/v1/compounds')
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
+    }
+
     public function test_effective_compound_admin_compound_index_prefers_membership_scope_over_stale_direct_compound_id(): void
     {
         $compoundA = Compound::factory()->create(['name' => 'Compound A']);

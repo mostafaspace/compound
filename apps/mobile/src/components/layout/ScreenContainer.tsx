@@ -2,6 +2,7 @@ import React from 'react';
 import { 
   StyleSheet, 
   ViewStyle, 
+  StyleProp,
   useColorScheme, 
   KeyboardAvoidingView, 
   Platform,
@@ -13,7 +14,7 @@ import { colors, spacing } from '../../theme';
 
 interface ScreenContainerProps {
   children: React.ReactNode;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   scrollable?: boolean;
   withKeyboard?: boolean;
   edges?: readonly ('top' | 'right' | 'bottom' | 'left')[];

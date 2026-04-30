@@ -37,7 +37,7 @@ export const colors = {
   success: '#10B981',
   warning: '#F59E0B',
   info: '#3B82F6',
-  accent: '#6366F1', // Indigo
+  accent: '#0EA5E9', // Standardized Sky Blue
 };
 
 export const spacing = {
@@ -62,21 +62,21 @@ export const shadows = {
   md: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.08,
     shadowRadius: 12,
     elevation: 3,
   },
   lg: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.1,
     shadowRadius: 20,
     elevation: 6,
   },
   premium: {
-    shadowColor: '#2563EB',
+    shadowColor: '#2563EB', // Professional Blue
     shadowOffset: { width: 0, height: 14 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.12,
     shadowRadius: 24,
     elevation: 8,
   }

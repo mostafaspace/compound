@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Security\SecurityGate;
+use App\Models\User;
 use App\Services\CompoundContextService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,13 +16,14 @@ class SecurityGateController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $compoundId = $this->context->resolve($request);
+        /** @var User $actor */
+        $actor = $request->user();
+        $requestedCompoundId = $request->header('X-Compound-Id');
+        $compoundIds = $this->context->resolveRequestedAccessibleCompoundIds($actor, $requestedCompoundId);
 
-        $query = SecurityGate::with('building')->latest();
-
-        if ($compoundId !== null) {
-            $query->where('compound_id', $compoundId);
-        }
+        $query = SecurityGate::with('building')
+            ->when($compoundIds !== null, fn ($q) => $q->whereIn('compound_id', $compoundIds))
+            ->latest();
 
         if ($request->has('is_active')) {
             $query->where('is_active', filter_var($request->input('is_active'), FILTER_VALIDATE_BOOLEAN));
@@ -32,10 +34,8 @@ class SecurityGateController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        $compoundId = $this->context->resolve($request);
-
         $validated = $request->validate([
-            'compoundId'  => ['nullable', 'string', 'max:26'],
+            'compoundId'  => ['required', 'string', 'max:26'],
             'buildingId'  => ['nullable', 'string', 'max:26', 'exists:buildings,id'],
             'name'        => ['required', 'string', 'max:120'],
             'zone'        => ['nullable', 'string', 'max:60'],
@@ -43,8 +43,10 @@ class SecurityGateController extends Controller
             'isActive'    => ['boolean'],
         ]);
 
+        $this->context->ensureUserCanAccessCompound($request->user(), $validated['compoundId']);
+
         $gate = SecurityGate::create([
-            'compound_id' => $compoundId ?? $validated['compoundId'],
+            'compound_id' => $validated['compoundId'],
             'building_id' => $validated['buildingId'] ?? null,
             'name'        => $validated['name'],
             'zone'        => $validated['zone'] ?? null,
@@ -55,13 +57,17 @@ class SecurityGateController extends Controller
         return response()->json(['data' => $gate->load('building')], 201);
     }
 
-    public function show(SecurityGate $securityGate): JsonResponse
+    public function show(Request $request, SecurityGate $securityGate): JsonResponse
     {
+        $this->context->ensureUserCanAccessCompound($request->user(), $securityGate->compound_id);
+
         return response()->json(['data' => $securityGate->load('building', 'compound')]);
     }
 
     public function update(Request $request, SecurityGate $securityGate): JsonResponse
     {
+        $this->context->ensureUserCanAccessCompound($request->user(), $securityGate->compound_id);
+
         $validated = $request->validate([
             'buildingId'  => ['nullable', 'string', 'max:26', 'exists:buildings,id'],
             'name'        => ['sometimes', 'required', 'string', 'max:120'],

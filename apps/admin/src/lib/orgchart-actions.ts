@@ -11,6 +11,8 @@ import type {
   OrgChartResponse,
   ResponsiblePartyResponse,
   ListRepresentativesFilters,
+  OrgChartAssignableUser,
+  OrgChartPersonDetail,
 } from "./orgchart";
 
 async function apiHeaders(authenticated = true): Promise<Record<string, string>> {
@@ -252,6 +254,84 @@ export async function listAllRepresentativeAssignments(
     );
 
     return results.flat();
+  } catch {
+    return [];
+  }
+}
+
+export async function getPersonDetail(userId: number): Promise<OrgChartPersonDetail | null> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/org-chart/person/${userId}`, {
+      cache: "no-store",
+      headers: await apiHeaders(),
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const payload = (await response.json()) as ApiEnvelope<OrgChartPersonDetail>;
+
+    return payload.data;
+  } catch {
+    return null;
+  }
+}
+
+export async function assignBuildingHead(buildingId: string, userId: number): Promise<boolean> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/org-chart/building/${buildingId}/head`, {
+      body: JSON.stringify({ user_id: userId }),
+      headers: {
+        ...(await apiHeaders()),
+        "Content-Type": "application/json",
+      },
+      method: "PATCH",
+    });
+
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+export async function assignFloorRepresentative(floorId: string, userId: number): Promise<boolean> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/org-chart/floor/${floorId}/representative`, {
+      body: JSON.stringify({ user_id: userId }),
+      headers: {
+        ...(await apiHeaders()),
+        "Content-Type": "application/json",
+      },
+      method: "PATCH",
+    });
+
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+export async function searchOrgChartAssignableUsers(query: string): Promise<OrgChartAssignableUser[]> {
+  const params = new URLSearchParams();
+
+  if (query.trim()) {
+    params.set("query", query.trim());
+  }
+
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/users?${params.toString()}`, {
+      cache: "no-store",
+      headers: await apiHeaders(),
+    });
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const payload = (await response.json()) as PaginatedEnvelope<OrgChartAssignableUser>;
+
+    return payload.data;
   } catch {
     return [];
   }

@@ -49,9 +49,7 @@ class EnsureUserHasRole
                     return $next($request);
                 }
             } catch (PermissionDoesNotExist) {
-                if ($this->legacyRoleHasPermission($user, $permission)) {
-                    return $next($request);
-                }
+                // permission doesn't exist in spatie, fallback to legacy check
             }
 
             if ($this->legacyRoleHasPermission($user, $permission)) {

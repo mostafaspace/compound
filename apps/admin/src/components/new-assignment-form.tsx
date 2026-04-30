@@ -2,8 +2,8 @@
 
 import { useRouter } from "next/navigation";
 
+import { createRepresentativeAssignment } from "@/lib/orgchart-actions";
 import { RepresentativeAssignmentForm } from "./representative-assignment-form";
-import { createRepresentativeAssignment } from "@/lib/orgchart";
 import type { CreateRepresentativeAssignmentInput } from "@/lib/orgchart";
 
 interface NewAssignmentFormProps {

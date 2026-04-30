@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getCurrentUser, getCompounds, getPollTypes } from "@/lib/api";
+import { hasEffectiveRole } from "@/lib/auth-access";
 import { getCompoundContext, requireAdminUser } from "@/lib/session";
 import { LogoutButton } from "@/components/logout-button";
 import { PollCreateForm } from "./poll-create-form";
@@ -13,7 +14,7 @@ export default async function NewPollPage() {
     getPollTypes(),
   ]);
 
-  const isSuperAdmin = currentUser?.role === "super_admin";
+  const isSuperAdmin = currentUser ? hasEffectiveRole(currentUser, "super_admin") : false;
   const defaultCompoundId = activeCompoundId ?? compounds[0]?.id ?? "";
   const lockedCompound = compounds.find((c) => c.id === defaultCompoundId) ?? compounds[0] ?? null;
 

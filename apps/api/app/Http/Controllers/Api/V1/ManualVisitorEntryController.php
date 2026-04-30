@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Security\ManualVisitorEntry;
+use App\Models\User;
 use App\Services\CompoundContextService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,14 +16,14 @@ class ManualVisitorEntryController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $compoundId = $this->context->resolve($request);
+        /** @var User $actor */
+        $actor = $request->user();
+        $requestedCompoundId = $request->header('X-Compound-Id');
+        $compoundIds = $this->context->resolveRequestedAccessibleCompoundIds($actor, $requestedCompoundId);
 
         $query = ManualVisitorEntry::with(['gate', 'shift', 'processedBy', 'host', 'hostUnit'])
+            ->when($compoundIds !== null, fn ($q) => $q->whereIn('compound_id', $compoundIds))
             ->latest('occurred_at');
-
-        if ($compoundId !== null) {
-            $query->where('compound_id', $compoundId);
-        }
 
         if ($request->has('status') && $request->input('status') !== 'all') {
             $query->where('status', $request->input('status'));
@@ -49,10 +50,8 @@ class ManualVisitorEntryController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        $compoundId = $this->context->resolve($request);
-
         $validated = $request->validate([
-            'compoundId'    => ['nullable', 'string', 'max:26'],
+            'compoundId'    => ['required', 'string', 'max:26'],
             'gateId'        => ['nullable', 'string', 'max:26', 'exists:security_gates,id'],
             'shiftId'       => ['nullable', 'string', 'max:26', 'exists:security_shifts,id'],
             'visitorName'   => ['required', 'string', 'max:120'],
@@ -66,11 +65,13 @@ class ManualVisitorEntryController extends Controller
             'occurredAt'    => ['required', 'date'],
         ]);
 
-        /** @var \App\Models\User $user */
+        $this->context->ensureUserCanAccessCompound($request->user(), $validated['compoundId']);
+
+        /** @var User $user */
         $user = $request->user();
 
         $entry = ManualVisitorEntry::create([
-            'compound_id'  => $compoundId ?? $validated['compoundId'],
+            'compound_id'  => $validated['compoundId'],
             'gate_id'      => $validated['gateId'] ?? null,
             'shift_id'     => $validated['shiftId'] ?? null,
             'processed_by' => $user->id,
@@ -90,8 +91,10 @@ class ManualVisitorEntryController extends Controller
         ], 201);
     }
 
-    public function show(ManualVisitorEntry $manualVisitorEntry): JsonResponse
+    public function show(Request $request, ManualVisitorEntry $manualVisitorEntry): JsonResponse
     {
+        $this->context->ensureUserCanAccessCompound($request->user(), $manualVisitorEntry->compound_id);
+
         return response()->json([
             'data' => $manualVisitorEntry->load(['gate', 'shift', 'processedBy', 'host', 'hostUnit', 'compound']),
         ]);
