@@ -12,6 +12,8 @@ export type RootStackParamList = {
   CreateIssue: undefined;
   IssueDetail: { issue: Issue };
   UploadDocument: undefined;
+  AdminInvitations: undefined;
+  CreateInvitation: undefined;
 };
 
 export type AuthStackParamList = {
@@ -33,7 +35,7 @@ export type AdminTabParamList = {
   Visitors: undefined;
   Finance: undefined;
   Units: undefined;
-  Settings: undefined;
+  More: undefined;
 };
 
 export type MoreStackParamList = {
@@ -47,6 +49,7 @@ export type MoreStackParamList = {
   Documents: undefined;
   VerificationStatus: undefined;
   PrivacySettings: undefined;
+  Polls: undefined;
 };
 
 export type GuardStackParamList = {

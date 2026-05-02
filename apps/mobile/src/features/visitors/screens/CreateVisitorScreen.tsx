@@ -7,7 +7,8 @@ import {
   Image, 
   TouchableOpacity, 
   Alert,
-  ActivityIndicator
+  Platform,
+  Dimensions
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
@@ -16,14 +17,20 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
+import { useSelector } from 'react-redux';
+import { getEffectiveRoleType } from '@compound/contracts';
 
 import { RootStackParamList } from '../../../navigation/types';
 import { useCreateVisitorMutation, useGetUnitsQuery } from '../../../services/property';
+import { useGetBuildingsQuery, useGetUnitsByBuildingQuery } from '../../../services/admin';
+import { selectCurrentUser } from '../../../store/authSlice';
 import { ScreenContainer } from '../../../components/layout/ScreenContainer';
 import { Typography } from '../../../components/ui/Typography';
 import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
-import { colors, spacing, shadows } from '../../../theme';
+import { colors, spacing } from '../../../theme';
+
+const { width } = Dimensions.get('window');
 
 const visitorSchema = z.object({
   visitorName: z.string().min(2, "Name is required (min 2 chars)"),
@@ -40,8 +47,16 @@ export const CreateVisitorScreen = () => {
   const isDark = useColorScheme() === 'dark';
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   
+  const user = useSelector(selectCurrentUser);
+  const roleType = getEffectiveRoleType(user);
+  const isAdmin = roleType === 'admin';
+
   const [createVisitor, { isLoading: isCreating }] = useCreateVisitorMutation();
-  const { data: units, error: unitsError, isLoading: isUnitsLoading } = useGetUnitsQuery();
+  const { data: units, isLoading: isUnitsLoading } = useGetUnitsQuery();
+  
+  const { data: buildings } = useGetBuildingsQuery(user?.compoundId || '', { skip: !isAdmin });
+  const { data: fallbackUnits } = useGetUnitsByBuildingQuery(buildings?.[0]?.id || '', { skip: !isAdmin || !buildings?.[0] });
+
   const [photo, setPhoto] = useState<any>(null);
 
   const { control, handleSubmit, formState: { errors } } = useForm<VisitorFormData>({
@@ -50,7 +65,7 @@ export const CreateVisitorScreen = () => {
       visitorName: '',
       visitorPhone: '',
       vehiclePlate: '',
-      numberOfVisitors: 1 as any,
+      numberOfVisitors: '1' as any,
       notes: '',
     }
   });
@@ -78,29 +93,25 @@ export const CreateVisitorScreen = () => {
   };
 
   const onSubmit = async (data: VisitorFormData) => {
-    console.log("Submitting with units:", units, "Error:", unitsError);
-    const unitId = units?.[0]?.unitId;
+    const unitId = units?.[0]?.unitId || fallbackUnits?.[0]?.id;
+
     if (!unitId) {
-      const debugInfo = units 
-        ? `Units array length: ${units.length}. First item unitId: ${units[0]?.unitId}`
-        : `Units is ${units}. Error: ${JSON.stringify(unitsError)}. Loading: ${isUnitsLoading}`;
       Alert.alert(
         "Error", 
-        `No unit found to associate this visitor with.\n\nDebug: ${debugInfo}`
+        "No unit found to associate this visitor with. Please contact management."
       );
       return;
     }
 
     try {
       const formData = new FormData();
-      formData.append('unitId', unitId);
+      formData.append('unitId', String(unitId));
       formData.append('visitorName', data.visitorName);
       if (data.visitorPhone) formData.append('visitorPhone', data.visitorPhone);
       if (data.vehiclePlate) formData.append('vehiclePlate', data.vehiclePlate);
       formData.append('numberOfVisitors', data.numberOfVisitors.toString());
       if (data.notes) formData.append('notes', data.notes);
       
-      // Default visit times (24h validity)
       formData.append('visitStartsAt', new Date().toISOString());
       formData.append('visitEndsAt', new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString());
 
@@ -121,32 +132,16 @@ export const CreateVisitorScreen = () => {
     }
   };
 
-  const sectionStyle = [
-    styles.section,
-    { 
-      backgroundColor: isDark ? colors.surface.dark : colors.surface.light,
-      borderColor: isDark ? colors.border.dark : colors.border.light,
-    }
-  ];
-
   return (
-    <ScreenContainer withKeyboard={true}>
+    <ScreenContainer withKeyboard={true} edges={['left', 'right', 'bottom']}>
       <ScrollView 
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <Typography variant="h1" style={styles.title}>
-            {t("Visitors.createNew", "Invite Guest")}
-          </Typography>
-          <Typography variant="body" style={styles.subtitle}>
-            {t("Visitors.subtitle", "Generate a secure QR pass for your visitor")}
-          </Typography>
-        </View>
 
-        <View style={sectionStyle}>
-          <Typography variant="h3" style={styles.sectionTitle}>
-            {t("Visitors.visitorDetails", "Visitor Details")}
+        <View style={[styles.card, { backgroundColor: isDark ? colors.surface.dark : colors.surface.light }]}>
+          <Typography variant="label" style={styles.cardHeader}>
+            {t("Visitors.visitorDetails", "Visitor Information")}
           </Typography>
           
           <Controller
@@ -154,11 +149,12 @@ export const CreateVisitorScreen = () => {
             name="visitorName"
             render={({ field: { onChange, value } }) => (
               <Input
-                label={t("Visitors.name", "Full Name *")}
-                placeholder={t("Visitors.namePlaceholder", "e.g. John Doe")}
+                label={t("Visitors.name", "Full Name")}
+                placeholder={t("Visitors.namePlaceholder", "Enter name...")}
                 value={value}
                 onChangeText={onChange}
                 error={errors.visitorName?.message}
+                containerStyle={styles.inputContainer}
               />
             )}
           />
@@ -168,12 +164,13 @@ export const CreateVisitorScreen = () => {
             name="visitorPhone"
             render={({ field: { onChange, value } }) => (
               <Input
-                label={t("Visitors.phone", "Phone Number (Optional)")}
+                label={t("Visitors.phone", "Phone Number")}
                 placeholder="+20 123 456 7890"
                 keyboardType="phone-pad"
                 value={value}
                 onChangeText={onChange}
                 error={errors.visitorPhone?.message}
+                containerStyle={styles.inputContainer}
               />
             )}
           />
@@ -190,6 +187,7 @@ export const CreateVisitorScreen = () => {
                     value={value}
                     onChangeText={onChange}
                     error={errors.vehiclePlate?.message}
+                    containerStyle={styles.inputContainer}
                   />
                 )}
               />
@@ -205,6 +203,7 @@ export const CreateVisitorScreen = () => {
                     value={value?.toString()}
                     onChangeText={onChange}
                     error={errors.numberOfVisitors?.message}
+                    containerStyle={styles.inputContainer}
                   />
                 )}
               />
@@ -212,20 +211,17 @@ export const CreateVisitorScreen = () => {
           </View>
         </View>
 
-        <View style={sectionStyle}>
-          <Typography variant="h3" style={styles.sectionTitle}>
+        <View style={[styles.card, { backgroundColor: isDark ? colors.surface.dark : colors.surface.light }]}>
+          <Typography variant="label" style={styles.cardHeader}>
             {t("Visitors.photo", "Visitor Photo (Optional)")}
-          </Typography>
-          <Typography variant="caption" style={styles.photoHint}>
-            {t("Visitors.photoHint", "Adding a photo helps security identify your guest faster.")}
           </Typography>
           
           <TouchableOpacity 
             style={[
               styles.photoPicker, 
               { 
+                backgroundColor: isDark ? '#1a202c' : '#f8fafc',
                 borderColor: isDark ? colors.border.dark : colors.border.light,
-                backgroundColor: isDark ? '#1a202c' : '#f8fafc'
               }
             ]} 
             onPress={handlePickImage}
@@ -235,8 +231,14 @@ export const CreateVisitorScreen = () => {
               <Image source={{ uri: photo.uri }} style={styles.photoPreview} />
             ) : (
               <View style={styles.photoPlaceholder}>
-                <Typography style={{ color: colors.primary.light, fontWeight: '600' }}>
-                  + {t("Visitors.addPhoto", "Add Photo")}
+                <View style={styles.iconCircle}>
+                  <Typography style={{ fontSize: 24 }}>📸</Typography>
+                </View>
+                <Typography variant="body" style={{ fontWeight: '600', color: colors.primary.light }}>
+                  {t("Visitors.addPhoto", "Capture or Upload")}
+                </Typography>
+                <Typography variant="caption" style={styles.photoHint}>
+                  {t("Visitors.photoHint", "Helps security identify your guest faster")}
                 </Typography>
               </View>
             )}
@@ -244,23 +246,23 @@ export const CreateVisitorScreen = () => {
           {photo && (
             <TouchableOpacity onPress={() => setPhoto(null)} style={styles.removePhoto}>
               <Typography variant="caption" style={{ color: colors.error, fontWeight: '600' }}>
-                {t("Common.remove", "Remove Photo")}
+                {t("Common.remove", "Change Photo")}
               </Typography>
             </TouchableOpacity>
           )}
         </View>
 
-        <View style={sectionStyle}>
+        <View style={[styles.card, { backgroundColor: isDark ? colors.surface.dark : colors.surface.light }]}>
           <Controller
             control={control}
             name="notes"
             render={({ field: { onChange, value } }) => (
               <Input
-                label={t("Visitors.notes", "Additional Notes")}
-                placeholder={t("Visitors.notesPlaceholder", "Any special instructions for the gate...")}
+                label={t("Visitors.notes", "Security Notes")}
+                placeholder={t("Visitors.notesPlaceholder", "Any special instructions...")}
                 multiline
                 numberOfLines={3}
-                style={{ height: 100, textAlignVertical: 'top' }}
+                style={{ height: 80, textAlignVertical: 'top' }}
                 value={value}
                 onChangeText={onChange}
                 error={errors.notes?.message}
@@ -276,12 +278,14 @@ export const CreateVisitorScreen = () => {
             loading={isCreating}
             style={styles.mainButton}
           />
-          <Button 
-            variant="outline"
-            title={t("Common.cancel", "Cancel")}
+          <TouchableOpacity 
             onPress={() => navigation.goBack()}
-            style={styles.cancelButton}
-          />
+            style={styles.cancelLink}
+          >
+            <Typography variant="body" style={styles.cancelText}>
+              {t("Common.cancel", "Cancel")}
+            </Typography>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </ScreenContainer>
@@ -290,77 +294,117 @@ export const CreateVisitorScreen = () => {
 
 const styles = StyleSheet.create({
   content: {
-    paddingHorizontal: spacing.sm,
-    paddingTop: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
     paddingBottom: spacing.xxl,
   },
   header: {
-    paddingHorizontal: spacing.sm,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xl,
+  },
+  headerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.xs,
   },
   title: {
-    marginBottom: spacing.xs,
-    letterSpacing: -0.5,
+    letterSpacing: -0.8,
+  },
+  typeBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
   subtitle: {
-    color: '#718096',
-    lineHeight: 20,
+    color: '#64748B',
+    fontSize: 14,
   },
-  section: {
+  card: {
     borderRadius: 24,
-    padding: spacing.xl,
-    marginBottom: spacing.xl,
-    borderWidth: 1,
-    ...shadows.md,
-  },
-  sectionTitle: {
+    padding: spacing.lg,
     marginBottom: spacing.lg,
-    color: colors.primary.light,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 2,
+      }
+    }),
+  },
+  cardHeader: {
+    color: '#94A3B8',
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+    fontSize: 11,
+    fontWeight: '800',
+    marginBottom: spacing.md,
+  },
+  inputContainer: {
+    marginBottom: spacing.md,
   },
   row: {
     flexDirection: 'row',
   },
   photoPicker: {
-    height: 140,
-    width: 140,
-    borderRadius: 70,
-    borderWidth: 2,
+    height: 180,
+    width: '100%',
+    borderRadius: 20,
+    borderWidth: 1,
     borderStyle: 'dashed',
-    alignSelf: 'center',
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
-    marginTop: spacing.md,
   },
   photoPreview: {
     width: '100%',
     height: '100%',
+    resizeMode: 'cover',
   },
   photoPlaceholder: {
     alignItems: 'center',
+    padding: spacing.md,
+  },
+  iconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
   },
   photoHint: {
     textAlign: 'center',
-    color: '#718096',
-    marginBottom: spacing.sm,
-    paddingHorizontal: spacing.lg,
+    color: '#94A3B8',
+    marginTop: 4,
+    fontSize: 12,
   },
   removePhoto: {
     alignSelf: 'center',
-    marginTop: spacing.sm,
+    marginTop: spacing.md,
   },
   footer: {
-    marginTop: spacing.md,
-    paddingHorizontal: spacing.sm,
+    marginTop: spacing.lg,
+    alignItems: 'center',
   },
   mainButton: {
-    marginBottom: spacing.md,
+    width: '100%',
     height: 60,
-    borderRadius: 16,
+    borderRadius: 18,
+    backgroundColor: '#1D4ED8',
   },
-  cancelButton: {
-    height: 56,
-    borderRadius: 16,
-    borderWidth: 0,
-  }
+  cancelLink: {
+    marginTop: spacing.lg,
+    padding: spacing.sm,
+  },
+  cancelText: {
+    color: '#64748B',
+    fontWeight: '600',
+  },
 });

@@ -1,75 +1,140 @@
-/* Root level — no connector above root */
+/* ─── Premium Org Chart Layout ─── */
+
+/* Container for the whole tree */
 .treeRoot {
-  display: table;
+  display: flex;
+  justify-content: center;
   list-style: none;
   margin: 0 auto;
   padding: 0;
 }
 
-/* Nested children container */
+/* Horizontal children container (default) */
 .treeChildren {
-  display: table;
+  display: flex;
+  justify-content: center;
   list-style: none;
   margin: 0 auto;
-  padding: 48px 0 0;
+  padding: 60px 0 0;
   position: relative;
 }
 
-/* Vertical connector from parent card down to the horizontal bar */
-.treeChildren::before {
+/* Vertical children container (for Floors) */
+.treeChildrenVertical {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  list-style: none;
+  margin: 0 auto;
+  padding: 60px 0 0;
+  position: relative;
+}
+
+/* Vertical connector from parent card down */
+.treeChildren::before,
+.treeChildrenVertical::before {
   content: '';
   position: absolute;
   top: 0;
   left: 50%;
-  border-left: 2px solid var(--brand-alpha-20, rgba(37, 99, 235, 0.2));
+  border-left: 2px solid var(--brand, #2563eb);
+  opacity: 0.3;
   width: 0;
-  height: 48px;
+  height: 60px;
 }
 
 /* Each node wrapper */
 .treeItem {
-  float: left;
   text-align: center;
   list-style-type: none;
   position: relative;
-  padding: 48px 12px 0;
+  padding: 60px 24px 0;
 }
 
-/* Left half of horizontal connector */
+/* Connectors for horizontal layout */
 .treeItem::before,
 .treeItem::after {
   content: '';
   position: absolute;
   top: 0;
   right: 50%;
-  border-top: 2px solid var(--brand-alpha-20, rgba(37, 99, 235, 0.2));
+  border-top: 2px solid var(--brand, #2563eb);
+  opacity: 0.3;
   width: 50%;
-  height: 48px;
+  height: 60px;
 }
 
-/* Right half of horizontal connector + vertical stem to node */
 .treeItem::after {
   right: auto;
   left: 50%;
-  border-left: 2px solid var(--brand-alpha-20, rgba(37, 99, 235, 0.2));
+  border-left: 2px solid var(--brand, #2563eb);
 }
 
-/* Only child: just a vertical stem, no horizontal */
-.treeItem:only-child::before {
+/* Remove horizontal lines for single children */
+.treeItem:only-child::before,
+.treeItem:only-child::after {
   display: none;
 }
-.treeItem:only-child::after {
-  border-top: none;
+
+/* Special stem for single child */
+.treeItem:only-child {
+  padding-top: 60px;
+}
+.treeItem:only-child::before {
+  content: '';
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 50%;
+  border-left: 2px solid var(--brand, #2563eb);
+  opacity: 0.3;
   width: 0;
+  height: 60px;
 }
 
-/* Cap the right end of the horizontal bar at the last child's center */
+/* Hide horizontal bars for first and last */
+.treeItem:first-child::before {
+  border: 0 none;
+}
+.treeItem:last-child::after {
+  border: 0 none;
+}
+
+/* Vertical stem for first and last */
+.treeItem:first-child::after {
+  border-left: 2px solid var(--brand, #2563eb);
+  border-radius: 8px 0 0 0;
+}
 .treeItem:last-child::before {
-  border-right: 2px solid var(--brand-alpha-20, rgba(37, 99, 235, 0.2));
+  border-right: 2px solid var(--brand, #2563eb);
   border-radius: 0 8px 0 0;
 }
 
-/* Round the top-left corner of the first child's connector */
-.treeItem:first-child::after {
-  border-radius: 8px 0 0 0;
+/* ─── Vertical Layout Overrides ─── */
+.treeItemVertical {
+  padding: 40px 0 0;
+  position: relative;
+}
+
+.treeItemVertical::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  border-left: 2px solid var(--brand, #2563eb);
+  opacity: 0.3;
+  height: 100%;
+}
+
+.treeItemVertical:last-child::before {
+  height: 40px;
+}
+
+/* ─── Premium Node Aesthetics ─── */
+.nodeCard {
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.nodeCard:hover {
+  transform: translateY(-4px) scale(1.02);
 }

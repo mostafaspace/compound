@@ -38,7 +38,10 @@
       "resident_owner": "Owner resident",
       "resident_tenant": "Tenant resident",
       "security": "Security",
-      "super_admin": "Super admin"
+      "super_admin": "Super admin",
+      "president": "President",
+      "building_representative": "Building Representative",
+      "floor_representative": "Floor Representative"
     },
     "statuses": {
       "active": "Active",
@@ -92,7 +95,12 @@
     "restoring": "Restoring resident session.",
     "signIn": "Sign in",
     "signedIn": "Signed in",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "accountBlocked": "Your account is not active.",
+    "loginFailed": "An unexpected error occurred. Please try again.",
+    "forgotPassword": "Forgot Password?",
+    "noAccount": "Don't have an account?",
+    "contactAdmin": "Contact Admin"
   },
   "Verification": {
     "label": "Verification Status",
@@ -407,7 +415,11 @@
     "buildings": "Buildings",
     "noRep": "No representative assigned",
     "floors_one": "{{count}} floor",
-    "floors_other": "{{count}} floors"
+    "floors_other": "{{count}} floors",
+    "vacant": "Vacant Position",
+    "assignRep": "Assign Representative",
+    "profile": "Member Profile",
+    "leadership": "Association Leadership"
   },
   "Privacy": {
     "label": "Privacy & Consents",

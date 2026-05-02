@@ -5,11 +5,12 @@ import { useColorScheme, Text } from 'react-native';
 import { AdminTabParamList } from './types';
 import { AdminDashboardScreen } from '../features/admin/screens/AdminDashboardScreen';
 import { VisitorsScreen } from '../features/visitors/screens/VisitorsScreen';
-import { AccountsScreen } from '../features/finance/screens/AccountsScreen';
-import { PropertyScreen } from '../features/property/screens/PropertyScreen';
-import { SettingsScreen } from '../features/settings/screens/SettingsScreen';
+import { AdminFinanceScreen } from '../features/admin/screens/AdminFinanceScreen';
+import { AdminUnitsScreen } from '../features/admin/screens/AdminUnitsScreen';
 import { colors, spacing } from '../theme';
 import { LogoutButton } from '../components/ui/LogoutButton';
+import { ScreenHeader } from '../components/layout/ScreenHeader';
+import { MoreNavigator } from './MoreNavigator';
 
 const Tab = createBottomTabNavigator<AdminTabParamList>();
 
@@ -51,7 +52,7 @@ export const AdminTabNavigator = () => {
           if (route.name === 'Visitors') icon = '👥';
           if (route.name === 'Finance') icon = '💰';
           if (route.name === 'Units') icon = '🏢';
-          if (route.name === 'Settings') icon = '⚙️';
+          if (route.name === 'More') icon = '•••';
           return <Text style={{ color, fontSize: 20 }}>{icon}</Text>;
         },
       })}
@@ -59,27 +60,42 @@ export const AdminTabNavigator = () => {
       <Tab.Screen
         name="Dashboard"
         component={AdminDashboardScreen}
-        options={{ title: t('Admin.dashboard', 'Dashboard') }}
+        options={{ 
+          title: t('Admin.dashboard', 'Dashboard'),
+          header: () => <ScreenHeader title={t('Admin.dashboard', 'Dashboard')} showBack={false} rightElement={<LogoutButton />} />
+        }}
       />
       <Tab.Screen
         name="Visitors"
         component={VisitorsScreen}
-        options={{ title: t('Visitors.label', 'Visitors') }}
+        options={{ 
+          title: t('Visitors.qrLabel', 'Visitor QR'),
+          header: () => <ScreenHeader title={t('Visitors.qrLabel', 'Visitor QR')} showBack={false} rightElement={<LogoutButton />} />
+        }}
       />
       <Tab.Screen
         name="Finance"
-        component={AccountsScreen}
-        options={{ title: t('Finance.label', 'Finance') }}
+        component={AdminFinanceScreen}
+        options={{ 
+          title: t('Finance.label', 'Finance'),
+          header: () => <ScreenHeader title={t('Finance.label', 'Finance')} showBack={false} rightElement={<LogoutButton />} />
+        }}
       />
       <Tab.Screen
         name="Units"
-        component={PropertyScreen}
-        options={{ title: t('Admin.units', 'Units') }}
+        component={AdminUnitsScreen}
+        options={{ 
+          title: t('Admin.units', 'Units'),
+          header: () => <ScreenHeader title={t('Admin.units', 'Units')} showBack={false} rightElement={<LogoutButton />} />
+        }}
       />
       <Tab.Screen
-        name="Settings"
-        component={SettingsScreen}
-        options={{ title: t('Common.settings', 'Settings') }}
+        name="More"
+        component={MoreNavigator}
+        options={{ 
+          title: t('Common.more', 'More'), 
+          headerShown: false 
+        }}
       />
     </Tab.Navigator>
   );

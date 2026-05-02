@@ -48,7 +48,7 @@ export const NotificationsScreen = () => {
   );
 
   return (
-    <ScreenContainer withKeyboard={false} style={styles.container}>
+    <ScreenContainer style={styles.container} edges={['left', 'right', 'bottom']}>
       <FlatList
         data={notifications}
         keyExtractor={(item) => item.id.toString()}

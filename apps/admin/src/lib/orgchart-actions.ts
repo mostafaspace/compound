@@ -278,10 +278,27 @@ export async function getPersonDetail(userId: number): Promise<OrgChartPersonDet
   }
 }
 
+export async function assignCompoundHead(compoundId: string, userId: number): Promise<boolean> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/org-chart/compound/${compoundId}/head`, {
+      body: JSON.stringify({ userId }),
+      headers: {
+        ...(await apiHeaders()),
+        "Content-Type": "application/json",
+      },
+      method: "PATCH",
+    });
+
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
 export async function assignBuildingHead(buildingId: string, userId: number): Promise<boolean> {
   try {
     const response = await fetch(`${config.apiBaseUrl}/org-chart/building/${buildingId}/head`, {
-      body: JSON.stringify({ user_id: userId }),
+      body: JSON.stringify({ userId }),
       headers: {
         ...(await apiHeaders()),
         "Content-Type": "application/json",
@@ -298,7 +315,7 @@ export async function assignBuildingHead(buildingId: string, userId: number): Pr
 export async function assignFloorRepresentative(floorId: string, userId: number): Promise<boolean> {
   try {
     const response = await fetch(`${config.apiBaseUrl}/org-chart/floor/${floorId}/representative`, {
-      body: JSON.stringify({ user_id: userId }),
+      body: JSON.stringify({ userId }),
       headers: {
         ...(await apiHeaders()),
         "Content-Type": "application/json",
@@ -316,7 +333,7 @@ export async function searchOrgChartAssignableUsers(query: string): Promise<OrgC
   const params = new URLSearchParams();
 
   if (query.trim()) {
-    params.set("query", query.trim());
+    params.set("q", query.trim());
   }
 
   try {

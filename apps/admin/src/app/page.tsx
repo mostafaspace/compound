@@ -5,7 +5,7 @@ import { CompoundContextBanner } from "@/components/compound-context-banner";
 import { SiteNav } from "@/components/site-nav";
 import { getCurrentUser, getSystemStatus } from "@/lib/api";
 import { formatRoleLabel, getPrimaryEffectiveRole } from "@/lib/auth-access";
-import { hasEffectiveRole, requireAdminUser } from "@/lib/session";
+import { getCompoundContext, hasEffectiveRole, requireAdminUser } from "@/lib/session";
 
 const workstreams = [
   { key: "financeReview", value: "12", tone: "text-brand" },
@@ -15,24 +15,6 @@ const workstreams = [
 ];
 
 const priorityQueue = ["ownerOnboarding", "bankReceipts", "vendorEstimate", "boardActions"];
-
-// Module cards replace the old inline nav buttons
-const modules = [
-  { href: "/compounds",             key: "compounds",           icon: "🏛️" },
-  { href: "/visitors",              key: "visitors",            icon: "🚗" },
-  { href: "/issues",                key: "issues",              icon: "🔧" },
-  { href: "/announcements",         key: "announcements",       icon: "📢" },
-  { href: "/finance",               key: "finance",             icon: "💳" },
-  { href: "/dues",                  key: "dues",                icon: "📄" },
-  { href: "/governance",            key: "governance",          icon: "⚖️" },
-  { href: "/documents",             key: "documents",           icon: "📁" },
-  { href: "/security",              key: "security",            icon: "🔒" },
-  { href: "/meetings",              key: "meetings",            icon: "🤝" },
-  { href: "/notifications/channels",key: "notificationChannels",icon: "🔔" },
-  { href: "/audit-logs",            key: "auditLogs",           icon: "📋" },
-  { href: "/analytics/operational", key: "analytics",           icon: "📊" },
-  { href: "/settings",              key: "settings",            icon: "⚙️" },
-];
 
 function CheckIcon() {
   return (
@@ -54,6 +36,26 @@ export default async function Home() {
   const apiOnline = status?.status === "ok";
   const role = formatRoleLabel(getPrimaryEffectiveRole(user));
   const isSuperAdmin = hasEffectiveRole(user, "super_admin");
+  const activeCompoundId = await getCompoundContext();
+
+  // Module cards replace the old inline nav buttons
+  const modules = [
+    { href: "/compounds",             key: "compounds",           icon: "🏛️" },
+    { href: "/visitors",              key: "visitors",            icon: "🚗" },
+    { href: "/issues",                key: "issues",              icon: "🔧" },
+    { href: "/announcements",         key: "announcements",       icon: "📢" },
+    { href: "/finance",               key: "finance",             icon: "💳" },
+    { href: "/dues",                  key: "dues",                icon: "📄" },
+    { href: "/governance",            key: "governance",          icon: "⚖️" },
+    { href: "/documents",             key: "documents",           icon: "📁" },
+    { href: "/security",              key: "security",            icon: "🔒" },
+    { href: "/meetings",              key: "meetings",            icon: "🤝" },
+    { href: "/notifications/channels",key: "notificationChannels",icon: "🔔" },
+    { href: "/audit-logs",            key: "auditLogs",           icon: "📋" },
+    { href: "/analytics/operational", key: "analytics",           icon: "📊" },
+    { href: `/compounds/${activeCompoundId ?? 'none'}/org-chart`, key: "orgChart",        icon: "🌳" },
+    { href: "/settings",              key: "settings",            icon: "⚙️" },
+  ];
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -105,7 +107,7 @@ export default async function Home() {
             <Link
               key={m.href}
               href={m.href}
-              className="glass flex flex-col items-center gap-2 rounded-xl px-3 py-4 text-center transition hover:border-brand hover:shadow-premium-md hover:-translate-y-0.5"
+              className={`glass flex flex-col items-center gap-2 rounded-xl px-3 py-4 text-center transition hover:border-brand hover:shadow-premium-md hover:-translate-y-0.5 ${(m.key === 'orgChart' && !activeCompoundId) ? 'opacity-40 grayscale pointer-events-none' : ''}`}
             >
               <span className="text-2xl" aria-hidden="true">{m.icon}</span>
               <span className="text-xs font-medium text-foreground leading-tight">{nav(m.key)}</span>

@@ -12,6 +12,7 @@ import { MoreNavigator } from './MoreNavigator';
 import { colors, spacing } from '../theme';
 import { usePermission } from '../hooks/usePermission';
 import { LogoutButton } from '../components/ui/LogoutButton';
+import { ScreenHeader } from '../components/layout/ScreenHeader';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
@@ -63,28 +64,43 @@ export const ResidentTabNavigator = () => {
       <Tab.Screen
         name="Dashboard"
         component={ResidentDashboardScreen}
-        options={{ title: t('Dashboard.title', { defaultValue: 'Dashboard' }) }}
+        options={{ 
+          title: t('Dashboard.title', { defaultValue: 'Dashboard' }),
+          header: () => <ScreenHeader title={t('Dashboard.title', { defaultValue: 'Dashboard' })} showBack={false} rightElement={<LogoutButton />} />
+        }}
       />
       <Tab.Screen
         name="Visitors"
         component={VisitorsScreen}
-        options={{ title: t('Visitors.label') }}
+        options={{ 
+          title: t('Visitors.qrLabel', 'Visitor QR'),
+          header: () => <ScreenHeader title={t('Visitors.qrLabel', 'Visitor QR')} showBack={false} rightElement={<LogoutButton />} />
+        }}
       />
       <Tab.Screen
         name="Finance"
         component={AccountsScreen}
-        options={{ title: t('Finance.label') }}
+        options={{ 
+          title: t('Finance.label'),
+          header: () => <ScreenHeader title={t('Finance.label')} showBack={false} rightElement={<LogoutButton />} />
+        }}
       />
       <Tab.Screen
         name="Governance"
         component={VotesScreen}
-        options={{ title: t('Governance.label') }}
+        options={{ 
+          title: t('Governance.label'),
+          header: () => <ScreenHeader title={t('Governance.label')} showBack={false} rightElement={<LogoutButton />} />
+        }}
       />
       {canViewGovernance && (
         <Tab.Screen
           name="Polls"
           component={PollsScreen}
-          options={{ title: 'Polls' }}
+          options={{ 
+            title: 'Polls',
+            header: () => <ScreenHeader title="Polls" showBack={false} rightElement={<LogoutButton />} />
+          }}
         />
       )}
       <Tab.Screen

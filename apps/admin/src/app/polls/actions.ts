@@ -1,17 +1,21 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
-import { closePoll, publishPoll } from "@/lib/api";
+import { createPoll as apiCreatePoll, publishPoll, closePoll } from "@/lib/api";
+import type { CreatePollInput } from "@compound/contracts";
 
-export async function publishPollAction(pollId: string) {
-  await publishPoll(pollId);
+export async function createPoll(input: CreatePollInput) {
+  const poll = await apiCreatePoll(input);
   revalidatePath("/polls");
-  redirect("/polls?published=1");
+  return poll;
 }
 
-export async function closePollAction(pollId: string) {
-  await closePoll(pollId);
+export async function publishPollAction(id: string) {
+  await publishPoll(id);
   revalidatePath("/polls");
-  redirect(`/polls/${pollId}?closed=1`);
+}
+
+export async function closePollAction(id: string) {
+  await closePoll(id);
+  revalidatePath("/polls");
 }

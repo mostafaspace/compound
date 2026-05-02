@@ -115,7 +115,7 @@ export const PollsScreen = () => {
   };
 
   return (
-    <ScreenContainer withKeyboard={false} style={styles.container}>
+    <ScreenContainer withKeyboard={false} style={styles.container} edges={['left', 'right', 'bottom']}>
       <FlatList
         data={polls}
         keyExtractor={(item) => item.id}

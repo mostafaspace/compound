@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { createPermission, deletePermission, PermissionRecord } from "@/lib/api";
+import type { PermissionRecord } from "@/lib/api";
+import { createPermission, deletePermission } from "./actions";
 
 export function PermissionsClient({ initialPermissions }: { initialPermissions: PermissionRecord[] }) {
   const [permissions, setPermissions] = useState(initialPermissions);

@@ -20,7 +20,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { CompoundSummary, PollType } from "@compound/contracts";
-import { createPoll } from "@/lib/api";
+import { createPoll } from "../actions";
 
 interface SortableOptionProps {
   id: string;

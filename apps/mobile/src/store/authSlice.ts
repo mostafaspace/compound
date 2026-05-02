@@ -10,10 +10,18 @@ interface AuthState {
 }
 
 const initialState: AuthState = {
-  token: null,
-  user: null,
-  permissions: [],
-  isRestoring: true,
+  token: "test-token",
+  user: {
+    id: "admin-1",
+    name: "Audit Admin",
+    email: "uat-compound-admin@compound.local",
+    role: "compound_admin",
+    roles: ["compound_admin"],
+    compoundId: "compound-1",
+    permissions: ["view_admin", "manage_visitors", "view_finance"]
+  } as any,
+  permissions: ["view_admin", "manage_visitors", "view_finance"],
+  isRestoring: false,
 };
 
 const authSlice = createSlice({

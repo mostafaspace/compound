@@ -12,6 +12,7 @@ export const linking: LinkingOptions<RootStackParamList> = {
           Finance: 'finance',
           Notifications: 'notifications',
           Settings: 'settings',
+          OrgChart: 'org-chart',
         },
       },
       Guard: {

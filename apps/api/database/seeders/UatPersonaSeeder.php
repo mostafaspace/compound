@@ -3,7 +3,11 @@
 namespace Database\Seeders;
 
 use App\Enums\AccountStatus;
+use App\Enums\UnitRelationType;
 use App\Enums\UserRole;
+use App\Enums\VerificationStatus;
+use App\Models\Property\Unit;
+use App\Models\Property\UnitMembership;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -38,7 +42,7 @@ class UatPersonaSeeder extends Seeder
         $personas = $this->getPersonas($compoundId);
 
         foreach ($personas as $persona) {
-            $user = User::firstOrCreate(
+            $user = User::updateOrCreate(
                 ['email' => $persona['email']],
                 $persona
             );
@@ -46,7 +50,44 @@ class UatPersonaSeeder extends Seeder
             $this->command->info("  ✓ {$persona['name']} ({$persona['role']})");
         }
 
+        $this->linkResidentsToUnits($compoundId);
+
         $this->command->info("UAT personas seeded. Password for all accounts: " . self::PASSWORD);
+    }
+
+    private function linkResidentsToUnits(?string $compoundId): void
+    {
+        if (!$compoundId) return;
+
+        $units = Unit::where('compound_id', $compoundId)->limit(2)->get();
+        if ($units->count() < 2) return;
+
+        $owner = User::where('email', 'uat-resident-owner@compound.local')->first();
+        $tenant = User::where('email', 'uat-resident-tenant@compound.local')->first();
+
+        if ($owner) {
+            UnitMembership::updateOrCreate(
+                ['unit_id' => $units[0]->id, 'user_id' => $owner->id],
+                [
+                    'relation_type' => UnitRelationType::Owner->value,
+                    'is_primary' => true,
+                    'verification_status' => VerificationStatus::Verified->value,
+                    'starts_at' => now()->subYear(),
+                ]
+            );
+        }
+
+        if ($tenant) {
+            UnitMembership::updateOrCreate(
+                ['unit_id' => $units[1]->id, 'user_id' => $tenant->id],
+                [
+                    'relation_type' => UnitRelationType::Tenant->value,
+                    'is_primary' => true,
+                    'verification_status' => VerificationStatus::Verified->value,
+                    'starts_at' => now()->subMonths(6),
+                ]
+            );
+        }
     }
 
     /**

@@ -1,8 +1,11 @@
 import React from 'react';
 import { View, StyleSheet, FlatList, useColorScheme } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { useSelector } from 'react-redux';
+import { getEffectiveRoleType } from '@compound/contracts';
+import { selectCurrentUser } from '../../../store/authSlice';
 import { useGetVisitorRequestsQuery, useCancelVisitorMutation } from '../../../services/property';
 import { RootStackParamList } from '../../../navigation/types';
 import { colors, spacing } from '../../../theme';
@@ -16,8 +19,19 @@ export const VisitorsScreen = () => {
   const isDark = useColorScheme() === 'dark';
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   
+  const user = useSelector(selectCurrentUser);
+  const roleType = getEffectiveRoleType(user);
+  const isAdmin = roleType === 'admin';
+
   const { data: visitors = [], isLoading, refetch } = useGetVisitorRequestsQuery();
   const [cancelVisitor, { isLoading: isCancelling }] = useCancelVisitorMutation();
+
+  // Refetch when screen comes into focus to catch new invitations
+  useFocusEffect(
+    React.useCallback(() => {
+      refetch();
+    }, [refetch])
+  );
 
   const handleCancel = async (id: string) => {
     try {
@@ -88,13 +102,15 @@ export const VisitorsScreen = () => {
         }
         contentContainerStyle={styles.listContent}
       />
-      <View style={styles.fabContainer}>
-        <Button 
-          title={t("Visitors.create", "New Visitor")} 
-          onPress={() => navigation.navigate('CreateVisitor')}
-          style={styles.fab}
-        />
-      </View>
+      {!isAdmin && (
+        <View style={styles.fabContainer}>
+          <Button 
+            title={t("Visitors.create", "New Visitor")} 
+            onPress={() => navigation.navigate('CreateVisitor')}
+            style={styles.fab}
+          />
+        </View>
+      )}
     </ScreenContainer>
   );
 };

@@ -22,7 +22,8 @@
     "meetings": "الاجتماعات",
     "workOrders": "أوامر العمل",
     "privacy": "الخصوصية والبيانات",
-    "launch": "جاهزية الإطلاق"
+    "launch": "جاهزية الإطلاق",
+    "orgChart": "الهيكل التنظيمي"
   },
   "Language": {
     "toggle": "تغيير اللغة",
@@ -352,7 +353,8 @@
     "noEmail": "لا يوجد بريد إلكتروني",
     "createInvite": "إنشاء دعوة",
     "documents": "المستندات",
-    "onboarding": "التسجيل"
+    "onboarding": "التسجيل",
+    "orgChart": "الهيكل التنظيمي"
   },
   "Onboarding": {
     "back": "لوحة القيادة",
@@ -1021,9 +1023,9 @@
     },
     "roles": {
       "floor_representative": "ممثل الطابق",
-      "building_representative": "ممثل المبنى",
+      "building_representative": "رئيس المبنى",
       "association_member": "عضو الاتحاد",
-      "president": "الرئيس",
+      "president": "رئيس الاتحاد",
       "treasurer": "أمين الصندوق",
       "security_contact": "مسؤول الأمن",
       "admin_contact": "مسؤول الإدارة"

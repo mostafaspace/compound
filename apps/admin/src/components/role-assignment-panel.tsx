@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import type { AdminScopeAssignment, RoleRecord } from "@/lib/api";
 import {
   getUserRoleAssignments, assignUserRole, revokeUserRole,
-  getRoles, AdminScopeAssignment, RoleRecord,
-} from "@/lib/api";
+  getRoles
+} from "@/app/support/users/actions";
 
 interface Props {
   userId: number;

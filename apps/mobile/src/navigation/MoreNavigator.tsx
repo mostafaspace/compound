@@ -6,13 +6,15 @@ import { MoreScreen } from '../features/more/screens/MoreScreen';
 import { NotificationsScreen } from '../features/notifications/screens/NotificationsScreen';
 import { AnnouncementsScreen } from '../features/announcements/screens/AnnouncementsScreen';
 import { PropertyScreen } from '../features/property/screens/PropertyScreen';
-import { OrgChartScreen } from '../features/orgchart/screens/OrgChartScreen';
+import { OrgChartScreen } from '../features/orgchart/screens/OrgChartScreenV2';
 import { SettingsScreen } from '../features/settings/screens/SettingsScreen';
 import { IssuesScreen } from '../features/issues/screens/IssuesScreen';
 import { DocumentsScreen } from '../features/documents/screens/DocumentsScreen';
 import { VerificationStatusScreen } from '../features/verification/screens/VerificationStatusScreen';
 import { PrivacySettingsScreen } from '../features/privacy/screens/PrivacySettingsScreen';
+import { PollsScreen } from '../features/polls/screens/PollsScreen';
 import { MoreStackParamList } from './types';
+import { ScreenHeader } from '../components/layout/ScreenHeader';
 import { colors } from '../theme';
 
 const Stack = createStackNavigator<MoreStackParamList>();
@@ -24,11 +26,20 @@ export const MoreNavigator = () => {
   return (
     <Stack.Navigator
       screenOptions={{
-        headerStyle: {
-          backgroundColor: isDark ? colors.surface.dark : colors.surface.light,
-        },
-        headerTintColor: isDark ? colors.text.primary.dark : colors.text.primary.light,
-        headerBackTitle: "",
+        header: ({ options, route }) => {
+          const title = options.headerTitle !== undefined 
+            ? options.headerTitle 
+            : options.title !== undefined 
+              ? options.title 
+              : route.name;
+          
+          return (
+            <ScreenHeader 
+              title={title as string} 
+              showBack={route.name !== 'MoreHome'} 
+            />
+          );
+        }
       }}
     >
       <Stack.Screen 
@@ -80,6 +91,11 @@ export const MoreNavigator = () => {
         name="PrivacySettings"
         component={PrivacySettingsScreen}
         options={{ title: t("Privacy.label", { defaultValue: "Privacy & Consents" }) }}
+      />
+      <Stack.Screen
+        name="Polls"
+        component={PollsScreen}
+        options={{ title: t("Polls.label", { defaultValue: "Polls" }) }}
       />
     </Stack.Navigator>
   );

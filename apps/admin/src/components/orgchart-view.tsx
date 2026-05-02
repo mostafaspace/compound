@@ -6,52 +6,45 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  type WheelEvent,
-  type MouseEvent as RMouseEvent,
+  useLayoutEffect,
 } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import * as d3 from "d3";
+import { OrgChart } from "d3-org-chart";
+
 import type {
   OrgChartResponse,
   OrgChartRepresentative,
   OrgChartAssignableUser,
-  OrgChartUnit,
 } from "@/lib/orgchart";
 import {
-  formatAssignableUserLabel,
   mergeRepresentativeWithPersonDetail,
   parseAssignmentUserId,
   buildOrgChartTree,
 } from "@/lib/orgchart";
 import {
   getPersonDetail,
+  assignCompoundHead,
   assignBuildingHead,
   assignFloorRepresentative,
   searchOrgChartAssignableUsers,
 } from "@/lib/orgchart-actions";
-import styles from "./orgchart-tree.module.css";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface TreeNode {
+interface FlatNode {
   id: string;
+  parentId: string | null;
+  name: string;
+  role: string;
   type: "compound" | "building" | "floor";
   label: string;
   code?: string;
-  representatives: OrgChartRepresentative[];
-  children: TreeNode[];
-  units?: OrgChartUnit[];
-}
-
-interface AssignmentState {
-  node: TreeNode;
-  initialUserId?: string;
-}
-
-interface Transform {
-  x: number;
-  y: number;
-  scale: number;
+  photoUrl?: string | null;
+  rep?: OrgChartRepresentative;
+  isVacant?: boolean;
 }
 
 interface OrgChartViewProps {
@@ -62,12 +55,11 @@ interface OrgChartViewProps {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function formatRole(role: string) {
-  return role
-    .split("_")
-    .map((w) => w[0].toUpperCase() + w.slice(1))
-    .join(" ");
-}
+const ROLE_BADGE: Record<string, { bg: string; color: string; border: string }> = {
+  president: { bg: "#EEF2FF", color: "#4F46E5", border: "#C7D2FE" },
+  building_representative: { bg: "#F0F9FF", color: "#0284C7", border: "#BAE6FD" },
+  floor_representative: { bg: "#F5F3FF", color: "#7C3AED", border: "#DDD6FE" },
+};
 
 function getInitials(name: string) {
   return name
@@ -78,314 +70,28 @@ function getInitials(name: string) {
     .toUpperCase();
 }
 
-const AVATAR_HUE = [
-  "#3b82f6",
-  "#10b981",
-  "#8b5cf6",
-  "#f59e0b",
-  "#ef4444",
-  "#06b6d4",
-  "#ec4899",
-  "#6366f1",
-];
+const AVATAR_HUE = ["#3b82f6", "#10b981", "#8b5cf6", "#f59e0b", "#ef4444", "#06b6d4", "#ec4899", "#6366f1"];
 function avatarColor(id: number) {
   return AVATAR_HUE[id % AVATAR_HUE.length];
 }
-
-const ROLE_BADGE: Record<string, { bg: string; color: string }> = {
-  president: { bg: "#fef3c7", color: "#92400e" },
-  treasurer: { bg: "#d1fae5", color: "#065f46" },
-  building_representative: { bg: "#dbeafe", color: "#1e40af" },
-  floor_representative: { bg: "#ede9fe", color: "#5b21b6" },
-  admin_contact: { bg: "#ffedd5", color: "#9a3412" },
-  security_contact: { bg: "#fee2e2", color: "#991b1b" },
-  association_member: { bg: "#f3f4f6", color: "#374151" },
-};
-
-function countAllReps(node: TreeNode): number {
-  let total = node.representatives.length;
-  for (const c of node.children) total += countAllReps(c);
-  return total;
-}
-
-function findAssignableNode(root: TreeNode, representative: OrgChartRepresentative): TreeNode | null {
-  if (representative.scopeLevel === "compound") {
-    return root;
-  }
-
-  for (const building of root.children) {
-    if (representative.scopeLevel === "building" && building.id === representative.buildingId) {
-      return building;
-    }
-
-    for (const floor of building.children) {
-      if (representative.scopeLevel === "floor" && floor.id === representative.floorId) {
-        return floor;
-      }
-    }
-  }
-
-  return null;
-}
-
-// ─── Icons ────────────────────────────────────────────────────────────────────
-
-function CompoundIcon() {
-  return (
-    <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 22V12h6v10" />
-    </svg>
-  );
-}
-
-function BuildingIcon() {
-  return (
-    <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-      <rect x="3" y="3" width="18" height="18" rx="1.5" strokeLinecap="round" />
-      <path strokeLinecap="round" d="M9 3v18M15 3v18M3 9h18M3 15h18" />
-    </svg>
-  );
-}
-
-function FloorIcon() {
-  return (
-    <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-    </svg>
-  );
-}
-
-const NODE_ICON = {
-  compound: <CompoundIcon />,
-  building: <BuildingIcon />,
-  floor: <FloorIcon />,
-};
-
-// ─── Person Card ──────────────────────────────────────────────────────────────
-
-// ─── Person Card ──────────────────────────────────────────────────────────────
-
-function PersonCard({ 
-  rep, 
-  isVacant = false, 
-  onClick,
-  onAssign
-}: { 
-  rep?: OrgChartRepresentative; 
-  isVacant?: boolean; 
-  onClick?: () => void;
-  onAssign?: () => void;
-}) {
-  const badge = rep ? (ROLE_BADGE[rep.role] ?? { bg: "#f3f4f6", color: "#374151" }) : { bg: "#f3f4f6", color: "#64748b" };
-  
-  return (
-    <div 
-      onClick={isVacant ? onAssign : onClick}
-      className={`group relative flex items-center gap-2.5 rounded-xl border border-line bg-panel p-2 w-60 text-left transition-all ${
-        isVacant ? "border-dashed opacity-70 grayscale hover:grayscale-0 hover:border-brand cursor-pointer" : "cursor-pointer hover:border-brand hover:shadow-premium-md hover:-translate-y-0.5"
-      }`}
-    >
-      <div className="relative shrink-0">
-        {rep?.user.photoUrl ? (
-          <img
-            src={rep.user.photoUrl}
-            alt={rep.user.name}
-            className="w-10 h-10 rounded-full object-cover ring-2 ring-brand/10 group-hover:ring-brand/30 transition-all"
-            draggable={false}
-          />
-        ) : (
-          <div
-            className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 ${isVacant ? "bg-slate-100 text-slate-400 border border-dashed border-slate-300" : ""}`}
-            style={!isVacant ? { backgroundColor: avatarColor(rep?.user.id ?? 0) } : {}}
-          >
-            {isVacant ? "+" : getInitials(rep?.user.name ?? "V")}
-          </div>
-        )}
-      </div>
-      
-      <div className="min-w-0 flex-1">
-        <p className="text-[12px] font-bold text-foreground truncate group-hover:text-brand transition-colors">
-          {isVacant ? "Vacant Position" : rep?.user.name}
-        </p>
-        <p className="text-[10px] text-muted truncate leading-tight">
-          {isVacant ? "Click to assign" : formatRole(rep?.role ?? "")}
-        </p>
-        {!isVacant && (
-          <span
-            className="inline-block text-[8px] font-black px-1.5 py-0.5 rounded-md mt-1 leading-tight uppercase tracking-widest"
-            style={{ backgroundColor: badge.bg, color: badge.color }}
-          >
-            {rep?.role.replace("_", " ")}
-          </span>
-        )}
-      </div>
-
-      {isVacant && (
-         <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <span className="text-[8px] font-black bg-brand text-white px-1.5 py-0.5 rounded-full">ASSIGN</span>
-         </div>
-      )}
-    </div>
-  );
-}
-
-// ─── Resident Card (Smaller) ──────────────────────────────────────────────────
-
-function ResidentCard({ resident }: { resident: any }) {
-  return (
-    <div className="flex items-center gap-2 py-1 px-2 hover:bg-slate-50 rounded-lg transition-colors cursor-default">
-       <div className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold text-white shrink-0" style={{ backgroundColor: avatarColor(resident.id) }}>
-          {getInitials(resident.name)}
-       </div>
-       <span className="text-[10px] font-medium text-muted-foreground truncate">{resident.name}</span>
-    </div>
-  );
-}
-
-// ─── Node Card ────────────────────────────────────────────────────────────────
-
-interface NodeCardProps {
-  node: TreeNode;
-  collapsed: Set<string>;
-  onToggle: (id: string) => void;
-  onSelect: (rep: OrgChartRepresentative) => void;
-  onAssign: (node: TreeNode) => void;
-  searchQuery: string;
-}
-
-function NodeCard({ node, collapsed, onToggle, onSelect, onAssign, searchQuery }: NodeCardProps) {
-  const isCollapsed = collapsed.has(node.id);
-  const hasChildren = node.children.length > 0;
-  const repsHere = node.representatives;
-  
-  // Show vacant if no reps at building/floor level
-  const showVacant = (node.type === "building" || node.type === "floor") && repsHere.length === 0;
-  
-  const isHighlighted = searchQuery && (
-    node.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    repsHere.some(r => r.user.name.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
-
-  return (
-    <li className={styles.treeItem}>
-      <div className={`inline-block relative ${isHighlighted ? "z-10" : ""}`}>
-        {isHighlighted && <div className="absolute -inset-1 bg-brand/30 blur-lg rounded-2xl animate-pulse" />}
-        
-        <div className={`relative flex flex-col items-center gap-3 transition-all ${isHighlighted ? "scale-105" : ""}`}>
-          <div className="bg-brand/10 text-brand text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest border border-brand/20">
-            {node.label}
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            {repsHere.length > 0 ? (
-              repsHere.map((rep) => (
-                <PersonCard key={rep.id} rep={rep} onClick={() => onSelect(rep)} />
-              ))
-            ) : showVacant ? (
-              <PersonCard isVacant={true} onAssign={() => onAssign(node)} />
-            ) : (
-              <div className="px-3 py-1.5 bg-panel border border-line rounded-lg shadow-sm">
-                 <p className="text-[11px] font-bold">{node.label}</p>
-              </div>
-            )}
-
-            {/* Units/Residents preview if at Floor level */}
-            {node.type === "floor" && (node as any).units?.length > 0 && (
-               <div className="mt-1 w-60 border border-line/40 rounded-xl bg-slate-50/50 p-2 text-left">
-                  <p className="text-[9px] font-black text-muted uppercase tracking-widest mb-1.5 px-1">Units & Residents</p>
-                  <div className="grid grid-cols-2 gap-1 max-h-32 overflow-y-auto pr-1 custom-scrollbar">
-                     {(node as any).units.map((u: any) => (
-                        <div key={u.id} className="border border-line/20 rounded-md p-1 bg-white">
-                           <p className="text-[8px] font-black text-brand px-1">U-{u.unitNumber}</p>
-                           {u.residents.map((r: any) => <ResidentCard key={r.id} resident={r} />)}
-                        </div>
-                     ))}
-                  </div>
-               </div>
-            )}
-          </div>
-
-          {hasChildren && (
-            <button
-              onClick={() => onToggle(node.id)}
-              className={`w-7 h-7 rounded-full border shadow-sm flex items-center justify-center transition-all bg-background z-20 ${
-                isCollapsed ? "border-brand text-brand hover:bg-brand hover:text-white" : "border-line text-muted hover:border-brand hover:text-brand"
-              }`}
-            >
-              {isCollapsed ? (
-                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={4}><path d="M12 5v14M5 12h14" strokeLinecap="round" /></svg>
-              ) : (
-                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={4}><path d="M5 12h14" strokeLinecap="round" /></svg>
-              )}
-            </button>
-          )}
-        </div>
-      </div>
-
-      {hasChildren && !isCollapsed && (
-        <ul className={styles.treeChildren}>
-          {node.children.map((child) => (
-            <NodeCard 
-              key={child.id} 
-              node={child} 
-              collapsed={collapsed} 
-              onToggle={onToggle} 
-              onSelect={onSelect}
-              onAssign={onAssign}
-              searchQuery={searchQuery}
-            />
-          ))}
-        </ul>
-      )}
-    </li>
-  );
-}
-
-// ─── Additional UI Components ────────────────────────────────────────────────
-
-function Legend() {
-  return (
-    <div className="hidden lg:flex items-center gap-4 bg-panel/80 backdrop-blur-md border border-line px-4 py-2 rounded-full shadow-premium-sm">
-       <span className="text-[10px] font-black text-muted uppercase tracking-widest mr-2">Legend</span>
-       {Object.entries(ROLE_BADGE).slice(0, 5).map(([role, color]) => (
-          <div key={role} className="flex items-center gap-2">
-             <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color.color }} />
-             <span className="text-[10px] font-bold text-foreground capitalize">{role.replace("_", " ")}</span>
-          </div>
-       ))}
-    </div>
-  );
-}
-
-function SearchIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2}>
-      <circle cx="11" cy="11" r="8" />
-      <path d="m21 21-4.3-4.3" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function ZoomInIcon() { return <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5}><path d="M12 5v14M5 12h14" strokeLinecap="round" /></svg>; }
-function ZoomOutIcon() { return <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5}><path d="M5 12h14" strokeLinecap="round" /></svg>; }
-function ResetIcon() { return <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2}><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>; }
-function DownloadIcon() { return <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" strokeLinecap="round" strokeLinejoin="round"/></svg>; }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function OrgChartView({ data, compoundId, canManage = false }: OrgChartViewProps) {
   const router = useRouter();
-  const root = buildOrgChartTree(data) as TreeNode;
-  const buildings = root.children;
+  const t = useTranslations("OrgChart");
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<any>(null);
 
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  // UI State
   const [selectedRep, setSelectedRep] = useState<OrgChartRepresentative | null>(null);
   const [selectedRepLoading, setSelectedRepLoading] = useState(false);
   const [selectedRepError, setSelectedRepError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [buildingFilter, setBuildingFilter] = useState<string>("all");
-  const [assigningState, setAssigningState] = useState<AssignmentState | null>(null);
+  
+  // Assignment State
+  const [assigningState, setAssigningState] = useState<{ id: string; type: string; label: string } | null>(null);
   const [assignmentUserIdInput, setAssignmentUserIdInput] = useState("");
   const [assignmentSearch, setAssignmentSearch] = useState("");
   const [assignmentCandidates, setAssignmentCandidates] = useState<OrgChartAssignableUser[]>([]);
@@ -393,51 +99,152 @@ export function OrgChartView({ data, compoundId, canManage = false }: OrgChartVi
   const [assignmentError, setAssignmentError] = useState<string | null>(null);
   const [assignmentSubmitting, setAssignmentSubmitting] = useState(false);
 
-  const onToggle = useCallback((id: string) => {
-    setCollapsed((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
+  // 1. Flatten data for D3-Org-Chart
+  const flatData = useMemo(() => {
+    const list: FlatNode[] = [];
+    
+    // Root: Compound
+    const rootRep = data.compound.representatives.find(r => r.role === "president");
+    list.push({
+      id: data.compound.id,
+      parentId: null,
+      name: rootRep?.user.name ?? "Vacant Position",
+      role: "president",
+      type: "compound",
+      label: data.compound.name,
+      photoUrl: rootRep?.user.photoUrl,
+      rep: rootRep,
+      isVacant: !rootRep
     });
-  }, []);
 
-  const [transform, setTransform] = useState<Transform>({ x: 0, y: 0, scale: 0.85 });
-  const transformRef = useRef(transform);
-  useEffect(() => { transformRef.current = transform; }, [transform]);
+    // Buildings
+    data.buildings.forEach(b => {
+      // Filter by building if applicable
+      if (buildingFilter !== "all" && b.id !== buildingFilter) return;
 
-  const [isDragging, setIsDragging] = useState(false);
-  const dragStart = useRef({ mx: 0, my: 0, tx: 0, ty: 0 });
+      const bRep = b.representatives.find(r => r.role === "building_representative");
+      list.push({
+        id: b.id,
+        parentId: data.compound.id,
+        name: bRep?.user.name ?? "Vacant Position",
+        role: "building_representative",
+        type: "building",
+        label: b.name,
+        photoUrl: bRep?.user.photoUrl,
+        rep: bRep,
+        isVacant: !bRep
+      });
 
-  const handleWheel = useCallback((e: WheelEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    const factor = e.deltaY > 0 ? 0.95 : 1.05;
-    setTransform((prev) => ({ ...prev, scale: Math.min(2.0, Math.max(0.1, prev.scale * factor)) }));
-  }, []);
+      // Floors
+      b.floors.forEach(f => {
+        const fRep = f.representatives.find(r => r.role === "floor_representative");
+        list.push({
+          id: f.id,
+          parentId: b.id,
+          name: fRep?.user.name ?? "Vacant Position",
+          role: "floor_representative",
+          type: "floor",
+          label: f.label,
+          photoUrl: fRep?.user.photoUrl,
+          rep: fRep,
+          isVacant: !fRep
+        });
+      });
+    });
 
-  const handleMouseDown = useCallback((e: RMouseEvent<HTMLDivElement>) => {
-    if ((e.target as HTMLElement).closest("button, a, input, select")) return;
-    setIsDragging(true);
-    dragStart.current = { mx: e.clientX, my: e.clientY, tx: transformRef.current.x, ty: transformRef.current.y };
-  }, []);
+    return list;
+  }, [data, buildingFilter]);
 
-  const handleMouseMove = useCallback((e: RMouseEvent<HTMLDivElement>) => {
-    if (!isDragging) return;
-    setTransform((prev) => ({ ...prev, x: dragStart.current.tx + (e.clientX - dragStart.current.mx), y: dragStart.current.ty + (e.clientY - dragStart.current.my) }));
-  }, [isDragging]);
+  // 2. Initialize / Update Chart
+  useLayoutEffect(() => {
+    if (!chartContainerRef.current) return;
 
-  const stopDrag = useCallback(() => setIsDragging(false), []);
-  const zoom = (f: number) => setTransform(p => ({ ...p, scale: Math.min(2.0, Math.max(0.1, p.scale * f)) }));
-  const resetView = () => setTransform({ x: 0, y: 0, scale: 0.85 });
+    if (!chartRef.current) {
+      chartRef.current = new OrgChart();
+    }
 
-  // Filtering logic
-  const filteredRoot = useMemo(() => {
-    if (buildingFilter === "all") return root;
-    return {
-      ...root,
-      children: root.children.filter(c => c.id === buildingFilter)
+    const chart = chartRef.current;
+
+    chart
+      .container(chartContainerRef.current)
+      .data(flatData)
+      .nodeHeight(() => 140)
+      .nodeWidth(() => 280)
+      .childrenMargin(() => 80)
+      .compactMarginBetween(() => 50)
+      .compactMarginPair(() => 100)
+      .neighbourMargin(() => 40)
+      .siblingsMargin(() => 40)
+      .onNodeClick((d: any) => {
+        if (d.data.isVacant) {
+          if (canManage) {
+            setAssigningState({ id: d.data.id, type: d.data.type, label: d.data.label });
+          }
+        } else if (d.data.rep) {
+          handleSelectRepresentative(d.data.rep);
+        }
+      })
+      .nodeContent((d: any) => {
+        const color = ROLE_BADGE[d.data.role] || { bg: "#F3F4F6", color: "#374151", border: "#E5E7EB" };
+        const initials = getInitials(d.data.name);
+        const avatarBg = d.data.isVacant ? "#f1f5f9" : avatarColor(d.data.rep?.user.id ?? 0);
+        
+        return `
+          <div class="p-2 h-full w-full">
+            <div class="bg-white h-full w-full rounded-2xl border-2 transition-all duration-300 shadow-lg flex flex-col items-center justify-center gap-2 ${d.data.isVacant ? 'border-dashed border-slate-300 opacity-90' : 'border-transparent hover:border-indigo-500'}">
+              <div class="absolute -top-3 px-3 py-1 bg-white border-2 border-indigo-100 rounded-full shadow-sm">
+                <span class="text-[10px] font-black text-indigo-600 uppercase tracking-widest">${d.data.label}</span>
+              </div>
+              
+              <div class="flex items-center gap-3 w-full px-4">
+                <div class="w-14 h-14 rounded-full flex items-center justify-center overflow-hidden border-4 border-slate-50 shadow-sm shrink-0" style="background-color: ${avatarBg}">
+                  ${d.data.photoUrl ? `<img src="${d.data.photoUrl}" class="w-full h-full object-cover" />` : `<span class="text-white font-black text-lg">${d.data.isVacant ? '+' : initials}</span>`}
+                </div>
+                
+                <div class="min-w-0 flex-1">
+                  <div class="text-[14px] font-black text-slate-900 truncate">${d.data.name}</div>
+                  <div class="text-[10px] text-slate-500 font-bold truncate">${t(`roles.${d.data.role}`)}</div>
+                  <div class="inline-flex items-center px-2 py-0.5 mt-2 rounded-lg text-[9px] font-black uppercase tracking-tighter border" style="background-color: ${color.bg}; color: ${color.color}; border-color: ${color.border}">
+                    ${t(`roles.${d.data.role}`)}
+                  </div>
+                </div>
+              </div>
+
+              ${d.data.isVacant ? `
+                <div class="mt-1">
+                  <span class="text-[9px] font-black bg-indigo-600 text-white px-3 py-1 rounded-full shadow-sm uppercase">Assign Rep</span>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        `;
+      })
+      .render();
+
+    chart.fit();
+
+    return () => {
+      // Cleanup if needed
     };
-  }, [root, buildingFilter]);
+  }, [flatData, t, canManage]);
+
+  // 3. Sync Search
+  useEffect(() => {
+    if (chartRef.current && searchQuery) {
+      chartRef.current.clearHighlighting();
+      const nodes = flatData.filter(d => 
+        d.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        d.label.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      if (nodes.length > 0) {
+        chartRef.current.setUpToTheRootHighlighted(nodes[0].id).render();
+      }
+    } else if (chartRef.current) {
+      chartRef.current.clearHighlighting().render();
+    }
+  }, [searchQuery, flatData]);
+
+  // ─── Event Handlers ─────────────────────────────────────────────────────────
 
   const handleSelectRepresentative = useCallback(async (rep: OrgChartRepresentative) => {
     setSelectedRep(rep);
@@ -447,45 +254,21 @@ export function OrgChartView({ data, compoundId, canManage = false }: OrgChartVi
     try {
       const detail = await getPersonDetail(rep.user.id);
       setSelectedRep((current) => {
-        if (!current || current.id !== rep.id) {
-          return current;
-        }
-
+        if (!current || current.id !== rep.id) return current;
         return mergeRepresentativeWithPersonDetail(current, detail);
       });
     } catch {
-      setSelectedRepError("Could not load full profile details.");
+      setSelectedRepError("Could not load profile details.");
     } finally {
       setSelectedRepLoading(false);
     }
   }, []);
 
-  const openAssignmentModal = useCallback((node: TreeNode, initialUserId?: string) => {
-    setAssignmentError(null);
-    setAssignmentUserIdInput(initialUserId ?? "");
-    setAssignmentSearch("");
-    setAssignmentCandidates([]);
-    setAssigningState({ node, initialUserId });
-  }, []);
-
-  const handleReplaceRepresentative = useCallback((rep: OrgChartRepresentative) => {
-    const node = findAssignableNode(root, rep);
-    if (!node) {
-      setSelectedRepError("Could not resolve the assignment scope for this member.");
-      return;
-    }
-
-    openAssignmentModal(node, String(rep.user.id));
-    setSelectedRep(null);
-  }, [openAssignmentModal, root]);
-
   const submitAssignment = useCallback(async () => {
     if (!assigningState) return;
-
     const userId = parseAssignmentUserId(assignmentUserIdInput);
-
     if (userId === null) {
-      setAssignmentError("Enter a valid positive user ID.");
+      setAssignmentError("Enter a valid user ID.");
       return;
     }
 
@@ -494,328 +277,159 @@ export function OrgChartView({ data, compoundId, canManage = false }: OrgChartVi
 
     try {
       let success = false;
+      if (assigningState.type === "compound") success = await assignCompoundHead(assigningState.id, userId);
+      else if (assigningState.type === "building") success = await assignBuildingHead(assigningState.id, userId);
+      else if (assigningState.type === "floor") success = await assignFloorRepresentative(assigningState.id, userId);
 
-      if (assigningState.node.type === "building") {
-        success = await assignBuildingHead(assigningState.node.id, userId);
-      } else if (assigningState.node.type === "floor") {
-        success = await assignFloorRepresentative(assigningState.node.id, userId);
+      if (success) {
+        setAssigningState(null);
+        router.refresh();
+      } else {
+        setAssignmentError("Request failed.");
       }
-
-      if (!success) {
-        setAssignmentError("Assignment request failed.");
-        return;
-      }
-
-      setAssigningState(null);
-      setAssignmentUserIdInput("");
-      router.refresh();
     } catch {
-      setAssignmentError("Assignment request failed.");
+      setAssignmentError("Request failed.");
     } finally {
       setAssignmentSubmitting(false);
     }
   }, [assigningState, assignmentUserIdInput, router]);
 
-  useEffect(() => {
-    if (!assigningState) {
-      return;
-    }
-
-    let cancelled = false;
-    const timeout = setTimeout(async () => {
-      setAssignmentSearchLoading(true);
-
-      try {
-        const candidates = await searchOrgChartAssignableUsers(assignmentSearch);
-        if (!cancelled) {
-          setAssignmentCandidates(candidates);
-        }
-      } catch {
-        if (!cancelled) {
-          setAssignmentCandidates([]);
-        }
-      } finally {
-        if (!cancelled) {
-          setAssignmentSearchLoading(false);
-        }
-      }
-    }, 200);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(timeout);
-    };
-  }, [assigningState, assignmentSearch]);
+  // ─── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* Upper Toolbar: Navigation & Filter */}
-      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-          <div className="flex items-center gap-0.5 rounded-xl border border-line bg-panel p-1 shadow-premium-sm">
-            <button onClick={() => zoom(1.1)} className="w-9 h-9 rounded-lg flex items-center justify-center text-muted hover:text-brand hover:bg-brand/5 transition-all" title="Zoom in"><ZoomInIcon /></button>
-            <span className="w-12 text-center text-[11px] font-black text-foreground tabular-nums">{Math.round(transform.scale * 100)}%</span>
-            <button onClick={() => zoom(0.9)} className="w-9 h-9 rounded-lg flex items-center justify-center text-muted hover:text-brand hover:bg-brand/5 transition-all" title="Zoom out"><ZoomOutIcon /></button>
-            <div className="w-px h-5 bg-line mx-1" />
-            <button onClick={resetView} className="w-9 h-9 rounded-lg flex items-center justify-center text-muted hover:text-brand hover:bg-brand/5 transition-all" title="Fit to Screen"><ResetIcon /></button>
+    <div className="flex flex-col gap-6 h-[calc(100vh-160px)]">
+      {/* Premium Toolbar */}
+      <div className="flex flex-col lg:flex-row items-center justify-between gap-4 bg-white/50 backdrop-blur-xl p-4 rounded-[2.5rem] border-2 border-slate-100 shadow-premium-sm">
+        <div className="flex items-center gap-4 w-full lg:w-auto">
+          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl">
+            <button onClick={() => chartRef.current?.zoomIn()} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-white transition-all text-slate-600">
+               <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5}><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg>
+            </button>
+            <button onClick={() => chartRef.current?.fit()} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-white transition-all text-slate-600">
+               <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2}><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>
+            </button>
+            <button onClick={() => chartRef.current?.zoomOut()} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-white transition-all text-slate-600">
+               <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5}><path d="M5 12h14" strokeLinecap="round"/></svg>
+            </button>
           </div>
 
-          <div className="relative flex-1 min-w-[240px] max-w-sm">
-            <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted/60"><SearchIcon /></div>
+          <div className="relative flex-1 max-w-sm">
             <input
               type="text"
-              placeholder="Find member, building, floor..."
+              placeholder="Search people or locations..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full h-11 pl-10 pr-4 rounded-xl border border-line bg-panel text-sm font-medium focus:border-brand focus:ring-4 focus:ring-brand/10 outline-none transition-all shadow-premium-sm"
+              className="w-full h-12 pl-12 pr-4 rounded-2xl border-2 border-slate-100 bg-white focus:border-indigo-500 outline-none transition-all font-bold text-sm"
             />
-          </div>
-
-          <div className="relative">
-            <select 
-              value={buildingFilter}
-              onChange={(e) => setBuildingFilter(e.target.value)}
-              className="h-11 pl-4 pr-10 rounded-xl border border-line bg-panel text-xs font-bold appearance-none outline-none focus:border-brand focus:ring-4 focus:ring-brand/10 transition-all shadow-premium-sm cursor-pointer"
-            >
-              <option value="all">🏢 All Buildings</option>
-              {buildings.map((building) => <option key={building.id} value={building.id}>{building.label}</option>)}
-            </select>
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-muted">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path d="m19 9-7 7-7-7" /></svg>
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+              <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3" strokeLinecap="round"/></svg>
             </div>
           </div>
+
+          <select 
+            value={buildingFilter}
+            onChange={(e) => setBuildingFilter(e.target.value)}
+            className="h-12 px-6 rounded-2xl border-2 border-slate-100 bg-white font-black text-xs uppercase tracking-widest outline-none focus:border-indigo-500 cursor-pointer"
+          >
+            <option value="all">🏢 All Buildings</option>
+            {data.buildings.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+          </select>
         </div>
 
-        <div className="flex items-center gap-3 ml-auto">
-           <Legend />
-           <button 
-            onClick={() => window.print()} 
-            className="hidden md:flex h-11 items-center gap-2 rounded-xl bg-panel border border-line px-4 text-xs font-bold hover:bg-slate-50 transition-all shadow-premium-sm"
-           >
-             <DownloadIcon /> Export
-           </button>
+        <div className="flex items-center gap-4">
+           <button onClick={() => chartRef.current?.exportImg()} className="h-12 px-6 rounded-2xl bg-slate-900 text-white font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg">Export Image</button>
         </div>
       </div>
 
-      <div className="relative flex group/canvas">
-        {/* Canvas */}
-        <div
-          className="relative flex-1 overflow-hidden rounded-3xl border border-line bg-slate-50/30 backdrop-blur-xl cursor-grab active:cursor-grabbing shadow-inner"
-          style={{ height: "calc(100vh - 280px)", minHeight: 600 }}
-          onWheel={handleWheel}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={stopDrag}
-          onMouseLeave={stopDrag}
-        >
-          {/* Enhanced Grid Background */}
-          <div className="absolute inset-0 opacity-[0.05] pointer-events-none" style={{ backgroundImage: "linear-gradient(#2563EB 0.5px, transparent 0.5px), linear-gradient(90deg, #2563EB 0.5px, transparent 0.5px)", backgroundSize: "60px 60px" }} />
-          <div className="absolute inset-0 opacity-[0.02] pointer-events-none" style={{ backgroundImage: "linear-gradient(#2563EB 0.5px, transparent 0.5px), linear-gradient(90deg, #2563EB 0.5px, transparent 0.5px)", backgroundSize: "12px 12px" }} />
-
-          <div
-            className="absolute p-40"
-            style={{
-              transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`,
-              transformOrigin: "0 0",
-              width: "max-content",
-            }}
-          >
-            <ul className={styles.treeRoot}>
-              <NodeCard 
-                node={filteredRoot} 
-                collapsed={collapsed} 
-                onToggle={onToggle} 
-                onSelect={handleSelectRepresentative}
-                onAssign={openAssignmentModal}
-                searchQuery={searchQuery}
-              />
-            </ul>
-          </div>
-
-          {/* Canvas Hints */}
-          <div className="absolute bottom-6 left-6 pointer-events-none flex items-center gap-3 opacity-0 group-hover/canvas:opacity-100 transition-opacity duration-500">
-             <div className="flex items-center gap-2 bg-black/5 backdrop-blur-md px-3 py-1.5 rounded-full text-[10px] font-bold text-muted-foreground border border-black/5">
-                <span className="bg-white px-1.5 py-0.5 rounded border border-line">SPACE + DRAG</span> Panning
-             </div>
-             <div className="flex items-center gap-2 bg-black/5 backdrop-blur-md px-3 py-1.5 rounded-full text-[10px] font-bold text-muted-foreground border border-black/5">
-                <span className="bg-white px-1.5 py-0.5 rounded border border-line">SCROLL</span> Zooming
-             </div>
-          </div>
+      {/* Main Canvas Container */}
+      <div className="relative flex-1 overflow-hidden rounded-[3rem] border-2 border-slate-100 bg-[#F8FAFC] shadow-inner">
+        <div ref={chartContainerRef} className="w-full h-full" />
+        
+        {/* Floating Controls Hint */}
+        <div className="absolute bottom-8 left-8 flex items-center gap-4">
+           <div className="bg-white/80 backdrop-blur-md px-4 py-2 rounded-full border border-slate-200 shadow-sm flex items-center gap-3">
+              <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">D3 Powered Engine v2.0</span>
+           </div>
         </div>
+      </div>
 
-        {/* Detail Panel */}
-        {selectedRep && (
-          <div className="absolute top-4 right-4 bottom-4 w-85 bg-background/98 backdrop-blur-xl border border-line rounded-3xl shadow-premium-2xl z-50 flex flex-col overflow-hidden animate-in slide-in-from-right duration-500 border-brand/10">
-            <div className="p-5 border-b border-line flex items-center justify-between bg-slate-50/50">
+      {/* Side Detail Panel (Same as V1 but polished) */}
+      {selectedRep && (
+        <div className="absolute top-4 right-4 bottom-4 w-96 bg-white/98 backdrop-blur-2xl border-2 border-slate-100 rounded-[2.5rem] shadow-2xl z-[60] flex flex-col overflow-hidden animate-in slide-in-from-right duration-500">
+           <div className="p-8 border-b border-slate-100 flex items-center justify-between">
               <div>
-                <h3 className="font-black text-foreground tracking-tight">Organization Profile</h3>
-                <p className="text-[10px] text-muted font-bold uppercase tracking-widest mt-0.5">Member Insights</p>
+                <h3 className="font-black text-xl text-slate-900">Member Profile</h3>
+                <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mt-1">Compound Administration</p>
               </div>
-              <button onClick={() => setSelectedRep(null)} className="w-9 h-9 rounded-full hover:bg-white hover:shadow-sm flex items-center justify-center text-muted transition-all">✕</button>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto p-8 flex flex-col items-center text-center">
-              <div className="relative mb-6">
-                <div className="w-28 h-28 rounded-full border-4 border-white shadow-premium-lg overflow-hidden ring-4 ring-brand/5">
-                  {selectedRep.user.photoUrl ? (
-                    <img src={selectedRep.user.photoUrl} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-3xl font-black text-white" style={{ backgroundColor: avatarColor(selectedRep.user.id) }}>
-                      {getInitials(selectedRep.user.name)}
-                    </div>
-                  )}
-                </div>
-                <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-brand rounded-full border-4 border-white flex items-center justify-center text-white shadow-md">
-                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M5 13l4 4L19 7" /></svg>
-                </div>
+              <button onClick={() => setSelectedRep(null)} className="w-10 h-10 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 transition-all">✕</button>
+           </div>
+           <div className="flex-1 overflow-y-auto p-10 flex flex-col items-center">
+              <div className="w-32 h-32 rounded-full border-4 border-white shadow-xl overflow-hidden mb-6">
+                {selectedRep.user.photoUrl ? (
+                  <img src={selectedRep.user.photoUrl} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-4xl font-black text-white" style={{ backgroundColor: avatarColor(selectedRep.user.id) }}>
+                    {getInitials(selectedRep.user.name)}
+                  </div>
+                )}
               </div>
-              
-              <h2 className="text-2xl font-black text-foreground tracking-tight leading-none">{selectedRep.user.name}</h2>
-              <p className="text-brand font-black text-xs mt-2 uppercase tracking-widest">{formatRole(selectedRep.role)}</p>
-              
-              <div className="w-full mt-10 space-y-4 text-left">
-                <div className="group bg-slate-50/80 dark:bg-slate-900/50 rounded-2xl p-5 border border-line/60 hover:border-brand/30 transition-colors">
-                  <div className="flex items-center gap-3 mb-2">
-                     <div className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center text-brand"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg></div>
-                     <p className="text-[10px] font-black text-muted uppercase tracking-widest">Email Address</p>
-                  </div>
-                  <p className="text-sm font-bold text-foreground pl-11">{selectedRep.user.email || (selectedRepLoading ? "Loading..." : "Protected Info")}</p>
-                </div>
-                
-                <div className="group bg-slate-50/80 dark:bg-slate-900/50 rounded-2xl p-5 border border-line/60 hover:border-brand/30 transition-colors">
-                  <div className="flex items-center gap-3 mb-2">
-                     <div className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center text-brand"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg></div>
-                     <p className="text-[10px] font-black text-muted uppercase tracking-widest">Phone Contact</p>
-                  </div>
-                  <p className="text-sm font-bold text-foreground pl-11">{selectedRep.user.phone || (selectedRepLoading ? "Loading..." : "Protected Info")}</p>
-                </div>
-
-                <div className="group bg-slate-50/80 dark:bg-slate-900/50 rounded-2xl p-5 border border-line/60 hover:border-brand/30 transition-colors">
-                  <div className="flex items-center gap-3 mb-2">
-                     <div className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center text-brand"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div>
-                     <p className="text-[10px] font-black text-muted uppercase tracking-widest">Current Scope</p>
-                  </div>
-                  <p className="text-sm font-bold text-foreground pl-11">{selectedRep.scopeLevel.toUpperCase()}: {data.compound.name}</p>
-                </div>
+              <h2 className="text-2xl font-black text-slate-900 mb-1">{selectedRep.user.name}</h2>
+              <div className="px-4 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-black uppercase tracking-widest mb-10">
+                {t(`roles.${selectedRep.role}`)}
               </div>
-              {selectedRepError && (
-                <div className="mt-4 w-full rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-bold text-amber-700">
-                  {selectedRepError}
-                </div>
-              )}
-            </div>
 
-            <div className="p-6 border-t border-line bg-slate-50/50 flex flex-col gap-3">
-              {canManage && selectedRep.scopeLevel !== "compound" && (
-                <button 
-                  onClick={() => handleReplaceRepresentative(selectedRep)}
-                  className="flex h-12 w-full items-center justify-center rounded-2xl bg-brand text-[13px] font-black text-white hover:bg-brand-strong transition-all shadow-premium-md hover:shadow-premium-lg"
-                >
-                  Replace Assignment
-                </button>
-              )}
-              <Link
-                href={`/users/${selectedRep.user.id}`}
-                className="flex h-12 w-full items-center justify-center rounded-2xl bg-white border border-line text-[13px] font-black text-foreground hover:bg-slate-100 transition-all shadow-sm"
-              >
-                Go to User Profile
-              </Link>
-            </div>
-          </div>
-        )}
-
-        {/* Role Assignment Modal (Simplified) */}
-        {assigningState && (
-           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
-              <div className="w-full max-w-md bg-background rounded-3xl shadow-premium-2xl overflow-hidden animate-in zoom-in-95 duration-300">
-                 <div className="p-6 border-b border-line flex items-center justify-between">
-                    <h3 className="font-black text-lg">Assign Role: {assigningState.node.label}</h3>
-                    <button onClick={() => setAssigningState(null)} className="text-muted hover:text-foreground">✕</button>
+              <div className="w-full space-y-6">
+                 <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Email Address</p>
+                    <p className="font-bold text-slate-900">{selectedRep.user.email || "—"}</p>
                  </div>
-                 <div className="p-8 flex flex-col gap-6">
-                    <div className="p-4 bg-brand/5 border border-brand/10 rounded-2xl">
-                       <p className="text-xs text-brand-strong font-bold">You are assigning a new representative for this position. This will automatically expire any active assignment for this scope.</p>
-                    </div>
-                    
-                    <div className="space-y-2">
-                       <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">Search User</label>
-                       <input 
-                        type="text" 
-                        value={assignmentSearch}
-                        onChange={(e) => setAssignmentSearch(e.target.value)}
-                        placeholder="Search by name, email, or phone" 
-                        className="w-full h-12 px-4 rounded-xl border border-line bg-slate-50 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/10 outline-none transition-all font-bold text-sm"
-                       />
-                    </div>
-
-                    <div className="space-y-2">
-                       <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">Selected User ID</label>
-                       <input 
-                        type="text" 
-                        value={assignmentUserIdInput}
-                        onChange={(e) => setAssignmentUserIdInput(e.target.value)}
-                        placeholder="Enter numeric user ID" 
-                        className="w-full h-12 px-4 rounded-xl border border-line bg-slate-50 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/10 outline-none transition-all font-bold text-sm"
-                       />
-                    </div>
-                    <div className="rounded-2xl border border-line bg-white/80">
-                      <div className="flex items-center justify-between border-b border-line px-4 py-3">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-muted">Matching Users</p>
-                        {assignmentSearchLoading && <span className="text-[10px] font-bold text-muted">Searching...</span>}
-                      </div>
-                      <div className="max-h-64 overflow-y-auto">
-                        {assignmentCandidates.length > 0 ? (
-                          assignmentCandidates.map((user) => {
-                            const isSelected = String(user.id) === assignmentUserIdInput.trim();
-                            return (
-                              <button
-                                key={user.id}
-                                type="button"
-                                onClick={() => {
-                                  setAssignmentUserIdInput(String(user.id));
-                                  setAssignmentSearch(user.name);
-                                }}
-                                className={`flex w-full items-start justify-between gap-3 px-4 py-3 text-left transition-all ${
-                                  isSelected ? "bg-brand/5" : "hover:bg-slate-50"
-                                }`}
-                              >
-                                <div className="min-w-0">
-                                  <p className="truncate text-sm font-bold text-foreground">{user.name}</p>
-                                  <p className="truncate text-xs text-muted">{formatAssignableUserLabel(user)}</p>
-                                </div>
-                                <span className="shrink-0 rounded-full border border-line px-2 py-1 text-[10px] font-black text-muted">
-                                  #{user.id}
-                                </span>
-                              </button>
-                            );
-                          })
-                        ) : (
-                          <div className="px-4 py-6 text-center text-xs font-medium text-muted">
-                            {assignmentSearchLoading ? "Searching users..." : "No matching users found."}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    {assignmentError && (
-                      <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-bold text-rose-700">
-                        {assignmentError}
-                      </div>
-                    )}
+                 <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Phone Number</p>
+                    <p className="font-bold text-slate-900">{selectedRep.user.phone || "—"}</p>
                  </div>
-                 <div className="p-6 bg-slate-50 flex gap-3">
-                    <button onClick={() => setAssigningState(null)} className="flex-1 h-12 rounded-2xl border border-line font-bold text-sm hover:bg-white transition-all">Cancel</button>
+              </div>
+           </div>
+           <div className="p-8 bg-slate-50 border-t border-slate-100 flex flex-col gap-3">
+              <Link href={`/users/${selectedRep.user.id}`} className="flex h-14 w-full items-center justify-center rounded-2xl bg-indigo-600 text-white font-black text-sm hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all">View Full Profile</Link>
+           </div>
+        </div>
+      )}
+
+      {/* Assignment Modal (Polished) */}
+      {assigningState && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-md">
+           <div className="w-full max-w-lg bg-white rounded-[3rem] shadow-2xl overflow-hidden p-10">
+              <h3 className="text-2xl font-black text-slate-900 mb-2">Assign Representative</h3>
+              <p className="text-slate-500 font-medium mb-8">Assigning for <span className="text-indigo-600 font-black">${assigningState.label}</span></p>
+              
+              <div className="space-y-6">
+                 <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">User ID</label>
+                    <input 
+                      type="text" 
+                      value={assignmentUserIdInput}
+                      onChange={(e) => setAssignmentUserIdInput(e.target.value)}
+                      placeholder="Enter numeric ID..." 
+                      className="w-full h-14 px-6 rounded-2xl border-2 border-slate-100 bg-slate-50 focus:bg-white focus:border-indigo-500 outline-none transition-all font-bold"
+                    />
+                 </div>
+                 {assignmentError && <p className="text-red-500 text-xs font-bold px-2">{assignmentError}</p>}
+                 
+                 <div className="flex gap-4 pt-4">
+                    <button onClick={() => setAssigningState(null)} className="flex-1 h-14 rounded-2xl bg-slate-100 text-slate-600 font-black text-sm hover:bg-slate-200 transition-all">Cancel</button>
                     <button 
-                      onClick={submitAssignment}
+                      onClick={submitAssignment} 
                       disabled={assignmentSubmitting}
-                      className="flex-1 h-12 rounded-2xl bg-brand text-white font-black text-sm hover:bg-brand-strong transition-all shadow-md"
+                      className="flex-1 h-14 rounded-2xl bg-indigo-600 text-white font-black text-sm hover:bg-indigo-700 disabled:opacity-50 shadow-xl shadow-indigo-200 transition-all"
                     >
-                      {assignmentSubmitting ? "Assigning..." : "Confirm Assignment"}
+                      {assignmentSubmitting ? "Processing..." : "Confirm Assignment"}
                     </button>
                  </div>
               </div>
            </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

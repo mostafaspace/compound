@@ -22,7 +22,8 @@
     "meetings": "Meetings",
     "workOrders": "Work Orders",
     "privacy": "Privacy & Data",
-    "launch": "Launch Readiness"
+    "launch": "Launch Readiness",
+    "orgChart": "Org Chart"
   },
   "Language": {
     "toggle": "Toggle language",
@@ -352,7 +353,8 @@
     "noEmail": "No email",
     "createInvite": "Create invite",
     "documents": "Documents",
-    "onboarding": "Onboarding"
+    "onboarding": "Onboarding",
+    "orgChart": "Organization Chart"
   },
   "Onboarding": {
     "back": "Dashboard",
@@ -1020,10 +1022,10 @@
       "submit": "Create Assignment"
     },
     "roles": {
-      "floor_representative": "Floor Representative",
-      "building_representative": "Building Representative",
+      "floor_representative": "Floor Rep",
+      "building_representative": "Building Head",
       "association_member": "Association Member",
-      "president": "President",
+      "president": "Head of Association",
       "treasurer": "Treasurer",
       "security_contact": "Security Contact",
       "admin_contact": "Admin Contact"

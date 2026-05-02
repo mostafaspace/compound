@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Enums\Permission;
+use App\Enums\UserRole;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission as SpatiePermission;
@@ -21,9 +22,9 @@ class RbacSeeder extends Seeder
         $p = fn (Permission ...$cases) => array_map(fn ($c) => $c->value, $cases);
 
         $rolePermissions = [
-            'super_admin' => [], // bypassed via Gate::before
+            UserRole::SuperAdmin->value => [], // bypassed via Gate::before
 
-            'compound_head' => $p(
+            UserRole::CompoundAdmin->value => $p(
                 Permission::ViewCompounds, Permission::ManageCompounds,
                 Permission::ViewUsers, Permission::ManageUsers,
                 Permission::ViewFinance, Permission::ManageFinance,
@@ -54,24 +55,24 @@ class RbacSeeder extends Seeder
                 Permission::ViewVisitors, Permission::ViewOrgChart,
             ),
 
-            'board_member' => $p(
+            UserRole::BoardMember->value => $p(
                 Permission::ViewFinance,
                 Permission::ViewGovernance, Permission::ManageGovernance,
                 Permission::ViewAnnouncements, Permission::ManageAnnouncements,
                 Permission::ViewOrgChart, Permission::ViewMeetings, Permission::ManageMeetings,
             ),
 
-            'finance_reviewer' => $p(
+            UserRole::FinanceReviewer->value => $p(
                 Permission::ViewFinance, Permission::ManageFinance,
                 Permission::ViewUsers,
             ),
 
-            'security_guard' => $p(
+            UserRole::SecurityGuard->value => $p(
                 Permission::ViewSecurity, Permission::ManageSecurity,
                 Permission::ViewVisitors, Permission::ManageVisitors,
             ),
 
-            'resident_owner' => $p(
+            UserRole::ResidentOwner->value => $p(
                 Permission::ViewVisitors, Permission::ManageVisitors,
                 Permission::ViewIssues, Permission::ManageIssues,
                 Permission::ViewAnnouncements,
@@ -79,13 +80,13 @@ class RbacSeeder extends Seeder
                 Permission::ViewOrgChart,
             ),
 
-            'resident_tenant' => $p(
+            UserRole::ResidentTenant->value => $p(
                 Permission::ViewVisitors, Permission::ManageVisitors,
                 Permission::ViewIssues, Permission::ManageIssues,
                 Permission::ViewAnnouncements,
             ),
 
-            'support_agent' => $p(
+            UserRole::SupportAgent->value => $p(
                 Permission::ViewUsers, Permission::ViewCompounds,
                 Permission::ViewIssues, Permission::ViewAnnouncements,
                 Permission::ViewFinance, Permission::ViewAuditLogs,

@@ -31,7 +31,10 @@
       "resident_owner": "مالك مقيم",
       "resident_tenant": "مستأجر مقيم",
       "security": "الأمن",
-      "super_admin": "مسؤول عام"
+      "super_admin": "مسؤول عام",
+      "president": "رئيس الاتحاد",
+      "building_representative": "ممثل المبنى",
+      "floor_representative": "ممثل الدور"
     },
     "statuses": {
       "active": "نشط",
@@ -87,7 +90,12 @@
     "restoring": "جار استعادة جلسة الساكن.",
     "signIn": "تسجيل الدخول",
     "signedIn": "تم تسجيل الدخول",
-    "signOut": "تسجيل الخروج"
+    "signOut": "تسجيل الخروج",
+    "accountBlocked": "حسابك غير نشط.",
+    "loginFailed": "حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.",
+    "forgotPassword": "هل نسيت كلمة السر؟",
+    "noAccount": "ليس لديك حساب؟",
+    "contactAdmin": "اتصل بالمسؤول"
   },
   "Verification": {
     "label": "???? ??????",
@@ -383,7 +391,11 @@
     "buildings": "المباني",
     "noRep": "لم يتم تعيين ممثل",
     "floors_one": "طابق واحد",
-    "floors_other": "{{count}} طوابق"
+    "floors_other": "{{count}} طوابق",
+    "vacant": "منصب شاغر",
+    "assignRep": "تعيين ممثل",
+    "profile": "ملف العضو",
+    "leadership": "قيادة الاتحاد"
   },
   "Privacy": {
     "label": "???????? ??????????",

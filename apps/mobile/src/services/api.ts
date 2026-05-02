@@ -16,9 +16,14 @@ const baseQuery = fetchBaseQuery({
   baseUrl: defaultApiBaseUrl,
   prepareHeaders: (headers, { getState }) => {
     headers.set("Accept", "application/json");
-    const token = (getState() as any).auth.token;
+    const state = getState() as any;
+    const token = state.auth.token;
     if (token) {
       headers.set("Authorization", `Bearer ${token}`);
+    }
+    const compoundId = state.auth.user?.compoundId;
+    if (compoundId) {
+      headers.set("X-Compound-Id", compoundId);
     }
     return headers;
   },
@@ -68,6 +73,7 @@ export const api = createApi({
     "UnitAccount",
     "UserDocument",
     "PolicyConsent",
+    "Admin",
   ],
   endpoints: () => ({}),
 });

@@ -1,10 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import {
-  RoleRecord, PermissionRecord,
-  updateRolePermissions, deleteRole, createRole,
-} from "@/lib/api";
+import type { RoleRecord, PermissionRecord } from "@/lib/api";
+import { updateRolePermissions, deleteRole, createRole } from "./actions";
 
 export function RolesClient({
   initialRoles,
