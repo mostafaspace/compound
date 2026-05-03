@@ -13,8 +13,15 @@ import type { StackNavigationProp } from '@react-navigation/stack';
 import {
   useGetPollQuery,
   useGetPollEligibilityQuery,
+  useGetPollVotersQuery,
   useCastPollVoteMutation,
+  useRemovePollVoteMutation,
+  usePublishPollMutation,
+  useClosePollMutation,
 } from '../../../services/polls';
+import { getEffectiveRoleType } from '@compound/contracts';
+import { useSelector } from 'react-redux';
+import { selectCurrentUser } from '../../../store/authSlice';
 import { colors, spacing } from '../../../theme';
 import { Typography } from '../../../components/ui/Typography';
 import { Button } from '../../../components/ui/Button';
@@ -81,13 +88,22 @@ export const PollDetailScreen = ({ route, navigation }: Props) => {
   const { data: eligibility } = useGetPollEligibilityQuery(pollId, {
     skip: !poll || poll.status !== 'active',
   });
+  const { data: voters } = useGetPollVotersQuery(pollId);
+  const user = useSelector(selectCurrentUser);
+  const roleType = getEffectiveRoleType(user);
+  const isAdmin = roleType === 'admin';
+
   const [castVote, { isLoading: isCasting }] = useCastPollVoteMutation();
+  const [removeVote, { isLoading: isRemoving }] = useRemovePollVoteMutation();
+  const [publishPoll, { isLoading: isPublishing }] = usePublishPollMutation();
+  const [closePoll, { isLoading: isClosing }] = useClosePollMutation();
 
   const [selectedOptionIds, setSelectedOptionIds] = useState<number[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const isActive = poll?.status === 'active';
+  const isDraft = poll?.status === 'draft';
   const hasVoted = poll?.hasVoted ?? eligibility?.hasVoted ?? false;
   const isEligible = eligibility?.eligible ?? false;
   const allowMultiple = poll?.allowMultiple ?? false;
@@ -124,6 +140,39 @@ export const PollDetailScreen = ({ route, navigation }: Props) => {
     }
   };
 
+  const handleUnvote = async () => {
+    setErrorMsg(null);
+    setSuccessMsg(null);
+    try {
+      await removeVote(pollId).unwrap();
+      setSuccessMsg('Your vote has been removed.');
+      setSelectedOptionIds([]);
+      refetch();
+    } catch (err: any) {
+      setErrorMsg(err?.data?.message ?? 'Failed to remove vote.');
+    }
+  };
+
+  const handlePublish = async () => {
+    try {
+      await publishPoll(pollId).unwrap();
+      setSuccessMsg('Poll published successfully!');
+      refetch();
+    } catch (err: any) {
+      setErrorMsg(err?.data?.message ?? 'Failed to publish poll.');
+    }
+  };
+
+  const handleClose = async () => {
+    try {
+      await closePoll(pollId).unwrap();
+      setSuccessMsg('Poll closed.');
+      refetch();
+    } catch (err: any) {
+      setErrorMsg(err?.data?.message ?? 'Failed to close poll.');
+    }
+  };
+
   const pct = (count: number) => {
     if (totalVotes === 0) return 0;
     return Math.round((count / totalVotes) * 100);
@@ -133,13 +182,22 @@ export const PollDetailScreen = ({ route, navigation }: Props) => {
     return (
       <ScreenContainer withKeyboard={false}>
         <View style={styles.center}>
-          <Typography variant="caption">Loading…</Typography>
+          {isLoading ? (
+            <Typography variant="caption">Loading…</Typography>
+          ) : (
+            <View style={{ alignItems: 'center', padding: spacing.xl }}>
+              <Typography variant="body" style={{ color: colors.error, marginBottom: spacing.md }}>
+                Failed to load poll details.
+              </Typography>
+              <Button title="Retry" onPress={refetch} variant="outline" />
+            </View>
+          )}
         </View>
       </ScreenContainer>
     );
   }
 
-  const showResults = hasVoted || !isActive;
+  const showResults = (hasVoted || !isActive) && !isDraft;
 
   return (
     <ScreenContainer withKeyboard={false} style={styles.container}>
@@ -147,16 +205,6 @@ export const PollDetailScreen = ({ route, navigation }: Props) => {
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
-        {/* Back button */}
-        <Pressable onPress={() => navigation.goBack()} style={styles.backRow}>
-          <Typography
-            variant="caption"
-            style={{ color: colors.primary.dark, fontWeight: '700' }}
-          >
-            ← Back
-          </Typography>
-        </Pressable>
-
         {/* Title + status */}
         <Typography variant="h2" style={styles.title}>
           {poll.title}
@@ -187,6 +235,26 @@ export const PollDetailScreen = ({ route, navigation }: Props) => {
               {poll.status}
             </Text>
           </View>
+          {isAdmin && poll.status === 'draft' && (
+            <Button
+              title="Publish Now"
+              variant="outline"
+              onPress={handlePublish}
+              loading={isPublishing}
+              style={styles.inlineAction}
+              textStyle={styles.inlineActionText}
+            />
+          )}
+          {isAdmin && poll.status === 'active' && (
+            <Button
+              title="Close Poll"
+              variant="outline"
+              onPress={handleClose}
+              loading={isClosing}
+              style={[styles.inlineAction, { borderColor: colors.error }]}
+              textStyle={[styles.inlineActionText, { color: colors.error }]}
+            />
+          )}
           {allowMultiple ? (
             <Typography variant="caption" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>
               Multi-choice{maxChoices ? ` (max ${maxChoices})` : ''}
@@ -238,7 +306,7 @@ export const PollDetailScreen = ({ route, navigation }: Props) => {
                 <Pressable
                   key={opt.id}
                   onPress={() => {
-                    if (!showResults && isEligible && isActive) {
+                    if (isActive && isEligible) {
                       toggleOption(opt.id);
                     }
                   }}
@@ -296,11 +364,25 @@ export const PollDetailScreen = ({ route, navigation }: Props) => {
                   </View>
 
                   {showResults ? (
-                    <AnimatedBar
-                      pct={optPct}
-                      isDark={isDark}
-                      selected={userVoted}
-                    />
+                    <>
+                      <AnimatedBar
+                        pct={optPct}
+                        isDark={isDark}
+                        selected={userVoted}
+                      />
+                      {/* Show names of people who voted for this option (WhatsApp style) */}
+                      {voters && voters.length > 0 && (
+                        <View style={styles.optionVoters}>
+                          {voters
+                            .filter(v => v.options.includes(opt.label))
+                            .map((v, i) => (
+                              <Typography key={i} variant="caption" style={styles.optionVoterName}>
+                                {v.userName}{i < voters.filter(v => v.options.includes(opt.label)).length - 1 ? ', ' : ''}
+                              </Typography>
+                            ))}
+                        </View>
+                      )}
+                    </>
                   ) : null}
                 </Pressable>
               );
@@ -309,9 +391,9 @@ export const PollDetailScreen = ({ route, navigation }: Props) => {
         </View>
 
         {/* Vote action */}
-        {isActive && !hasVoted && isEligible ? (
+        {isActive && isEligible && (!hasVoted || selectedOptionIds.length > 0) ? (
           <Button
-            title={isCasting ? 'Submitting…' : 'Submit Vote'}
+            title={isCasting ? 'Submitting…' : (hasVoted ? 'Update Vote' : 'Submit Vote')}
             onPress={handleVote}
             disabled={selectedOptionIds.length === 0 || isCasting}
             loading={isCasting}
@@ -323,13 +405,59 @@ export const PollDetailScreen = ({ route, navigation }: Props) => {
               You are not eligible to vote in this poll.
             </Typography>
           </View>
-        ) : isActive && hasVoted ? (
+        ) : isActive && hasVoted && selectedOptionIds.length === 0 ? (
           <View style={styles.votedBox}>
             <Typography variant="body" style={styles.votedText}>
-              You have already voted.
+              You voted. Tap another option to change your vote while the poll is open.
             </Typography>
+            <Button
+              title={isRemoving ? 'Removing…' : 'Remove My Vote'}
+              variant="ghost"
+              onPress={handleUnvote}
+              disabled={isRemoving}
+              loading={isRemoving}
+              style={styles.unvoteButton}
+              textStyle={{ color: colors.error }}
+            />
           </View>
         ) : null}
+
+        {/* Transparency Logs */}
+        {isAdmin && (
+          <View style={styles.logsSection}>
+            <Typography variant="h3" style={styles.logsTitle}>
+              Transparency & Tracking
+            </Typography>
+            
+            <View style={styles.logCard}>
+              <Typography variant="label" style={styles.logLabel}>
+                Seen by ({poll.viewLogs?.length || 0})
+              </Typography>
+              {(poll.viewLogs || []).map((log, i) => (
+                <View key={i} style={styles.logRow}>
+                  <Typography variant="caption">{log.userName}</Typography>
+                  <Typography variant="caption" style={styles.logTime}>
+                    {new Date(log.lastViewedAt).toLocaleTimeString()}
+                  </Typography>
+                </View>
+              ))}
+            </View>
+
+            <View style={styles.logCard}>
+              <Typography variant="label" style={styles.logLabel}>
+                Notified Residents ({poll.notificationLogs?.length || 0})
+              </Typography>
+              {(poll.notificationLogs || []).map((log, i) => (
+                <View key={i} style={styles.logRow}>
+                  <Typography variant="caption">{log.userName}</Typography>
+                  <Typography variant="caption" style={[styles.logStatus, { color: log.delivered ? colors.success : colors.error }]}>
+                    {log.delivered ? 'Delivered' : 'Failed'}
+                  </Typography>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
       </ScrollView>
     </ScreenContainer>
   );
@@ -371,6 +499,16 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginBottom: spacing.md,
     flexWrap: 'wrap',
+  },
+  inlineAction: {
+    height: 32,
+    paddingHorizontal: spacing.md,
+    borderRadius: 8,
+    borderWidth: 1.5,
+  },
+  inlineActionText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
   statusBadge: {
     borderRadius: 100,
@@ -481,6 +619,68 @@ const styles = StyleSheet.create({
   votedText: {
     color: colors.primary.dark,
     textAlign: 'center',
+    fontWeight: '600',
+  },
+  unvoteButton: {
+    marginTop: spacing.sm,
+  },
+  votersCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: spacing.lg,
+    marginTop: spacing.md,
+  },
+  voterRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#e5e7eb',
+  },
+  voterInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  optionVoters: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: spacing.xs,
+    gap: 4,
+  },
+  optionVoterName: {
+    color: colors.primary.dark,
+    fontSize: 10,
+    fontWeight: '500',
+  },
+  logsSection: {
+    marginTop: spacing.xl,
+    paddingTop: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+  },
+  logsTitle: {
+    marginBottom: spacing.md,
+  },
+  logCard: {
+    marginBottom: spacing.md,
+    backgroundColor: 'rgba(0,0,0,0.02)',
+    padding: spacing.md,
+    borderRadius: 12,
+  },
+  logLabel: {
+    marginBottom: spacing.sm,
+    color: '#374151',
+  },
+  logRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 2,
+  },
+  logTime: {
+    color: '#9ca3af',
+  },
+  logStatus: {
     fontWeight: '600',
   },
 });

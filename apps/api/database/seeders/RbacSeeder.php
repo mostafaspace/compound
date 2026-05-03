@@ -77,6 +77,7 @@ class RbacSeeder extends Seeder
                 Permission::ViewIssues, Permission::ManageIssues,
                 Permission::ViewAnnouncements,
                 Permission::ViewFinance,
+                Permission::ViewGovernance,
                 Permission::ViewOrgChart,
             ),
 
@@ -84,6 +85,30 @@ class RbacSeeder extends Seeder
                 Permission::ViewVisitors, Permission::ManageVisitors,
                 Permission::ViewIssues, Permission::ManageIssues,
                 Permission::ViewAnnouncements,
+                Permission::ViewGovernance,
+                Permission::ViewOrgChart,
+            ),
+
+            UserRole::Resident->value => $p(
+                Permission::ViewVisitors, Permission::ManageVisitors,
+                Permission::ViewIssues, Permission::ManageIssues,
+                Permission::ViewAnnouncements,
+                Permission::ViewGovernance,
+                Permission::ViewOrgChart,
+            ),
+
+            UserRole::President->value => $p(
+                Permission::ViewCompounds,
+                Permission::ViewUsers,
+                Permission::ViewFinance,
+                Permission::ViewAnnouncements, Permission::ManageAnnouncements,
+                Permission::ViewIssues, Permission::ManageIssues,
+                Permission::ViewGovernance, Permission::ManageGovernance,
+                Permission::ViewSecurity,
+                Permission::ViewVisitors,
+                Permission::ViewOrgChart, Permission::ViewAnalytics,
+                Permission::ViewAuditLogs, Permission::ViewMeetings,
+                Permission::ManageMeetings, Permission::ViewMaintenance,
             ),
 
             UserRole::SupportAgent->value => $p(

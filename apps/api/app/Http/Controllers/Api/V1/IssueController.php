@@ -35,6 +35,9 @@ class IssueController extends Controller
 
         $query->when($compoundIds !== null, fn ($q) => $q->whereIn('compound_id', $compoundIds));
 
+        // Role-based scope: floor reps see their floor, building reps their building, etc.
+        $this->issueService->applyScopeForUser($query, $actor);
+
         if ($request->has('status') && $request->input('status') !== 'all') {
             $query->where('status', $request->input('status'));
         }

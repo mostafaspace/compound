@@ -7,8 +7,10 @@ use App\Enums\UserRole;
 use App\Models\Issues\Issue;
 use App\Models\Issues\IssueAttachment;
 use App\Models\Issues\IssueComment;
+use App\Models\RepresentativeAssignment;
 use App\Models\User;
 use App\Support\AuditLogger;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
 
@@ -304,6 +306,7 @@ class IssueService
         if ($user->hasAnyEffectiveRole([
             UserRole::SuperAdmin,
             UserRole::CompoundAdmin,
+            UserRole::President,
             UserRole::BoardMember,
             UserRole::FinanceReviewer,
             UserRole::SupportAgent,
@@ -311,6 +314,72 @@ class IssueService
             return $this->compoundContext->userCanAccessCompoundById($user, $issue->compound_id);
         }
 
+        // Building rep can see issues in their building
+        $buildingAssignment = $this->getActiveRepAssignment($user, 'building_representative');
+        if ($buildingAssignment && $issue->building_id === $buildingAssignment->building_id) {
+            return true;
+        }
+
+        // Floor rep can see issues in their building + floor
+        $floorAssignment = $this->getActiveRepAssignment($user, 'floor_representative');
+        if ($floorAssignment && $issue->building_id === $floorAssignment->building_id) {
+            if ($issue->unit_id === null) {
+                return true;
+            }
+            $issueFloorId = $issue->unit?->floor_id;
+            if ($issueFloorId === $floorAssignment->floor_id) {
+                return true;
+            }
+        }
+
         return $issue->reported_by === $user->id;
+    }
+
+    /**
+     * Apply role-based scope filtering on the issues query for list endpoints.
+     *
+     * @param Builder<Issue> $query
+     * @return Builder<Issue>
+     */
+    public function applyScopeForUser(Builder $query, User $user): Builder
+    {
+        if ($user->hasAnyEffectiveRole([
+            UserRole::SuperAdmin,
+            UserRole::CompoundAdmin,
+            UserRole::President,
+            UserRole::BoardMember,
+            UserRole::SupportAgent,
+        ])) {
+            return $query;
+        }
+
+        // Building rep: only issues in their building
+        $buildingAssignment = $this->getActiveRepAssignment($user, 'building_representative');
+        if ($buildingAssignment) {
+            return $query->where('building_id', $buildingAssignment->building_id);
+        }
+
+        // Floor rep: only issues in their building + floor
+        $floorAssignment = $this->getActiveRepAssignment($user, 'floor_representative');
+        if ($floorAssignment) {
+            return $query->where('building_id', $floorAssignment->building_id)
+                ->where(function (Builder $q) use ($floorAssignment): void {
+                    $q->whereNull('unit_id')
+                        ->orWhereHas('unit', fn ($uq) => $uq->where('floor_id', $floorAssignment->floor_id));
+                });
+        }
+
+        // Regular resident: only their own issues
+        return $query->where('reported_by', $user->id);
+    }
+
+    private function getActiveRepAssignment(User $user, string $role): ?RepresentativeAssignment
+    {
+        return RepresentativeAssignment::query()
+            ->where('user_id', $user->id)
+            ->where('role', $role)
+            ->where('is_active', true)
+            ->whereNull('ends_at')
+            ->first();
     }
 }

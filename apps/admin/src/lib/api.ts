@@ -151,6 +151,29 @@ export async function getSystemStatus(): Promise<SystemStatus | null> {
   }
 }
 
+export interface DashboardData {
+  role: string;
+  attentionItems: Array<{ type: string; label: string; count: number; route: string }>;
+  shortcuts: Array<{ key: string; label: string; route: string; icon: string }>;
+  stats: Record<string, number>;
+}
+
+export async function getDashboard(): Promise<DashboardData | null> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/dashboard`, {
+      cache: "no-store",
+      headers: await apiHeaders(),
+    });
+
+    if (!response.ok) return null;
+
+    const payload = (await response.json()) as ApiEnvelope<DashboardData>;
+    return payload.data;
+  } catch {
+    return null;
+  }
+}
+
 export async function getAuditLogs(input: AuditLogFilters = {}): Promise<AuditLogEntry[]> {
   try {
     const params = new URLSearchParams();

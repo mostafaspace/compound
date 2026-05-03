@@ -137,6 +137,36 @@ export default async function PollDetailPage({ params, searchParams }: PollDetai
                 </div>
               )}
             </div>
+
+            {poll.voters && poll.voters.length > 0 ? (
+              <div className="rounded-lg border border-line bg-panel p-5">
+                <h2 className="text-lg font-semibold">Voters ({poll.voters.length})</h2>
+                <div className="mt-4 overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-line text-left text-xs font-semibold text-muted">
+                        <th className="pb-2">Resident</th>
+                        <th className="pb-2">Unit</th>
+                        <th className="pb-2">Choice(s)</th>
+                        <th className="pb-2">Voted At</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {poll.voters.map((voter, idx) => (
+                        <tr key={`${voter.userId}-${idx}`} className="border-b border-line last:border-0">
+                          <td className="py-2 font-medium">{voter.userName ?? "Unknown"}</td>
+                          <td className="py-2">{voter.unitNumber ?? "—"}</td>
+                          <td className="py-2">{voter.options.join(", ")}</td>
+                          <td className="py-2 text-muted">
+                            {voter.votedAt ? formatDate(voter.votedAt, locale) : "—"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : null}
           </div>
 
           {/* Metadata sidebar */}
@@ -169,8 +199,8 @@ export default async function PollDetailPage({ params, searchParams }: PollDetai
               <div className="mt-1 text-sm">{poll.eligibility.replace(/_/g, " ")}</div>
             </div>
             <div>
-              <span className="text-xs font-semibold text-muted">Anonymous</span>
-              <div className="mt-1 text-sm">{poll.isAnonymous ? "Yes" : "No"}</div>
+              <span className="text-xs font-semibold text-muted">Transparency</span>
+              <div className="mt-1 text-sm">All voters visible</div>
             </div>
             <div>
               <span className="text-xs font-semibold text-muted">Multiple choices</span>

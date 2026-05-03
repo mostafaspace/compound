@@ -25,6 +25,15 @@ export interface PollOption {
   votesCount: number;
 }
 
+export interface PollVoter {
+  userId: number;
+  userName: string | null;
+  unitId: string | null;
+  unitNumber: string | null;
+  options: string[];
+  votedAt: string | null;
+}
+
 export interface Poll {
   id: string;
   compoundId: string;
@@ -35,7 +44,6 @@ export interface Poll {
   description: string | null;
   status: PollStatus;
   scope: PollScope;
-  isAnonymous: boolean;
   allowMultiple: boolean;
   maxChoices: number | null;
   eligibility: PollEligibility;
@@ -49,6 +57,18 @@ export interface Poll {
   votesCount: number;
   hasVoted?: boolean | null;
   userVoteOptionIds?: number[] | null;
+  voters?: PollVoter[];
+  viewLogs?: Array<{
+    userName: string;
+    firstViewedAt: string;
+    lastViewedAt: string;
+    viewCount: number;
+  }>;
+  notificationLogs?: Array<{
+    userName: string;
+    notifiedAt: string;
+    delivered: boolean;
+  }>;
 }
 
 export interface CreatePollInput {
@@ -58,7 +78,6 @@ export interface CreatePollInput {
   title: string;
   description?: string;
   scope?: PollScope;
-  isAnonymous?: boolean;
   allowMultiple?: boolean;
   maxChoices?: number;
   eligibility?: PollEligibility;

@@ -75,7 +75,7 @@ class ResidentInvitationController extends Controller
                 'name' => $validated['name'],
                 'email' => $validated['email'],
                 'phone' => $validated['phone'] ?? null,
-                'role' => $validated['role'],
+                'role' => $validated['role'] ?? UserRole::defaultForNewUser()->value,
                 'status' => AccountStatus::Invited->value,
                 'password' => Hash::make(Str::password(32)),
             ]);

@@ -99,6 +99,15 @@ export interface UnitMembership {
   endsAt: string | null;
   isPrimary: boolean;
   verificationStatus: VerificationStatus;
+  residentName: string | null;
+  residentPhone: string | null;
+  phonePublic: boolean;
+  residentEmail: string | null;
+  emailPublic: boolean;
+  hasVehicle: boolean;
+  vehiclePlate: string | null;
+  parkingSpotCode: string | null;
+  garageStickerCode: string | null;
   createdAt: string | null;
   updatedAt: string | null;
 }
@@ -147,4 +156,13 @@ export interface CreateUnitMembershipInput {
   endsAt?: string;
   isPrimary?: boolean;
   verificationStatus?: VerificationStatus;
+  residentName?: string;
+  residentPhone?: string;
+  phonePublic?: boolean;
+  residentEmail?: string;
+  emailPublic?: boolean;
+  hasVehicle?: boolean;
+  vehiclePlate?: string;
+  parkingSpotCode?: string;
+  garageStickerCode?: string;
 }

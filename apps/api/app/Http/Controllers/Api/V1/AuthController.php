@@ -98,13 +98,15 @@ class AuthController extends Controller
         return match (true) {
             $user->isEffectiveSuperAdmin() => UserRole::SuperAdmin,
             $user->hasEffectiveRole(UserRole::CompoundAdmin) => UserRole::CompoundAdmin,
+            $user->hasEffectiveRole(UserRole::President) => UserRole::President,
             $user->hasEffectiveRole(UserRole::BoardMember) => UserRole::BoardMember,
             $user->hasEffectiveRole(UserRole::FinanceReviewer) => UserRole::FinanceReviewer,
             $user->hasEffectiveRole(UserRole::SupportAgent) => UserRole::SupportAgent,
             $user->hasEffectiveRole(UserRole::SecurityGuard) => UserRole::SecurityGuard,
             $user->hasEffectiveRole(UserRole::ResidentOwner) => UserRole::ResidentOwner,
             $user->hasEffectiveRole(UserRole::ResidentTenant) => UserRole::ResidentTenant,
-            default => $user->role,
+            $user->hasEffectiveRole(UserRole::Resident) => UserRole::Resident,
+            default => $user->role ?? UserRole::Resident,
         };
     }
 
@@ -116,11 +118,13 @@ class AuthController extends Controller
         return match ($role) {
             UserRole::SuperAdmin => ['*'],
             UserRole::CompoundAdmin => ['admin:*', 'property:*', 'resident:*', 'finance:read'],
+            UserRole::President => ['property:read', 'governance:*', 'finance:read', 'resident:read', 'issues:*'],
             UserRole::BoardMember => ['property:read', 'governance:*', 'finance:read'],
             UserRole::FinanceReviewer => ['property:read', 'finance:*'],
             UserRole::SupportAgent => ['property:read', 'resident:read', 'support:*'],
             UserRole::SecurityGuard => ['property:read', 'visitor:*', 'security:*'],
             UserRole::ResidentOwner, UserRole::ResidentTenant => ['resident:self'],
+            UserRole::Resident => ['resident:self'],
         };
     }
 }

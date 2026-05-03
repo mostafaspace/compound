@@ -6,7 +6,7 @@
     "units": "الوحدات",
     "visitors": "الزوار",
     "finance": "المالية",
-    "governance": "الحوكمة",
+    "governance": "التصويت",
     "more": "المزيد",
     "signOut": "تسجيل الخروج"
   },
@@ -307,11 +307,11 @@
     "recentTransactions": "المعاملات الأخيرة"
   },
   "Governance": {
-    "label": "الحوكمة",
+    "label": "التصويت",
     "title": "التصويتات النشطة",
     "loading": "جار التحميل…",
     "loadError": "تعذر تحميل التصويتات.",
-    "networkError": "تعذر الوصول إلى خدمة الحوكمة.",
+    "networkError": "تعذر الوصول إلى خدمة التصويت.",
     "noActiveVotes": "لا توجد تصويتات نشطة في الوقت الحالي.",
     "endsAt": "تنتهي في {{date}}",
     "checkEligibility": "تحقق من أهليتي للتصويت",

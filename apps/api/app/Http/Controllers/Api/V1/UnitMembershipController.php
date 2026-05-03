@@ -9,6 +9,7 @@ use App\Http\Requests\Property\UpdateUnitMembershipRequest;
 use App\Http\Resources\UnitMembershipResource;
 use App\Models\Property\Unit;
 use App\Models\Property\UnitMembership;
+use App\Models\User;
 use App\Services\CompoundContextService;
 use App\Support\AuditLogger;
 use Illuminate\Http\JsonResponse;
@@ -62,6 +63,15 @@ class UnitMembershipController extends Controller
             'is_primary' => $validated['isPrimary'] ?? false,
             'verification_status' => $validated['verificationStatus'] ?? VerificationStatus::Pending->value,
             'created_by' => $request->user()?->id,
+            'resident_name' => $validated['residentName'] ?? null,
+            'resident_phone' => $validated['residentPhone'] ?? null,
+            'phone_public' => $validated['phonePublic'] ?? false,
+            'resident_email' => $validated['residentEmail'] ?? null,
+            'email_public' => $validated['emailPublic'] ?? false,
+            'has_vehicle' => $validated['hasVehicle'] ?? false,
+            'vehicle_plate' => $validated['vehiclePlate'] ?? null,
+            'parking_spot_code' => $validated['parkingSpotCode'] ?? null,
+            'garage_sticker_code' => $validated['garageStickerCode'] ?? null,
         ]);
 
         $this->auditLogger->record('property.unit_membership_created', actor: $request->user(), request: $request, metadata: [
@@ -118,6 +128,22 @@ class UnitMembershipController extends Controller
         ]);
 
         return UnitMembershipResource::make($unitMembership->refresh()->load('user'));
+    }
+
+    public function unassignedUsers(Request $request): JsonResponse
+    {
+        /** @var User $actor */
+        $actor = $request->user();
+        $compoundId = $this->compoundContext->resolveManagedCompoundId($actor);
+
+        $users = User::query()
+            ->whereDoesntHave('unitMemberships', fn ($q) => $q->whereNull('ends_at'))
+            ->when($compoundId !== null, fn ($q) => $q->where('compound_id', $compoundId))
+            ->select(['id', 'name', 'email', 'phone', 'photo_url', 'created_at'])
+            ->orderBy('created_at', 'desc')
+            ->paginate(20);
+
+        return response()->json(['data' => $users]);
     }
 
     private function ensureCanAccessMembership(Request $request, UnitMembership $unitMembership): void

@@ -23,7 +23,6 @@ class PollResource extends JsonResource
             'description'   => $this->description,
             'status'        => $this->status,
             'scope'         => $this->scope,
-            'isAnonymous'   => $this->is_anonymous,
             'allowMultiple' => $this->allow_multiple,
             'maxChoices'    => $this->max_choices,
             'eligibility'   => $this->eligibility,
@@ -35,10 +34,27 @@ class PollResource extends JsonResource
             'updatedAt'     => $this->updated_at?->toJSON(),
             'options'       => PollOptionResource::collection($this->whenLoaded('options')),
             'votesCount'    => $this->whenLoaded('votes', fn () => $this->votes->count(), 0),
-            // Set via $poll->setAttribute('has_voted', bool) in controller before returning
             'hasVoted'      => $this->has_voted ?? null,
-            // Set via $poll->setAttribute('user_vote_option_ids', int[]) in controller
             'userVoteOptionIds' => $this->user_vote_option_ids ?? null,
+            'voters'        => $this->whenLoaded('votes', fn () => $this->votes->map(fn ($vote) => [
+                'userId'     => $vote->user_id,
+                'userName'   => $vote->user?->name,
+                'unitId'     => $vote->unit_id ?? null,
+                'unitNumber' => $vote->relationLoaded('unit') ? $vote->unit?->unit_number : null,
+                'options'    => $vote->relationLoaded('options') ? $vote->options->pluck('label')->toArray() : [],
+                'votedAt'    => $vote->voted_at?->toIso8601String(),
+            ])->toArray()),
+            'viewLogs' => $this->whenLoaded('viewLogs', fn() => $this->viewLogs->map(fn($log) => [
+                'userName' => $log->user?->name,
+                'firstViewedAt' => $log->first_viewed_at?->toIso8601String(),
+                'lastViewedAt' => $log->last_viewed_at?->toIso8601String(),
+                'viewCount' => $log->view_count,
+            ])),
+            'notificationLogs' => $this->whenLoaded('notificationLogs', fn() => $this->notificationLogs->map(fn($log) => [
+                'userName' => $log->user?->name,
+                'notifiedAt' => $log->notified_at?->toIso8601String(),
+                'delivered' => $log->delivered,
+            ])),
         ];
     }
 }

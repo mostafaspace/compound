@@ -21,7 +21,6 @@ class Poll extends Model
         'description',
         'status',
         'scope',
-        'is_anonymous',
         'allow_multiple',
         'max_choices',
         'eligibility',
@@ -35,7 +34,6 @@ class Poll extends Model
     protected function casts(): array
     {
         return [
-            'is_anonymous'   => 'boolean',
             'allow_multiple' => 'boolean',
             'starts_at'      => 'datetime',
             'ends_at'        => 'datetime',
@@ -72,5 +70,17 @@ class Poll extends Model
     public function votes(): HasMany
     {
         return $this->hasMany(PollVote::class);
+    }
+
+    /** @return HasMany<PollViewLog, $this> */
+    public function viewLogs(): HasMany
+    {
+        return $this->hasMany(PollViewLog::class);
+    }
+
+    /** @return HasMany<PollNotificationLog, $this> */
+    public function notificationLogs(): HasMany
+    {
+        return $this->hasMany(PollNotificationLog::class);
     }
 }

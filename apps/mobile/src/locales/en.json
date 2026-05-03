@@ -6,7 +6,7 @@
     "units": "Units",
     "visitors": "Visitors",
     "finance": "Finance",
-    "governance": "Governance",
+    "governance": "Polls",
     "more": "More",
     "signOut": "Sign Out"
   },
@@ -331,12 +331,12 @@
     "recentTransactions": "Recent transactions"
   },
   "Governance": {
-    "label": "Governance",
-    "title": "Active votes",
+    "label": "Polls",
+    "title": "Active polls",
     "loading": "Loading…",
-    "loadError": "Votes could not be loaded.",
-    "networkError": "Could not reach the governance service.",
-    "noActiveVotes": "No active votes at this time.",
+    "loadError": "Polls could not be loaded.",
+    "networkError": "Could not reach the polls service.",
+    "noActiveVotes": "No active polls at this time.",
     "endsAt": "Ends {{date}}",
     "checkEligibility": "Check my eligibility",
     "selectOption": "Select an option",

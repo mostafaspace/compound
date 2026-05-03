@@ -31,6 +31,15 @@ class UnitMembership extends Model
         'is_primary',
         'verification_status',
         'created_by',
+        'resident_name',
+        'resident_phone',
+        'phone_public',
+        'resident_email',
+        'email_public',
+        'has_vehicle',
+        'vehicle_plate',
+        'parking_spot_code',
+        'garage_sticker_code',
     ];
 
     protected function casts(): array
@@ -41,6 +50,9 @@ class UnitMembership extends Model
             'relation_type' => UnitRelationType::class,
             'starts_at' => 'date',
             'verification_status' => VerificationStatus::class,
+            'phone_public' => 'boolean',
+            'email_public' => 'boolean',
+            'has_vehicle' => 'boolean',
         ];
     }
 

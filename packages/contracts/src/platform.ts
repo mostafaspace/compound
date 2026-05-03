@@ -1,11 +1,13 @@
 export const userRoleValues = [
   "super_admin",
   "compound_admin",
+  "president",
   "board_member",
   "finance_reviewer",
   "security_guard",
   "resident_owner",
   "resident_tenant",
+  "resident",
   "support_agent"
 ] as const;
 

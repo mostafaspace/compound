@@ -8,14 +8,18 @@ use App\Enums\VoteEligibility;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Polls\PollResource;
 use App\Models\Polls\Poll;
+use App\Models\Polls\PollNotificationLog;
 use App\Models\Polls\PollOption;
+use App\Models\Polls\PollViewLog;
 use App\Models\Polls\PollVote;
+use App\Models\Property\UnitMembership;
 use App\Models\User;
 use App\Services\CompoundContextService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 
 class PollController extends Controller
@@ -113,7 +117,6 @@ class PollController extends Controller
             'title'           => ['required', 'string', 'max:255'],
             'description'     => ['nullable', 'string'],
             'scope'           => ['nullable', 'string', Rule::in(['compound', 'building'])],
-            'isAnonymous'     => ['nullable', 'boolean'],
             'allowMultiple'   => ['nullable', 'boolean'],
             'maxChoices'      => ['nullable', 'integer', 'min:2'],
             'eligibility'     => ['nullable', 'string', Rule::in(array_column(VoteEligibility::cases(), 'value'))],
@@ -139,7 +142,6 @@ class PollController extends Controller
             'description'    => $validated['description'] ?? null,
             'status'         => PollStatus::Draft->value,
             'scope'          => $validated['scope'] ?? 'compound',
-            'is_anonymous'   => $validated['isAnonymous'] ?? false,
             'allow_multiple' => $validated['allowMultiple'] ?? false,
             'max_choices'    => $validated['maxChoices'] ?? null,
             'eligibility'    => $validated['eligibility'] ?? VoteEligibility::AllVerified->value,
@@ -166,7 +168,11 @@ class PollController extends Controller
         $user = $request->user();
         $this->authorizePollAccess($user, $poll);
 
-        $poll->load(['options', 'pollType', 'votes']);
+        $eagerLoads = ['options', 'pollType', 'votes.user', 'votes.options', 'viewLogs.user', 'notificationLogs.user'];
+        if (Schema::hasColumn('poll_votes', 'unit_id')) {
+            $eagerLoads[] = 'votes.unit';
+        }
+        $poll->load($eagerLoads);
 
         $pollVote = PollVote::with('options')
             ->where('poll_id', $poll->id)
@@ -178,6 +184,17 @@ class PollController extends Controller
             'user_vote_option_ids',
             $pollVote?->options->pluck('id')->toArray() ?? []
         );
+
+        if (Schema::hasTable('poll_view_logs')) {
+            $log = PollViewLog::firstOrNew(['poll_id' => $poll->id, 'user_id' => $user->id]);
+            if (!$log->exists) {
+                $log->first_viewed_at = now();
+                $log->view_count = 0;
+            }
+            $log->last_viewed_at = now();
+            $log->view_count++;
+            $log->save();
+        }
 
         return PollResource::make($poll);
     }
@@ -195,7 +212,6 @@ class PollController extends Controller
             'description'     => ['nullable', 'string'],
             'pollTypeId'      => ['nullable', 'string', 'exists:poll_types,id'],
             'scope'           => ['sometimes', 'string', Rule::in(['compound', 'building'])],
-            'isAnonymous'     => ['sometimes', 'boolean'],
             'allowMultiple'   => ['sometimes', 'boolean'],
             'maxChoices'      => ['nullable', 'integer', 'min:2'],
             'eligibility'     => ['sometimes', 'string', Rule::in(array_column(VoteEligibility::cases(), 'value'))],
@@ -208,7 +224,6 @@ class PollController extends Controller
         $updates = array_filter([
             'title'          => $validated['title'] ?? null,
             'scope'          => $validated['scope'] ?? null,
-            'is_anonymous'   => $validated['isAnonymous'] ?? null,
             'allow_multiple' => $validated['allowMultiple'] ?? null,
             'eligibility'    => $validated['eligibility'] ?? null,
         ], fn ($v) => ! is_null($v));
@@ -260,6 +275,10 @@ class PollController extends Controller
             'status'       => PollStatus::Active->value,
             'published_at' => now(),
         ]);
+
+        if (Schema::hasTable('poll_notification_logs')) {
+            $this->dispatchPollNotifications($poll);
+        }
 
         return PollResource::make($poll->load('options'));
     }
@@ -319,13 +338,42 @@ class PollController extends Controller
             return response()->json(['message' => 'This poll is not currently active.'], 422);
         }
 
+        if ($poll->ends_at && $poll->ends_at->isPast()) {
+            return response()->json(['message' => 'This poll has ended.'], 422);
+        }
+
         [$eligible, $reason] = $this->checkEligibility($poll, $user);
         if (! $eligible) {
             return response()->json(['message' => 'You are not eligible to vote.', 'reason' => $reason], 403);
         }
 
-        if (PollVote::where('poll_id', $poll->id)->where('user_id', $user->id)->exists()) {
-            return response()->json(['message' => 'You have already voted in this poll.', 'reason' => 'already_voted'], 409);
+        $hasUnitColumn = Schema::hasColumn('poll_votes', 'unit_id');
+        $unitId = $hasUnitColumn ? $this->resolveVoterUnitId($poll, $user) : null;
+
+        if ($hasUnitColumn && $unitId === null) {
+            return response()->json(['message' => 'No valid unit membership found for this poll.'], 403);
+        }
+
+        $existingVote = null;
+        if ($hasUnitColumn && $unitId) {
+            $existingVote = PollVote::where('poll_id', $poll->id)
+                ->where('unit_id', $unitId)
+                ->first();
+
+            if ($existingVote && $existingVote->user_id !== $user->id) {
+                return response()->json([
+                    'message' => 'Your apartment has already voted in this poll.',
+                    'reason' => 'apartment_already_voted',
+                ], 409);
+            }
+        } else {
+            $existingVote = PollVote::where('poll_id', $poll->id)
+                ->where('user_id', $user->id)
+                ->first();
+
+            if ($existingVote) {
+                return response()->json(['message' => 'You have already voted in this poll.', 'reason' => 'already_voted'], 409);
+            }
         }
 
         $validated = $request->validate([
@@ -345,20 +393,88 @@ class PollController extends Controller
             ], 422);
         }
 
-        DB::transaction(function () use ($poll, $user, $optionIds): void {
-            $pollVote = PollVote::create([
+        DB::transaction(function () use ($poll, $user, $unitId, $optionIds, $existingVote, $hasUnitColumn): void {
+            if ($existingVote) {
+                $oldOptionIds = $existingVote->options()->pluck('poll_options.id')->toArray();
+                PollOption::whereIn('id', $oldOptionIds)->decrement('votes_count');
+                $existingVote->options()->detach();
+                $existingVote->delete();
+            }
+
+            $voteData = [
                 'poll_id'  => $poll->id,
                 'user_id'  => $user->id,
                 'voted_at' => now(),
-            ]);
+            ];
+            if ($hasUnitColumn) {
+                $voteData['unit_id'] = $unitId;
+            }
+
+            $pollVote = PollVote::create($voteData);
 
             $pollVote->options()->attach($optionIds);
-
-            // Atomically increment the denormalized votes_count on each chosen option
             PollOption::whereIn('id', $optionIds)->increment('votes_count');
         });
 
         return response()->json(['data' => ['message' => 'Vote recorded successfully.']]);
+    }
+
+    public function unvote(Request $request, Poll $poll): JsonResponse
+    {
+        $user = $request->user();
+        $this->authorizePollAccess($user, $poll);
+
+        if ($poll->status !== PollStatus::Active->value) {
+            return response()->json(['message' => 'Cannot remove vote after poll is closed.'], 422);
+        }
+
+        if ($poll->ends_at && $poll->ends_at->isPast()) {
+            return response()->json(['message' => 'This poll has ended.'], 422);
+        }
+
+        $existingVote = PollVote::where('poll_id', $poll->id)
+            ->where('user_id', $user->id)
+            ->first();
+
+        if (! $existingVote) {
+            return response()->json(['message' => 'You have not voted in this poll.'], 404);
+        }
+
+        DB::transaction(function () use ($existingVote): void {
+            $oldOptionIds = $existingVote->options()->pluck('poll_options.id')->toArray();
+            PollOption::whereIn('id', $oldOptionIds)->decrement('votes_count');
+            $existingVote->options()->detach();
+            $existingVote->delete();
+        });
+
+        return response()->json(['data' => ['message' => 'Vote removed successfully.']]);
+    }
+
+    public function voters(Request $request, Poll $poll): JsonResponse
+    {
+        $user = $request->user();
+        $this->authorizePollAccess($user, $poll);
+
+        $eagerLoads = ['user:id,name', 'options:id,label'];
+        if (Schema::hasColumn('poll_votes', 'unit_id')) {
+            $eagerLoads[] = 'unit:id,unit_number,building_id';
+        }
+
+        $votes = PollVote::with($eagerLoads)
+            ->where('poll_id', $poll->id)
+            ->orderByDesc('voted_at')
+            ->get();
+
+        $votersList = $votes->map(fn (PollVote $vote) => [
+            'userId'     => $vote->user_id,
+            'userName'   => $vote->user?->name,
+            'unitId'     => $vote->unit_id ?? null,
+            'unitNumber' => $vote->unit?->unit_number ?? null,
+            'options'    => $vote->options->pluck('label')->toArray(),
+            'votedAt'    => $vote->voted_at?->toIso8601String(),
+        ]);
+
+        return response()->json(['data' => $votersList->toArray()]);
     }
 
     private function authorizePollAccess(User $user, Poll $poll): void
@@ -383,6 +499,47 @@ class PollController extends Controller
             });
 
         abort_unless($query->exists(), 403);
+    }
+
+    private function resolveVoterUnitId(Poll $poll, User $user): ?string
+    {
+        $membership = $user->unitMemberships()
+            ->activeForAccess()
+            ->whereHas('unit', function ($q) use ($poll) {
+                $q->where('compound_id', $poll->compound_id);
+                if ($poll->scope === 'building' && $poll->building_id) {
+                    $q->where('building_id', $poll->building_id);
+                }
+            })
+            ->first();
+
+        return $membership?->unit_id;
+    }
+
+    private function dispatchPollNotifications(Poll $poll): void
+    {
+        $query = UnitMembership::query()
+            ->activeForAccess()
+            ->whereHas('unit', function ($q) use ($poll) {
+                $q->where('compound_id', $poll->compound_id);
+                if ($poll->scope === 'building' && $poll->building_id) {
+                    $q->where('building_id', $poll->building_id);
+                }
+            });
+
+        $userIds = $query->pluck('user_id')->unique();
+
+        $now = now();
+        $logs = $userIds->map(fn ($userId) => [
+            'poll_id'     => $poll->id,
+            'user_id'     => $userId,
+            'notified_at' => $now,
+            'channel'     => 'in_app',
+            'delivered'   => true,
+            'delivered_at' => $now,
+        ])->toArray();
+
+        PollNotificationLog::insert($logs);
     }
 
     /** @return array{0: bool, 1: string|null} */
@@ -414,12 +571,12 @@ class PollController extends Controller
         $eligibility = $poll->eligibility;
 
         if ($eligibility === VoteEligibility::OwnersOnly->value) {
-            $isOwner = $memberships->contains(fn ($m) => in_array($m->relation_type, ['owner', 'representative']));
+            $isOwner = $memberships->contains(fn ($m) => in_array($m->relation_type->value, ['owner', 'representative']));
             if (! $isOwner) {
                 return [false, 'owners_only'];
             }
         } elseif ($eligibility === VoteEligibility::OwnersAndResidents->value) {
-            $isEligible = $memberships->contains(fn ($m) => in_array($m->relation_type, ['owner', 'representative', 'resident']));
+            $isEligible = $memberships->contains(fn ($m) => in_array($m->relation_type->value, ['owner', 'representative', 'resident']));
             if (! $isEligible) {
                 return [false, 'owners_and_residents_only'];
             }

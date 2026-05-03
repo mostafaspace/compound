@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AnnouncementController;
+use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\ImportBatchController;
 use App\Http\Controllers\Api\V1\AccountMergeController;
 use App\Http\Controllers\Api\V1\AuditLogController;
@@ -35,6 +36,7 @@ use App\Http\Controllers\Api\V1\NotificationTemplateController;
 use App\Http\Controllers\Api\V1\OperationalStatusController;
 use App\Http\Controllers\Api\V1\OrgChartController;
 use App\Http\Controllers\Api\V1\RepresentativeAssignmentController;
+use App\Http\Controllers\Api\V1\ResidentSearchController;
 use App\Http\Controllers\Api\V1\ResidentInvitationController;
 use App\Http\Controllers\Api\V1\SettingsController;
 use App\Http\Controllers\Api\V1\SystemStatusController;
@@ -81,6 +83,9 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
     Route::middleware('auth:sanctum')->group(function (): void {
         Route::get('/auth/me', [AuthController::class, 'me'])->name('auth.me');
         Route::post('/auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
+
+        // Dashboard — role-aware attention items, shortcuts, and stats
+        Route::get('/dashboard', DashboardController::class)->name('dashboard');
 
         // ─── Localization (CM-85) ─────────────────────────────────────────
         // Returns effective locale settings for the current compound.
@@ -208,6 +213,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             Route::post('/buildings/{building}/archive', [BuildingController::class, 'archive'])->name('buildings.archive');
             Route::post('/floors/{floor}/archive', [FloorController::class, 'archive'])->name('floors.archive');
             Route::post('/units/{unit}/archive', [UnitController::class, 'archive'])->name('units.archive');
+            Route::get('/units/unassigned-users', [UnitMembershipController::class, 'unassignedUsers'])->name('units.unassigned-users');
             Route::get('/units/{unit}/memberships', [UnitMembershipController::class, 'index'])->name('units.memberships.index');
             Route::post('/units/{unit}/memberships', [UnitMembershipController::class, 'store'])->name('units.memberships.store');
             Route::patch('/unit-memberships/{unitMembership}', [UnitMembershipController::class, 'update'])
@@ -243,6 +249,10 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
                 Route::get('/imports/templates/{type}', [ImportBatchController::class, 'template'])->name('imports.template');
                 Route::get('/imports/{importBatch}', [ImportBatchController::class, 'show'])->name('imports.show');
             });
+
+            // Resident search — used by admin to find users by name/email/phone/unit for assignment
+            Route::get('/residents/search', ResidentSearchController::class)
+                ->name('residents.search');
 
             // Representative assignments (admin-only mutations)
             Route::get('/compounds/{compound}/representatives', [RepresentativeAssignmentController::class, 'index'])
@@ -433,6 +443,8 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             // Resident participation
             Route::get('/{poll}/eligibility', [\App\Http\Controllers\Api\V1\Polls\PollController::class, 'eligibility'])->name('eligibility');
             Route::post('/{poll}/vote', [\App\Http\Controllers\Api\V1\Polls\PollController::class, 'vote'])->name('vote');
+            Route::delete('/{poll}/vote', [\App\Http\Controllers\Api\V1\Polls\PollController::class, 'unvote'])->name('unvote');
+            Route::get('/{poll}/voters', [\App\Http\Controllers\Api\V1\Polls\PollController::class, 'voters'])->name('voters');
         });
 
     // Notification channels — admin: templates + delivery logs

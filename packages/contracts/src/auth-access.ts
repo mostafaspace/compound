@@ -5,17 +5,19 @@ export type AuthRoleType = "admin" | "resident" | "security";
 const roleAliases: Record<UserRole, string[]> = {
   super_admin: ["super_admin"],
   compound_admin: ["compound_admin", "compound_head"],
+  president: ["president"],
   board_member: ["board_member"],
   finance_reviewer: ["finance_reviewer"],
   security_guard: ["security_guard"],
   resident_owner: ["resident_owner"],
   resident_tenant: ["resident_tenant"],
+  resident: ["resident"],
   support_agent: ["support_agent"],
 };
 
 const roleTypeMatrix: Record<AuthRoleType, UserRole[]> = {
-  admin: ["super_admin", "compound_admin", "board_member", "finance_reviewer", "support_agent"],
-  resident: ["resident_owner", "resident_tenant"],
+  admin: ["super_admin", "compound_admin", "president", "board_member", "finance_reviewer", "support_agent"],
+  resident: ["resident_owner", "resident_tenant", "resident"],
   security: ["security_guard"],
 };
 

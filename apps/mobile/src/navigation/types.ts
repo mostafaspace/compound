@@ -26,7 +26,6 @@ export type MainTabParamList = {
   Visitors: undefined;
   Finance: undefined;
   Governance: undefined;
-  Polls: undefined;
   More: undefined;
 };
 

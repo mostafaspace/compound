@@ -12,7 +12,8 @@
     "visitors": "Visitors",
     "announcements": "Announcements",
     "dues": "Dues",
-    "governance": "Governance",
+    "governance": "Polls",
+    "polls": "Polls",
     "settings": "Settings",
     "notificationChannels": "Notification channels",
     "imports": "Data import",
@@ -86,8 +87,8 @@
         "detail": "breached response targets"
       },
       "governance": {
-        "label": "Governance",
-        "detail": "open approvals"
+        "label": "Polls",
+        "detail": "open polls"
       }
     },
     "priorityQueue": {
@@ -652,8 +653,8 @@
     "noCampaigns": "No campaigns yet"
   },
   "Governance": {
-    "title": "Governance",
-    "subtitle": "Manage polls, elections, and formal decisions for the compound.",
+    "title": "Polls",
+    "subtitle": "Manage polls, elections, and decisions for the compound.",
     "back": "Dashboard",
     "viewResults": "View results",
     "activate": "Open for voting",
@@ -1188,7 +1189,7 @@
       "issues": "Issues",
       "announcements": "Announcements",
       "finance": "Finance",
-      "governance": "Governance",
+      "governance": "Polls",
       "notifications": "Notifications",
       "localization": "Localization"
     },

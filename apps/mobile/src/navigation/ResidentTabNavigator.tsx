@@ -6,7 +6,6 @@ import { MainTabParamList } from './types';
 import { ResidentDashboardScreen } from '../features/resident/screens/ResidentDashboardScreen';
 import { VisitorsScreen } from '../features/visitors/screens/VisitorsScreen';
 import { AccountsScreen } from '../features/finance/screens/AccountsScreen';
-import { VotesScreen } from '../features/governance/screens/VotesScreen';
 import { PollsScreen } from '../features/polls/screens/PollsScreen';
 import { MoreNavigator } from './MoreNavigator';
 import { colors, spacing } from '../theme';
@@ -54,8 +53,7 @@ export const ResidentTabNavigator = () => {
           if (route.name === 'Dashboard') icon = '🏠';
           if (route.name === 'Visitors') icon = '👥';
           if (route.name === 'Finance') icon = '💳';
-          if (route.name === 'Governance') icon = '⚖️';
-          if (route.name === 'Polls') icon = '📊';
+          if (route.name === 'Governance') icon = '📊';
           if (route.name === 'More') icon = '•••';
           return <Text style={{ color, fontSize: 20 }}>{icon}</Text>;
         },
@@ -87,22 +85,12 @@ export const ResidentTabNavigator = () => {
       />
       <Tab.Screen
         name="Governance"
-        component={VotesScreen}
-        options={{ 
+        component={PollsScreen}
+        options={{
           title: t('Governance.label'),
           header: () => <ScreenHeader title={t('Governance.label')} showBack={false} rightElement={<LogoutButton />} />
         }}
       />
-      {canViewGovernance && (
-        <Tab.Screen
-          name="Polls"
-          component={PollsScreen}
-          options={{ 
-            title: 'Polls',
-            header: () => <ScreenHeader title="Polls" showBack={false} rightElement={<LogoutButton />} />
-          }}
-        />
-      )}
       <Tab.Screen
         name="More"
         component={MoreNavigator}

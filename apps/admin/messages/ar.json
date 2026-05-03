@@ -12,7 +12,8 @@
     "visitors": "الزوار",
     "announcements": "الإعلانات",
     "dues": "الرسوم والمستحقات",
-    "governance": "الحوكمة",
+    "governance": "التصويت",
+    "polls": "التصويت",
     "settings": "الإعدادات",
     "notificationChannels": "قنوات الإشعارات",
     "imports": "استيراد البيانات",
@@ -86,8 +87,8 @@
         "detail": "بلاغات تجاوزت أهداف الاستجابة"
       },
       "governance": {
-        "label": "الحوكمة",
-        "detail": "موافقات مفتوحة"
+        "label": "التصويت",
+        "detail": "تصويتات مفتوحة"
       }
     },
     "priorityQueue": {
@@ -652,8 +653,8 @@
     "noCampaigns": "لا توجد حملات بعد"
   },
   "Governance": {
-    "title": "الحوكمة",
-    "subtitle": "إدارة الاستطلاعات والانتخابات والقرارات الرسمية للمجمع.",
+    "title": "التصويت",
+    "subtitle": "إدارة التصويتات والاستطلاعات والقرارات للمجمع.",
     "back": "لوحة القيادة",
     "viewResults": "عرض النتائج",
     "activate": "فتح التصويت",
@@ -1188,7 +1189,7 @@
       "issues": "البلاغات",
       "announcements": "الإعلانات",
       "finance": "المالية",
-      "governance": "الحوكمة",
+      "governance": "التصويت",
       "notifications": "الإشعارات",
       "localization": "التوطين"
     },

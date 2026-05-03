@@ -139,7 +139,6 @@ export function PollCreateForm({ isSuperAdmin, compounds, defaultCompoundId, loc
         pollTypeId: String(data.get("pollTypeId") ?? "") || undefined,
         title: String(data.get("title") ?? "").trim(),
         description: String(data.get("description") ?? "").trim() || undefined,
-        isAnonymous: data.get("isAnonymous") === "on",
         allowMultiple: data.get("allowMultiple") === "on",
         eligibility: (String(data.get("eligibility") ?? "all_verified")) as
           | "all_verified"
@@ -251,10 +250,6 @@ export function PollCreateForm({ isSuperAdmin, compounds, defaultCompoundId, loc
 
       {/* Flags */}
       <div className="flex gap-6">
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" name="isAnonymous" className="rounded" />
-          Anonymous voting
-        </label>
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" name="allowMultiple" className="rounded" />
           Allow multiple choices
