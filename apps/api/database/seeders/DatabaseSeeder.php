@@ -45,6 +45,7 @@ class DatabaseSeeder extends Seeder
             NextPointSeeder::class,
             BaselineSeeder::class,
             UatPersonaSeeder::class,
+            PollTransparencySeeder::class,
         ]);
     }
 }

@@ -25,7 +25,7 @@ export default async function SecurityShiftsPage({
 }: {
   searchParams?: Promise<SearchParams>;
 }) {
-  await requireAdminUser(getCurrentUser, ["super_admin", "compound_admin", "support_agent"]);
+  await requireAdminUser(getCurrentUser, ["super_admin", "compound_admin"]);
 
   const params = searchParams ? await searchParams : {};
   const status = params.status ?? "all";

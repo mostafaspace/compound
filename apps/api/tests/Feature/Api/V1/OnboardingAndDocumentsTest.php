@@ -320,8 +320,23 @@ class OnboardingAndDocumentsTest extends TestCase
         Storage::fake('local');
         config(['filesystems.default' => 'local']);
 
-        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
+        $compound = Compound::factory()->create();
+        $building = Building::factory()->for($compound)->create();
+        $unit = Unit::factory()->for($compound)->for($building)->create();
+
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compound->id,
+        ]);
         $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+
+        $unit->memberships()->create([
+            'user_id' => $resident->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'verification_status' => VerificationStatus::Verified->value,
+            'starts_at' => now()->subYear(),
+        ]);
+
         $documentType = DocumentType::query()->create([
             'key' => 'ownership_contract',
             'name' => 'Ownership contract',
@@ -336,10 +351,12 @@ class OnboardingAndDocumentsTest extends TestCase
         $this->post('/api/v1/documents', [
             'documentTypeId' => $documentType->id,
             'userId' => $resident->id,
+            'unitId' => $unit->id,
             'file' => UploadedFile::fake()->create('ownership.pdf', 256, 'application/pdf'),
         ])
             ->assertCreated()
             ->assertJsonPath('data.userId', $resident->id)
+            ->assertJsonPath('data.unitId', $unit->id)
             ->assertJsonPath('data.status', DocumentStatus::Submitted->value)
             ->assertJsonPath('data.originalName', 'ownership.pdf');
 
@@ -559,13 +576,16 @@ class OnboardingAndDocumentsTest extends TestCase
     {
         Notification::fake();
 
-        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
+        $compound = Compound::factory()->create();
+        $building = Building::factory()->for($compound)->create();
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compound->id,
+        ]);
         $resident = User::factory()->create([
             'role' => UserRole::ResidentOwner->value,
             'status' => AccountStatus::PendingReview->value,
         ]);
-        $compound = Compound::factory()->create();
-        $building = Building::factory()->for($compound)->create();
         $unit = Unit::factory()
             ->for($compound)
             ->for($building)
@@ -772,14 +792,28 @@ class OnboardingAndDocumentsTest extends TestCase
     {
         Notification::fake();
 
-        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value]);
+        $compound = Compound::factory()->create();
+        $building = Building::factory()->for($compound)->create();
+        $unit = Unit::factory()->for($compound)->for($building)->create();
+
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compound->id,
+        ]);
         $resident = User::factory()->create([
             'role' => UserRole::ResidentTenant->value,
             'status' => AccountStatus::PendingReview->value,
         ]);
 
+        $unit->memberships()->create([
+            'user_id' => $resident->id,
+            'relation_type' => UnitRelationType::Tenant->value,
+            'starts_at' => now()->subDay(),
+        ]);
+
         $verificationRequest = VerificationRequest::query()->create([
             'user_id' => $resident->id,
+            'unit_id' => $unit->id,
             'requested_role' => UserRole::ResidentTenant->value,
             'relation_type' => UnitRelationType::Tenant->value,
             'status' => VerificationRequestStatus::PendingReview->value,

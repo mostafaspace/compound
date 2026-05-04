@@ -6,7 +6,7 @@
     "units": "الوحدات",
     "visitors": "الزوار",
     "finance": "المالية",
-    "governance": "التصويت",
+    "polls": "التصويت",
     "more": "المزيد",
     "signOut": "تسجيل الخروج"
   },
@@ -14,6 +14,11 @@
     "light": "الوضع الفاتح",
     "dark": "الوضع الداكن",
     "system": "تلقائي"
+  },
+  "Dashboard": {
+    "welcome": "أهلاً، {{name}}",
+    "recentActivity": "النشاط الأخير",
+    "viewAll": "عرض الكل"
   },
   "App": {
     "brand": "كمباوند",
@@ -64,11 +69,11 @@
     "more": "المزيد",
     "settings": "الإعدادات",
     "loading": "جار التحميل...",
-    "active": "???",
-    "error": "???",
-    "verified": "????",
-    "viewAll": "??? ????",
-    "remove": "?????"
+    "active": "نشط",
+    "error": "خطأ",
+    "verified": "موثق",
+    "viewAll": "عرض الكل",
+    "remove": "إزالة"
   },
   "Status": {
     "label": "حالة واجهة البرمجة",
@@ -98,18 +103,18 @@
     "contactAdmin": "اتصل بالمسؤول"
   },
   "Verification": {
-    "label": "???? ??????",
+    "label": "حالة التحقق",
     "pendingTitle": "قيد المراجعة",
     "requestedAccess": "الوصول المطلوب: {{role}}",
     "submitted": "تاريخ الإرسال: {{date}}",
     "moreInfoRequested": "مطلوب معلومات إضافية",
     "reviewerNote": "ملاحظة المراجع",
     "noRequest": "لا يوجد طلب تحقق مرتبط بهذا الحساب بعد.",
-    "statusHeading": "???? ??????",
-    "role": "????? ???????",
-    "relation": "??? ???????",
-    "adminNote": "?????? ???????",
-    "moreInfoNote": "??????? ?????? ??????"
+    "statusHeading": "حالة التحقق",
+    "role": "الدور المطلوب",
+    "relation": "نوع العلاقة",
+    "adminNote": "ملاحظة المسؤول",
+    "moreInfoNote": "معلومات إضافية مطلوبة"
   },
   "Property": {
     "activeWindow": "نشط من {{start}} إلى {{end}}",
@@ -132,7 +137,22 @@
     "primary": "أساسي",
     "title": "ملف وحدتي",
     "type": "النوع",
-    "unitId": "معرف الوحدة: {{id}}"
+    "unitId": "معرف الوحدة: {{id}}",
+    "statuses": {
+      "active": "نشط",
+      "vacant": "شاغر",
+      "blocked": "محجوب",
+      "archived": "مؤرشف"
+    },
+    "types": {
+      "apartment": "شقة",
+      "studio": "استوديو",
+      "villa": "فيلا",
+      "duplex": "دوبلكس",
+      "retail": "تجاري",
+      "office": "مكتب",
+      "other": "أخرى"
+    }
   },
   "Documents": {
     "chooseAndUpload": "اختيار ورفع",
@@ -142,22 +162,22 @@
     "uploadError": "فشل الرفع. تحقق من حجم الملف ونوع المستند.",
     "uploadNetworkError": "تعذر إكمال رفع المستند.",
     "uploadSuccess": "تم رفع المستند لمراجعة الإدارة.",
-    "label": "?????????",
-    "empty": "?? ???? ??????? ?????? ???.",
-    "typeLabel": "??? ???????",
-    "fileLabel": "????? (PDF? JPG? PNG)",
-    "chooseFile": "???? ??????? ???...",
-    "selectTypeRequired": "???? ?????? ??? ???????.",
-    "selectFileRequired": "???? ?????? ???.",
-    "uploadSuccessTitle": "?? ??? ???????",
-    "uploadSuccessMsg": "?? ????? ?????? ????????.",
-    "upload": "??? ?????",
+    "label": "المستندات",
+    "empty": "لا توجد مستندات مرفوعة بعد.",
+    "typeLabel": "نوع المستند",
+    "fileLabel": "الملف (PDF, JPG, PNG)",
+    "chooseFile": "انقر لاختيار ملف...",
+    "selectTypeRequired": "يرجى اختيار نوع المستند.",
+    "selectFileRequired": "يرجى اختيار ملف.",
+    "uploadSuccessTitle": "تم رفع المستند",
+    "uploadSuccessMsg": "تم تقديم مستندك للمراجعة.",
+    "upload": "رفع مستند",
     "statuses": {
-      "submitted": "??????",
-      "under_review": "??? ????????",
-      "approved": "????? ????",
-      "rejected": "?????",
-      "missing": "?????"
+      "submitted": "تم التقديم",
+      "under_review": "قيد المراجعة",
+      "approved": "تمت الموافقة",
+      "rejected": "مرفوض",
+      "missing": "مفقود"
     }
   },
   "Visitors": {
@@ -187,11 +207,16 @@
     "unitRequired": "يلزم وجود وحدة موثقة قبل إنشاء تصاريح الزوار.",
     "vehicle": "المركبة: {{vehicle}}",
     "vehiclePlate": "لوحة المركبة",
+    "photo": "صورة الزائر",
+    "photoHint": "تساعد الصورة الأمن في التعرف على ضيفك بشكل أسرع.",
+    "addPhoto": "إضافة صورة",
+    "authorizedGuest": "ضيف معتمد",
     "visitEnds": "نهاية الزيارة",
     "visitStarts": "بداية الزيارة",
     "window": "الفترة: {{start}} - {{end}}"
   },
   "QuickActions": {
+    "label": "إجراءات سريعة",
     "visitors": "رمز الزائر",
     "visitorsDetail": "إنشاء أو إلغاء تصاريح الضيوف",
     "payments": "المدفوعات",
@@ -229,7 +254,7 @@
     }
   },
   "Issues": {
-    "label": "??????? ?????????",
+    "label": "البلاغات والشكاوى",
     "title": "بلاغاتي",
     "count_one": "{{count}} مقدم",
     "count_other": "{{count}} مقدمة",
@@ -263,18 +288,18 @@
       "resolved": "محلول",
       "closed": "مغلق"
     },
-    "create": "????? ????",
-    "detail": "?????? ??????",
-    "categoryLabel": "?????",
-    "titleLabel": "???????",
-    "descriptionLabel": "?????",
-    "priorityLabel": "????????",
-    "resolvedAt": "?? ????: {{date}}",
+    "create": "إرسال بلاغ",
+    "detail": "تفاصيل البلاغ",
+    "categoryLabel": "الفئة",
+    "titleLabel": "العنوان",
+    "descriptionLabel": "الوصف",
+    "priorityLabel": "الأولوية",
+    "resolvedAt": "تم الحل: {{date}}",
     "priorities": {
-      "low": "?????",
-      "normal": "????",
-      "high": "????",
-      "urgent": "????"
+      "low": "منخفضة",
+      "normal": "عادية",
+      "high": "مرتفعة",
+      "urgent": "عاجلة"
     }
   },
   "Finance": {
@@ -306,7 +331,7 @@
     },
     "recentTransactions": "المعاملات الأخيرة"
   },
-  "Governance": {
+  "Polls": {
     "label": "التصويت",
     "title": "التصويتات النشطة",
     "loading": "جار التحميل…",
@@ -398,22 +423,22 @@
     "leadership": "قيادة الاتحاد"
   },
   "Privacy": {
-    "label": "???????? ??????????",
-    "consentTitle": "??? ????????",
-    "consentBody": "???? ?????? ?????? ??????? ????????? ????? ???????? ??????:",
-    "acceptAll": "???? ?????????",
-    "consentsHeading": "????????",
-    "noConsents": "?? ???? ??????? ????.",
-    "version": "??????? {{v}}",
+    "label": "الخصوصية والموافقات",
+    "consentTitle": "قبل المتابعة",
+    "consentBody": "يرجى مراجعة والموافقة على ما يلي لاستخدام المنصة:",
+    "acceptAll": "الموافقة والمتابعة",
+    "consentsHeading": "موافقاتك",
+    "noConsents": "لا توجد موافقات نشطة.",
+    "version": "الإصدار {{v}}",
     "policies": {
-      "privacy_policy": "????? ????????",
-      "terms_of_service": "???? ??????",
-      "data_processing": "??????? ?????? ????????"
+      "privacy_policy": "سياسة الخصوصية",
+      "terms_of_service": "شروط الخدمة",
+      "data_processing": "اتفاقية معالجة البيانات"
     },
     "policiesDesc": {
-      "privacy_policy": "??? ???? ??????? ??????? ????????? ???????.",
-      "terms_of_service": "????? ???????? ??????? ???? ???????.",
-      "data_processing": "?????? ??? ????? ?????? ???????."
+      "privacy_policy": "كيف نجمع بياناتك الشخصية ونستخدمها ونحميها.",
+      "terms_of_service": "القواعد والإرشادات لاستخدام منصة الكمباوند.",
+      "data_processing": "تفاصيل حول كيفية معالجة بياناتك."
     }
   }
 }

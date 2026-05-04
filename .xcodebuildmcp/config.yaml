@@ -1,0 +1,12 @@
+schemaVersion: 1
+enabledWorkflows:
+  - project-discovery
+  - simulator
+  - simulator-management
+  - ui-automation
+  - debugging
+  - logging
+sessionDefaults:
+  projectPath: "./apps/mobile/ios/Compound.xcworkspace"
+  scheme: "Compound"
+sentryDisabled: true

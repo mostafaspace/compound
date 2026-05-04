@@ -62,6 +62,7 @@ import type {
   PaymentSubmission,
   UnitDetail,
   UnitAccount,
+  UnitMembership,
   UnitSummary,
   UpdateBuildingInput,
   UpdateAnnouncementInput,
@@ -69,6 +70,7 @@ import type {
   UpdateFloorInput,
   UpdateIssueInput,
   UpdateNotificationPreferenceInput,
+  UpdateUnitMembershipInput,
   UpdateUnitInput,
   UserNotification,
   UserDocument,
@@ -94,10 +96,12 @@ import type {
   DataExportRequest,
   LocaleSettings,
   Poll,
+  PollVoter,
   PollType,
   CreatePollInput,
   CreatePollTypeInput,
   PollStatus,
+  VoteVoter,
 } from "@compound/contracts";
 
 import { config } from "./config";
@@ -162,7 +166,7 @@ export async function getDashboard(): Promise<DashboardData | null> {
   try {
     const response = await fetch(`${config.apiBaseUrl}/dashboard`, {
       cache: "no-store",
-      headers: await apiHeaders(),
+      headers: await apiHeaders(true),
     });
 
     if (!response.ok) return null;
@@ -1127,6 +1131,57 @@ export async function createUnitMembership(unitId: string, input: CreateUnitMemb
   }
 
   return response.json();
+}
+
+export interface UnassignedResidentUser {
+  id: number;
+  name: string;
+  email: string;
+  phone: string | null;
+  photoUrl: string | null;
+  createdAt: string | null;
+}
+
+export async function getUnassignedUsers(): Promise<UnassignedResidentUser[]> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/units/unassigned-users`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const payload = (await response.json()) as {
+      data?: {
+        data?: UnassignedResidentUser[];
+      };
+    };
+
+    return payload.data?.data ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export async function updateUnitMembership(membershipId: number, input: UpdateUnitMembershipInput): Promise<UnitMembership> {
+  const response = await fetch(`${config.apiBaseUrl}/unit-memberships/${membershipId}`, {
+    body: JSON.stringify(input),
+    headers: {
+      ...(await apiHeaders(true)),
+      "Content-Type": "application/json",
+    },
+    method: "PATCH",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to update membership: ${response.status}`);
+  }
+
+  const payload = (await response.json()) as ApiEnvelope<UnitMembership>;
+
+  return payload.data;
 }
 
 export async function endUnitMembership(membershipId: number) {
@@ -2178,6 +2233,25 @@ export async function getVoteEligibility(voteId: string): Promise<VoteEligibilit
   }
 }
 
+export async function getVoteVoters(voteId: string): Promise<VoteVoter[] | null> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/governance/votes/${voteId}/voters`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const payload = (await response.json()) as ApiEnvelope<VoteVoter[]>;
+
+    return payload.data;
+  } catch {
+    return null;
+  }
+}
+
 export async function castVote(voteId: string, optionId: number): Promise<void> {
   const response = await fetch(`${config.apiBaseUrl}/governance/votes/${voteId}/cast`, {
     body: JSON.stringify({ optionId }),
@@ -3091,6 +3165,24 @@ export async function getPoll(id: string): Promise<Poll | null> {
   if (!response.ok) return null;
   const json: ApiEnvelope<Poll> = await response.json();
   return json.data;
+}
+
+export async function getPollVoters(id: string): Promise<PollVoter[] | null> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/polls/${id}/voters`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const json: ApiEnvelope<PollVoter[]> = await response.json();
+    return json.data;
+  } catch {
+    return null;
+  }
 }
 
 export async function createPoll(input: CreatePollInput): Promise<Poll> {

@@ -34,6 +34,19 @@ export interface PollVoter {
   votedAt: string | null;
 }
 
+export interface PollViewLog {
+  userName: string | null;
+  firstViewedAt: string | null;
+  lastViewedAt: string | null;
+  viewCount: number;
+}
+
+export interface PollNotificationLog {
+  userName: string | null;
+  notifiedAt: string | null;
+  delivered: boolean;
+}
+
 export interface Poll {
   id: string;
   compoundId: string;
@@ -58,17 +71,8 @@ export interface Poll {
   hasVoted?: boolean | null;
   userVoteOptionIds?: number[] | null;
   voters?: PollVoter[];
-  viewLogs?: Array<{
-    userName: string;
-    firstViewedAt: string;
-    lastViewedAt: string;
-    viewCount: number;
-  }>;
-  notificationLogs?: Array<{
-    userName: string;
-    notifiedAt: string;
-    delivered: boolean;
-  }>;
+  viewLogs?: PollViewLog[];
+  notificationLogs?: PollNotificationLog[];
 }
 
 export interface CreatePollInput {

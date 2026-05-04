@@ -34,6 +34,7 @@ This directory is the only authoritative source of truth for product behavior, s
 - [Definition Of Done](./definition-of-done.md)
 - [Traceability Matrix](./traceability-matrix.md)
 - [Recovery Matrix](./recovery-matrix.md)
+- [Release Matrix](./release-matrix.md)
 - [Recovery Backlog](./recovery-backlog.md)
 - [Agent Operator Guide](./agent-operator-guide.md)
 - [Constitution Change Log](./constitution-change-log.md)

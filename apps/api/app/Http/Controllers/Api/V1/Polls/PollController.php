@@ -15,6 +15,7 @@ use App\Models\Polls\PollVote;
 use App\Models\Property\UnitMembership;
 use App\Models\User;
 use App\Services\CompoundContextService;
+use App\Support\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -26,6 +27,7 @@ class PollController extends Controller
 {
     public function __construct(
         private readonly CompoundContextService $compoundContext,
+        private readonly AuditLogger $auditLogger,
     ) {}
 
     /**
@@ -157,6 +159,19 @@ class PollController extends Controller
             ]);
         }
 
+        $this->auditLogger->record(
+            'polls.created',
+            actor: $user,
+            request: $request,
+            auditableType: Poll::class,
+            auditableId: (string) $poll->id,
+            metadata: [
+                'compound_id' => $poll->compound_id,
+                'scope' => $poll->scope,
+                'option_count' => count($validated['options']),
+            ],
+        );
+
         return response()->json(
             ['data' => PollResource::make($poll->load('options'))->resolve()],
             201,
@@ -167,6 +182,17 @@ class PollController extends Controller
     {
         $user = $request->user();
         $this->authorizePollAccess($user, $poll);
+
+        if (Schema::hasTable('poll_view_logs')) {
+            $log = PollViewLog::firstOrNew(['poll_id' => $poll->id, 'user_id' => $user->id]);
+            if (!$log->exists) {
+                $log->first_viewed_at = now();
+                $log->view_count = 0;
+            }
+            $log->last_viewed_at = now();
+            $log->view_count++;
+            $log->save();
+        }
 
         $eagerLoads = ['options', 'pollType', 'votes.user', 'votes.options', 'viewLogs.user', 'notificationLogs.user'];
         if (Schema::hasColumn('poll_votes', 'unit_id')) {
@@ -185,23 +211,14 @@ class PollController extends Controller
             $pollVote?->options->pluck('id')->toArray() ?? []
         );
 
-        if (Schema::hasTable('poll_view_logs')) {
-            $log = PollViewLog::firstOrNew(['poll_id' => $poll->id, 'user_id' => $user->id]);
-            if (!$log->exists) {
-                $log->first_viewed_at = now();
-                $log->view_count = 0;
-            }
-            $log->last_viewed_at = now();
-            $log->view_count++;
-            $log->save();
-        }
-
         return PollResource::make($poll);
     }
 
     public function update(Request $request, Poll $poll): PollResource
     {
-        $this->authorizePollAccess($request->user(), $poll);
+        /** @var User $actor */
+        $actor = $request->user();
+        $this->authorizePollAccess($actor, $poll);
 
         if ($poll->status !== PollStatus::Draft->value) {
             abort(422, 'Only draft polls can be edited.');
@@ -257,12 +274,26 @@ class PollController extends Controller
             }
         }
 
+        $this->auditLogger->record(
+            'polls.updated',
+            actor: $actor,
+            request: $request,
+            auditableType: Poll::class,
+            auditableId: (string) $poll->id,
+            metadata: [
+                'compound_id' => $poll->compound_id,
+                'updated_fields' => array_keys($validated),
+            ],
+        );
+
         return PollResource::make($poll->load('options'));
     }
 
     public function publish(Request $request, Poll $poll): PollResource
     {
-        $this->authorizePollAccess($request->user(), $poll);
+        /** @var User $actor */
+        $actor = $request->user();
+        $this->authorizePollAccess($actor, $poll);
 
         if ($poll->status !== PollStatus::Draft->value) {
             abort(422, 'Only draft polls can be published.');
@@ -280,12 +311,26 @@ class PollController extends Controller
             $this->dispatchPollNotifications($poll);
         }
 
+        $this->auditLogger->record(
+            'polls.published',
+            actor: $actor,
+            request: $request,
+            auditableType: Poll::class,
+            auditableId: (string) $poll->id,
+            metadata: [
+                'compound_id' => $poll->compound_id,
+                'status' => $poll->status,
+            ],
+        );
+
         return PollResource::make($poll->load('options'));
     }
 
     public function close(Request $request, Poll $poll): PollResource
     {
-        $this->authorizePollAccess($request->user(), $poll);
+        /** @var User $actor */
+        $requestUser = $request->user();
+        $this->authorizePollAccess($requestUser, $poll);
 
         if ($poll->status !== PollStatus::Active->value) {
             abort(422, 'Only active polls can be closed.');
@@ -296,18 +341,44 @@ class PollController extends Controller
             'closed_at' => now(),
         ]);
 
+        $this->auditLogger->record(
+            'polls.closed',
+            actor: $requestUser,
+            request: $request,
+            auditableType: Poll::class,
+            auditableId: (string) $poll->id,
+            metadata: [
+                'compound_id' => $poll->compound_id,
+                'status' => $poll->status,
+            ],
+        );
+
         return PollResource::make($poll->load(['options', 'votes']));
     }
 
     public function archive(Request $request, Poll $poll): PollResource
     {
-        $this->authorizePollAccess($request->user(), $poll);
+        /** @var User $actor */
+        $actor = $request->user();
+        $this->authorizePollAccess($actor, $poll);
 
         if ($poll->status !== PollStatus::Closed->value) {
             abort(422, 'Only closed polls can be archived.');
         }
 
         $poll->update(['status' => PollStatus::Archived->value]);
+
+        $this->auditLogger->record(
+            'polls.archived',
+            actor: $actor,
+            request: $request,
+            auditableType: Poll::class,
+            auditableId: (string) $poll->id,
+            metadata: [
+                'compound_id' => $poll->compound_id,
+                'status' => $poll->status,
+            ],
+        );
 
         return PollResource::make($poll->load('options'));
     }
@@ -416,6 +487,19 @@ class PollController extends Controller
             PollOption::whereIn('id', $optionIds)->increment('votes_count');
         });
 
+        $this->auditLogger->record(
+            'polls.voted',
+            actor: $user,
+            request: $request,
+            auditableType: Poll::class,
+            auditableId: (string) $poll->id,
+            metadata: [
+                'compound_id' => $poll->compound_id,
+                'unit_id' => $unitId,
+                'option_ids' => $optionIds,
+            ],
+        );
+
         return response()->json(['data' => ['message' => 'Vote recorded successfully.']]);
     }
 
@@ -440,12 +524,25 @@ class PollController extends Controller
             return response()->json(['message' => 'You have not voted in this poll.'], 404);
         }
 
-        DB::transaction(function () use ($existingVote): void {
-            $oldOptionIds = $existingVote->options()->pluck('poll_options.id')->toArray();
+        $oldOptionIds = $existingVote->options()->pluck('poll_options.id')->toArray();
+
+        DB::transaction(function () use ($existingVote, $oldOptionIds): void {
             PollOption::whereIn('id', $oldOptionIds)->decrement('votes_count');
             $existingVote->options()->detach();
             $existingVote->delete();
         });
+
+        $this->auditLogger->record(
+            'polls.unvoted',
+            actor: $user,
+            request: $request,
+            auditableType: Poll::class,
+            auditableId: (string) $poll->id,
+            metadata: [
+                'compound_id' => $poll->compound_id,
+                'option_ids' => $oldOptionIds,
+            ],
+        );
 
         return response()->json(['data' => ['message' => 'Vote removed successfully.']]);
     }

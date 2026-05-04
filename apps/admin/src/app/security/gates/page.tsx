@@ -6,7 +6,7 @@ import { getCurrentUser, getSecurityGates } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
 
 export default async function SecurityGatesPage() {
-  await requireAdminUser(getCurrentUser, ["super_admin", "compound_admin", "support_agent"]);
+  await requireAdminUser(getCurrentUser, ["super_admin", "compound_admin"]);
 
   const [t, gates] = await Promise.all([getTranslations("Security"), getSecurityGates()]);
 

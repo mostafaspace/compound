@@ -167,7 +167,7 @@ class UatSeeder extends Seeder
         ];
 
         foreach ($personas as $attrs) {
-            User::query()->firstOrCreate(
+            User::query()->updateOrCreate(
                 ['email' => $attrs['email']],
                 array_merge($attrs, [
                     'status'   => AccountStatus::Active->value,
@@ -224,7 +224,7 @@ class UatSeeder extends Seeder
 
         $users = [];
         foreach ($orgUsers as $email => $attrs) {
-            $users[$email] = User::query()->firstOrCreate(
+            $users[$email] = User::query()->updateOrCreate(
                 ['email' => $email],
                 array_merge($attrs, [
                     'role'        => UserRole::ResidentOwner->value,

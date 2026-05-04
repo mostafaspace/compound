@@ -14,6 +14,7 @@ use App\Models\Governance\VoteOption;
 use App\Models\Governance\VoteParticipation;
 use App\Models\User;
 use App\Services\CompoundContextService;
+use App\Support\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -23,6 +24,7 @@ class VoteController extends Controller
 {
     public function __construct(
         private readonly CompoundContextService $compoundContext,
+        private readonly AuditLogger $auditLogger,
     ) {}
 
     /**
@@ -152,6 +154,19 @@ class VoteController extends Controller
             ]);
         }
 
+        $this->auditLogger->record(
+            'governance.votes.created',
+            actor: $actor,
+            request: $request,
+            auditableType: Vote::class,
+            auditableId: (string) $vote->id,
+            metadata: [
+                'compound_id' => $vote->compound_id,
+                'type' => $vote->type,
+                'option_count' => count($validated['options']),
+            ],
+        );
+
         return response()->json(
             ['data' => VoteResource::make($vote->load('options'))->resolve()],
             201,
@@ -174,7 +189,9 @@ class VoteController extends Controller
      */
     public function update(Request $request, Vote $vote): VoteResource
     {
-        $this->ensureAdminCanManageVote($request->user(), $vote);
+        /** @var User $actor */
+        $actor = $request->user();
+        $this->ensureAdminCanManageVote($actor, $vote);
 
         if ($vote->status !== VoteStatus::Draft->value) {
             abort(422, 'Only draft votes can be edited.');
@@ -214,6 +231,18 @@ class VoteController extends Controller
             }
         }
 
+        $this->auditLogger->record(
+            'governance.votes.updated',
+            actor: $actor,
+            request: $request,
+            auditableType: Vote::class,
+            auditableId: (string) $vote->id,
+            metadata: [
+                'compound_id' => $vote->compound_id,
+                'updated_fields' => array_keys($validated),
+            ],
+        );
+
         return VoteResource::make($vote->load('options'));
     }
 
@@ -222,7 +251,9 @@ class VoteController extends Controller
      */
     public function activate(Request $request, Vote $vote): VoteResource
     {
-        $this->ensureAdminCanManageVote($request->user(), $vote);
+        /** @var User $actor */
+        $actor = $request->user();
+        $this->ensureAdminCanManageVote($actor, $vote);
 
         if ($vote->status !== VoteStatus::Draft->value) {
             abort(422, 'Only draft votes can be activated.');
@@ -234,6 +265,18 @@ class VoteController extends Controller
 
         $vote->update(['status' => VoteStatus::Active->value]);
 
+        $this->auditLogger->record(
+            'governance.votes.activated',
+            actor: $actor,
+            request: $request,
+            auditableType: Vote::class,
+            auditableId: (string) $vote->id,
+            metadata: [
+                'compound_id' => $vote->compound_id,
+                'status' => $vote->status,
+            ],
+        );
+
         return VoteResource::make($vote->load('options'));
     }
 
@@ -242,13 +285,27 @@ class VoteController extends Controller
      */
     public function close(Request $request, Vote $vote): VoteResource
     {
-        $this->ensureAdminCanManageVote($request->user(), $vote);
+        /** @var User $actor */
+        $actor = $request->user();
+        $this->ensureAdminCanManageVote($actor, $vote);
 
         if ($vote->status !== VoteStatus::Active->value) {
             abort(422, 'Only active votes can be closed.');
         }
 
         $vote->update(['status' => VoteStatus::Closed->value]);
+
+        $this->auditLogger->record(
+            'governance.votes.closed',
+            actor: $actor,
+            request: $request,
+            auditableType: Vote::class,
+            auditableId: (string) $vote->id,
+            metadata: [
+                'compound_id' => $vote->compound_id,
+                'status' => $vote->status,
+            ],
+        );
 
         return VoteResource::make($vote->load(['options', 'participations']));
     }
@@ -258,7 +315,9 @@ class VoteController extends Controller
      */
     public function cancel(Request $request, Vote $vote): VoteResource
     {
-        $this->ensureAdminCanManageVote($request->user(), $vote);
+        /** @var User $actor */
+        $actor = $request->user();
+        $this->ensureAdminCanManageVote($actor, $vote);
 
         if (in_array($vote->status, [VoteStatus::Closed->value, VoteStatus::Cancelled->value])) {
             abort(422, 'This vote cannot be cancelled.');
@@ -266,11 +325,23 @@ class VoteController extends Controller
 
         $vote->update(['status' => VoteStatus::Cancelled->value]);
 
+        $this->auditLogger->record(
+            'governance.votes.cancelled',
+            actor: $actor,
+            request: $request,
+            auditableType: Vote::class,
+            auditableId: (string) $vote->id,
+            metadata: [
+                'compound_id' => $vote->compound_id,
+                'status' => $vote->status,
+            ],
+        );
+
         return VoteResource::make($vote->load('options'));
     }
 
     /**
-     * Cast a vote (resident action).
+     * Cast a vote (resident action). One vote per apartment is enforced.
      */
     public function cast(Request $request, Vote $vote): JsonResponse
     {
@@ -285,14 +356,28 @@ class VoteController extends Controller
             ], 403);
         }
 
-        // Check for duplicate vote
-        if (VoteParticipation::query()
-            ->where('vote_id', $vote->id)
-            ->where('user_id', $user->id)
-            ->exists()) {
+        $unitId = $this->resolveVoterUnitId($vote, $user);
+
+        if ($unitId === null) {
+            return response()->json([
+                'message' => 'No valid unit membership found for this vote.',
+                'reason'  => 'no_unit_membership',
+            ], 403);
+        }
+
+        // Check if this user already voted
+        if (VoteParticipation::query()->where('vote_id', $vote->id)->where('user_id', $user->id)->exists()) {
             return response()->json([
                 'message' => 'You have already voted in this election.',
                 'reason'  => 'already_voted',
+            ], 409);
+        }
+
+        // Check if another resident from the same apartment already voted
+        if (VoteParticipation::query()->where('vote_id', $vote->id)->where('unit_id', $unitId)->exists()) {
+            return response()->json([
+                'message' => 'Your apartment has already voted in this election.',
+                'reason'  => 'apartment_already_voted',
             ], 409);
         }
 
@@ -303,11 +388,56 @@ class VoteController extends Controller
         VoteParticipation::create([
             'vote_id'              => $vote->id,
             'user_id'              => $user->id,
+            'unit_id'              => $unitId,
             'option_id'            => $validated['optionId'],
             'eligibility_snapshot' => $eligibility['snapshot'],
         ]);
 
+        $this->auditLogger->record(
+            'governance.votes.cast',
+            actor: $user,
+            request: $request,
+            auditableType: Vote::class,
+            auditableId: (string) $vote->id,
+            metadata: [
+                'compound_id' => $vote->compound_id,
+                'option_id' => $validated['optionId'],
+                'unit_id' => $unitId,
+            ],
+        );
+
         return response()->json(['data' => ['message' => 'Vote cast successfully.']]);
+    }
+
+    /**
+     * List voters for a vote (admin only).
+     */
+    public function voters(Request $request, Vote $vote): JsonResponse
+    {
+        $user = $request->user();
+        $this->ensureAdminCanManageVote($user, $vote);
+        abort_if($vote->is_anonymous, 403, 'Individual voters are hidden for anonymous votes.');
+
+        $participations = VoteParticipation::with([
+            'user:id,name',
+            'option:id,label',
+            'unit:id,unit_number',
+        ])
+            ->where('vote_id', $vote->id)
+            ->orderByDesc('created_at')
+            ->get();
+
+        $votersList = $participations->map(fn (VoteParticipation $p) => [
+            'userId'     => $p->user_id,
+            'userName'   => $p->user?->name,
+            'unitId'     => $p->unit_id,
+            'unitNumber' => $p->unit?->unit_number,
+            'optionId'   => $p->option_id,
+            'option'     => $p->option?->label,
+            'votedAt'    => $p->created_at?->toIso8601String(),
+        ]);
+
+        return response()->json(['data' => $votersList->toArray()]);
     }
 
     /**
@@ -413,6 +543,21 @@ class VoteController extends Controller
         $snapshot['eligibilityPassed'] = true;
 
         return ['eligible' => true, 'reason' => null, 'snapshot' => $snapshot];
+    }
+
+    private function resolveVoterUnitId(Vote $vote, User $user): ?string
+    {
+        $membership = $user->unitMemberships()
+            ->activeForAccess()
+            ->whereHas('unit', function ($q) use ($vote): void {
+                $q->where('compound_id', $vote->compound_id);
+                if ($vote->scope === VoteScope::Building->value && $vote->building_id) {
+                    $q->where('building_id', $vote->building_id);
+                }
+            })
+            ->first();
+
+        return $membership?->unit_id;
     }
 
     private function ensureViewerCanAccessVote(Request $request, Vote $vote): void

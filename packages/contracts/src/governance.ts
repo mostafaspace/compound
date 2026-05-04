@@ -22,6 +22,16 @@ export interface VoteTallyRow {
   count: number;
 }
 
+export interface VoteVoter {
+  userId: number;
+  userName: string | null;
+  unitId: string | null;
+  unitNumber: string | null;
+  optionId: number;
+  option: string | null;
+  votedAt: string | null;
+}
+
 export interface Vote {
   id: string;
   compoundId: string;

@@ -101,7 +101,7 @@ class IssueController extends Controller
 
     public function update(UpdateIssueRequest $request, Issue $issue): JsonResponse
     {
-        abort_unless($this->issueService->userCanAccessIssue($request->user(), $issue), Response::HTTP_FORBIDDEN);
+        abort_unless($this->issueService->userCanManageIssue($request->user(), $issue), Response::HTTP_FORBIDDEN);
 
         /** @var User $user */
         $user = $request->user();
@@ -131,7 +131,7 @@ class IssueController extends Controller
 
     public function escalate(Request $request, Issue $issue): JsonResponse
     {
-        abort_unless($this->issueService->userCanAccessIssue($request->user(), $issue), Response::HTTP_FORBIDDEN);
+        abort_unless($this->issueService->userCanEscalateIssue($request->user(), $issue), Response::HTTP_FORBIDDEN);
 
         $request->validate([
             'reason' => ['required', 'string', 'max:1000'],

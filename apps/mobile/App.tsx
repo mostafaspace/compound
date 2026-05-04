@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { StatusBar, View, StyleSheet } from 'react-native';
 import BootSplash from 'react-native-bootsplash';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -18,11 +18,11 @@ const hideBootSplash = async () => {
 };
 
 const AppContent = () => {
-  const [isReady, setIsReady] = useState(false);
+  const [isReady, setIsReady] = React.useState(false);
   const { isRestoring } = useRestoreSession();
   const isOffline = useSelector(selectIsOffline);
 
-  useEffect(() => {
+  React.useEffect(() => {
     // Hide native bootsplash overlay immediately
     hideBootSplash();
 

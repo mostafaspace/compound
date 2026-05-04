@@ -14,6 +14,7 @@ class VisitorPass extends Model
 
     protected $fillable = [
         'visitor_request_id',
+        'token',
         'token_hash',
         'status',
         'expires_at',

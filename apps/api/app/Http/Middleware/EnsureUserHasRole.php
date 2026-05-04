@@ -165,6 +165,7 @@ class EnsureUserHasRole
                 Permission::ViewAnnouncements->value,
                 Permission::ViewFinance->value,
                 Permission::ViewAuditLogs->value,
+                Permission::ViewAnalytics->value,
             ],
         };
     }

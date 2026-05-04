@@ -47,7 +47,7 @@
   "Login": {
     "brand": "Compound admin",
     "heroTitle": "Operations console",
-    "heroSubtitle": "Secure access for property registry, finance, residents, governance, support, and security operations.",
+    "heroSubtitle": "Secure access for property registry, finance, residents, polls, support, and security operations.",
     "seedHint": "Use a seeded admin account after running backend migrations and seeders.",
     "title": "Sign in",
     "subtitle": "Access is limited to active admin, board, finance, and support users.",
@@ -65,13 +65,57 @@
     }
   },
   "Dashboard": {
-  "eyebrow": "Compound operations",
-  "title": "Production control center",
-  "modules": "Modules",
-  "signedInAs": "Signed in as {name} / {role}",
+    "eyebrow": "Compound operations",
+    "title": "Production control center",
+    "modules": "Modules",
+    "signedInAs": "Signed in as {name} / {role}",
     "actions": {
       "reviewQueue": "Review queue",
       "systemStatus": "System status"
+    },
+    "operatorActions": {
+      "reviewQueueDetail": "{count, plural, one {# queue item needs follow-up.} other {# queue items need follow-up.}}",
+      "openIssueOperationsDetail": "Check the latest issue and resident operations without hunting through modules.",
+      "reviewQueueLabel": "Review priority queue",
+      "openIssueOperationsLabel": "Open issue operations",
+      "assignApartmentsDetail": "Link residents to verified units so visitor, issue, and voting flows resolve cleanly.",
+      "assignApartmentsLabel": "Assign apartments",
+      "reviewOrgChartCoverageDetail": "Review vacant representative roles and keep the escalation chain complete.",
+      "setActiveCompoundDetail": "Choose a compound context before opening compound-scoped operational tools.",
+      "reviewOrgChartCoverageLabel": "Check org chart coverage",
+      "setActiveCompoundLabel": "Set active compound"
+    },
+    "panels": {
+      "operatorNextSteps": {
+        "title": "Operator next steps",
+        "subtitle": "Action-first links for the admin surfaces that still need the most runtime proof.",
+        "apiDegraded": "API degraded"
+      },
+      "runtimeClarity": {
+        "title": "Runtime clarity",
+        "apiDegraded": "API health is not green. Treat dashboard counts as possibly stale until the status panel recovers.",
+        "noActiveCompound": "No active compound is selected, so org chart and other scoped admin flows will stay partially blocked.",
+        "noStats": "Dashboard metrics are unavailable right now. Use the module links below to continue operating safely.",
+        "ready": "Core dashboard signals are available. You can use this page as a safe starting point for release checks."
+      }
+    },
+    "stats": {
+      "totalResidents": "Total residents",
+      "activeVisitors": "Active visitors",
+      "openIssues": "Open issues"
+    },
+    "shortcuts": {
+      "title": "Quick actions",
+      "empty": {
+        "title": "No personalized quick actions are available for this role yet.",
+        "description": "Continue with the operator links above or jump straight into the release-hardening flows below.",
+        "openAssignment": "Open apartment assignment",
+        "reviewOrgChartCoverage": "Review org chart coverage",
+        "selectActiveCompound": "Select active compound"
+      }
+    },
+    "modulesDisabled": {
+      "orgChart": "Org chart access stays disabled until an active compound is selected from the compound registry."
     },
     "workstreams": {
       "financeReview": {
@@ -95,6 +139,13 @@
       "title": "Priority queue",
       "subtitle": "Sorted by SLA, financial risk, and resident impact.",
       "live": "Live",
+      "empty": {
+        "title": "Nothing needs your attention right now.",
+        "description": "The live queue is clear. Use the links below if you still need to validate assignment or compound coverage before release.",
+        "checkAssignment": "Check apartment assignment",
+        "reviewOrgChart": "Review org chart",
+        "selectCompound": "Select compound"
+      },
       "items": {
         "ownerOnboarding": "Verify new owner onboarding requests",
         "bankReceipts": "Review unallocated bank transfer receipts",
@@ -112,7 +163,9 @@
       "timezone": "Timezone",
       "pending": "pending",
       "realtime": "Realtime",
-      "reverbFirst": "Reverb first"
+      "reverbFirst": "Reverb first",
+      "runtimeReady": "Runtime health is green. If an admin workflow still looks wrong, check the assignment queue and unit detail pages next for data-level validation.",
+      "runtimeDegraded": "API health is degraded. Treat counts as advisory, and continue with direct operator pages like apartment assignment or unit records until status recovers."
     }
   },
   "Notifications": {
@@ -253,7 +306,7 @@
   },
   "Registry": {
     "propertyRegistry": "Property registry",
-    "propertyRegistryDesc": "Compounds are the top-level operating boundary for users, units, finance, governance, and security.",
+    "propertyRegistryDesc": "Compounds are the top-level operating boundary for users, units, finance, polls, and security.",
     "dashboard": "Dashboard",
     "backToCompound": "Back to compound",
     "backToBuilding": "Back to building",
@@ -355,7 +408,155 @@
     "createInvite": "Create invite",
     "documents": "Documents",
     "onboarding": "Onboarding",
-    "orgChart": "Organization Chart"
+    "orgChart": "Organization Chart",
+    "assignApartment": {
+      "eyebrow": "Release hardening",
+      "title": "Assign apartment",
+      "description": "Link users without an active apartment membership to a real unit so resident, visitor, complaint, and voting flows have a trusted foundation.",
+      "backToDashboard": "Back to dashboard",
+      "noCompound": {
+        "description": "Apartment assignment needs an active compound so the unit list and resident context resolve correctly.",
+        "title": "Select a compound before assigning residents",
+        "helper": "This page only works against a single compound at a time. Choose the correct compound first, then return here to link residents to verified units.",
+        "openRegistry": "Open compound registry",
+        "returnToDashboard": "Return to dashboard"
+      },
+      "compoundUnavailable": {
+        "description": "The current compound context could not be loaded, so apartment assignment is temporarily blocked.",
+        "title": "Compound data is unavailable",
+        "helper": "Re-open the compound registry to confirm the active compound still exists, then return here to finish resident assignments.",
+        "reopenRegistry": "Reopen compound registry",
+        "returnToDashboard": "Return to dashboard"
+      },
+      "messages": {
+        "assigned": "Apartment assignment saved. The resident now appears on the selected unit record.",
+        "error": "Nothing was assigned. Select both a user and a unit before submitting. If no units are listed, complete unit setup in the compound registry first.",
+        "noUnits": "No units are available in {compound} yet, so resident assignment cannot be completed from this page.",
+        "reviewCompoundSetup": "Review compound setup"
+      },
+      "metrics": {
+        "assignmentQueue": {
+          "title": "Assignment queue",
+          "description": "Users still missing an apartment membership."
+        },
+        "availableUnits": {
+          "title": "Available units",
+          "description": "Units currently loaded from {compound}."
+        },
+        "operatorNote": {
+          "title": "Operator note",
+          "lead": "Use this queue only for existing users who already have accounts.",
+          "description": "If someone still needs onboarding, invite them from the unit detail page instead of assigning them here."
+        }
+      },
+      "unassignedUsers": {
+        "title": "Unassigned users ({count})",
+        "description": "These users have no active apartment membership yet.",
+        "noPhone": "No phone",
+        "assign": "Assign",
+        "unitLabel": "Unit",
+        "selectUnit": "Select a unit",
+        "unitOption": "{building} • Unit {unit}",
+        "assignmentHint": "This assigns the user as a verified primary resident effective today.",
+        "assignButton": "Assign to apartment",
+        "unitSetupRequired": "Unit setup is required before this resident can be assigned.",
+        "openRegistry": "Open compound registry",
+        "empty": {
+          "title": "No unassigned users are waiting right now.",
+          "description": "This queue is clear for the current release pass. You can return to the dashboard or review unit details below.",
+          "returnToDashboard": "Return to dashboard",
+          "reviewCompoundRegistry": "Review compound registry"
+        }
+      },
+      "availableUnits": {
+        "title": "Available units ({count})",
+        "description": "Current units in {compound}. Use the user cards to make the assignment, or open a unit record to inspect existing memberships first.",
+        "empty": {
+          "title": "No units were found for this compound.",
+          "description": "Assignments stay blocked until at least one building and unit is available in the active compound context.",
+          "reviewCompoundRegistry": "Review compound registry",
+          "returnToDashboard": "Return to dashboard"
+        },
+        "table": {
+          "building": "Building",
+          "unit": "Unit",
+          "status": "Status",
+          "residents": "Residents"
+        }
+      }
+    },
+    "unitDetail": {
+      "description": "Review the live resident record for this unit, end outdated memberships when access should stop, and use the invitation form only for people who do not already have an account.",
+      "messages": {
+        "updated": "Membership details saved. The unit record now reflects the latest resident contact and parking information.",
+        "invited": "The resident can finish onboarding from the invite before any compound-level role review happens."
+      },
+      "common": {
+        "notSet": "Not set",
+        "visible": "Visible",
+        "hidden": "Hidden",
+        "registeredWithoutPlate": "Registered without plate",
+        "noVehicleOnFile": "No vehicle on file"
+      },
+      "metrics": {
+        "activeMemberships": {
+          "title": "Active memberships",
+          "description": "Residents who currently inherit access from this unit."
+        },
+        "membershipHistory": {
+          "title": "Membership history",
+          "description": "Ended memberships retained here for operator context."
+        },
+        "operatorGuidance": {
+          "title": "Operator guidance",
+          "lead": "Use apartment assignment for existing users.",
+          "description": "Invite from this page only when the resident still needs a new account and onboarding link."
+        }
+      },
+      "memberships": {
+        "description": "Existing accounts belong in the assignment queue. Use the controls here to review the current record for this unit.",
+        "userFallback": "User {id}",
+        "profileSummary": "Profile: {residentName} · Phone: {residentPhone} ({phoneVisibility}) · Email: {residentEmail} ({emailVisibility})",
+        "vehicleSummary": "Vehicle: {vehicle} · Parking: {parking} · Sticker: {sticker}",
+        "verificationPending": "Resident access may stay limited until verification is complete.",
+        "historicalMembership": "Historical membership retained for operator reference. You can still correct profile details below.",
+        "activeMembershipHint": "Use the editor below to correct resident profile, contact visibility, and parking data.",
+        "endedNote": "Kept for operator history.",
+        "empty": {
+          "description": "This unit does not have an active resident record yet. Invite a new resident or use apartment assignment if the user already exists in the system.",
+          "inviteNewResident": "Invite new resident",
+          "assignExistingUser": "Assign existing user"
+        }
+      },
+      "editor": {
+        "title": "Edit apartment membership details",
+        "description": "Update resident profile fields without changing relation, verification, or access dates.",
+        "open": "Open editor",
+        "operatorNoteTitle": "Operator note",
+        "operatorNotePrefix": "This editor updates the resident-facing membership profile only. If the person already exists and needs a different unit, use",
+        "operatorNoteSuffix": ". If access should stop entirely, end the membership instead.",
+        "residentName": "Resident name",
+        "residentPhone": "Resident phone",
+        "showPhone": "Show phone on resident-facing records",
+        "residentEmail": "Resident email",
+        "showEmail": "Show email on resident-facing records",
+        "vehicleRegistered": "Vehicle registered for this membership",
+        "vehicleHint": "Uncheck this to clear the stored plate, parking code, and garage sticker from the membership record.",
+        "vehiclePlate": "Vehicle / plate",
+        "parkingCode": "Parking code",
+        "garageSticker": "Garage sticker",
+        "saveHint": "Save here to correct the live membership profile while keeping the current apartment assignment intact.",
+        "save": "Save membership details"
+      },
+      "invitePanel": {
+        "title": "Invite a brand-new resident from here.",
+        "descriptionPrefix": "If the person already has an account, do not create another invite.",
+        "assignInstead": "Use assign apartment instead",
+        "descriptionSuffix": ".",
+        "emptyMembershipHint": "No memberships are currently linked to this unit, so this form is the fastest path to create a clean resident record.",
+        "roleHint": "Choose the invite access role that matches occupancy, then set the unit relation that should appear on the apartment record."
+      }
+    }
   },
   "Onboarding": {
     "back": "Dashboard",
@@ -652,7 +853,7 @@
     "noRecurringCharges": "No recurring charges yet",
     "noCampaigns": "No campaigns yet"
   },
-  "Governance": {
+  "PollsVoting": {
     "title": "Polls",
     "subtitle": "Manage polls, elections, and decisions for the compound.",
     "back": "Dashboard",
@@ -684,6 +885,11 @@
       "type": "Type",
       "scope": "Scope",
       "eligibility": "Eligibility",
+      "ballotMode": "Ballot mode",
+      "docCompliance": "Document compliance",
+      "resultAppliedAt": "Result applied at",
+      "latestParticipation": "Latest participation",
+      "uniqueUnits": "Represented units",
       "startsAt": "Starts at",
       "endsAt": "Ends at",
       "options": "Options",
@@ -701,9 +907,27 @@
       "closed": "Voting is now closed.",
       "cancelled": "Vote cancelled."
     },
+    "transparency": {
+      "namedBallots": "Named ballots",
+      "anonymousBallots": "Anonymous ballots",
+      "docRequired": "Required",
+      "docNotRequired": "Not required",
+      "resultPending": "Pending application",
+      "resultApplied": "Applied",
+      "ledgerTitle": "Participation ledger",
+      "ledgerSubtitle": "Admin-ready participation data from the backend voter ledger.",
+      "ledgerEmpty": "No participation rows have been recorded yet.",
+      "ledgerUnavailable": "The individual participation ledger is unavailable right now.",
+      "anonymousTitle": "Anonymous ballot protections",
+      "anonymousDescription": "This vote is configured as anonymous, so the backend intentionally hides the individual voter ledger while still exposing aggregate tally and participation totals.",
+      "resident": "Resident",
+      "unit": "Unit",
+      "selection": "Selection",
+      "votedAt": "Voted at"
+    },
     "degraded": {
-      "title": "Governance data is loading in degraded mode",
-      "description": "Vote and poll data is unavailable while the API is degraded. Recheck the operator status endpoint before assuming no votes are active."
+      "title": "Poll data is loading in degraded mode",
+      "description": "Poll and voting data is unavailable while the API is degraded. Recheck the operator status endpoint before assuming no polls are active."
     },
     "create": {
       "title": "Create vote / poll",
@@ -713,7 +937,7 @@
       "submit": "Create",
       "compoundId": "Compound",
       "compoundLocked": "The vote will be created in your assigned compound scope.",
-      "noCompoundAccess": "No compound is available for governance creation yet."
+      "noCompoundAccess": "No compound is available for poll creation yet."
     }
   },
   "Issues": {
@@ -1427,7 +1651,7 @@
   },
   "OperationalAnalytics": {
     "title": "Operational Analytics",
-    "subtitle": "Compound-wide metrics across residents, visitors, issues, announcements, and governance.",
+    "subtitle": "Compound-wide metrics across residents, visitors, issues, announcements, and polls.",
     "back": "← Back to dashboard",
     "filterBuilding": "Building",
     "filterFrom": "From",
@@ -1663,7 +1887,7 @@
     },
     "retention": {
       "title": "Retention & Anonymization Policy",
-      "desc1": "Financial records, vote tallies, audit logs, and governance decisions are retained indefinitely and are NOT deleted during user anonymization.",
+      "desc1": "Financial records, vote tallies, audit logs, and formal voting decisions are retained indefinitely and are NOT deleted during user anonymization.",
       "desc2": "Visitor logs, notifications, and non-financial personal data may be purged according to compound-level retention settings.",
       "desc3": "Anonymization scrubs name, email, and phone; the user record is archived and all device sessions are revoked."
     }
@@ -1740,7 +1964,7 @@
   },
   "Meetings": {
     "back": "← Back to dashboard",
-    "title": "Governance Meetings",
+    "title": "Association Meetings",
     "subtitle": "Manage association and committee meetings, agendas, minutes, and action items.",
     "empty": "No meetings found.",
     "nav": {

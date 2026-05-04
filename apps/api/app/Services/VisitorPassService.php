@@ -14,6 +14,14 @@ use Illuminate\Support\Str;
 
 class VisitorPassService
 {
+    public function findPassByToken(string $token): ?VisitorPass
+    {
+        return VisitorPass::query()
+            ->with(['visitorRequest.host', 'visitorRequest.unit.building.compound'])
+            ->where('token_hash', $this->hashToken($token))
+            ->first();
+    }
+
     public function issuePass(VisitorRequest $visitorRequest): string
     {
         $token = Str::random(64);
@@ -34,11 +42,7 @@ class VisitorPassService
 
     public function validateToken(string $token, ?User $scanner = null, ?string $decision = null): array
     {
-        $hash = $this->hashToken($token);
-        $pass = VisitorPass::query()
-            ->with(['visitorRequest.host', 'visitorRequest.unit.building.compound'])
-            ->where('token_hash', $hash)
-            ->first();
+        $pass = $this->findPassByToken($token);
 
         if (! $pass) {
             $this->recordScan(null, null, $scanner, VisitorScanResult::NotFound, $decision, token: $token);

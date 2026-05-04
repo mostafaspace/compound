@@ -11,6 +11,8 @@ const config = {
       path.resolve(projectRoot, "node_modules"),
       path.resolve(workspaceRoot, "node_modules"),
     ],
+    disableHierarchicalLookup: true,
+    unstable_enableSymlinks: true,
     extraNodeModules: {
       react: path.resolve(workspaceRoot, "node_modules/react"),
       "react-native": path.resolve(workspaceRoot, "node_modules/react-native"),

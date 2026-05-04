@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\NotificationCategory;
+use App\Enums\RepresentativeRole;
 use App\Enums\UserRole;
 use App\Models\Issues\Issue;
 use App\Models\Issues\IssueAttachment;
@@ -24,7 +25,13 @@ class IssueService
 
     /**
      * @param  array<string, mixed>  $data
-     * @param  array{compound_id: string, building_id: string|null, assigned_to: int|null}  $location
+     * @param  array{
+     *   compound_id: string,
+     *   building_id: string|null,
+     *   assigned_to: int|null,
+     *   requested_target_role: string,
+     *   resolved_target_role: string|null
+     * }  $location
      */
     public function createIssue(array $data, User $reporter, array $location): Issue
     {
@@ -39,6 +46,10 @@ class IssueService
             'description' => $data['description'],
             'priority' => $data['priority'] ?? 'normal',
             'status' => 'new',
+            'metadata' => [
+                'requestedTargetRole' => $location['requested_target_role'],
+                'resolvedTargetRole' => $location['resolved_target_role'],
+            ],
         ]);
 
         // Notify assignee if one was set
@@ -195,12 +206,15 @@ class IssueService
     public function escalateIssue(Issue $issue, User $actor, string $reason): Issue
     {
         $previousAssignedTo = $issue->assigned_to;
+        $escalationAssignee = $this->resolveEscalationAssignee($issue) ?? $previousAssignedTo;
 
         $issue->status = 'escalated';
+        $issue->assigned_to = $escalationAssignee;
         $issue->metadata = array_merge($issue->metadata ?? [], [
             'escalatedAt' => now()->toIso8601String(),
             'escalatedBy' => $actor->id,
             'escalationReason' => $reason,
+            'escalationTargetRole' => $escalationAssignee !== $previousAssignedTo ? RepresentativeRole::President->value : ($issue->metadata['resolvedTargetRole'] ?? null),
         ]);
         $issue->save();
 
@@ -231,6 +245,28 @@ class IssueService
         if ($previousAssignedTo && $previousAssignedTo !== $issue->reported_by) {
             $this->notificationService->create(
                 userId: $previousAssignedTo,
+                category: NotificationCategory::Issues,
+                title: 'Issue escalated',
+                body: $issue->title,
+                metadata: [
+                    'issueId' => $issue->id,
+                    'reason' => $reason,
+                    'titleTranslations' => [
+                        'en' => 'Issue escalated',
+                        'ar' => 'تم تصعيد البلاغ',
+                    ],
+                    'bodyTranslations' => [
+                        'en' => $issue->title,
+                        'ar' => $issue->title,
+                    ],
+                ],
+                priority: 'high',
+            );
+        }
+
+        if ($escalationAssignee && ! in_array($escalationAssignee, array_filter([$issue->reported_by, $previousAssignedTo]), true)) {
+            $this->notificationService->create(
+                userId: $escalationAssignee,
                 category: NotificationCategory::Issues,
                 title: 'Issue escalated',
                 body: $issue->title,
@@ -303,14 +339,7 @@ class IssueService
 
     public function userCanAccessIssue(User $user, Issue $issue): bool
     {
-        if ($user->hasAnyEffectiveRole([
-            UserRole::SuperAdmin,
-            UserRole::CompoundAdmin,
-            UserRole::President,
-            UserRole::BoardMember,
-            UserRole::FinanceReviewer,
-            UserRole::SupportAgent,
-        ])) {
+        if ($this->isPrivilegedIssueManager($user)) {
             return $this->compoundContext->userCanAccessCompoundById($user, $issue->compound_id);
         }
 
@@ -335,6 +364,23 @@ class IssueService
         return $issue->reported_by === $user->id;
     }
 
+    public function userCanManageIssue(User $user, Issue $issue): bool
+    {
+        return $this->isPrivilegedIssueManager($user)
+            && $this->compoundContext->userCanAccessCompoundById($user, $issue->compound_id);
+    }
+
+    public function userCanEscalateIssue(User $user, Issue $issue): bool
+    {
+        if ($this->userCanManageIssue($user, $issue)) {
+            return true;
+        }
+
+        $buildingAssignment = $this->getActiveRepAssignment($user, RepresentativeRole::BuildingRepresentative->value);
+
+        return $buildingAssignment !== null && $issue->building_id === $buildingAssignment->building_id;
+    }
+
     /**
      * Apply role-based scope filtering on the issues query for list endpoints.
      *
@@ -348,6 +394,7 @@ class IssueService
             UserRole::CompoundAdmin,
             UserRole::President,
             UserRole::BoardMember,
+            UserRole::FinanceReviewer,
             UserRole::SupportAgent,
         ])) {
             return $query;
@@ -381,5 +428,40 @@ class IssueService
             ->where('is_active', true)
             ->whereNull('ends_at')
             ->first();
+    }
+
+    private function resolveEscalationAssignee(Issue $issue): ?int
+    {
+        $president = RepresentativeAssignment::query()
+            ->active()
+            ->where('compound_id', $issue->compound_id)
+            ->where('role', RepresentativeRole::President->value)
+            ->first();
+
+        if ($president?->user_id) {
+            return $president->user_id;
+        }
+
+        return User::query()
+            ->where('status', 'active')
+            ->where(function ($query): void {
+                $query->whereIn('role', [UserRole::CompoundAdmin->value, 'compound_head'])
+                    ->orWhereHas('roles', fn ($roleQuery) => $roleQuery->whereIn('name', [UserRole::CompoundAdmin->value, 'compound_head']));
+            })
+            ->get()
+            ->first(fn (User $candidate): bool => $this->compoundContext->userCanAccessCompoundById($candidate, $issue->compound_id))
+            ?->id;
+    }
+
+    private function isPrivilegedIssueManager(User $user): bool
+    {
+        return $user->hasAnyEffectiveRole([
+            UserRole::SuperAdmin,
+            UserRole::CompoundAdmin,
+            UserRole::President,
+            UserRole::BoardMember,
+            UserRole::FinanceReviewer,
+            UserRole::SupportAgent,
+        ]);
     }
 }

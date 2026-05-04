@@ -25,7 +25,7 @@ class UnitFactory extends Factory
         return [
             'compound_id' => Compound::factory(),
             'building_id' => Building::factory(),
-            'floor_id' => Floor::factory(),
+            'floor_id' => null,
             'unit_number' => fake()->bothify('###'),
             'type' => fake()->randomElement([UnitType::Apartment->value, UnitType::Duplex->value, UnitType::Villa->value]),
             'area_sqm' => fake()->randomFloat(2, 80, 350),

@@ -26,6 +26,8 @@ import { colors, spacing } from '../../../theme';
 import { Typography } from '../../../components/ui/Typography';
 import { Button } from '../../../components/ui/Button';
 import { ScreenContainer } from '../../../components/layout/ScreenContainer';
+import { StatusBadge } from '../../../components/ui/StatusBadge';
+import { pollStatusPalette } from '../../../theme/semantics';
 import type { RootStackParamList } from '../../../navigation/types';
 import type { PollOption } from '@compound/contracts';
 
@@ -198,6 +200,7 @@ export const PollDetailScreen = ({ route, navigation }: Props) => {
   }
 
   const showResults = (hasVoted || !isActive) && !isDraft;
+  const statusPalette = pollStatusPalette(poll.status);
 
   return (
     <ScreenContainer withKeyboard={false} style={styles.container}>
@@ -220,21 +223,11 @@ export const PollDetailScreen = ({ route, navigation }: Props) => {
         ) : null}
 
         <View style={styles.metaRow}>
-          <View
-            style={[
-              styles.statusBadge,
-              { backgroundColor: STATUS_COLORS[poll.status]?.bg ?? '#f3f4f6' },
-            ]}
-          >
-            <Text
-              style={[
-                styles.statusText,
-                { color: STATUS_COLORS[poll.status]?.text ?? '#6b7280' },
-              ]}
-            >
-              {poll.status}
-            </Text>
-          </View>
+          <StatusBadge
+            label={poll.status}
+            backgroundColor={statusPalette.background}
+            textColor={statusPalette.text}
+          />
           {isAdmin && poll.status === 'draft' && (
             <Button
               title="Publish Now"
@@ -437,7 +430,7 @@ export const PollDetailScreen = ({ route, navigation }: Props) => {
                 <View key={i} style={styles.logRow}>
                   <Typography variant="caption">{log.userName}</Typography>
                   <Typography variant="caption" style={styles.logTime}>
-                    {new Date(log.lastViewedAt).toLocaleTimeString()}
+                    {log.lastViewedAt ? new Date(log.lastViewedAt).toLocaleTimeString() : 'Not recorded'}
                   </Typography>
                 </View>
               ))}
@@ -461,13 +454,6 @@ export const PollDetailScreen = ({ route, navigation }: Props) => {
       </ScrollView>
     </ScreenContainer>
   );
-};
-
-const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
-  draft: { bg: '#fef3c7', text: '#92400e' },
-  active: { bg: '#d1fae5', text: '#065f46' },
-  closed: { bg: '#dbeafe', text: '#1e40af' },
-  archived: { bg: '#f3f4f6', text: '#6b7280' },
 };
 
 const styles = StyleSheet.create({
@@ -509,16 +495,6 @@ const styles = StyleSheet.create({
   inlineActionText: {
     fontSize: 12,
     fontWeight: '700',
-  },
-  statusBadge: {
-    borderRadius: 100,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-  },
-  statusText: {
-    fontWeight: '700',
-    textTransform: 'capitalize',
-    fontSize: 11,
   },
   successBanner: {
     backgroundColor: '#d1fae5',

@@ -137,7 +137,40 @@ class CompoundContextService
 
     public function scopePropertyQuery(\Illuminate\Database\Eloquent\Builder $query, User $user): void
     {
-        $this->scopeResolver->scopePropertyQuery($query, $user);
+        if ($this->isEffectiveSuperAdmin($user)) {
+            return;
+        }
+
+        $assignments = $user->scopeAssignments()->get();
+
+        if ($assignments->isNotEmpty()) {
+            $this->scopeResolver->scopePropertyQuery($query, $user);
+            return;
+        }
+
+        $managedCompoundId = $this->resolveManagedCompoundId($user);
+
+        if ($managedCompoundId !== null) {
+            $model = $query->getModel();
+            $table = $model->getTable();
+            $columns = \Illuminate\Support\Facades\Schema::getColumnListing($table);
+
+            if (in_array('compound_id', $columns, true)) {
+                $query->where($table.'.compound_id', $managedCompoundId);
+            } elseif (in_array('building_id', $columns, true)) {
+                $query->whereHas('building', fn ($q) => $q->where('compound_id', $managedCompoundId));
+            } elseif (in_array('floor_id', $columns, true)) {
+                $query->whereHas('floor.building', fn ($q) => $q->where('compound_id', $managedCompoundId));
+            } elseif (in_array('unit_id', $columns, true)) {
+                $query->whereHas('unit.building', fn ($q) => $q->where('compound_id', $managedCompoundId));
+            } elseif ($table === 'units') {
+                $query->whereHas('building', fn ($q) => $q->where('compound_id', $managedCompoundId));
+            } else {
+                $query->whereRaw('1 = 0');
+            }
+        } else {
+            $query->whereRaw('1 = 0');
+        }
     }
 
     public function resolveUserCompoundId(User $user): ?string

@@ -262,6 +262,72 @@ class PropertyRegistryTest extends TestCase
         ]);
     }
 
+    public function test_building_detail_includes_unit_memberships_for_assignment_views(): void
+    {
+        $compound = Compound::factory()->create();
+        $building = Building::factory()->for($compound)->create();
+        $unit = Unit::factory()->for($compound)->for($building)->create(['floor_id' => null, 'unit_number' => '101']);
+        $resident = User::factory()->create([
+            'role' => UserRole::ResidentOwner->value,
+            'compound_id' => $compound->id,
+            'email' => 'owner.lookup@example.test',
+        ]);
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compound->id,
+        ]);
+
+        UnitMembership::query()->create([
+            'unit_id' => $unit->id,
+            'user_id' => $resident->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'starts_at' => now()->subDay()->toDateString(),
+            'is_primary' => true,
+            'verification_status' => VerificationStatus::Verified->value,
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $this->getJson("/api/v1/buildings/{$building->id}")
+            ->assertOk()
+            ->assertJsonPath('data.units.0.unitNumber', '101')
+            ->assertJsonPath('data.units.0.memberships.0.user.email', 'owner.lookup@example.test');
+    }
+
+    public function test_unassigned_users_endpoint_returns_only_resident_candidates(): void
+    {
+        $compound = Compound::factory()->create();
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compound->id,
+        ]);
+
+        User::factory()->create([
+            'role' => UserRole::SecurityGuard->value,
+            'compound_id' => $compound->id,
+            'email' => 'guard.unassigned@example.test',
+        ]);
+
+        $resident = User::factory()->create([
+            'role' => UserRole::Resident->value,
+            'compound_id' => $compound->id,
+            'email' => 'resident.unassigned@example.test',
+        ]);
+
+        User::factory()->create([
+            'role' => UserRole::ResidentOwner->value,
+            'compound_id' => null,
+            'email' => 'resident.other@example.test',
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $this->getJson('/api/v1/units/unassigned-users')
+            ->assertOk()
+            ->assertJsonCount(1, 'data.data')
+            ->assertJsonPath('data.data.0.email', $resident->email);
+    }
+
     public function test_it_manages_unit_memberships(): void
     {
         $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
@@ -299,6 +365,70 @@ class PropertyRegistryTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.verificationStatus', VerificationStatus::Expired->value)
             ->assertJsonPath('data.endsAt', now()->toDateString());
+    }
+
+    public function test_it_updates_unit_membership_resident_profile_and_vehicle_fields(): void
+    {
+        $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+        $compound = Compound::factory()->create();
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compound->id,
+        ]);
+        Sanctum::actingAs($admin);
+
+        $building = Building::factory()->for($compound)->create();
+        $unit = Unit::factory()
+            ->for($compound)
+            ->for($building)
+            ->create(['floor_id' => null, 'unit_number' => '306']);
+
+        $membership = UnitMembership::query()->create([
+            'unit_id' => $unit->id,
+            'user_id' => $resident->id,
+            'relation_type' => UnitRelationType::Resident->value,
+            'starts_at' => '2026-04-19',
+            'is_primary' => true,
+            'verification_status' => VerificationStatus::Pending->value,
+        ]);
+
+        $this->patchJson("/api/v1/unit-memberships/{$membership->id}", [
+            'residentName' => 'Ahmed Ali',
+            'residentPhone' => '+201001112223',
+            'phonePublic' => true,
+            'residentEmail' => 'ahmed.ali@example.test',
+            'emailPublic' => false,
+            'hasVehicle' => true,
+            'vehiclePlate' => 'XYZ-987',
+            'parkingSpotCode' => 'P-42',
+            'garageStickerCode' => 'GS-77',
+            'verificationStatus' => VerificationStatus::Verified->value,
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.residentName', 'Ahmed Ali')
+            ->assertJsonPath('data.residentPhone', '+201001112223')
+            ->assertJsonPath('data.phonePublic', true)
+            ->assertJsonPath('data.residentEmail', 'ahmed.ali@example.test')
+            ->assertJsonPath('data.emailPublic', false)
+            ->assertJsonPath('data.hasVehicle', true)
+            ->assertJsonPath('data.vehiclePlate', 'XYZ-987')
+            ->assertJsonPath('data.parkingSpotCode', 'P-42')
+            ->assertJsonPath('data.garageStickerCode', 'GS-77')
+            ->assertJsonPath('data.verificationStatus', VerificationStatus::Verified->value);
+
+        $this->assertDatabaseHas('unit_memberships', [
+            'id' => $membership->id,
+            'resident_name' => 'Ahmed Ali',
+            'resident_phone' => '+201001112223',
+            'phone_public' => true,
+            'resident_email' => 'ahmed.ali@example.test',
+            'email_public' => false,
+            'has_vehicle' => true,
+            'vehicle_plate' => 'XYZ-987',
+            'parking_spot_code' => 'P-42',
+            'garage_sticker_code' => 'GS-77',
+            'verification_status' => VerificationStatus::Verified->value,
+        ]);
     }
 
     public function test_scoped_admin_cannot_manage_other_compound_unit_memberships(): void

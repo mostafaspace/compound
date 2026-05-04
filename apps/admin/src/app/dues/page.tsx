@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 
-import { LogoutButton } from "@/components/logout-button";
+import { SiteNav } from "@/components/site-nav";
 import {
   getCurrentUser,
   getChargeTypes,
@@ -65,6 +65,7 @@ export default async function DuesPage({ searchParams }: DuesPageProps) {
 
   return (
     <main className="min-h-screen bg-background text-foreground">
+      <SiteNav breadcrumb={[{ label: t("title") }]} />
       <header className="border-b border-line bg-panel">
         <div className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-6 md:flex-row md:items-center md:justify-between lg:px-8">
           <div>
@@ -73,7 +74,6 @@ export default async function DuesPage({ searchParams }: DuesPageProps) {
             </Link>
             <h1 className="mt-2 text-3xl font-semibold">{t("title")}</h1>
           </div>
-          <LogoutButton />
         </div>
       </header>
 

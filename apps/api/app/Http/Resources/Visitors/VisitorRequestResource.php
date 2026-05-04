@@ -10,6 +10,9 @@ class VisitorRequestResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $viewer = $request->user();
+        $canSeeQrToken = $viewer && (int) $viewer->id === (int) $this->host_user_id;
+
         return [
             'id' => $this->id,
             'hostUserId' => $this->host_user_id,
@@ -34,8 +37,12 @@ class VisitorRequestResource extends JsonResource
             'numberOfVisitors' => $this->number_of_visitors,
             'status' => $this->status->value,
             'pass' => VisitorPassResource::make($this->whenLoaded('pass')),
-            'qrToken' => $this->when(isset($this->qr_token), $this->qr_token) 
-                         ?? $this->whenLoaded('pass', fn() => $this->pass?->token),
+            'qrToken' => $this->when(
+                $canSeeQrToken,
+                fn () => isset($this->qr_token)
+                    ? $this->qr_token
+                    : $this->whenLoaded('pass', fn () => $this->pass?->token),
+            ),
             'arrivedAt' => $this->arrived_at?->toIso8601String(),
             'allowedAt' => $this->allowed_at?->toIso8601String(),
             'deniedAt' => $this->denied_at?->toIso8601String(),

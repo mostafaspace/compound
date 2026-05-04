@@ -2,7 +2,7 @@ import type { PollStatus } from "@compound/contracts";
 import Link from "next/link";
 import { getLocale } from "next-intl/server";
 
-import { LogoutButton } from "@/components/logout-button";
+import { SiteNav } from "@/components/site-nav";
 import { getCurrentUser, getPolls } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
 import { publishPollAction, closePollAction } from "./actions";
@@ -31,6 +31,7 @@ export default async function PollsPage({ searchParams }: PollsPageProps) {
 
   return (
     <main className="min-h-screen bg-background text-foreground">
+      <SiteNav breadcrumb={[{ label: "Polls" }]} />
       <header className="border-b border-line bg-panel">
         <div className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-6 md:flex-row md:items-center md:justify-between lg:px-8">
           <div>
@@ -53,7 +54,6 @@ export default async function PollsPage({ searchParams }: PollsPageProps) {
             >
               + New Poll
             </Link>
-            <LogoutButton />
           </div>
         </div>
       </header>

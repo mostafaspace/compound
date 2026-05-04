@@ -3,7 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useTranslation } from 'react-i18next';
 import { useColorScheme, Text } from 'react-native';
 import { MainTabParamList } from './types';
-import { ResidentDashboardScreen } from '../features/resident/screens/ResidentDashboardScreen';
+import { DashboardScreen } from '../features/dashboard/screens/DashboardScreen';
 import { VisitorsScreen } from '../features/visitors/screens/VisitorsScreen';
 import { AccountsScreen } from '../features/finance/screens/AccountsScreen';
 import { PollsScreen } from '../features/polls/screens/PollsScreen';
@@ -15,10 +15,19 @@ import { ScreenHeader } from '../components/layout/ScreenHeader';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
+const tabGlyphs: Record<keyof MainTabParamList, string> = {
+  Dashboard: 'DB',
+  Property: 'PR',
+  Visitors: 'VI',
+  Finance: 'FN',
+  Polls: 'PL',
+  More: 'MO',
+};
+
 export const ResidentTabNavigator = () => {
   const { t } = useTranslation();
   const isDark = useColorScheme() === 'dark';
-  const canViewGovernance = usePermission('view_governance');
+  const canViewPolls = usePermission('view_governance');
 
   return (
     <Tab.Navigator
@@ -49,19 +58,13 @@ export const ResidentTabNavigator = () => {
           fontWeight: '600',
         },
         tabBarIcon: ({ color, size }) => {
-          let icon = '•';
-          if (route.name === 'Dashboard') icon = '🏠';
-          if (route.name === 'Visitors') icon = '👥';
-          if (route.name === 'Finance') icon = '💳';
-          if (route.name === 'Governance') icon = '📊';
-          if (route.name === 'More') icon = '•••';
-          return <Text style={{ color, fontSize: 20 }}>{icon}</Text>;
+          return <Text style={{ color, fontSize: 12, fontWeight: '800', letterSpacing: 1 }}>{tabGlyphs[route.name]}</Text>;
         },
       })}
     >
       <Tab.Screen
         name="Dashboard"
-        component={ResidentDashboardScreen}
+        component={DashboardScreen}
         options={{ 
           title: t('Dashboard.title', { defaultValue: 'Dashboard' }),
           header: () => <ScreenHeader title={t('Dashboard.title', { defaultValue: 'Dashboard' })} showBack={false} rightElement={<LogoutButton />} />
@@ -83,14 +86,16 @@ export const ResidentTabNavigator = () => {
           header: () => <ScreenHeader title={t('Finance.label')} showBack={false} rightElement={<LogoutButton />} />
         }}
       />
-      <Tab.Screen
-        name="Governance"
-        component={PollsScreen}
-        options={{
-          title: t('Governance.label'),
-          header: () => <ScreenHeader title={t('Governance.label')} showBack={false} rightElement={<LogoutButton />} />
-        }}
-      />
+      {canViewPolls && (
+        <Tab.Screen
+          name="Polls"
+          component={PollsScreen}
+          options={{
+            title: t('Polls.label'),
+            header: () => <ScreenHeader title={t('Polls.label')} showBack={false} rightElement={<LogoutButton />} />
+          }}
+        />
+      )}
       <Tab.Screen
         name="More"
         component={MoreNavigator}

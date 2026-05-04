@@ -9,6 +9,8 @@ use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Support\AuditLogger;
+use Database\Seeders\RbacSeeder;
+use Database\Seeders\UatSeeder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -16,6 +18,13 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
+    private const SELF_HEALING_UAT_EMAILS = [
+        'compound-admin@uat.compound.local',
+        'resident-owner@uat.compound.local',
+        'security-guard@uat.compound.local',
+        'board-member@uat.compound.local',
+    ];
+
     public function __construct(private readonly AuditLogger $auditLogger) {}
 
     /**
@@ -27,6 +36,14 @@ class AuthController extends Controller
 
         /** @var User|null $user */
         $user = User::query()->where('email', $validated['email'])->first();
+
+        if ($this->shouldSelfHealUatPersona($validated['email'], $user, $validated['password'])) {
+            app(RbacSeeder::class)->run();
+            app(UatSeeder::class)->run();
+
+            /** @var User|null $user */
+            $user = User::query()->where('email', $validated['email'])->first();
+        }
 
         if (! $user || ! Hash::check($validated['password'], $user->password)) {
             $this->auditLogger->record('auth.login_failed', request: $request, statusCode: 422, metadata: [
@@ -126,5 +143,18 @@ class AuthController extends Controller
             UserRole::ResidentOwner, UserRole::ResidentTenant => ['resident:self'],
             UserRole::Resident => ['resident:self'],
         };
+    }
+
+    private function shouldSelfHealUatPersona(string $email, ?User $user, string $password): bool
+    {
+        if (app()->environment('production')) {
+            return false;
+        }
+
+        if (! in_array($email, self::SELF_HEALING_UAT_EMAILS, strict: true)) {
+            return false;
+        }
+
+        return ! $user || ! Hash::check($password, $user->password);
     }
 }

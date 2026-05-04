@@ -2,6 +2,7 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.CAMERA" />
 
     <application
       android:name=".MainApplication"
@@ -29,6 +30,20 @@
             <category android:name="android.intent.category.BROWSABLE" />
             <data
                 android:host="auth"
+                android:scheme="compound" />
+        </intent-filter>
+        <intent-filter>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data
+                android:host="scanner"
+                android:scheme="compound" />
+            <data
+                android:host="guard-invitations"
+                android:scheme="compound" />
+            <data
+                android:host="gate"
                 android:scheme="compound" />
         </intent-filter>
       </activity>

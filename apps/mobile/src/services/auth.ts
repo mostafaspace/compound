@@ -8,6 +8,11 @@ export const authApi = api.injectEndpoints({
       query: (credentials) => ({
         url: "/auth/login",
         method: "POST",
+        cache: "no-store",
+        headers: {
+          "Cache-Control": "no-store, no-cache, max-age=0",
+          Pragma: "no-cache",
+        },
         body: {
           ...credentials,
           deviceName: Platform.OS === "web" ? "Mobile web" : `${Platform.OS} app`,

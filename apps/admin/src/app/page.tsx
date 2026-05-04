@@ -5,19 +5,20 @@ import { CompoundContextBanner } from "@/components/compound-context-banner";
 import { SiteNav } from "@/components/site-nav";
 import { getCurrentUser, getDashboard, getSystemStatus } from "@/lib/api";
 import { formatRoleLabel, getPrimaryEffectiveRole } from "@/lib/auth-access";
+import { sanitizeDashboardCollection } from "@/lib/dashboard-routes";
 import { getCompoundContext, hasEffectiveRole, requireAdminUser } from "@/lib/session";
 
 const shortcutIcons: Record<string, string> = {
-  "user-plus": "👤",
-  "home": "🏠",
-  "sitemap": "🌳",
-  "bar-chart": "📊",
-  "qr-code": "🚗",
-  "alert-circle": "🔧",
-  "gavel": "⚖️",
-  "scan": "📷",
-  "clock": "🕐",
-  "edit": "✏️",
+  "user-plus": "US",
+  "home": "HM",
+  "sitemap": "OC",
+  "bar-chart": "PL",
+  "qr-code": "QR",
+  "alert-circle": "IS",
+  "gavel": "MT",
+  "scan": "SC",
+  "clock": "HS",
+  "edit": "ME",
 };
 
 function CheckIcon() {
@@ -43,27 +44,52 @@ export default async function Home() {
   const isSuperAdmin = hasEffectiveRole(user, "super_admin");
   const activeCompoundId = await getCompoundContext();
 
-  const attentionItems = dashboard?.attentionItems ?? [];
-  const shortcuts = dashboard?.shortcuts ?? [];
+  const attentionItems = sanitizeDashboardCollection(dashboard?.attentionItems ?? [], { activeCompoundId });
+  const shortcuts = sanitizeDashboardCollection(dashboard?.shortcuts ?? [], { activeCompoundId });
   const stats = dashboard?.stats ?? {};
+  const hasStats = Object.keys(stats).length > 0;
+  const orgChartHref = activeCompoundId ? `/compounds/${activeCompoundId}/org-chart` : "/compounds";
+
+  const operatorActions = [
+    {
+      detail:
+        attentionItems.length > 0
+          ? t("operatorActions.reviewQueueDetail", { count: attentionItems.length })
+          : t("operatorActions.openIssueOperationsDetail"),
+      href: attentionItems.length > 0 ? "#attention" : "/issues",
+      label: attentionItems.length > 0 ? t("operatorActions.reviewQueueLabel") : t("operatorActions.openIssueOperationsLabel"),
+    },
+    {
+      detail: t("operatorActions.assignApartmentsDetail"),
+      href: "/units/assign",
+      label: t("operatorActions.assignApartmentsLabel"),
+    },
+    {
+      detail: activeCompoundId
+        ? t("operatorActions.reviewOrgChartCoverageDetail")
+        : t("operatorActions.setActiveCompoundDetail"),
+      href: activeCompoundId ? `/compounds/${activeCompoundId}/org-chart` : "/compounds",
+      label: activeCompoundId ? t("operatorActions.reviewOrgChartCoverageLabel") : t("operatorActions.setActiveCompoundLabel"),
+    },
+  ];
 
   // Module cards replace the old inline nav buttons
   const modules = [
-    { href: "/compounds",             key: "compounds",           icon: "🏛️" },
-    { href: "/visitors",              key: "visitors",            icon: "🚗" },
-    { href: "/issues",                key: "issues",              icon: "🔧" },
-    { href: "/announcements",         key: "announcements",       icon: "📢" },
-    { href: "/finance",               key: "finance",             icon: "💳" },
-    { href: "/dues",                  key: "dues",                icon: "📄" },
-    { href: "/polls",                 key: "polls",               icon: "📊" },
-    { href: "/documents",             key: "documents",           icon: "📁" },
-    { href: "/security",              key: "security",            icon: "🔒" },
-    { href: "/meetings",              key: "meetings",            icon: "🤝" },
-    { href: "/notifications/channels",key: "notificationChannels",icon: "🔔" },
-    { href: "/audit-logs",            key: "auditLogs",           icon: "📋" },
-    { href: "/analytics/operational", key: "analytics",           icon: "📊" },
-    { href: `/compounds/${activeCompoundId ?? 'none'}/org-chart`, key: "orgChart",        icon: "🌳" },
-    { href: "/settings",              key: "settings",            icon: "⚙️" },
+    { href: "/compounds",             key: "compounds",           icon: "CP" },
+    { href: "/visitors",              key: "visitors",            icon: "VI" },
+    { href: "/issues",                key: "issues",              icon: "IS" },
+    { href: "/announcements",         key: "announcements",       icon: "AN" },
+    { href: "/finance",               key: "finance",             icon: "FN" },
+    { href: "/dues",                  key: "dues",                icon: "DU" },
+    { href: "/polls",                 key: "polls",               icon: "PL" },
+    { href: "/documents",             key: "documents",           icon: "DC" },
+    { href: "/security",              key: "security",            icon: "SE" },
+    { href: "/meetings",              key: "meetings",            icon: "MT" },
+    { href: "/notifications/channels",key: "notificationChannels",icon: "NT" },
+    { href: "/audit-logs",            key: "auditLogs",           icon: "AU" },
+    { href: "/analytics/operational", key: "analytics",           icon: "OP" },
+    { href: orgChartHref,                     key: "orgChart",        icon: "OC" },
+    { href: "/settings",              key: "settings",            icon: "ST" },
   ];
 
   return (
@@ -99,34 +125,90 @@ export default async function Home() {
 
       <CompoundContextBanner isSuperAdmin={isSuperAdmin} />
 
+      <section className="mx-auto max-w-7xl px-5 py-6 lg:px-8">
+        <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+          <div className="rounded-xl border border-line bg-panel p-5 shadow-premium-md">
+            <div className="flex flex-col gap-2 border-b border-line pb-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <h2 className="text-lg font-semibold">{t("panels.operatorNextSteps.title")}</h2>
+                <p className="mt-1 text-sm text-muted">{t("panels.operatorNextSteps.subtitle")}</p>
+              </div>
+              {!apiOnline ? (
+                <span className="rounded-full bg-[#fff3f2] px-3 py-1 text-xs font-semibold text-danger">
+                  {t("panels.operatorNextSteps.apiDegraded")}
+                </span>
+              ) : null}
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
+              {operatorActions.map((action) => (
+                <Link
+                  key={action.href}
+                  href={action.href}
+                  className="rounded-xl border border-line bg-background/60 p-4 transition hover:border-brand hover:shadow-premium-sm"
+                >
+                  <p className="text-sm font-semibold text-foreground">{action.label}</p>
+                  <p className="mt-2 text-sm text-muted">{action.detail}</p>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-line bg-panel p-5 shadow-premium-md">
+            <h2 className="text-lg font-semibold">{t("panels.runtimeClarity.title")}</h2>
+            <div className="mt-4 space-y-3 text-sm">
+              {!apiOnline ? (
+                <div className="rounded-lg border border-[#f1c7c2] bg-[#fff3f2] px-4 py-3 text-danger">
+                  {t("panels.runtimeClarity.apiDegraded")}
+                </div>
+              ) : null}
+              {!activeCompoundId ? (
+                <div className="rounded-lg border border-[#e7d7a9] bg-[#fff8e8] px-4 py-3 text-[#7a5d1a]">
+                  {t("panels.runtimeClarity.noActiveCompound")}
+                </div>
+              ) : null}
+              {!hasStats ? (
+                <div className="rounded-lg border border-line bg-background/60 px-4 py-3 text-muted">
+                  {t("panels.runtimeClarity.noStats")}
+                </div>
+              ) : null}
+              {apiOnline && activeCompoundId && hasStats ? (
+                <div className="rounded-lg border border-[#d3eadf] bg-[#f5fbf8] px-4 py-3 text-brand">
+                  {t("panels.runtimeClarity.ready")}
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Stats cards — only show if stats available */}
-      {Object.keys(stats).length > 0 && (
+      {hasStats ? (
         <section className="mx-auto grid max-w-7xl gap-5 px-5 py-6 md:grid-cols-2 lg:grid-cols-3 lg:px-8">
           {stats.totalResidents !== undefined && (
             <article className="rounded-xl border border-line bg-panel p-5 shadow-premium-md">
-              <p className="text-sm font-medium text-muted">Total Residents</p>
+              <p className="text-sm font-medium text-muted">{t("stats.totalResidents")}</p>
               <p className="mt-4 text-4xl font-semibold tracking-tight text-brand">{stats.totalResidents}</p>
             </article>
           )}
           {stats.activeVisitors !== undefined && (
             <article className="rounded-xl border border-line bg-panel p-5 shadow-premium-md">
-              <p className="text-sm font-medium text-muted">Active Visitors</p>
+              <p className="text-sm font-medium text-muted">{t("stats.activeVisitors")}</p>
               <p className="mt-4 text-4xl font-semibold tracking-tight text-accent">{stats.activeVisitors}</p>
             </article>
           )}
           {stats.openIssues !== undefined && (
             <article className="rounded-xl border border-line bg-panel p-5 shadow-premium-md">
-              <p className="text-sm font-medium text-muted">Open Issues</p>
+              <p className="text-sm font-medium text-muted">{t("stats.openIssues")}</p>
               <p className="mt-4 text-4xl font-semibold tracking-tight text-danger">{stats.openIssues}</p>
             </article>
           )}
         </section>
-      )}
+      ) : null}
 
       {/* Quick shortcuts — clickable, role-based */}
-      {shortcuts.length > 0 && (
+      {shortcuts.length > 0 ? (
         <section className="mx-auto max-w-7xl px-5 pb-6 lg:px-8">
-          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted">Quick Actions</h2>
+          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted">{t("shortcuts.title")}</h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
             {shortcuts.map((s) => (
               <Link
@@ -134,10 +216,33 @@ export default async function Home() {
                 href={s.route}
                 className="glass flex flex-col items-center gap-2 rounded-xl px-3 py-4 text-center transition hover:border-brand hover:shadow-premium-md hover:-translate-y-0.5"
               >
-                <span className="text-2xl" aria-hidden="true">{shortcutIcons[s.icon] ?? "⚡"}</span>
+                <span className="inline-flex size-10 items-center justify-center rounded-full border border-line bg-background text-xs font-black tracking-[0.18em] text-brand" aria-hidden="true">
+                  {shortcutIcons[s.icon] ?? "GO"}
+                </span>
                 <span className="text-xs font-medium text-foreground leading-tight">{s.label}</span>
               </Link>
             ))}
+          </div>
+        </section>
+      ) : (
+        <section className="mx-auto max-w-7xl px-5 pb-6 lg:px-8">
+          <div className="rounded-xl border border-dashed border-line bg-panel px-5 py-4">
+            <p className="text-sm font-medium text-foreground">{t("shortcuts.empty.title")}</p>
+            <p className="mt-2 text-sm text-muted">{t("shortcuts.empty.description")}</p>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <Link
+                className="inline-flex h-10 items-center justify-center rounded-lg bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"
+                href="/units/assign"
+              >
+                {t("shortcuts.empty.openAssignment")}
+              </Link>
+              <Link
+                className="inline-flex h-10 items-center justify-center rounded-lg border border-line bg-panel px-4 text-sm font-semibold hover:border-brand"
+                href={activeCompoundId ? orgChartHref : "/compounds"}
+              >
+                {activeCompoundId ? t("shortcuts.empty.reviewOrgChartCoverage") : t("shortcuts.empty.selectActiveCompound")}
+              </Link>
+            </div>
           </div>
         </section>
       )}
@@ -152,11 +257,18 @@ export default async function Home() {
               href={m.href}
               className={`glass flex flex-col items-center gap-2 rounded-xl px-3 py-4 text-center transition hover:border-brand hover:shadow-premium-md hover:-translate-y-0.5 ${(m.key === 'orgChart' && !activeCompoundId) ? 'opacity-40 grayscale pointer-events-none' : ''}`}
             >
-              <span className="text-2xl" aria-hidden="true">{m.icon}</span>
+              <span className="inline-flex size-10 items-center justify-center rounded-full border border-line bg-background text-xs font-black tracking-[0.18em] text-brand" aria-hidden="true">
+                {m.icon}
+              </span>
               <span className="text-xs font-medium text-foreground leading-tight">{nav(m.key)}</span>
             </Link>
           ))}
         </div>
+        {!activeCompoundId ? (
+          <p className="mt-3 text-sm text-muted">
+            {t("modulesDisabled.orgChart")}
+          </p>
+        ) : null}
       </section>
 
       {/* Attention items + system status */}
@@ -193,7 +305,24 @@ export default async function Home() {
               ))}
             </ol>
           ) : (
-            <p className="mt-6 text-sm text-muted text-center py-8">Nothing needs your attention right now.</p>
+            <div className="py-8 text-center">
+              <p className="text-sm font-medium text-foreground">{t("priorityQueue.empty.title")}</p>
+              <p className="mt-2 text-sm text-muted">{t("priorityQueue.empty.description")}</p>
+              <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+                <Link
+                  className="inline-flex h-10 items-center justify-center rounded-lg bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"
+                  href="/units/assign"
+                >
+                  {t("priorityQueue.empty.checkAssignment")}
+                </Link>
+                <Link
+                  className="inline-flex h-10 items-center justify-center rounded-lg border border-line bg-panel px-4 text-sm font-semibold hover:border-brand"
+                  href={activeCompoundId ? orgChartHref : "/compounds"}
+                >
+                  {activeCompoundId ? t("priorityQueue.empty.reviewOrgChart") : t("priorityQueue.empty.selectCompound")}
+                </Link>
+              </div>
+            </div>
           )}
         </div>
 
@@ -218,6 +347,13 @@ export default async function Home() {
               <span className="text-muted">{t("systemStatus.realtime")}</span>
               <span className="font-semibold text-accent">{t("systemStatus.reverbFirst")}</span>
             </div>
+          </div>
+          <div className="mt-5 rounded-lg border border-line bg-background/60 px-4 py-3 text-sm">
+            {apiOnline ? (
+              <p className="text-muted">{t("systemStatus.runtimeReady")}</p>
+            ) : (
+              <p className="text-danger">{t("systemStatus.runtimeDegraded")}</p>
+            )}
           </div>
         </aside>
       </section>

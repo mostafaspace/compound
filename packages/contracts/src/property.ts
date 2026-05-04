@@ -156,13 +156,15 @@ export interface CreateUnitMembershipInput {
   endsAt?: string;
   isPrimary?: boolean;
   verificationStatus?: VerificationStatus;
-  residentName?: string;
-  residentPhone?: string;
+  residentName?: string | null;
+  residentPhone?: string | null;
   phonePublic?: boolean;
-  residentEmail?: string;
+  residentEmail?: string | null;
   emailPublic?: boolean;
   hasVehicle?: boolean;
-  vehiclePlate?: string;
-  parkingSpotCode?: string;
-  garageStickerCode?: string;
+  vehiclePlate?: string | null;
+  parkingSpotCode?: string | null;
+  garageStickerCode?: string | null;
 }
+
+export type UpdateUnitMembershipInput = Partial<CreateUnitMembershipInput>;

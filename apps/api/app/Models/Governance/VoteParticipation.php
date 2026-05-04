@@ -2,6 +2,7 @@
 
 namespace App\Models\Governance;
 
+use App\Models\Property\Unit;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,6 +12,7 @@ class VoteParticipation extends Model
     protected $fillable = [
         'vote_id',
         'user_id',
+        'unit_id',
         'option_id',
         'eligibility_snapshot',
     ];
@@ -44,5 +46,13 @@ class VoteParticipation extends Model
     public function option(): BelongsTo
     {
         return $this->belongsTo(VoteOption::class);
+    }
+
+    /**
+     * @return BelongsTo<Unit, $this>
+     */
+    public function unit(): BelongsTo
+    {
+        return $this->belongsTo(Unit::class);
     }
 }

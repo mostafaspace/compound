@@ -8,6 +8,7 @@ use App\Enums\UserRole;
 use App\Models\Polls\Poll;
 use App\Models\Polls\PollOption;
 use App\Models\Polls\PollType;
+use App\Models\Polls\PollVote;
 use App\Models\Property\Building;
 use App\Models\Property\Compound;
 use App\Models\Property\Unit;
@@ -299,5 +300,229 @@ class PollsTest extends TestCase
 
         $this->deleteJson("/api/v1/polls/types/{$globalType->id}")
             ->assertForbidden();
+    }
+
+    public function test_resident_can_unvote_while_poll_is_active_and_revote(): void
+    {
+        $compound = Compound::factory()->create();
+        $building = Building::factory()->for($compound)->create();
+        $unit = Unit::factory()->for($compound)->for($building)->create(['floor_id' => null]);
+
+        $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value, 'compound_id' => null]);
+        UnitMembership::factory()->create([
+            'unit_id' => $unit->id,
+            'user_id' => $resident->id,
+            'verification_status' => 'verified',
+            'starts_at' => now()->subYear(),
+            'ends_at' => null,
+        ]);
+
+        $poll = Poll::create([
+            'compound_id' => $compound->id,
+            'title' => 'Unvote test poll',
+            'status' => PollStatus::Active->value,
+            'scope' => 'compound',
+            'eligibility' => 'all_verified',
+            'created_by' => $resident->id,
+        ]);
+        $opt1 = PollOption::create(['poll_id' => $poll->id, 'label' => 'Option A', 'sort_order' => 0]);
+        $opt2 = PollOption::create(['poll_id' => $poll->id, 'label' => 'Option B', 'sort_order' => 1]);
+
+        Sanctum::actingAs($resident);
+
+        $this->postJson("/api/v1/polls/{$poll->id}/vote", ['optionIds' => [$opt1->id]])
+            ->assertOk();
+
+        $this->assertDatabaseHas('poll_votes', ['poll_id' => $poll->id, 'user_id' => $resident->id]);
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'polls.voted',
+            'actor_id' => $resident->id,
+            'auditable_id' => (string) $poll->id,
+        ]);
+
+        $this->deleteJson("/api/v1/polls/{$poll->id}/vote")
+            ->assertOk()
+            ->assertJsonPath('data.message', 'Vote removed successfully.');
+
+        $this->assertDatabaseMissing('poll_votes', ['poll_id' => $poll->id, 'user_id' => $resident->id]);
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'polls.unvoted',
+            'actor_id' => $resident->id,
+            'auditable_id' => (string) $poll->id,
+        ]);
+
+        // Resident can vote again after unvoting
+        $this->postJson("/api/v1/polls/{$poll->id}/vote", ['optionIds' => [$opt2->id]])
+            ->assertOk();
+
+        $this->assertDatabaseHas('poll_votes', ['poll_id' => $poll->id, 'user_id' => $resident->id]);
+    }
+
+    public function test_resident_cannot_unvote_after_poll_is_closed(): void
+    {
+        $compound = Compound::factory()->create();
+        $building = Building::factory()->for($compound)->create();
+        $unit = Unit::factory()->for($compound)->for($building)->create(['floor_id' => null]);
+
+        $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value, 'compound_id' => null]);
+        UnitMembership::factory()->create([
+            'unit_id' => $unit->id,
+            'user_id' => $resident->id,
+            'verification_status' => 'verified',
+            'starts_at' => now()->subYear(),
+            'ends_at' => null,
+        ]);
+
+        $poll = Poll::create([
+            'compound_id' => $compound->id,
+            'title' => 'Closed poll',
+            'status' => PollStatus::Active->value,
+            'scope' => 'compound',
+            'eligibility' => 'all_verified',
+            'created_by' => $resident->id,
+        ]);
+        $opt1 = PollOption::create(['poll_id' => $poll->id, 'label' => 'Option A', 'sort_order' => 0]);
+
+        // Create vote directly so we can close the poll immediately after
+        PollVote::create(['poll_id' => $poll->id, 'user_id' => $resident->id, 'unit_id' => $unit->id, 'voted_at' => now()]);
+
+        $poll->update(['status' => PollStatus::Closed->value]);
+
+        Sanctum::actingAs($resident);
+
+        $this->deleteJson("/api/v1/polls/{$poll->id}/vote")
+            ->assertUnprocessable();
+    }
+
+    public function test_second_resident_from_same_apartment_is_blocked_on_poll_vote(): void
+    {
+        $compound = Compound::factory()->create();
+        $building = Building::factory()->for($compound)->create();
+        $unit = Unit::factory()->for($compound)->for($building)->create(['floor_id' => null]);
+
+        $owner = User::factory()->create(['role' => UserRole::ResidentOwner->value, 'compound_id' => null]);
+        $spouse = User::factory()->create(['role' => UserRole::ResidentOwner->value, 'compound_id' => null]);
+
+        foreach ([$owner, $spouse] as $user) {
+            UnitMembership::factory()->create([
+                'unit_id' => $unit->id,
+                'user_id' => $user->id,
+                'verification_status' => 'verified',
+                'starts_at' => now()->subYear(),
+                'ends_at' => null,
+            ]);
+        }
+
+        $poll = Poll::create([
+            'compound_id' => $compound->id,
+            'title' => 'Apartment vote test',
+            'status' => PollStatus::Active->value,
+            'scope' => 'compound',
+            'eligibility' => 'all_verified',
+            'created_by' => $owner->id,
+        ]);
+        $opt1 = PollOption::create(['poll_id' => $poll->id, 'label' => 'Option A', 'sort_order' => 0]);
+
+        Sanctum::actingAs($owner);
+        $this->postJson("/api/v1/polls/{$poll->id}/vote", ['optionIds' => [$opt1->id]])
+            ->assertOk();
+
+        Sanctum::actingAs($spouse);
+        $this->postJson("/api/v1/polls/{$poll->id}/vote", ['optionIds' => [$opt1->id]])
+            ->assertStatus(409)
+            ->assertJsonPath('reason', 'apartment_already_voted');
+    }
+
+    public function test_admin_can_view_poll_voters_list_with_unit_info(): void
+    {
+        $compound = Compound::factory()->create();
+        $building = Building::factory()->for($compound)->create();
+        $unit = Unit::factory()->for($compound)->for($building)->create(['floor_id' => null]);
+
+        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value, 'compound_id' => $compound->id]);
+        $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value, 'compound_id' => null]);
+        UnitMembership::factory()->create([
+            'unit_id' => $unit->id,
+            'user_id' => $resident->id,
+            'verification_status' => 'verified',
+            'starts_at' => now()->subYear(),
+            'ends_at' => null,
+        ]);
+
+        $poll = Poll::create([
+            'compound_id' => $compound->id,
+            'title' => 'Voters list test',
+            'status' => PollStatus::Active->value,
+            'scope' => 'compound',
+            'eligibility' => 'all_verified',
+            'created_by' => $admin->id,
+        ]);
+        $opt1 = PollOption::create(['poll_id' => $poll->id, 'label' => 'Option A', 'sort_order' => 0]);
+
+        Sanctum::actingAs($resident);
+        $this->postJson("/api/v1/polls/{$poll->id}/vote", ['optionIds' => [$opt1->id]])
+            ->assertOk();
+
+        Sanctum::actingAs($admin);
+        $response = $this->getJson("/api/v1/polls/{$poll->id}/voters")
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
+
+        $this->assertSame($resident->id, $response->json('data.0.userId'));
+        $this->assertSame($unit->id, $response->json('data.0.unitId'));
+        $this->assertContains('Option A', $response->json('data.0.options'));
+    }
+
+    public function test_show_includes_notification_and_current_view_logs_for_resident_transparency(): void
+    {
+        $compound = Compound::factory()->create();
+        $building = Building::factory()->for($compound)->create();
+        $unit = Unit::factory()->for($compound)->for($building)->create(['floor_id' => null]);
+
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compound->id,
+        ]);
+        $resident = User::factory()->create([
+            'role' => UserRole::ResidentOwner->value,
+            'compound_id' => null,
+            'name' => 'Resident Transparency',
+        ]);
+
+        UnitMembership::factory()->create([
+            'unit_id' => $unit->id,
+            'user_id' => $resident->id,
+            'verification_status' => 'verified',
+            'starts_at' => now()->subYear(),
+            'ends_at' => null,
+        ]);
+
+        $poll = Poll::create([
+            'compound_id' => $compound->id,
+            'title' => 'Transparency poll',
+            'status' => PollStatus::Draft->value,
+            'scope' => 'compound',
+            'eligibility' => 'all_verified',
+            'created_by' => $admin->id,
+        ]);
+        PollOption::create(['poll_id' => $poll->id, 'label' => 'Option A', 'sort_order' => 0]);
+        PollOption::create(['poll_id' => $poll->id, 'label' => 'Option B', 'sort_order' => 1]);
+
+        Sanctum::actingAs($admin);
+        $this->postJson("/api/v1/polls/{$poll->id}/publish")
+            ->assertOk();
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'polls.published',
+            'actor_id' => $admin->id,
+            'auditable_id' => (string) $poll->id,
+        ]);
+
+        Sanctum::actingAs($resident);
+        $response = $this->getJson("/api/v1/polls/{$poll->id}")
+            ->assertOk();
+
+        $this->assertSame($resident->name, $response->json('data.notificationLogs.0.userName'));
+        $this->assertSame($resident->name, $response->json('data.viewLogs.0.userName'));
+        $this->assertSame(1, $response->json('data.viewLogs.0.viewCount'));
     }
 }

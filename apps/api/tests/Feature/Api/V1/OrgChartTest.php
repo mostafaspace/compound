@@ -255,6 +255,51 @@ class OrgChartTest extends TestCase
         $cachedResponse->assertJsonMissingPath('data.buildings.__PHP_Incomplete_Class_Name');
     }
 
+    public function test_org_chart_preserves_vacant_buildings_and_floors_without_representatives(): void
+    {
+        $compound = Compound::factory()->create();
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compound->id,
+        ]);
+        Sanctum::actingAs($admin);
+
+        $assignedBuilding = Building::factory()->for($compound)->create([
+            'name' => 'Assigned Building',
+            'sort_order' => 1,
+        ]);
+        $vacantBuilding = Building::factory()->for($compound)->create([
+            'name' => 'Vacant Building',
+            'sort_order' => 2,
+        ]);
+        Floor::factory()->for($assignedBuilding)->create([
+            'label' => 'Assigned Building Vacant Floor',
+            'sort_order' => 1,
+        ]);
+        Floor::factory()->for($vacantBuilding)->create([
+            'label' => 'Vacant Building Floor',
+            'sort_order' => 1,
+        ]);
+        RepresentativeAssignment::factory()->forBuilding($assignedBuilding)->create();
+
+        $response = $this->getJson("/api/v1/compounds/{$compound->id}/org-chart")
+            ->assertOk()
+            ->assertJsonCount(2, 'data.buildings')
+            ->assertJsonPath('data.buildings.0.name', 'Assigned Building')
+            ->assertJsonPath('data.buildings.1.name', 'Vacant Building')
+            ->assertJsonCount(1, 'data.buildings.0.representatives')
+            ->assertJsonCount(0, 'data.buildings.1.representatives')
+            ->assertJsonPath('data.buildings.0.floors.0.label', 'Assigned Building Vacant Floor')
+            ->assertJsonPath('data.buildings.1.floors.0.label', 'Vacant Building Floor')
+            ->assertJsonCount(0, 'data.buildings.0.floors.0.representatives')
+            ->assertJsonCount(0, 'data.buildings.1.floors.0.representatives');
+
+        $this->assertSame(
+            ['Assigned Building', 'Vacant Building'],
+            collect($response->json('data.buildings'))->pluck('name')->all(),
+        );
+    }
+
     public function test_org_chart_excludes_admins_only_contacts_from_residents(): void
     {
         $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value]);

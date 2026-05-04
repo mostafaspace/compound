@@ -2,8 +2,9 @@ import type { IssueCategory, IssueStatus } from "@compound/contracts";
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 
-import { LogoutButton } from "@/components/logout-button";
+import { SiteNav } from "@/components/site-nav";
 import { getCurrentUser, getIssues, getSystemStatus } from "@/lib/api";
+import { issuePriorityBadgeClass, issueStatusBadgeClass } from "@/lib/semantic-badges";
 import { requireAdminUser } from "@/lib/session";
 
 interface IssuesPageProps {
@@ -22,19 +23,6 @@ function parseStatus(value?: string): IssueStatus | "all" {
 
 function parseCategory(value?: string): IssueCategory | "all" {
   return categoryValues.includes(value as IssueCategory | "all") ? (value as IssueCategory | "all") : "all";
-}
-
-function statusTone(status: string): string {
-  if (status === "resolved" || status === "closed") return "bg-[#e6f3ef] text-brand";
-  if (status === "escalated") return "bg-[#fff3f2] text-danger";
-  if (status === "in_progress") return "bg-[#eaf0ff] text-[#244a8f]";
-  return "bg-[#f3ead7] text-accent";
-}
-
-function priorityTone(priority: string): string {
-  if (priority === "urgent") return "bg-[#fff3f2] text-danger";
-  if (priority === "high") return "bg-[#f3ead7] text-accent";
-  return "bg-background text-muted";
 }
 
 function formatDate(value: string | null, locale: string): string {
@@ -108,6 +96,7 @@ export default async function IssuesPage({ searchParams }: IssuesPageProps) {
 
   return (
     <main className="min-h-screen bg-background text-foreground">
+      <SiteNav breadcrumb={[{ label: t("title") }]} />
       <header className="border-b border-line bg-panel">
         <div className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-6 md:flex-row md:items-center md:justify-between lg:px-8">
           <div>
@@ -123,7 +112,6 @@ export default async function IssuesPage({ searchParams }: IssuesPageProps) {
             >
               {t("propertyRegistry")}
             </Link>
-            <LogoutButton />
           </div>
         </div>
       </header>
@@ -222,12 +210,12 @@ export default async function IssuesPage({ searchParams }: IssuesPageProps) {
                     </td>
                     <td className="px-4 py-4">{issue.assignee?.name ?? <span className="text-muted">{t("unassigned")}</span>}</td>
                     <td className="px-4 py-4">
-                      <span className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${statusTone(issue.status)}`}>
+                      <span className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${issueStatusBadgeClass(issue.status)}`}>
                         {statusLabel[issue.status] ?? issue.status}
                       </span>
                     </td>
                     <td className="px-4 py-4">
-                      <span className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${priorityTone(issue.priority)}`}>
+                      <span className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${issuePriorityBadgeClass(issue.priority)}`}>
                         {priorityLabel[issue.priority] ?? issue.priority}
                       </span>
                     </td>

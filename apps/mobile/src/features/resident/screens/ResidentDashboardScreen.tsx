@@ -31,25 +31,25 @@ export const ResidentDashboardScreen = () => {
         </Typography>
         <View style={styles.quickActionsGrid}>
           <View style={[styles.actionCard, { backgroundColor: isDark ? colors.surface.dark : colors.surface.light }]}>
-            <Typography style={{ fontSize: 32 }}>👥</Typography>
+            <Typography style={styles.actionGlyph}>VI</Typography>
             <Typography variant="body" style={styles.actionLabel}>
               {t('Visitors.label', 'Visitors')}
             </Typography>
           </View>
           <View style={[styles.actionCard, { backgroundColor: isDark ? colors.surface.dark : colors.surface.light }]}>
-            <Typography style={{ fontSize: 32 }}>💳</Typography>
+            <Typography style={styles.actionGlyph}>FN</Typography>
             <Typography variant="body" style={styles.actionLabel}>
               {t('Finance.label', 'Finance')}
             </Typography>
           </View>
           <View style={[styles.actionCard, { backgroundColor: isDark ? colors.surface.dark : colors.surface.light }]}>
-            <Typography style={{ fontSize: 32 }}>🔧</Typography>
+            <Typography style={styles.actionGlyph}>IS</Typography>
             <Typography variant="body" style={styles.actionLabel}>
               {t('Resident.maintenance', 'Maintenance')}
             </Typography>
           </View>
           <View style={[styles.actionCard, { backgroundColor: isDark ? colors.surface.dark : colors.surface.light }]}>
-            <Typography style={{ fontSize: 32 }}>📢</Typography>
+            <Typography style={styles.actionGlyph}>AN</Typography>
             <Typography variant="body" style={styles.actionLabel}>
               {t('Resident.announcements', 'Announcements')}
             </Typography>
@@ -99,6 +99,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.05)',
+  },
+  actionGlyph: {
+    color: colors.primary.light,
+    fontSize: 16,
+    fontWeight: '900',
+    letterSpacing: 2,
   },
   actionLabel: {
     marginTop: spacing.sm,

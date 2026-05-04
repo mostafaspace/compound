@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
-import { LogoutButton } from "@/components/logout-button";
+import { SiteNav } from "@/components/site-nav";
 import { getCurrentUser, getManualVisitorEntries, getSecurityGates } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
 
@@ -25,7 +25,7 @@ export default async function ManualEntriesPage({
 }: {
   searchParams?: Promise<SearchParams>;
 }) {
-  await requireAdminUser(getCurrentUser, ["super_admin", "compound_admin", "support_agent"]);
+  await requireAdminUser(getCurrentUser, ["super_admin", "compound_admin"]);
 
   const params = searchParams ? await searchParams : {};
   const status = params.status && ["allowed", "denied"].includes(params.status) ? params.status : undefined;
@@ -43,6 +43,7 @@ export default async function ManualEntriesPage({
 
   return (
     <main className="min-h-screen bg-background text-foreground">
+      <SiteNav breadcrumb={[{ label: t("back"), href: "/security" }, { label: t("title") }]} />
       <header className="border-b border-line bg-panel">
         <div className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-6 md:flex-row md:items-center md:justify-between lg:px-8">
           <div>
@@ -52,7 +53,6 @@ export default async function ManualEntriesPage({
             <h1 className="mt-2 text-3xl font-semibold">{t("manualEntries.title")}</h1>
             <p className="mt-1 text-sm text-muted">{t("manualEntries.subtitle")}</p>
           </div>
-          <LogoutButton />
         </div>
       </header>
 

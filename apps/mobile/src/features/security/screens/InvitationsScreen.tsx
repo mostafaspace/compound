@@ -3,9 +3,11 @@ import { View, StyleSheet, FlatList, useColorScheme } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useGetPendingVisitorRequestsQuery, usePerformVisitorActionMutation } from '../../../services/security';
 import { ScreenContainer } from '../../../components/layout/ScreenContainer';
+import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { Typography } from '../../../components/ui/Typography';
 import { Button } from '../../../components/ui/Button';
 import { colors, spacing, shadows } from '../../../theme';
+import { visitorStatusPalette } from '../../../theme/semantics';
 import { formatDate } from '../../../utils/formatters';
 
 export const InvitationsScreen = () => {
@@ -22,6 +24,48 @@ export const InvitationsScreen = () => {
     } catch (err: any) {
       console.error(`Failed to ${action} visitor`, err);
     }
+  };
+
+  const renderActions = (item: any) => {
+    if (item.status === 'allowed') {
+      return (
+        <View style={styles.actionRow}>
+          <Button
+            title={t('Security.complete', 'Complete')}
+            onPress={() => handleAction(item.id, 'complete')}
+            style={[styles.actionBtn, styles.completeBtn, { flex: 1 }]}
+            loading={isPerforming}
+          />
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.actionRow}>
+        {item.status !== 'arrived' ? (
+          <Button
+            title={t('Security.markArrived', 'Mark Arrived')}
+            onPress={() => handleAction(item.id, 'arrive')}
+            style={[styles.actionBtn, { flex: 1 }]}
+            loading={isPerforming}
+          />
+        ) : null}
+        <Button
+          title={t('Security.allow', 'Allow')}
+          onPress={() => handleAction(item.id, 'allow')}
+          style={[styles.actionBtn, styles.allowBtn, { flex: 1 }]}
+          loading={isPerforming}
+        />
+        <Button
+          variant="outline"
+          title={t('Security.deny', 'Deny')}
+          onPress={() => handleAction(item.id, 'deny')}
+          style={[styles.actionBtn, styles.denyBtn, { flex: 1 }]}
+          textStyle={{ color: colors.error }}
+          loading={isPerforming}
+        />
+      </View>
+    );
   };
 
   const renderItem = ({ item }: { item: any }) => (
@@ -42,11 +86,11 @@ export const InvitationsScreen = () => {
             {item.unit?.buildingName && ` • ${item.unit.buildingName}`}
           </Typography>
         </View>
-        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
-          <Typography variant="caption" style={{ color: '#FFF', fontWeight: '600' }}>
-            {item.status}
-          </Typography>
-        </View>
+        <StatusBadge
+          label={item.status.replace(/_/g, ' ')}
+          backgroundColor={visitorStatusPalette(item.status).background}
+          textColor={visitorStatusPalette(item.status).text}
+        />
       </View>
 
       <View style={styles.detailsRow}>
@@ -78,28 +122,7 @@ export const InvitationsScreen = () => {
         )}
       </View>
 
-      <View style={styles.actionRow}>
-        <Button
-          title={t('Security.markArrived', 'Mark Arrived')}
-          onPress={() => handleAction(item.id, 'arrive')}
-          style={[styles.actionBtn, { flex: 1 }]}
-          loading={isPerforming}
-        />
-        <Button
-          title={t('Security.allow', 'Allow')}
-          onPress={() => handleAction(item.id, 'allow')}
-          style={[styles.actionBtn, styles.allowBtn, { flex: 1 }]}
-          loading={isPerforming}
-        />
-        <Button
-          variant="outline"
-          title={t('Security.deny', 'Deny')}
-          onPress={() => handleAction(item.id, 'deny')}
-          style={[styles.actionBtn, styles.denyBtn, { flex: 1 }]}
-          textStyle={{ color: colors.error }}
-          loading={isPerforming}
-        />
-      </View>
+      {renderActions(item)}
     </View>
   );
 
@@ -113,7 +136,7 @@ export const InvitationsScreen = () => {
         onRefresh={refetch}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Typography style={{ fontSize: 48 }}>📋</Typography>
+            <Typography style={styles.emptyGlyph}>IN</Typography>
             <Typography variant="h3" style={styles.emptyTitle}>
               {t('Security.noPending', 'No Pending Invitations')}
             </Typography>
@@ -127,19 +150,6 @@ export const InvitationsScreen = () => {
     </ScreenContainer>
   );
 };
-
-function getStatusColor(status: string): string {
-  switch (status) {
-    case 'pending':
-      return colors.warning;
-    case 'qr_issued':
-      return colors.primary.light;
-    case 'arrived':
-      return colors.info;
-    default:
-      return colors.text.secondary.light;
-  }
-}
 
 const styles = StyleSheet.create({
   container: {
@@ -167,11 +177,6 @@ const styles = StyleSheet.create({
   unitText: {
     marginTop: 2,
   },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
   detailsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -196,6 +201,9 @@ const styles = StyleSheet.create({
   allowBtn: {
     backgroundColor: colors.success,
   },
+  completeBtn: {
+    backgroundColor: colors.info,
+  },
   denyBtn: {
     borderColor: colors.error,
   },
@@ -204,6 +212,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: spacing.xxl,
+  },
+  emptyGlyph: {
+    color: colors.primary.light,
+    fontSize: 24,
+    fontWeight: '900',
+    letterSpacing: 3,
   },
   emptyTitle: {
     marginTop: spacing.md,

@@ -9,6 +9,8 @@ const logger = createLogger({
   collapsed: true,
   duration: true,
   timestamp: true,
+  predicate: (_getState, action) =>
+    process.env.NODE_ENV === "development" && !String(action.type).startsWith("auth/"),
 });
 
 export const store = configureStore({
@@ -20,7 +22,11 @@ export const store = configureStore({
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: false,
-    }).concat(api.middleware, logger),
+    }).concat(
+      process.env.NODE_ENV === "development"
+        ? [api.middleware, logger]
+        : [api.middleware],
+    ),
 });
 
 setupListeners(store.dispatch);

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
-import { LogoutButton } from "@/components/logout-button";
+import { SiteNav } from "@/components/site-nav";
 import { getCurrentUser, getMeetings, getMeetingActionItems } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
 
@@ -64,6 +64,7 @@ export default async function MeetingsPage({
 
   return (
     <main className="min-h-screen bg-background text-foreground">
+      <SiteNav breadcrumb={[{ label: t("title") }]} />
       {/* Header */}
       <header className="border-b border-line bg-panel">
         <div className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-6 md:flex-row md:items-center md:justify-between lg:px-8">
@@ -81,7 +82,6 @@ export default async function MeetingsPage({
             >
               {t("nav.actionItems")}
             </Link>
-            <LogoutButton />
           </div>
         </div>
       </header>

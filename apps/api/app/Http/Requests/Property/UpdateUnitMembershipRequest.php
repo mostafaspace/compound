@@ -25,6 +25,15 @@ class UpdateUnitMembershipRequest extends FormRequest
             'endsAt' => ['sometimes', 'nullable', 'date', 'after_or_equal:startsAt'],
             'isPrimary' => ['sometimes', 'boolean'],
             'verificationStatus' => ['sometimes', 'required', Rule::enum(VerificationStatus::class)],
+            'residentName' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'residentPhone' => ['sometimes', 'nullable', 'string', 'max:20'],
+            'phonePublic' => ['sometimes', 'boolean'],
+            'residentEmail' => ['sometimes', 'nullable', 'email', 'max:255'],
+            'emailPublic' => ['sometimes', 'boolean'],
+            'hasVehicle' => ['sometimes', 'boolean'],
+            'vehiclePlate' => ['sometimes', 'nullable', 'string', 'max:20', 'required_if:hasVehicle,true'],
+            'parkingSpotCode' => ['sometimes', 'nullable', 'string', 'max:50'],
+            'garageStickerCode' => ['sometimes', 'nullable', 'string', 'max:50'],
         ];
     }
 }

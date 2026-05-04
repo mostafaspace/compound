@@ -3,8 +3,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 
-import { LogoutButton } from "@/components/logout-button";
+import { SiteNav } from "@/components/site-nav";
 import { getCurrentUser, getIssue, getIssueAttachments } from "@/lib/api";
+import { issueStatusBadgeClass } from "@/lib/semantic-badges";
 import { requireAdminUser } from "@/lib/session";
 
 import { assignIssueAction, escalateIssueAction, postCommentAction, updateIssueStatusAction } from "../actions";
@@ -17,13 +18,6 @@ interface IssueDetailPageProps {
     commented?: string;
     escalated?: string;
   }>;
-}
-
-function statusTone(status: string): string {
-  if (status === "resolved" || status === "closed") return "bg-[#e6f3ef] text-brand";
-  if (status === "escalated") return "bg-[#fff3f2] text-danger";
-  if (status === "in_progress") return "bg-[#eaf0ff] text-[#244a8f]";
-  return "bg-[#f3ead7] text-accent";
 }
 
 function formatDate(value: string | null, locale: string): string {
@@ -91,6 +85,7 @@ export default async function IssueDetailPage({ params, searchParams }: IssueDet
 
   return (
     <main className="min-h-screen bg-background text-foreground">
+      <SiteNav breadcrumb={[{ label: "Issues", href: "/issues" }, { label: issue.title }]} />
       <header className="border-b border-line bg-panel">
         <div className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-6 md:flex-row md:items-center md:justify-between lg:px-8">
           <div>
@@ -103,7 +98,6 @@ export default async function IssueDetailPage({ params, searchParams }: IssueDet
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <LogoutButton />
           </div>
         </div>
       </header>
@@ -218,7 +212,7 @@ export default async function IssueDetailPage({ params, searchParams }: IssueDet
               <div>
                 <span className="text-xs font-semibold text-muted">{t("status")}</span>
                 <div className="mt-1">
-                  <span className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${statusTone(issue.status)}`}>
+                  <span className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${issueStatusBadgeClass(issue.status)}`}>
                     {statusLabel[issue.status] ?? issue.status}
                   </span>
                 </div>

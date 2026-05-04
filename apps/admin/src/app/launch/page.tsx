@@ -95,7 +95,7 @@ const UAT_PERSONAS = [
   {
     role: "board_member",
     email: "board-member@uat.compound.local",
-    scenarios: ["Governance vote creation & result", "Meeting management & minutes"],
+    scenarios: ["Poll creation & result", "Meeting management & minutes"],
   },
   {
     role: "finance_reviewer",

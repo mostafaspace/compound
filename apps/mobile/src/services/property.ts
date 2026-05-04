@@ -1,7 +1,9 @@
 import { api } from "./api";
 import type {
   ApiEnvelope,
+  CreateIssueInput,
   PaginatedEnvelope,
+  UpdateIssueInput,
   UnitMembership,
   VerificationRequest,
   VisitorRequest,
@@ -39,6 +41,7 @@ export const propertyApi = api.injectEndpoints({
         method: "POST",
         body: { reason },
       }),
+      transformResponse: (response: ApiEnvelope<VisitorRequest>) => response.data,
       invalidatesTags: ["VisitorRequest"],
     }),
     markAsShared: builder.mutation<VisitorRequest, string>({
@@ -46,6 +49,7 @@ export const propertyApi = api.injectEndpoints({
         url: `/visitor-requests/${id}/mark-as-shared`,
         method: "POST",
       }),
+      transformResponse: (response: ApiEnvelope<VisitorRequest>) => response.data,
       invalidatesTags: ["VisitorRequest"],
     }),
     getIssues: builder.query<Issue[], void>({
@@ -82,7 +86,7 @@ export const propertyApi = api.injectEndpoints({
       transformResponse: (response: PaginatedEnvelope<UserDocument>) => response.data,
       providesTags: ["UserDocument"],
     }),
-    createIssue: builder.mutation<Issue, any>({
+    createIssue: builder.mutation<Issue, CreateIssueInput>({
       query: (body) => ({
         url: "/issues",
         method: "POST",
@@ -109,6 +113,24 @@ export const propertyApi = api.injectEndpoints({
       transformResponse: (response: ApiEnvelope<UserDocument>) => response.data,
       invalidatesTags: ["UserDocument"],
     }),
+    updateIssue: builder.mutation<Issue, { id: string | number; body: UpdateIssueInput }>({
+      query: ({ id, body }) => ({
+        url: `/issues/${id}`,
+        method: "PATCH",
+        body,
+      }),
+      transformResponse: (response: ApiEnvelope<Issue>) => response.data,
+      invalidatesTags: ["Issue"],
+    }),
+    escalateIssue: builder.mutation<Issue, { id: string | number; reason: string }>({
+      query: ({ id, reason }) => ({
+        url: `/issues/${id}/escalate`,
+        method: "POST",
+        body: { reason },
+      }),
+      transformResponse: (response: ApiEnvelope<Issue>) => response.data,
+      invalidatesTags: ["Issue"],
+    }),
     markNotificationRead: builder.mutation<void, string | number>({
       query: (id) => ({
         url: `/notifications/${id}/read`,
@@ -122,6 +144,14 @@ export const propertyApi = api.injectEndpoints({
         method: "POST",
       }),
       invalidatesTags: ["Notification"],
+    }),
+    createAnnouncement: builder.mutation<void, { title: string; content: string; category?: string; mustAcknowledge?: boolean }>({
+      query: (body) => ({
+        url: "/announcements",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Announcement"],
     }),
   }),
 });
@@ -143,6 +173,9 @@ export const {
   useCreateIssueMutation,
   useCreateVisitorMutation,
   useUploadDocumentMutation,
+  useUpdateIssueMutation,
+  useEscalateIssueMutation,
+  useCreateAnnouncementMutation,
   useMarkNotificationReadMutation,
   useArchiveNotificationMutation,
 } = propertyApi;

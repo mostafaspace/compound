@@ -28,14 +28,19 @@ class AuditReportingTest extends TestCase
         ], $attrs));
     }
 
-    private function makeLog(array $attrs = []): AuditLog
+    private function makeLog(array $attrs = [], ?string $compoundId = null): AuditLog
     {
+        $metadata = $attrs['metadata'] ?? [];
+        if ($compoundId) {
+            $metadata['compoundId'] = $compoundId;
+        }
+
         return AuditLog::query()->create(array_merge([
             'action'      => 'test.action',
             'method'      => 'PATCH',
             'path'        => 'api/v1/test',
             'status_code' => 200,
-            'metadata'    => [],
+            'metadata'    => $metadata,
         ], $attrs));
     }
 
@@ -247,19 +252,19 @@ class AuditReportingTest extends TestCase
             'auditable_type' => 'user_document',
             'auditable_id' => '700',
             'created_at' => now()->subHour(),
-        ]);
+        ], $compound->id);
         $this->makeLog([
             'actor_id' => $resident->id,
             'action' => 'documents.reviewed',
             'auditable_type' => 'user_document',
             'auditable_id' => '700',
-        ]);
+        ], $compound->id);
         $this->makeLog([
             'actor_id' => $foreignResident->id,
             'action' => 'documents.reviewed',
             'auditable_type' => 'user_document',
             'auditable_id' => '700',
-        ]);
+        ], $otherCompound->id);
 
         Sanctum::actingAs($admin);
 
@@ -291,19 +296,19 @@ class AuditReportingTest extends TestCase
             'auditable_type' => 'user_document',
             'auditable_id' => '701',
             'created_at' => now()->subHour(),
-        ]);
+        ], $compound->id);
         $this->makeLog([
             'actor_id' => $resident->id,
             'action' => 'documents.reviewed',
             'auditable_type' => 'user_document',
             'auditable_id' => '701',
-        ]);
+        ], $compound->id);
         $this->makeLog([
             'actor_id' => $foreignResident->id,
             'action' => 'documents.reviewed',
             'auditable_type' => 'user_document',
             'auditable_id' => '701',
-        ]);
+        ], $otherCompound->id);
 
         Sanctum::actingAs($admin);
 

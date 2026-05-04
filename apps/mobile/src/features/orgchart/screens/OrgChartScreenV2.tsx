@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import {
   View,
   StyleSheet,
@@ -16,6 +16,7 @@ import {
   GestureHandlerRootView, 
   PinchGestureHandler, 
   PanGestureHandler, 
+  TapGestureHandler,
   State 
 } from 'react-native-gesture-handler';
 import * as d3 from 'd3-hierarchy';
@@ -52,7 +53,7 @@ export const OrgChartScreen = ({ navigation }: any) => {
   const { t } = useTranslation();
   const isDark = useColorScheme() === 'dark';
   const currentUser = useSelector(selectCurrentUser);
-  const compoundId = currentUser?.compoundId ?? '';
+  const compoundId = currentUser?.compoundId || (currentUser as any)?.memberships?.[0]?.compoundId || '';
   
   // 1. Data Hooks
   const { data, isLoading } = useGetOrgChartQuery(compoundId, { skip: !compoundId });
@@ -62,31 +63,31 @@ export const OrgChartScreen = ({ navigation }: any) => {
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
   const [selectedRep, setSelectedRep] = useState<OrgChartRepresentative | null>(null);
   const [containerLayout, setContainerLayout] = useState({ width: 0, height: 0 });
-  
+
+  // Refs for gesture handler simultaneous interactions
+  const panRef = useRef(null);
+  const pinchRef = useRef(null);
+  const doubleTapRef = useRef(null);
+
   // 3. Animation Hooks (Source of truth for position/scale)
-  const animX = useRef(new Animated.Value(0)).current;
-  const animY = useRef(new Animated.Value(80)).current;
-  const animScale = useRef(new Animated.Value(0.75)).current;
-  
+  const baseX = useRef(new Animated.Value(0)).current;
+  const baseY = useRef(new Animated.Value(80)).current;
+  const panX = useRef(new Animated.Value(0)).current;
+  const panY = useRef(new Animated.Value(0)).current;
+
+  const baseScale = useRef(new Animated.Value(0.75)).current;
+  const pinchScale = useRef(new Animated.Value(1)).current;
+
+  // We use Animated.add and Animated.multiply so that gesture values and base values are independent.
+  // This avoids tricky setOffset bugs where gestures "jump" due to initial state mismatches.
+  const animX = useMemo(() => Animated.add(baseX, panX), [baseX, panX]);
+  const animY = useMemo(() => Animated.add(baseY, panY), [baseY, panY]);
+  const animScale = useMemo(() => Animated.multiply(baseScale, pinchScale), [baseScale, pinchScale]);
+
   // Internal state to track accumulated offsets for gesture continuity
   const offset = useRef({ x: 0, y: 80, s: 0.75 }).current;
 
-  // 4. Initialization & Centering
-  useEffect(() => {
-    if (data && collapsedIds.size === 0) {
-      const buildings = data.buildings.map(b => b.id);
-      setCollapsedIds(new Set(buildings));
-    }
-  }, [data]);
-
-  // Center horizontally when layout is ready
-  useEffect(() => {
-    if (containerLayout.width > 0) {
-      // We don't change animX/offset.x, the 'centerX' will be added in transform
-    }
-  }, [containerLayout.width]);
-
-  // 5. Layout Calculation
+  // 4. Layout Calculation
   const layoutData = useMemo(() => {
     if (!data) return { nodes: [], links: [] };
     const nodes: any[] = [];
@@ -170,7 +171,7 @@ export const OrgChartScreen = ({ navigation }: any) => {
   }, []);
 
   const onPanEvent = Animated.event(
-    [{ nativeEvent: { translationX: animX, translationY: animY } }],
+    [{ nativeEvent: { translationX: panX, translationY: panY } }],
     { useNativeDriver: true }
   );
 
@@ -178,59 +179,53 @@ export const OrgChartScreen = ({ navigation }: any) => {
     if (event.nativeEvent.oldState === State.ACTIVE) {
       offset.x += event.nativeEvent.translationX;
       offset.y += event.nativeEvent.translationY;
-      animX.setOffset(offset.x);
-      animY.setOffset(offset.y);
-      animX.setValue(0);
-      animY.setValue(0);
+      baseX.setValue(offset.x);
+      baseY.setValue(offset.y);
+      panX.setValue(0);
+      panY.setValue(0);
     }
   };
 
   const onPinchEvent = Animated.event(
-    [{ nativeEvent: { scale: animScale } }],
+    [{ nativeEvent: { scale: pinchScale } }],
     { useNativeDriver: true }
   );
 
   const onPinchStateChange = (event: any) => {
     if (event.nativeEvent.oldState === State.ACTIVE) {
       offset.s *= event.nativeEvent.scale;
-      animScale.setOffset(offset.s);
-      animScale.setValue(1);
+      baseScale.setValue(offset.s);
+      pinchScale.setValue(1);
     }
   };
 
-  const handleZoom = (delta: number) => {
-    const nextScale = Math.max(0.2, Math.min(2, offset.s + delta));
-    offset.s = nextScale;
-    Animated.spring(animScale, {
-      toValue: 1,
-      tension: 40,
-      friction: 7,
-      useNativeDriver: true
-    }).start();
-    animScale.setOffset(nextScale);
+  const onDoubleTap = (event: any) => {
+    if (event.nativeEvent.state === State.ACTIVE) {
+      const currentScale = offset.s;
+      const nextScale = currentScale < 1.2 ? 1.5 : 0.75;
+
+      offset.s = nextScale;
+      Animated.spring(baseScale, {
+        toValue: nextScale,
+        tension: 40,
+        friction: 7,
+        useNativeDriver: true
+      }).start();
+      pinchScale.setValue(1);
+
+      if (nextScale === 0.75) {
+        offset.x = 0;
+        offset.y = 80;
+        Animated.parallel([
+          Animated.spring(baseX, { toValue: 0, useNativeDriver: true }),
+          Animated.spring(baseY, { toValue: 80, useNativeDriver: true }),
+        ]).start();
+        panX.setValue(0);
+        panY.setValue(0);
+      }
+    }
   };
 
-  const handleReset = () => {
-    // Reset internal tracker
-    offset.x = 0;
-    offset.y = 80;
-    offset.s = 0.75;
-    
-    // Animate everything back to defaults
-    Animated.parallel([
-      Animated.spring(animX, { toValue: 0, useNativeDriver: true }),
-      Animated.spring(animY, { toValue: 0, useNativeDriver: true }),
-      Animated.spring(animScale, { toValue: 1, useNativeDriver: true }),
-    ]).start(() => {
-      // After spring finishes, set offsets correctly
-      animX.setOffset(0);
-      animY.setOffset(80);
-      animScale.setOffset(0.75);
-      animX.setValue(0);
-      animY.setValue(0);
-      animScale.setValue(1);
-    });
-  };
 
   // 7. Render Logic
   if (isLoading) {
@@ -250,10 +245,26 @@ export const OrgChartScreen = ({ navigation }: any) => {
         style={[styles.canvasContainer, { backgroundColor: isDark ? '#020617' : '#F8FAFC' }]} 
         onLayout={(e) => setContainerLayout(e.nativeEvent.layout)}
       >
-        <PinchGestureHandler onGestureEvent={onPinchEvent} onHandlerStateChange={onPinchStateChange}>
+        <TapGestureHandler
+          ref={doubleTapRef}
+          numberOfTaps={2}
+          onHandlerStateChange={onDoubleTap}
+        >
           <Animated.View style={styles.container}>
-            <PanGestureHandler onGestureEvent={onPanEvent} onHandlerStateChange={onPanStateChange}>
-              <Animated.View style={styles.canvas}>
+            <PinchGestureHandler
+              ref={pinchRef}
+              simultaneousHandlers={panRef}
+              onGestureEvent={onPinchEvent}
+              onHandlerStateChange={onPinchStateChange}
+            >
+              <Animated.View style={styles.container}>
+                <PanGestureHandler
+                  ref={panRef}
+                  simultaneousHandlers={pinchRef}
+                  onGestureEvent={onPanEvent}
+                  onHandlerStateChange={onPanStateChange}
+                >
+                  <Animated.View style={styles.canvas}>
                 {/* The main coordinate system. Transformed by gestures + initial centerX */}
                 <Animated.View style={{
                   position: 'absolute',
@@ -371,21 +382,9 @@ export const OrgChartScreen = ({ navigation }: any) => {
             </PanGestureHandler>
           </Animated.View>
         </PinchGestureHandler>
+      </Animated.View>
+    </TapGestureHandler>
 
-        {/* Floating Controls */}
-        <View style={styles.controls}>
-          <Pressable onPress={() => handleZoom(0.15)} style={styles.controlBtn}>
-            <Typography style={styles.controlText}>➕</Typography>
-          </Pressable>
-          <View style={styles.divider} />
-          <Pressable onPress={handleReset} style={styles.controlBtn}>
-            <Typography style={styles.resetText}>RESET</Typography>
-          </Pressable>
-          <View style={styles.divider} />
-          <Pressable onPress={() => handleZoom(-0.15)} style={styles.controlBtn}>
-            <Typography style={styles.controlText}>➖</Typography>
-          </Pressable>
-        </View>
       </View>
     </GestureHandlerRootView>
   );
@@ -418,19 +417,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   collapseText: { fontSize: 10, fontWeight: '900', color: '#64748B' },
-  controls: {
-    position: 'absolute',
-    bottom: 40,
-    alignSelf: 'center',
-    flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    borderRadius: 30,
-    padding: 6,
-    ...shadows.lg,
-    alignItems: 'center',
-  },
-  controlBtn: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
-  controlText: { fontSize: 18 },
-  resetText: { fontSize: 9, fontWeight: '900', color: colors.primary.light },
-  divider: { width: 1, height: 20, backgroundColor: '#E2E8F0', marginHorizontal: 2 },
 });

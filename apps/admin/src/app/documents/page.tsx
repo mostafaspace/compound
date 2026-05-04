@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 
-import { LogoutButton } from "@/components/logout-button";
+import { SiteNav } from "@/components/site-nav";
 import { getCurrentUser, getDocuments, getDocumentTypes, getSystemStatus } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
 
@@ -46,13 +46,13 @@ export default async function DocumentsPage({ searchParams }: DocumentsPageProps
 
   return (
     <main className="min-h-screen bg-background text-foreground">
+      <SiteNav breadcrumb={[{ label: t("title") }]} />
       <header className="border-b border-line bg-panel">
         <div className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-6 md:flex-row md:items-center md:justify-between lg:px-8">
           <div>
             <h1 className="text-3xl font-semibold">{t("title")}</h1>
             <p className="mt-2 max-w-2xl text-sm text-muted">{t("subtitle")}</p>
           </div>
-          <LogoutButton />
         </div>
       </header>
 

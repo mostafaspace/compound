@@ -19,6 +19,8 @@ interface ButtonProps {
   loading?: boolean;
   style?: StyleProp<ViewStyle>;
   textStyle?: StyleProp<TextStyle>;
+  testID?: string;
+  accessibilityLabel?: string;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -29,6 +31,8 @@ export const Button: React.FC<ButtonProps> = ({
   loading,
   style,
   textStyle,
+  testID,
+  accessibilityLabel,
 }) => {
   const isDark = useColorScheme() === 'dark';
   
@@ -89,6 +93,10 @@ export const Button: React.FC<ButtonProps> = ({
     <Pressable
       onPress={onPress}
       disabled={disabled || loading}
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? title}
+      accessibilityState={{ disabled: Boolean(disabled || loading), busy: Boolean(loading) }}
       style={({ pressed }) => [
         ...getButtonStyle(),
         pressed && styles.pressed,

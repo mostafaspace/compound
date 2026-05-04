@@ -12,17 +12,12 @@ import { useGetPollsQuery } from '../../../services/polls';
 import { colors, spacing } from '../../../theme';
 import { Typography } from '../../../components/ui/Typography';
 import { ScreenContainer } from '../../../components/layout/ScreenContainer';
+import { StatusBadge } from '../../../components/ui/StatusBadge';
+import { pollStatusPalette } from '../../../theme/semantics';
 import type { RootStackParamList } from '../../../navigation/types';
 import type { Poll } from '@compound/contracts';
 
 type PollsNavProp = NavigationProp<RootStackParamList>;
-
-const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
-  draft: { bg: '#fef3c7', text: '#92400e' },
-  active: { bg: '#d1fae5', text: '#065f46' },
-  closed: { bg: '#dbeafe', text: '#1e40af' },
-  archived: { bg: '#f3f4f6', text: '#6b7280' },
-};
 
 export const PollsScreen = () => {
   const isDark = useColorScheme() === 'dark';
@@ -31,7 +26,7 @@ export const PollsScreen = () => {
   const { data: polls = [], isLoading, refetch } = useGetPollsQuery();
 
   const renderPollItem = ({ item }: { item: Poll }) => {
-    const statusColor = STATUS_COLORS[item.status] ?? STATUS_COLORS.draft;
+    const statusColor = pollStatusPalette(item.status);
 
     return (
       <Pressable
@@ -47,14 +42,11 @@ export const PollsScreen = () => {
       >
         {/* Header row: status badge + poll type chip */}
         <View style={styles.cardHeader}>
-          <View style={[styles.statusBadge, { backgroundColor: statusColor.bg }]}>
-            <Typography
-              variant="caption"
-              style={[styles.statusText, { color: statusColor.text }]}
-            >
-              {item.status}
-            </Typography>
-          </View>
+          <StatusBadge
+            label={item.status}
+            backgroundColor={statusColor.background}
+            textColor={statusColor.text}
+          />
           {item.pollType ? (
             <View
               style={[
@@ -155,16 +147,6 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     marginBottom: spacing.sm,
     flexWrap: 'wrap',
-  },
-  statusBadge: {
-    borderRadius: 100,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-  },
-  statusText: {
-    fontWeight: '700',
-    textTransform: 'capitalize',
-    fontSize: 11,
   },
   typeBadge: {
     flexDirection: 'row',

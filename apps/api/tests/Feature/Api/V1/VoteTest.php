@@ -59,6 +59,11 @@ class VoteTest extends TestCase
         $this->assertEquals('draft', $response->json('data.status'));
         $this->assertCount(3, $response->json('data.options'));
         $this->assertEquals('7am – 8am', $response->json('data.options.0.label'));
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'governance.votes.created',
+            'actor_id' => $admin->id,
+            'auditable_id' => $response->json('data.id'),
+        ]);
     }
 
     public function test_admin_can_create_an_election(): void
@@ -111,6 +116,11 @@ class VoteTest extends TestCase
         ])->assertOk();
 
         $this->assertEquals('Updated title', $response->json('data.title'));
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'governance.votes.updated',
+            'actor_id' => $admin->id,
+            'auditable_id' => (string) $vote->id,
+        ]);
     }
 
     public function test_cannot_update_active_vote(): void
@@ -142,6 +152,11 @@ class VoteTest extends TestCase
         $this->postJson("/api/v1/governance/votes/{$vote->id}/activate")
             ->assertOk()
             ->assertJsonPath('data.status', VoteStatus::Active->value);
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'governance.votes.activated',
+            'actor_id' => $admin->id,
+            'auditable_id' => (string) $vote->id,
+        ]);
     }
 
     public function test_cannot_activate_vote_with_fewer_than_two_options(): void
@@ -168,6 +183,11 @@ class VoteTest extends TestCase
         $this->postJson("/api/v1/governance/votes/{$vote->id}/close")
             ->assertOk()
             ->assertJsonPath('data.status', VoteStatus::Closed->value);
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'governance.votes.closed',
+            'actor_id' => $admin->id,
+            'auditable_id' => (string) $vote->id,
+        ]);
     }
 
     public function test_cannot_close_draft_vote(): void
@@ -193,6 +213,11 @@ class VoteTest extends TestCase
         $this->postJson("/api/v1/governance/votes/{$vote->id}/cancel")
             ->assertOk()
             ->assertJsonPath('data.status', VoteStatus::Cancelled->value);
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'governance.votes.cancelled',
+            'actor_id' => $admin->id,
+            'auditable_id' => (string) $vote->id,
+        ]);
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -308,15 +333,21 @@ class VoteTest extends TestCase
             'user_id' => $owner->id,
             'option_id' => $option->id,
         ]);
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'governance.votes.cast',
+            'actor_id' => $owner->id,
+            'auditable_id' => (string) $vote->id,
+        ]);
     }
 
     public function test_cannot_vote_twice(): void
     {
-        [$owner, $vote, $option] = $this->makeActiveVoteWithOwner(VoteEligibility::OwnersOnly);
+        [$owner, $vote, $option, $unit] = $this->makeActiveVoteWithOwner(VoteEligibility::OwnersOnly);
 
         VoteParticipation::create([
             'vote_id'              => $vote->id,
             'user_id'              => $owner->id,
+            'unit_id'              => $unit->id,
             'option_id'            => $option->id,
             'eligibility_snapshot' => ['role' => 'resident_owner'],
         ]);
@@ -325,7 +356,7 @@ class VoteTest extends TestCase
 
         $this->postJson("/api/v1/governance/votes/{$vote->id}/cast", [
             'optionId' => $option->id,
-        ])->assertStatus(409);
+        ])->assertStatus(409)->assertJsonPath('reason', 'already_voted');
     }
 
     public function test_ineligible_user_cannot_cast_vote(): void
@@ -641,7 +672,7 @@ class VoteTest extends TestCase
     /**
      * Creates an active vote with one resident owner having a verified membership.
      *
-     * @return array{0: User, 1: Vote, 2: VoteOption}
+     * @return array{0: User, 1: Vote, 2: VoteOption, 3: \App\Models\Property\Unit}
      */
     private function makeActiveVoteWithOwner(VoteEligibility $eligibility): array
     {
@@ -667,8 +698,113 @@ class VoteTest extends TestCase
         $opt1  = VoteOption::factory()->create(['vote_id' => $vote->id, 'label' => 'Option A']);
         VoteOption::factory()->create(['vote_id' => $vote->id, 'label' => 'Option B']);
 
-        return [$owner, $vote, $opt1];
+        return [$owner, $vote, $opt1, $unit];
     }
+
+    // ─────────────────────────────────────────────────────────────────
+    // WS5: One-vote-per-apartment enforcement
+    // ─────────────────────────────────────────────────────────────────
+
+    public function test_second_resident_from_same_apartment_cannot_cast_in_same_vote(): void
+    {
+        [$owner, $vote, $option, $unit] = $this->makeActiveVoteWithOwner(VoteEligibility::OwnersOnly);
+
+        $tenant = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+        UnitMembership::factory()->create([
+            'unit_id'             => $unit->id,
+            'user_id'             => $tenant->id,
+            'verification_status' => 'verified',
+            'starts_at'           => now()->subYear(),
+            'ends_at'             => null,
+        ]);
+
+        // Owner votes first
+        Sanctum::actingAs($owner);
+        $this->postJson("/api/v1/governance/votes/{$vote->id}/cast", ['optionId' => $option->id])
+            ->assertOk();
+
+        // Second resident from same apartment is blocked
+        Sanctum::actingAs($tenant);
+        $this->postJson("/api/v1/governance/votes/{$vote->id}/cast", ['optionId' => $option->id])
+            ->assertStatus(409)
+            ->assertJsonPath('reason', 'apartment_already_voted');
+    }
+
+    public function test_unit_id_is_stored_on_vote_participation(): void
+    {
+        [$owner, $vote, $option, $unit] = $this->makeActiveVoteWithOwner(VoteEligibility::OwnersOnly);
+
+        Sanctum::actingAs($owner);
+
+        $this->postJson("/api/v1/governance/votes/{$vote->id}/cast", ['optionId' => $option->id])
+            ->assertOk();
+
+        $this->assertDatabaseHas('vote_participations', [
+            'vote_id' => $vote->id,
+            'user_id' => $owner->id,
+            'unit_id' => $unit->id,
+            'option_id' => $option->id,
+        ]);
+    }
+
+    public function test_admin_can_view_voters_list_with_unit_info(): void
+    {
+        [$owner, $vote, $option, $unit] = $this->makeActiveVoteWithOwner(VoteEligibility::OwnersOnly);
+        $admin = $this->makeScopedAdmin($vote->compound);
+
+        VoteParticipation::create([
+            'vote_id'              => $vote->id,
+            'user_id'              => $owner->id,
+            'unit_id'              => $unit->id,
+            'option_id'            => $option->id,
+            'eligibility_snapshot' => ['role' => 'resident_owner'],
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $data = $this->getJson("/api/v1/governance/votes/{$vote->id}/voters")
+            ->assertOk()
+            ->json('data');
+
+        $this->assertCount(1, $data);
+        $this->assertEquals($owner->id, $data[0]['userId']);
+        $this->assertEquals($unit->id, $data[0]['unitId']);
+        $this->assertNotNull($data[0]['option']);
+    }
+
+    public function test_resident_cannot_view_voters_list(): void
+    {
+        [$owner, $vote] = $this->makeActiveVoteWithOwner(VoteEligibility::OwnersOnly);
+
+        Sanctum::actingAs($owner);
+
+        $this->getJson("/api/v1/governance/votes/{$vote->id}/voters")
+            ->assertForbidden();
+    }
+
+    public function test_anonymous_vote_hides_individual_voter_list_even_from_admin(): void
+    {
+        [$owner, $vote, $option, $unit] = $this->makeActiveVoteWithOwner(VoteEligibility::OwnersOnly);
+        $admin = $this->makeScopedAdmin($vote->compound);
+
+        $vote->update(['is_anonymous' => true]);
+
+        VoteParticipation::create([
+            'vote_id'              => $vote->id,
+            'user_id'              => $owner->id,
+            'unit_id'              => $unit->id,
+            'option_id'            => $option->id,
+            'eligibility_snapshot' => ['role' => 'resident_owner'],
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $this->getJson("/api/v1/governance/votes/{$vote->id}/voters")
+            ->assertForbidden()
+            ->assertJsonPath('message', 'Individual voters are hidden for anonymous votes.');
+    }
+
+    // ─────────────────────────────────────────────────────────────────
 
     private function makeScopedAdmin(Compound $compound, UserRole $role = UserRole::CompoundAdmin): User
     {

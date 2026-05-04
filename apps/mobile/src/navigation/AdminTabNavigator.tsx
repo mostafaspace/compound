@@ -14,6 +14,14 @@ import { MoreNavigator } from './MoreNavigator';
 
 const Tab = createBottomTabNavigator<AdminTabParamList>();
 
+const tabGlyphs: Record<keyof AdminTabParamList, string> = {
+  Dashboard: 'DB',
+  Visitors: 'VI',
+  Finance: 'FN',
+  Units: 'UN',
+  More: 'MO',
+};
+
 export const AdminTabNavigator = () => {
   const { t } = useTranslation();
   const isDark = useColorScheme() === 'dark';
@@ -47,13 +55,7 @@ export const AdminTabNavigator = () => {
           fontWeight: '600',
         },
         tabBarIcon: ({ color, size }) => {
-          let icon = '•';
-          if (route.name === 'Dashboard') icon = '🏠';
-          if (route.name === 'Visitors') icon = '👥';
-          if (route.name === 'Finance') icon = '💰';
-          if (route.name === 'Units') icon = '🏢';
-          if (route.name === 'More') icon = '•••';
-          return <Text style={{ color, fontSize: 20 }}>{icon}</Text>;
+          return <Text style={{ color, fontSize: 12, fontWeight: '800', letterSpacing: 1 }}>{tabGlyphs[route.name]}</Text>;
         },
       })}
     >

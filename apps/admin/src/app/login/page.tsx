@@ -1,5 +1,6 @@
 import { loginAction } from "./actions";
 import { LanguageToggle } from "@/components/language-toggle";
+import { PasswordInput } from "@/components/password-input";
 import { getTranslations } from "next-intl/server";
 
 interface LoginPageProps {
@@ -64,17 +65,11 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               />
             </label>
 
-            <label className="grid gap-2">
-              <span className="text-sm font-semibold">{t("fields.password")}</span>
-              <input
-                autoComplete="current-password"
-                className="h-11 rounded-lg border border-line px-3 text-sm outline-none focus:border-brand"
-                name="password"
-                placeholder={t("fields.passwordPlaceholder")}
-                required
-                type="password"
-              />
-            </label>
+            <PasswordInput
+              name="password"
+              label={t("fields.password")}
+              placeholder={t("fields.passwordPlaceholder")}
+            />
           </div>
 
           <button

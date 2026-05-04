@@ -31,28 +31,28 @@ export const MoreScreen = ({ navigation }: { navigation: MoreScreenNavigationPro
         {
           id: "property",
           label: t("Property.label", "Property Registry"),
-          icon: "🏘️",
+          icon: "PR",
           screen: "Property",
           show: true,
         },
         {
           id: "announcements",
           label: t("Announcements.label", "Announcements"),
-          icon: "📢",
+          icon: "AN",
           screen: "Announcements",
           show: canViewAnnouncements,
         },
         {
           id: "orgchart",
           label: t("OrgChart.label", "Org Chart"),
-          icon: "📊",
+          icon: "OC",
           screen: "OrgChart",
           show: canViewOrgChart,
         },
         {
           id: "polls",
           label: t("Polls.label", "Polls"),
-          icon: "📈",
+          icon: "PL",
           screen: "Polls",
           show: true,
         },
@@ -64,7 +64,7 @@ export const MoreScreen = ({ navigation }: { navigation: MoreScreenNavigationPro
         {
           id: "issues",
           label: t("Issues.label", "Issues & Complaints"),
-          icon: "🛠️",
+          icon: "IS",
           screen: "Issues",
           show: true,
         },
@@ -76,35 +76,35 @@ export const MoreScreen = ({ navigation }: { navigation: MoreScreenNavigationPro
         {
           id: "documents",
           label: t("Documents.label", "Documents"),
-          icon: "📄",
+          icon: "DC",
           screen: "Documents",
           show: true,
         },
         {
           id: "verification",
           label: t("Verification.label", "Verification Status"),
-          icon: "🪪",
+          icon: "ID",
           screen: "VerificationStatus",
           show: true,
         },
         {
           id: "notifications",
           label: t("Notifications.label", "Notifications"),
-          icon: "🔔",
+          icon: "NT",
           screen: "Notifications",
           show: true,
         },
         {
           id: "privacy",
           label: t("Privacy.label", "Privacy & Consents"),
-          icon: "🛡️",
+          icon: "PV",
           screen: "PrivacySettings",
           show: true,
         },
         {
           id: "settings",
           label: t("Common.settings", "Settings"),
-          icon: "⚙️",
+          icon: "ST",
           screen: "Settings",
           show: true,
         },
@@ -144,7 +144,7 @@ export const MoreScreen = ({ navigation }: { navigation: MoreScreenNavigationPro
                 >
                   <View style={styles.row}>
                     <View style={[styles.iconBadge, { backgroundColor: isDark ? "#1E293B" : "#F1F5F9" }]}>
-                      <Typography style={{ fontSize: 20 }}>
+                      <Typography style={styles.iconText}>
                         {item.icon}
                       </Typography>
                     </View>
@@ -217,6 +217,12 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
+  },
+  iconText: {
+    color: colors.primary.light,
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 1,
   },
   label: {
     fontSize: 16,

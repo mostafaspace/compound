@@ -19,6 +19,15 @@ use Symfony\Component\HttpFoundation\Response;
 
 class UnitMembershipController extends Controller
 {
+    /**
+     * @var list<string>
+     */
+    private const ASSIGNABLE_RESIDENT_ROLES = [
+        \App\Enums\UserRole::Resident->value,
+        \App\Enums\UserRole::ResidentOwner->value,
+        \App\Enums\UserRole::ResidentTenant->value,
+    ];
+
     public function __construct(
         private readonly AuditLogger $auditLogger,
         private readonly CompoundContextService $compoundContext,
@@ -99,13 +108,30 @@ class UnitMembershipController extends Controller
                 ->update(['is_primary' => false]);
         }
 
-        $unitMembership->fill([
+        $updates = [
             'relation_type' => $validated['relationType'] ?? $unitMembership->relation_type,
             'starts_at' => array_key_exists('startsAt', $validated) ? $validated['startsAt'] : $unitMembership->starts_at,
             'ends_at' => array_key_exists('endsAt', $validated) ? $validated['endsAt'] : $unitMembership->ends_at,
             'is_primary' => array_key_exists('isPrimary', $validated) ? $validated['isPrimary'] : $unitMembership->is_primary,
             'verification_status' => $validated['verificationStatus'] ?? $unitMembership->verification_status,
-        ])->save();
+            'resident_name' => array_key_exists('residentName', $validated) ? $validated['residentName'] : $unitMembership->resident_name,
+            'resident_phone' => array_key_exists('residentPhone', $validated) ? $validated['residentPhone'] : $unitMembership->resident_phone,
+            'phone_public' => array_key_exists('phonePublic', $validated) ? $validated['phonePublic'] : $unitMembership->phone_public,
+            'resident_email' => array_key_exists('residentEmail', $validated) ? $validated['residentEmail'] : $unitMembership->resident_email,
+            'email_public' => array_key_exists('emailPublic', $validated) ? $validated['emailPublic'] : $unitMembership->email_public,
+            'has_vehicle' => array_key_exists('hasVehicle', $validated) ? $validated['hasVehicle'] : $unitMembership->has_vehicle,
+            'vehicle_plate' => array_key_exists('vehiclePlate', $validated) ? $validated['vehiclePlate'] : $unitMembership->vehicle_plate,
+            'parking_spot_code' => array_key_exists('parkingSpotCode', $validated) ? $validated['parkingSpotCode'] : $unitMembership->parking_spot_code,
+            'garage_sticker_code' => array_key_exists('garageStickerCode', $validated) ? $validated['garageStickerCode'] : $unitMembership->garage_sticker_code,
+        ];
+
+        if (($updates['has_vehicle'] ?? false) === false) {
+            $updates['vehicle_plate'] = null;
+            $updates['parking_spot_code'] = null;
+            $updates['garage_sticker_code'] = null;
+        }
+
+        $unitMembership->fill($updates)->save();
 
         $this->auditLogger->record('property.unit_membership_updated', actor: $request->user(), request: $request, metadata: [
             'membership_id' => $unitMembership->id,
@@ -139,6 +165,11 @@ class UnitMembershipController extends Controller
         $users = User::query()
             ->whereDoesntHave('unitMemberships', fn ($q) => $q->whereNull('ends_at'))
             ->when($compoundId !== null, fn ($q) => $q->where('compound_id', $compoundId))
+            ->where(function ($query): void {
+                $query
+                    ->whereIn('role', self::ASSIGNABLE_RESIDENT_ROLES)
+                    ->orWhereHas('roles', fn ($roles) => $roles->whereIn('name', self::ASSIGNABLE_RESIDENT_ROLES));
+            })
             ->select(['id', 'name', 'email', 'phone', 'photo_url', 'created_at'])
             ->orderBy('created_at', 'desc')
             ->paginate(20);

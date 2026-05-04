@@ -55,10 +55,10 @@ class ChargesTest extends TestCase
     // Charge types
     // ──────────────────────────────────────────────────────────
 
-    public function test_finance_reviewer_can_create_charge_type(): void
+    public function test_super_admin_can_create_charge_type(): void
     {
-        $reviewer = User::factory()->create(['role' => UserRole::FinanceReviewer->value]);
-        Sanctum::actingAs($reviewer);
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin->value]);
+        Sanctum::actingAs($admin);
 
         $this->postJson('/api/v1/finance/charge-types', [
             'name' => 'Monthly Maintenance',
@@ -77,7 +77,7 @@ class ChargesTest extends TestCase
         ]);
 
         $this->assertDatabaseHas('audit_logs', [
-            'actor_id' => $reviewer->id,
+            'actor_id' => $admin->id,
             'action' => 'dues.charge_type_created',
         ]);
     }
@@ -94,12 +94,12 @@ class ChargesTest extends TestCase
             ->assertJsonCount(3, 'data');
     }
 
-    public function test_finance_reviewer_can_update_charge_type(): void
+    public function test_super_admin_can_update_charge_type(): void
     {
-        $reviewer = User::factory()->create(['role' => UserRole::FinanceReviewer->value]);
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin->value]);
         $chargeType = ChargeType::factory()->create(['name' => 'Original Name']);
 
-        Sanctum::actingAs($reviewer);
+        Sanctum::actingAs($admin);
 
         $this->patchJson("/api/v1/finance/charge-types/{$chargeType->id}", [
             'name' => 'Updated Name',

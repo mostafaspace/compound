@@ -22,6 +22,9 @@ import { IssueDetailScreen } from '../features/issues/screens/IssueDetailScreen'
 import { UploadDocumentScreen } from '../features/documents/screens/UploadDocumentScreen';
 import { AdminInvitationsScreen } from '../features/admin/screens/AdminInvitationsScreen';
 import { CreateInvitationScreen } from '../features/admin/screens/CreateInvitationScreen';
+import { AuditLogScreen } from '../features/admin/screens/AuditLogScreen';
+import { AuditLogTimelineScreen } from '../features/admin/screens/AuditLogTimelineScreen';
+import { CreateAnnouncementScreen } from '../features/announcements/screens/CreateAnnouncementScreen';
 import { ScreenHeader } from '../components/layout/ScreenHeader';
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -33,8 +36,6 @@ export const RootNavigator = () => {
   const user = useSelector(selectCurrentUser);
   const isRestoring = useSelector(selectIsRestoring);
   const roleType = getEffectiveRoleType(user);
-
-  console.log("[Audit Navigator] State:", { authToken, roleType, userEmail: user?.email });
 
   // Initialize push notifications
   usePushNotifications(!isRestoring);
@@ -63,26 +64,26 @@ export const RootNavigator = () => {
             ) : (
               <Stack.Screen name="Main" component={ResidentTabNavigator} />
             )}
-            <Stack.Screen 
-              name="CreateVisitor" 
-              component={CreateVisitorScreen} 
-              options={{ 
+            <Stack.Screen
+              name="CreateVisitor"
+              component={CreateVisitorScreen}
+              options={{
                 headerShown: true,
                 header: () => <ScreenHeader title={t("Visitors.createNew", "Invite Guest")} />
               }}
             />
-            <Stack.Screen 
-              name="ShareVisitorPass" 
-              component={ShareVisitorPassScreen} 
-              options={{ 
+            <Stack.Screen
+              name="ShareVisitorPass"
+              component={ShareVisitorPassScreen}
+              options={{
                 headerShown: true,
                 header: () => <ScreenHeader title={t("Visitors.sharePass", "Visitor Pass")} />
               }}
             />
-            <Stack.Screen 
-              name="PollDetail" 
-              component={PollDetailScreen} 
-              options={{ 
+            <Stack.Screen
+              name="PollDetail"
+              component={PollDetailScreen}
+              options={{
                 headerShown: true,
                 header: () => <ScreenHeader title={t("Polls.detail", "Poll Details")} />
               }}
@@ -90,41 +91,65 @@ export const RootNavigator = () => {
             <Stack.Screen
               name="CreateIssue"
               component={CreateIssueScreen}
-              options={{ 
-                headerShown: true, 
+              options={{
+                headerShown: true,
                 header: () => <ScreenHeader title={t("Issues.create", { defaultValue: "Report Issue" })} />
               }}
             />
             <Stack.Screen
               name="IssueDetail"
               component={IssueDetailScreen}
-              options={{ 
-                headerShown: true, 
+              options={{
+                headerShown: true,
                 header: () => <ScreenHeader title={t("Issues.detail", { defaultValue: "Issue Details" })} />
               }}
             />
             <Stack.Screen
               name="UploadDocument"
               component={UploadDocumentScreen}
-              options={{ 
-                headerShown: true, 
+              options={{
+                headerShown: true,
                 header: () => <ScreenHeader title={t("Documents.upload", { defaultValue: "Upload Document" })} />
               }}
             />
             <Stack.Screen
               name="AdminInvitations"
               component={AdminInvitationsScreen}
-              options={{ 
-                headerShown: true, 
+              options={{
+                headerShown: true,
                 header: () => <ScreenHeader title={t("Admin.invitations", { defaultValue: "Invitations" })} />
               }}
             />
             <Stack.Screen
               name="CreateInvitation"
               component={CreateInvitationScreen}
-              options={{ 
-                headerShown: true, 
+              options={{
+                headerShown: true,
                 header: () => <ScreenHeader title={t("Admin.newInvitation", { defaultValue: "New Invitation" })} />
+              }}
+            />
+            <Stack.Screen
+              name="AuditLog"
+              component={AuditLogScreen}
+              options={{
+                headerShown: true,
+                header: () => <ScreenHeader title={t("Admin.auditLogs", { defaultValue: "Audit Logs" })} />
+              }}
+            />
+            <Stack.Screen
+              name="AuditLogTimeline"
+              component={AuditLogTimelineScreen}
+              options={{
+                headerShown: true,
+                header: () => <ScreenHeader title={t("Admin.timeline", { defaultValue: "Timeline" })} />
+              }}
+            />
+            <Stack.Screen
+              name="CreateAnnouncement"
+              component={CreateAnnouncementScreen}
+              options={{
+                headerShown: true,
+                header: () => <ScreenHeader title={t("Announcements.createNew", { defaultValue: "Create Announcement" })} />
               }}
             />
           </Stack.Group>

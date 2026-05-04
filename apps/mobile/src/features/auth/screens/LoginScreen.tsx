@@ -1,11 +1,9 @@
-import React, { useState } from 'react';
-import { 
-  StyleSheet, 
-  View, 
-  KeyboardAvoidingView, 
-  Platform, 
-  TouchableWithoutFeedback, 
-  Keyboard,
+import React, { useCallback, useRef, useState } from 'react';
+import {
+  StyleSheet,
+  View,
+  KeyboardAvoidingView,
+  Platform,
   Dimensions,
   StatusBar,
   Pressable,
@@ -13,17 +11,32 @@ import {
   TouchableOpacity
 } from 'react-native';
 
-const PersonaChip = ({ label, email, onSelect }: { label: string, email: string, onSelect: (e: string) => void }) => (
+const PersonaChip = ({
+  label,
+  onSelect,
+  testID,
+  disabled,
+}: {
+  label: string,
+  onSelect: () => void;
+  testID: string;
+  disabled?: boolean;
+}) => (
   <TouchableOpacity 
-    onPress={() => onSelect(email)}
+    onPress={onSelect}
+    disabled={disabled}
+    testID={testID}
+    accessibilityRole="button"
+    accessibilityLabel={`Use ${label} UAT persona`}
     style={{
       paddingHorizontal: 12,
       paddingVertical: 6,
       borderRadius: 12,
-      backgroundColor: 'rgba(255,255,255,0.05)',
+      backgroundColor: disabled ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.05)',
       marginRight: 8,
       borderWidth: 1,
       borderColor: 'rgba(255,255,255,0.1)',
+      opacity: disabled ? 0.5 : 1,
     }}
   >
     <Typography style={{ color: '#94A3B8', fontSize: 12, fontWeight: '700' }}>{label}</Typography>
@@ -39,6 +52,7 @@ import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
 import { Typography } from '../../../components/ui/Typography';
 import { colors, spacing, shadows } from '../../../theme';
+import { uatPersonaEmails, uatPersonaPassword } from '../login-personas';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const authTokenService = "compound.mobile.authToken";
@@ -51,34 +65,46 @@ export const LoginScreen = () => {
   const [password, setPassword] = useState("");
   const [errorMap, setErrorMap] = useState<Record<string, string>>({});
   const [systemError, setSystemError] = useState<string | null>(null);
+  const submitInFlightRef = useRef(false);
   
   const [login, { isLoading: isSigningIn }] = useLoginMutation();
 
-  const handleLogin = async () => {
+  const submitLogin = useCallback(async (nextEmail: string, nextPassword: string) => {
+    if (submitInFlightRef.current) {
+      return;
+    }
+
+    submitInFlightRef.current = true;
     setErrorMap({});
     setSystemError(null);
 
     // Basic frontend validation
-    if (!email.trim() || !password) return;
+    if (!nextEmail.trim() || !nextPassword) {
+      submitInFlightRef.current = false;
+      return;
+    }
 
     try {
       const result = await login({
-        email: email.trim().toLowerCase(),
-        password,
+        email: nextEmail.trim().toLowerCase(),
+        password: nextPassword,
       }).unwrap();
 
       // Dispatch to Redux
       dispatch(setCredentials({ user: result.user, token: result.token }));
 
-      // Secure storage
-      await Keychain.setGenericPassword(result.user.email, result.token, {
-        accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
-        service: authTokenService,
-      });
+      try {
+        await Keychain.setGenericPassword(result.user.email, result.token, {
+          accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED,
+          service: authTokenService,
+        });
+      } catch (storageError) {
+        console.warn("Auth token persistence failed; keeping in-memory session active", storageError);
+      }
       
     } catch (err: any) {
-      console.log("[Login Error]", err);
-      
+      console.error("Login failed", err);
+
       if (err.status === 422) {
         // Validation errors (Laravel format)
         if (err.data?.errors) {
@@ -90,6 +116,8 @@ export const LoginScreen = () => {
         } else {
           setSystemError(err.data?.message || t("Auth.invalidCredentials"));
         }
+      } else if (err.status === 429) {
+        setSystemError(t("Auth.tooManyAttempts", { defaultValue: "Too many sign-in attempts. Please wait a few seconds and try again." }));
       } else if (err.status === 403) {
         setSystemError(t("Auth.accountBlocked", { defaultValue: "Your account is not active." }));
       } else if (err.status === 'FETCH_ERROR') {
@@ -97,8 +125,21 @@ export const LoginScreen = () => {
       } else {
         setSystemError(t("Auth.loginFailed", { defaultValue: "An unexpected error occurred. Please try again." }));
       }
+    } finally {
+      submitInFlightRef.current = false;
     }
-  };
+  }, [dispatch, login, t]);
+
+  const handleLogin = useCallback(async () => {
+    await submitLogin(email, password);
+  }, [email, password, submitLogin]);
+
+  const handlePersonaFill = useCallback((personaEmail: string) => {
+    setEmail(personaEmail);
+    setPassword(uatPersonaPassword);
+    setErrorMap({});
+    setSystemError(null);
+  }, []);
 
   return (
     <KeyboardAvoidingView 
@@ -121,133 +162,152 @@ export const LoginScreen = () => {
         </Svg>
       </View>
 
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View style={{ flex: 1 }}>
+      <View style={styles.flex}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="always"
+          keyboardDismissMode="on-drag"
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
           <View style={styles.inner}>
-          <View style={styles.header}>
-            <View style={styles.logoCircle}>
-              <Typography style={styles.logoEmoji}>🏢</Typography>
-            </View>
-            <Typography variant="h1" style={[styles.brandTitle, { color: '#FFFFFF' }]}>
-              {t("App.brand", { defaultValue: "Compound" })}
-            </Typography>
-            <Typography variant="caption" style={[styles.brandSubtitle, { color: '#94A3B8' }]}>
-              {t("App.subtitle", { defaultValue: "Smart Living Management" })}
-            </Typography>
-          </View>
-
-          <View style={styles.card}>
-            <Typography variant="h2" style={[styles.signInTitle, { color: '#FFFFFF' }]}>
-              {t("Auth.signIn", { defaultValue: "Welcome Back" })}
-            </Typography>
-            <Typography variant="caption" style={[styles.instructions, { color: '#64748B' }]}>
-              {t("Auth.instructions", { defaultValue: "Please enter your credentials to continue" })}
-            </Typography>
-
-            {systemError && (
-              <View style={styles.errorBanner}>
-                <Typography style={styles.errorBannerText}>{systemError}</Typography>
-              </View>
-            )}
-
-            <View style={styles.form}>
-              <Input
-                label={t("Auth.email", { defaultValue: "Email Address" })}
-                autoCapitalize="none"
-                autoComplete="email"
-                inputMode="email"
-                onChangeText={(v) => {
-                  setEmail(v);
-                  if (errorMap.email) {
-                    const next = { ...errorMap };
-                    delete next.email;
-                    setErrorMap(next);
-                  }
-                }}
-                placeholder={t("Auth.emailPlaceholder", { defaultValue: "name@example.com" })}
-                placeholderTextColor="#64748B"
-                style={{ 
-                  color: '#FFFFFF',
-                  backgroundColor: '#1E293B',
-                  borderColor: '#3B82F6',
-                  borderWidth: 1.5,
-                  height: 56,
-                  paddingHorizontal: 20,
-                  borderRadius: 16,
-                }}
-                value={email}
-                error={errorMap.email}
-              />
-              
-              <Input
-                label={t("Auth.password", { defaultValue: "Password" })}
-                autoCapitalize="none"
-                onChangeText={(v) => {
-                  setPassword(v);
-                  if (errorMap.password) {
-                    const next = { ...errorMap };
-                    delete next.password;
-                    setErrorMap(next);
-                  }
-                }}
-                placeholder={t("Auth.passwordPlaceholder", { defaultValue: "••••••••" })}
-                placeholderTextColor="#64748B"
-                style={{ 
-                  color: '#FFFFFF',
-                  backgroundColor: '#1E293B',
-                  borderColor: '#3B82F6',
-                  borderWidth: 1.5,
-                  height: 56,
-                  paddingHorizontal: 20,
-                  borderRadius: 16,
-                }}
-                secureTextEntry
-                value={password}
-                error={errorMap.password}
-              />
-              
-              <Button
-                title={t("Auth.signIn", { defaultValue: "Sign In" })}
-                onPress={handleLogin}
-                loading={isSigningIn}
-                disabled={!email.trim() || !password || password.length < 1}
-                style={styles.loginButton}
-              />
-
-              {__DEV__ && (
-                <View style={styles.devPersonas}>
-                  <Typography variant="caption" style={styles.devTitle}>DEV PERSONAS</Typography>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.personaScroll}>
-                    <PersonaChip label="Admin" email="uat-compound-admin@compound.local" onSelect={(e) => { setEmail(e); setPassword('password'); }} />
-                    <PersonaChip label="Resident" email="uat-resident-owner@compound.local" onSelect={(e) => { setEmail(e); setPassword('password'); }} />
-                    <PersonaChip label="Security" email="uat-security-guard@compound.local" onSelect={(e) => { setEmail(e); setPassword('password'); }} />
-                    <PersonaChip label="Board" email="uat-board-member@compound.local" onSelect={(e) => { setEmail(e); setPassword('password'); }} />
-                  </ScrollView>
+              <View style={styles.header}>
+                <View style={styles.logoCircle}>
+                  <Typography style={styles.logoEmoji}>🏢</Typography>
                 </View>
-              )}
-
-              <Pressable style={styles.forgotBtn}>
-                <Typography style={styles.forgotText}>
-                  {t("Auth.forgotPassword", { defaultValue: "Forgot Password?" })}
+                <Typography variant="h1" style={[styles.brandTitle, { color: '#FFFFFF' }]}>
+                  {t("App.brand", { defaultValue: "Compound" })}
                 </Typography>
-              </Pressable>
-            </View>
-          </View>
+                <Typography variant="caption" style={[styles.brandSubtitle, { color: '#94A3B8' }]}>
+                  {t("App.subtitle", { defaultValue: "Smart Living Management" })}
+                </Typography>
+              </View>
 
-          <View style={styles.footer}>
-            <Typography variant="caption" style={styles.footerText}>
-              {t("Auth.noAccount", { defaultValue: "Don't have an account?" })}
-            </Typography>
-            <Pressable>
-              <Typography style={styles.footerLink}>
-                {t("Auth.contactAdmin", { defaultValue: "Contact Admin" })}
-              </Typography>
-            </Pressable>
+              <View style={styles.card}>
+                <Typography variant="h2" style={[styles.signInTitle, { color: '#FFFFFF' }]}>
+                  {t("Auth.signIn", { defaultValue: "Welcome Back" })}
+                </Typography>
+                <Typography variant="caption" style={[styles.instructions, { color: '#64748B' }]}>
+                  {t("Auth.instructions", { defaultValue: "Please enter your credentials to continue" })}
+                </Typography>
+
+                {systemError && (
+                  <View
+                    style={styles.errorBanner}
+                    testID="login-error-banner"
+                    accessibilityRole="alert"
+                  >
+                    <Typography style={styles.errorBannerText}>{systemError}</Typography>
+                  </View>
+                )}
+
+                <View style={styles.form}>
+                  {__DEV__ && (
+                    <View style={styles.devPersonas}>
+	                      <Typography variant="caption" style={styles.devTitle}>DEV PERSONAS</Typography>
+                        <Typography variant="caption" style={styles.devHint}>
+                          Tap a persona to fill the form, then sign in once.
+                        </Typography>
+	                      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.personaScroll}>
+                        <PersonaChip label="Admin" testID="login-persona-admin" disabled={isSigningIn} onSelect={() => handlePersonaFill(uatPersonaEmails.admin)} />
+                        <PersonaChip label="Resident" testID="login-persona-resident" disabled={isSigningIn} onSelect={() => handlePersonaFill(uatPersonaEmails.resident)} />
+                        <PersonaChip label="Security" testID="login-persona-security" disabled={isSigningIn} onSelect={() => handlePersonaFill(uatPersonaEmails.security)} />
+                        <PersonaChip label="Board" testID="login-persona-board" disabled={isSigningIn} onSelect={() => handlePersonaFill(uatPersonaEmails.board)} />
+                      </ScrollView>
+                    </View>
+                  )}
+
+                  <Input
+                    label={t("Auth.email", { defaultValue: "Email Address" })}
+                    autoCapitalize="none"
+                    autoComplete="email"
+                    inputMode="email"
+                    testID="login-email-input"
+                    accessibilityLabel={t("Auth.email", { defaultValue: "Email Address" })}
+                    onChangeText={(v) => {
+                      setEmail(v);
+                      if (errorMap.email) {
+                        const next = { ...errorMap };
+                        delete next.email;
+                        setErrorMap(next);
+                      }
+                    }}
+                    placeholder={t("Auth.emailPlaceholder", { defaultValue: "name@example.com" })}
+                    placeholderTextColor="#64748B"
+                    style={{
+                      color: '#FFFFFF',
+                      backgroundColor: '#1E293B',
+                      borderColor: '#3B82F6',
+                      borderWidth: 1.5,
+                      height: 56,
+                      paddingHorizontal: 20,
+                      borderRadius: 16,
+                    }}
+                    value={email}
+                    error={errorMap.email}
+                  />
+
+                  <Input
+                    label={t("Auth.password", { defaultValue: "Password" })}
+                    autoCapitalize="none"
+                    testID="login-password-input"
+                    accessibilityLabel={t("Auth.password", { defaultValue: "Password" })}
+                    onChangeText={(v) => {
+                      setPassword(v);
+                      if (errorMap.password) {
+                        const next = { ...errorMap };
+                        delete next.password;
+                        setErrorMap(next);
+                      }
+                    }}
+                    placeholder={t("Auth.passwordPlaceholder", { defaultValue: "••••••••" })}
+                    placeholderTextColor="#64748B"
+                    style={{
+                      color: '#FFFFFF',
+                      backgroundColor: '#1E293B',
+                      borderColor: '#3B82F6',
+                      borderWidth: 1.5,
+                      height: 56,
+                      paddingHorizontal: 20,
+                      borderRadius: 16,
+                    }}
+                    secureTextEntry
+                    value={password}
+                    error={errorMap.password}
+                  />
+
+                  <Button
+                    title={t("Auth.signIn", { defaultValue: "Sign In" })}
+                    onPress={handleLogin}
+                    loading={isSigningIn}
+                    disabled={!email.trim() || !password || password.length < 1}
+                    testID="login-submit-button"
+                    accessibilityLabel={t("Auth.signIn", { defaultValue: "Sign In" })}
+                    style={styles.loginButton}
+                  />
+
+                  <Pressable style={styles.forgotBtn}>
+                    <Typography style={styles.forgotText}>
+                      {t("Auth.forgotPassword", { defaultValue: "Forgot Password?" })}
+                    </Typography>
+                  </Pressable>
+                </View>
+              </View>
+
+              <View style={styles.footer}>
+                <Typography variant="caption" style={styles.footerText}>
+                  {t("Auth.noAccount", { defaultValue: "Don't have an account?" })}
+                </Typography>
+                <Pressable>
+                  <Typography style={styles.footerLink}>
+                    {t("Auth.contactAdmin", { defaultValue: "Contact Admin" })}
+                  </Typography>
+                </Pressable>
+              </View>
           </View>
-        </View>
+        </ScrollView>
       </View>
-    </TouchableWithoutFeedback>
-  </KeyboardAvoidingView>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -256,13 +316,20 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#020617',
   },
+  flex: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: spacing.xl,
+  },
   backgroundContainer: {
     ...StyleSheet.absoluteFill,
     zIndex: -1,
   },
   inner: {
-    flex: 1,
     padding: spacing.xl,
+    minHeight: SCREEN_HEIGHT,
     justifyContent: 'center',
     zIndex: 1,
   },
@@ -369,6 +436,10 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 1,
+    marginBottom: 6,
+  },
+  devHint: {
+    color: '#64748B',
     marginBottom: 12,
   },
   personaScroll: {

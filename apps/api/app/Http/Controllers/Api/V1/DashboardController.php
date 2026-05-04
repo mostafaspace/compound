@@ -16,6 +16,15 @@ use Illuminate\Http\Request;
 
 class DashboardController extends Controller
 {
+    /**
+     * @var list<string>
+     */
+    private const ASSIGNABLE_RESIDENT_ROLES = [
+        UserRole::Resident->value,
+        UserRole::ResidentOwner->value,
+        UserRole::ResidentTenant->value,
+    ];
+
     public function __construct(
         private readonly CompoundContextService $compoundContext,
         private readonly IssueService $issueService,
@@ -76,6 +85,11 @@ class DashboardController extends Controller
             $unassignedUsers = User::query()
                 ->whereDoesntHave('unitMemberships', fn ($q) => $q->whereNull('ends_at'))
                 ->when($compoundId, fn ($q) => $q->where('compound_id', $compoundId))
+                ->where(function ($query): void {
+                    $query
+                        ->whereIn('role', self::ASSIGNABLE_RESIDENT_ROLES)
+                        ->orWhereHas('roles', fn ($roles) => $roles->whereIn('name', self::ASSIGNABLE_RESIDENT_ROLES));
+                })
                 ->count();
 
             if ($unassignedUsers > 0) {
@@ -136,7 +150,7 @@ class DashboardController extends Controller
                 ['key' => 'complaints', 'label' => 'View Complaints', 'route' => '/issues', 'icon' => 'alert-circle'],
                 ['key' => 'visitorLog', 'label' => 'Visitor Log', 'route' => '/visitors', 'icon' => 'qr-code'],
                 ['key' => 'orgChart', 'label' => 'Org Chart', 'route' => '/org-chart', 'icon' => 'sitemap'],
-                ['key' => 'polls', 'label' => 'Polls', 'route' => '/governance', 'icon' => 'bar-chart'],
+                ['key' => 'polls', 'label' => 'Polls', 'route' => '/polls', 'icon' => 'bar-chart'],
             ];
         } elseif ($user->hasEffectiveRole(UserRole::SecurityGuard)) {
             $shortcuts = [

@@ -11,11 +11,23 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasIndex('buildings', 'buildings_type_index')) {
+            Schema::table('buildings', function (Blueprint $table) {
+                $table->dropIndex('buildings_type_index');
+            });
+        }
+
         Schema::table('buildings', function (Blueprint $table) {
             if (Schema::hasColumn('buildings', 'type')) {
                 $table->dropColumn('type');
             }
         });
+
+        if (Schema::hasIndex('units', 'units_type_index')) {
+            Schema::table('units', function (Blueprint $table) {
+                $table->dropIndex('units_type_index');
+            });
+        }
 
         Schema::table('units', function (Blueprint $table) {
             if (Schema::hasColumn('units', 'type')) {

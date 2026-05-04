@@ -264,7 +264,7 @@ class UserLifecycleTest extends TestCase
 
         $this->getJson("/api/v1/users/{$target->id}/support-view")
             ->assertOk()
-            ->assertJsonPath('user.role', UserRole::ResidentOwner->value)
+            ->assertJsonPath('user.role', 'compound_head')
             ->assertJsonPath('user.roles.0', 'compound_head');
     }
 

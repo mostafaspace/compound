@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getCurrentUser, getPollTypes } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
-import { LogoutButton } from "@/components/logout-button";
+import { SiteNav } from "@/components/site-nav";
 import { createPollTypeAction, deletePollTypeAction } from "./actions";
 
 export default async function PollTypesPage() {
@@ -10,6 +10,7 @@ export default async function PollTypesPage() {
 
   return (
     <main className="min-h-screen bg-background text-foreground">
+      <SiteNav breadcrumb={[{ label: "Polls", href: "/polls" }, { label: "Categories" }]} />
       <header className="border-b border-line bg-panel">
         <div className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-6 md:flex-row md:items-center md:justify-between lg:px-8">
           <div>
@@ -19,7 +20,7 @@ export default async function PollTypesPage() {
             <h1 className="mt-2 text-3xl font-semibold">Poll Categories</h1>
             <p className="mt-2 max-w-2xl text-sm text-muted">Manage poll categories for your community.</p>
           </div>
-          <LogoutButton />
+
         </div>
       </header>
 

@@ -10,6 +10,15 @@ export const issuePriorityValues = ["low", "normal", "high", "urgent"] as const;
 
 export type IssuePriority = (typeof issuePriorityValues)[number];
 
+export const issueTargetRoleValues = [
+  "floor_representative",
+  "building_representative",
+  "president",
+  "compound_admin",
+] as const;
+
+export type IssueTargetRole = (typeof issueTargetRoleValues)[number];
+
 export interface Issue {
   id: string;
   compoundId: string;
@@ -48,6 +57,7 @@ export interface IssueComment {
 export interface CreateIssueInput {
   unitId?: string;
   buildingId?: string;
+  targetRole?: IssueTargetRole;
   category: IssueCategory;
   title: string;
   description: string;

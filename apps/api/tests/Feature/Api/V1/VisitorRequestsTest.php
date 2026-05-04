@@ -77,6 +77,74 @@ class VisitorRequestsTest extends TestCase
         ]);
     }
 
+    public function test_resident_can_reopen_shared_visitor_pass_with_same_qr_token(): void
+    {
+        [$resident, $unit] = $this->residentWithVerifiedUnit();
+        $security = User::factory()->create([
+            'role' => UserRole::SecurityGuard->value,
+            'compound_id' => $unit->compound_id,
+            'status' => AccountStatus::Active->value,
+        ]);
+
+        Sanctum::actingAs($resident);
+
+        $createResponse = $this->postJson('/api/v1/visitor-requests', [
+            'unitId' => $unit->id,
+            'visitorName' => 'Returning Guest',
+            'visitStartsAt' => now()->subMinutes(10)->toIso8601String(),
+            'visitEndsAt' => now()->addHours(2)->toIso8601String(),
+        ])->assertCreated();
+
+        $visitorRequestId = $createResponse->json('data.id');
+        $issuedToken = $createResponse->json('data.qrToken');
+
+        $showResponse = $this->getJson("/api/v1/visitor-requests/{$visitorRequestId}")
+            ->assertOk()
+            ->assertJsonPath('data.id', $visitorRequestId)
+            ->assertJsonPath('data.qrToken', $issuedToken);
+
+        $this->assertIsString($showResponse->json('data.qrToken'));
+        $this->assertDatabaseHas('visitor_passes', [
+            'visitor_request_id' => $visitorRequestId,
+            'token' => $issuedToken,
+        ]);
+
+        Sanctum::actingAs($security);
+
+        $this->postJson('/api/v1/visitor-requests/validate-pass', ['token' => $issuedToken])
+            ->assertOk()
+            ->assertJsonPath('data.result', VisitorScanResult::Valid->value);
+    }
+
+    public function test_security_can_process_visitor_request_without_receiving_qr_token_in_staff_responses(): void
+    {
+        [$resident, $unit] = $this->residentWithVerifiedUnit();
+        $security = User::factory()->create([
+            'role' => UserRole::SecurityGuard->value,
+            'compound_id' => $unit->compound_id,
+            'status' => AccountStatus::Active->value,
+        ]);
+
+        $token = $this->createVisitorPassFor($resident, $unit);
+        $visitorRequest = VisitorRequest::query()->firstOrFail();
+
+        Sanctum::actingAs($security);
+
+        $indexResponse = $this->getJson('/api/v1/visitor-requests')
+            ->assertOk();
+        $this->assertArrayNotHasKey('qrToken', $indexResponse->json('data.0'));
+
+        $showResponse = $this->getJson("/api/v1/visitor-requests/{$visitorRequest->id}")
+            ->assertOk();
+        $this->assertArrayNotHasKey('qrToken', $showResponse->json('data'));
+
+        $validateResponse = $this->postJson('/api/v1/visitor-requests/validate-pass', ['token' => $token])
+            ->assertOk()
+            ->assertJsonPath('data.result', VisitorScanResult::Valid->value);
+
+        $this->assertArrayNotHasKey('qrToken', $validateResponse->json('data.visitorRequest'));
+    }
+
     public function test_visitor_request_notifications_are_limited_to_request_compound_security(): void
     {
         $compoundA = Compound::factory()->create();
@@ -274,6 +342,7 @@ class VisitorRequestsTest extends TestCase
         [$resident, $unit] = $this->residentWithVerifiedUnit();
         $security = User::factory()->create([
             'role' => UserRole::SecurityGuard->value,
+            'compound_id' => $unit->compound_id,
             'status' => AccountStatus::Active->value,
         ]);
         $token = $this->createVisitorPassFor($resident, $unit);
@@ -360,6 +429,40 @@ class VisitorRequestsTest extends TestCase
         $this->assertDatabaseHas('visitor_requests', [
             'id' => $visitorRequest->id,
             'status' => VisitorRequestStatus::QrIssued->value,
+        ]);
+    }
+
+    public function test_scoped_security_cannot_record_scan_log_for_other_compound_visitor_request(): void
+    {
+        $compoundA = Compound::factory()->create();
+        $compoundB = Compound::factory()->create();
+        $securityA = User::factory()->create([
+            'role' => UserRole::SecurityGuard->value,
+            'compound_id' => $compoundA->id,
+            'status' => AccountStatus::Active->value,
+        ]);
+        $resident = User::factory()->create([
+            'role' => UserRole::ResidentOwner->value,
+            'status' => AccountStatus::Active->value,
+        ]);
+        $buildingB = Building::factory()->for($compoundB)->create();
+        $unitB = Unit::factory()->for($compoundB)->for($buildingB)->create(['floor_id' => null]);
+        $unitB->memberships()->create([
+            'user_id' => $resident->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'starts_at' => now()->toDateString(),
+            'verification_status' => VerificationStatus::Verified->value,
+        ]);
+        $token = $this->createVisitorPassFor($resident, $unitB);
+        $visitorRequest = VisitorRequest::query()->firstOrFail();
+
+        Sanctum::actingAs($securityA);
+
+        $this->postJson('/api/v1/visitor-requests/validate-pass', ['token' => $token])->assertForbidden();
+
+        $this->assertDatabaseMissing('visitor_scan_logs', [
+            'visitor_request_id' => $visitorRequest->id,
+            'scanned_by' => $securityA->id,
         ]);
     }
 
@@ -534,6 +637,7 @@ class VisitorRequestsTest extends TestCase
         [$resident, $unit] = $this->residentWithVerifiedUnit();
         $security = User::factory()->create([
             'role' => UserRole::SecurityGuard->value,
+            'compound_id' => $unit->compound_id,
             'status' => AccountStatus::Active->value,
         ]);
 

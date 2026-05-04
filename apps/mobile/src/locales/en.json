@@ -6,7 +6,7 @@
     "units": "Units",
     "visitors": "Visitors",
     "finance": "Finance",
-    "governance": "Polls",
+    "polls": "Polls",
     "more": "More",
     "signOut": "Sign Out"
   },
@@ -216,10 +216,11 @@
     "window": "Window: {{start}} - {{end}}"
   },
   "QuickActions": {
+    "label": "Quick Actions",
     "visitors": "Visitor QR",
     "visitorsDetail": "Create or revoke guest passes",
     "payments": "Payments",
-    "visitorsDetail": "Submit receipts and view balance",
+    "paymentsDetail": "Submit receipts and view balance",
     "issues": "Complaints",
     "issuesDetail": "Track issues and responses",
     "announcements": "Announcements",
@@ -330,7 +331,7 @@
     },
     "recentTransactions": "Recent transactions"
   },
-  "Governance": {
+  "Polls": {
     "label": "Polls",
     "title": "Active polls",
     "loading": "Loading…",

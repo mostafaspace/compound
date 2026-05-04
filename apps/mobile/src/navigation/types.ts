@@ -14,6 +14,9 @@ export type RootStackParamList = {
   UploadDocument: undefined;
   AdminInvitations: undefined;
   CreateInvitation: undefined;
+  AuditLog: undefined;
+  AuditLogTimeline: { entityType: string; entityId: string };
+  CreateAnnouncement: undefined;
 };
 
 export type AuthStackParamList = {
@@ -25,7 +28,7 @@ export type MainTabParamList = {
   Property: undefined;
   Visitors: undefined;
   Finance: undefined;
-  Governance: undefined;
+  Polls: undefined;
   More: undefined;
 };
 

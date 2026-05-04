@@ -7,11 +7,22 @@ import { Button } from '../../../components/ui/Button';
 import { Typography } from '../../../components/ui/Typography';
 import { ScreenContainer } from '../../../components/layout/ScreenContainer';
 import { formatDate } from '../../../utils/formatters';
+import { useSelector } from 'react-redux';
+import { selectCurrentUser } from '../../../store/authSlice';
+import { getEffectiveRoleType } from '@compound/contracts';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { RootStackParamList } from '../../../navigation/types';
 
 export const AnnouncementsScreen = () => {
   const { t } = useTranslation();
   const isDark = useColorScheme() === 'dark';
-  
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
+
+  const user = useSelector(selectCurrentUser);
+  const roleType = getEffectiveRoleType(user);
+  const isAdmin = roleType === 'admin';
+
   const { data: announcements = [], isLoading, refetch } = useGetAnnouncementsQuery();
   const [acknowledge, { isLoading: isAcknowledging }] = useAcknowledgeAnnouncementMutation();
 
@@ -27,10 +38,10 @@ export const AnnouncementsScreen = () => {
           </View>
         )}
       </View>
-      
+
       {!item.acknowledgedAt && item.mustAcknowledge && (
-        <Button 
-          title={t("Announcements.acknowledge")} 
+        <Button
+          title={t("Announcements.acknowledge")}
           onPress={() => acknowledge(item.id)}
           loading={isAcknowledging}
           style={styles.ackButton}
@@ -56,6 +67,15 @@ export const AnnouncementsScreen = () => {
         }
         contentContainerStyle={styles.listContent}
       />
+      {isAdmin && (
+        <View style={styles.fabContainer}>
+          <Button
+            title={t("Announcements.create", "New Announcement")}
+            onPress={() => navigation.navigate('CreateAnnouncement' as any)}
+            style={styles.fab}
+          />
+        </View>
+      )}
     </ScreenContainer>
   );
 };
@@ -102,5 +122,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: spacing.xl,
+  },
+  fabContainer: {
+    position: 'absolute',
+    bottom: spacing.lg,
+    right: spacing.lg,
+    left: spacing.lg,
+  },
+  fab: {
+    borderRadius: 16,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
   }
 });

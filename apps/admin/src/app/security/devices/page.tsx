@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
+import { SiteNav } from "@/components/site-nav";
 import { LogoutButton } from "@/components/logout-button";
 import { getCurrentUser, getSecurityDevices } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
@@ -11,7 +12,7 @@ function formatDateTime(iso: string | null): string {
 }
 
 export default async function SecurityDevicesPage() {
-  await requireAdminUser(getCurrentUser, ["super_admin", "compound_admin", "support_agent"]);
+  await requireAdminUser(getCurrentUser, ["super_admin", "compound_admin"]);
 
   const [t, devices] = await Promise.all([getTranslations("Security"), getSecurityDevices()]);
 

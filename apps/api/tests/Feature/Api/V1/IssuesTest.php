@@ -12,7 +12,9 @@ use App\Models\Issues\IssueAttachment;
 use App\Models\Notification;
 use App\Models\Property\Building;
 use App\Models\Property\Compound;
+use App\Models\Property\Floor;
 use App\Models\Property\Unit;
+use App\Models\RepresentativeAssignment;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -77,6 +79,104 @@ class IssuesTest extends TestCase
         Sanctum::actingAs($resident);
 
         $this->postJson('/api/v1/issues', [])->assertUnprocessable();
+    }
+
+    public function test_resident_can_route_issue_to_selected_representative_or_admin(): void
+    {
+        $compound = Compound::factory()->create();
+        $building = Building::factory()->for($compound)->create();
+        $floor = Floor::factory()->for($building)->create();
+        $unit = Unit::factory()->for($compound)->for($building)->create([
+            'floor_id' => $floor->id,
+        ]);
+
+        $admin = $this->makeScopedAdminForCompound($compound);
+        $resident = User::factory()->create([
+            'role' => UserRole::ResidentOwner->value,
+            'status' => AccountStatus::Active->value,
+        ]);
+
+        $unit->memberships()->create([
+            'user_id' => $resident->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'starts_at' => now()->toDateString(),
+            'is_primary' => true,
+            'verification_status' => VerificationStatus::Verified->value,
+            'created_by' => $admin->id,
+        ]);
+
+        $floorRep = User::factory()->create(['status' => AccountStatus::Active->value]);
+        $buildingRep = User::factory()->create(['status' => AccountStatus::Active->value]);
+        $president = User::factory()->create(['status' => AccountStatus::Active->value]);
+
+        RepresentativeAssignment::factory()->forFloor($floor)->create([
+            'user_id' => $floorRep->id,
+        ]);
+        RepresentativeAssignment::factory()->forBuilding($building)->create([
+            'user_id' => $buildingRep->id,
+        ]);
+        RepresentativeAssignment::factory()->create([
+            'compound_id' => $compound->id,
+            'user_id' => $president->id,
+            'role' => 'president',
+        ]);
+
+        Sanctum::actingAs($resident);
+
+        $this->postJson('/api/v1/issues', [
+            'unitId' => $unit->id,
+            'category' => 'maintenance',
+            'title' => 'Floor rep complaint',
+            'description' => 'Route this to the floor representative.',
+            'targetRole' => 'floor_representative',
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.assignedTo', $floorRep->id);
+
+        $this->postJson('/api/v1/issues', [
+            'unitId' => $unit->id,
+            'category' => 'security',
+            'title' => 'Building rep complaint',
+            'description' => 'Route this to the building representative.',
+            'targetRole' => 'building_representative',
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.assignedTo', $buildingRep->id);
+
+        $this->postJson('/api/v1/issues', [
+            'unitId' => $unit->id,
+            'category' => 'noise',
+            'title' => 'President complaint',
+            'description' => 'Route this to the president.',
+            'targetRole' => 'president',
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.assignedTo', $president->id);
+
+        $this->postJson('/api/v1/issues', [
+            'unitId' => $unit->id,
+            'category' => 'other',
+            'title' => 'Admin complaint',
+            'description' => 'Route this to the compound admin.',
+            'targetRole' => 'compound_admin',
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.assignedTo', $admin->id);
+    }
+
+    public function test_floor_representative_target_requires_unit_with_floor(): void
+    {
+        [$resident, $unit] = $this->residentWithVerifiedUnit();
+
+        Sanctum::actingAs($resident);
+
+        $this->postJson('/api/v1/issues', [
+            'unitId' => $unit->id,
+            'category' => 'maintenance',
+            'title' => 'Floor rep complaint',
+            'description' => 'This unit has no floor scope available.',
+            'targetRole' => 'floor_representative',
+        ])->assertUnprocessable();
     }
 
     public function test_resident_can_view_own_issues(): void
@@ -394,6 +494,44 @@ class IssuesTest extends TestCase
         ]);
     }
 
+    public function test_building_representative_can_escalate_issue_to_president(): void
+    {
+        $compound = Compound::factory()->create();
+        $building = Building::factory()->for($compound)->create();
+        $resident = User::factory()->create([
+            'role' => UserRole::ResidentOwner->value,
+            'status' => AccountStatus::Active->value,
+        ]);
+        $buildingRep = User::factory()->create(['status' => AccountStatus::Active->value]);
+        $president = User::factory()->create(['status' => AccountStatus::Active->value]);
+
+        RepresentativeAssignment::factory()->forBuilding($building)->create([
+            'user_id' => $buildingRep->id,
+        ]);
+        RepresentativeAssignment::factory()->create([
+            'compound_id' => $compound->id,
+            'user_id' => $president->id,
+            'role' => 'president',
+        ]);
+
+        $issue = Issue::factory()->create([
+            'compound_id' => $compound->id,
+            'building_id' => $building->id,
+            'reported_by' => $resident->id,
+            'assigned_to' => $buildingRep->id,
+            'status' => 'in_progress',
+        ]);
+
+        Sanctum::actingAs($buildingRep);
+
+        $this->postJson("/api/v1/issues/{$issue->id}/escalate", [
+            'reason' => 'Needs presidential review.',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'escalated')
+            ->assertJsonPath('data.assignedTo', $president->id);
+    }
+
     public function test_escalation_requires_reason(): void
     {
         [$resident, $unit] = $this->residentWithVerifiedUnit();
@@ -621,6 +759,38 @@ class IssuesTest extends TestCase
         $this->postJson("/api/v1/issues/{$issueB->id}/escalate", [
             'reason' => 'Cross-compound escalation should be blocked.',
         ])->assertForbidden();
+    }
+
+    public function test_floor_representative_cannot_close_issue(): void
+    {
+        $compound = Compound::factory()->create();
+        $building = Building::factory()->for($compound)->create();
+        $floor = Floor::factory()->for($building)->create();
+        $unit = Unit::factory()->for($compound)->for($building)->create([
+            'floor_id' => $floor->id,
+        ]);
+        $resident = User::factory()->create([
+            'role' => UserRole::ResidentOwner->value,
+            'status' => AccountStatus::Active->value,
+        ]);
+        $floorRep = User::factory()->create(['status' => AccountStatus::Active->value]);
+
+        RepresentativeAssignment::factory()->forFloor($floor)->create([
+            'user_id' => $floorRep->id,
+        ]);
+
+        $issue = Issue::factory()->create([
+            'compound_id' => $compound->id,
+            'building_id' => $building->id,
+            'unit_id' => $unit->id,
+            'reported_by' => $resident->id,
+            'assigned_to' => $floorRep->id,
+            'status' => 'in_progress',
+        ]);
+
+        Sanctum::actingAs($floorRep);
+
+        $this->patchJson("/api/v1/issues/{$issue->id}", ['status' => 'closed'])->assertForbidden();
     }
 
     public function test_scoped_admin_cannot_comment_or_manage_attachments_for_other_compound_issue(): void

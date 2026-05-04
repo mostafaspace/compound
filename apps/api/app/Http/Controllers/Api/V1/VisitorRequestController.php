@@ -58,7 +58,14 @@ class VisitorRequestController extends Controller
         $visitorRequests = VisitorRequest::query()
             ->with(['host', 'unit.building.compound', 'pass'])
             ->when(! $this->isStaff($user), fn ($query) => $query->where('host_user_id', $user->id))
-            ->when($status !== '' && $status !== 'all', fn ($query) => $query->where('status', $status))
+            ->when($status !== '' && $status !== 'all', function ($query) use ($status) {
+                $statuses = explode(',', $status);
+                if (count($statuses) > 1) {
+                    $query->whereIn('status', $statuses);
+                } else {
+                    $query->where('status', $status);
+                }
+            })
             ->tap(fn ($query) => $this->compoundContext->scopePropertyQuery($query, $user))
             ->latest('visit_starts_at')
             ->paginate();
@@ -137,12 +144,15 @@ class VisitorRequestController extends Controller
         /** @var User $actor */
         $actor = $request->user();
         $validated = $request->validated();
+        $pass = $this->visitorPassService->findPassByToken($validated['token']);
+
+        if ($pass?->visitorRequest instanceof VisitorRequest) {
+            $this->ensureStaffCanAccessVisitorRequest($request, $pass->visitorRequest);
+        }
+
         $result = $this->visitorPassService->validateToken($validated['token'], $actor, 'validated');
 
         $visitorRequest = $result['visitorRequest'];
-        if ($visitorRequest instanceof VisitorRequest) {
-            $this->ensureStaffCanAccessVisitorRequest($request, $visitorRequest);
-        }
 
         $this->auditLogger->record('visitors.pass_validated', actor: $actor, request: $request, metadata: [
             'result' => $result['result']->value,

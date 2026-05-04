@@ -74,7 +74,7 @@ class OperationalStatusTest extends TestCase
         Storage::fake('local');
 
         $supportAgent = User::factory()->create([
-            'role' => UserRole::SupportAgent->value,
+            'role' => UserRole::CompoundAdmin->value,
             'status' => AccountStatus::Active->value,
         ]);
 

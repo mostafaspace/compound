@@ -11,6 +11,12 @@ import { LogoutButton } from '../components/ui/LogoutButton';
 
 const Tab = createBottomTabNavigator<GuardStackParamList>();
 
+const tabGlyphs: Record<keyof GuardStackParamList, string> = {
+  Gate: 'GT',
+  Scanner: 'QR',
+  Invitations: 'IN',
+};
+
 export const GuardNavigator = () => {
   const { t } = useTranslation();
   const isDark = useColorScheme() === 'dark';
@@ -44,11 +50,7 @@ export const GuardNavigator = () => {
           fontWeight: '600',
         },
         tabBarIcon: ({ color, size }) => {
-          let icon = '•';
-          if (route.name === 'Gate') icon = '🏠';
-          if (route.name === 'Scanner') icon = '📷';
-          if (route.name === 'Invitations') icon = '📋';
-          return <Text style={{ color, fontSize: 20 }}>{icon}</Text>;
+          return <Text style={{ color, fontSize: 12, fontWeight: '800', letterSpacing: 1 }}>{tabGlyphs[route.name]}</Text>;
         },
       })}
     >

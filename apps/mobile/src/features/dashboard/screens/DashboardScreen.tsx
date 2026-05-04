@@ -16,16 +16,17 @@ const authTokenService = "compound.mobile.authToken";
 const visitorTokenService = "compound.mobile.visitorPassTokens";
 
 const shortcutRouteMap: Record<string, { screen: string; params?: object }> = {
+  '/units/assign': { screen: 'Admin', params: { screen: 'Units' } },
   '/visitors/create': { screen: 'CreateVisitor' },
   '/issues/create': { screen: 'CreateIssue' },
-  '/polls': { screen: 'Main', params: { screen: 'Governance' } },
+  '/polls': { screen: 'Main', params: { screen: 'Polls' } },
   '/org-chart': { screen: 'Main', params: { screen: 'More', params: { screen: 'OrgChart' } } },
   '/visitors': { screen: 'Main', params: { screen: 'Visitors' } },
   '/issues': { screen: 'Main', params: { screen: 'More', params: { screen: 'Issues' } } },
   '/security/scanner': { screen: 'Guard', params: { screen: 'Scanner' } },
   '/security/entries': { screen: 'Guard', params: { screen: 'Gate' } },
   '/security/manual-entry': { screen: 'Guard', params: { screen: 'Gate' } },
-  '/governance': { screen: 'Main', params: { screen: 'Governance' } },
+  '/governance': { screen: 'Main', params: { screen: 'Polls' } },
 };
 
 export const DashboardScreen = () => {

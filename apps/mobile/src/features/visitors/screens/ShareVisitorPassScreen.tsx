@@ -25,15 +25,12 @@ export const ShareVisitorPassScreen = () => {
 
   const { data: visitor, isLoading, error, refetch } = useGetVisitorRequestQuery(visitorId);
   const [markAsShared] = useMarkAsSharedMutation();
+  const qrToken = visitor?.qrToken ?? null;
 
   React.useEffect(() => {
-    // Debug logging
-    console.log('SharePass: State update', { visitorId, isLoading, hasVisitor: !!visitor, hasError: !!error });
-    
-    // Auto-retry if stuck and no visitor but not loading
+    // Retry once if the screen opens before the pass payload is available.
     const timer = setTimeout(() => {
       if (!visitor && !isLoading && !error) {
-        console.log('SharePass: Stuck? Retrying refetch...');
         refetch();
       }
     }, 3000);
@@ -58,6 +55,31 @@ export const ShareVisitorPassScreen = () => {
           {error ? JSON.stringify(error) : 'Visitor not found'}
         </Typography>
         <Button title="Back to Dashboard" onPress={() => navigation.popToTop()} />
+      </ScreenContainer>
+    );
+  }
+
+  if (!qrToken) {
+    return (
+      <ScreenContainer style={styles.center}>
+        <Typography variant="h3" style={{ marginBottom: spacing.md }}>
+          {t("Visitors.passUnavailable", { defaultValue: "Pass unavailable" })}
+        </Typography>
+        <Typography style={{ marginBottom: spacing.xl, textAlign: 'center' }}>
+          {t("Visitors.passUnavailableBody", {
+            defaultValue: "This visitor pass does not have a QR token yet. Please refresh or regenerate the pass before sharing it.",
+          })}
+        </Typography>
+        <Button
+          title={t("Common.retry", { defaultValue: "Retry" })}
+          onPress={() => refetch()}
+          style={{ marginBottom: spacing.md }}
+        />
+        <Button
+          variant="outline"
+          title={t("Common.backToDashboard", "Back to Dashboard")}
+          onPress={() => navigation.popToTop()}
+        />
       </ScreenContainer>
     );
   }
@@ -139,7 +161,7 @@ export const ShareVisitorPassScreen = () => {
               {/* QR Code */}
               <View style={[styles.qrContainer, { backgroundColor: isDark ? '#1a202c' : '#f8fafc' }]}>
                 <QRCode
-                  value={visitor.qrToken || visitor.id}
+                  value={qrToken}
                   size={180}
                   backgroundColor="transparent"
                   color={isDark ? '#FFF' : colors.primary.light}

@@ -27,7 +27,7 @@ export const CreateInvitationScreen = () => {
     phone: '',
     buildingId: '',
     unitId: '',
-    role: 'resident_owner',
+    role: 'resident',
   });
 
   const { data: buildings = [], isLoading: loadingBuildings } = useGetBuildingsQuery(user?.compoundId || '');
@@ -156,34 +156,22 @@ export const CreateInvitationScreen = () => {
 
         <View style={styles.section}>
           <Typography variant="caption" style={styles.label}>
-            {t('Admin.role', 'Resident Role')}
+            {t('Admin.role', 'Account Role')}
           </Typography>
-          <View style={styles.roleContainer}>
-            <TouchableOpacity
-              onPress={() => setFormData({ ...formData, role: 'resident_owner' })}
-              style={[
-                styles.roleOption,
-                formData.role === 'resident_owner' && styles.activeRole,
-                { backgroundColor: isDark ? colors.surface.dark : colors.surface.light }
-              ]}
-            >
-              <Typography variant="body" style={formData.role === 'resident_owner' ? styles.activeChipText : {}}>
-                {t('Roles.owner', 'Owner')}
-              </Typography>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setFormData({ ...formData, role: 'resident_tenant' })}
-              style={[
-                styles.roleOption,
-                formData.role === 'resident_tenant' && styles.activeRole,
-                { backgroundColor: isDark ? colors.surface.dark : colors.surface.light }
-              ]}
-            >
-              <Typography variant="body" style={formData.role === 'resident_tenant' ? styles.activeChipText : {}}>
-                {t('Roles.tenant', 'Tenant')}
-              </Typography>
-            </TouchableOpacity>
+          <View
+            style={[
+              styles.roleOption,
+              styles.lockedRole,
+              { backgroundColor: isDark ? colors.surface.dark : colors.surface.light }
+            ]}
+          >
+            <Typography variant="body" style={styles.lockedRoleText}>
+              {t('Roles.resident', 'Resident')}
+            </Typography>
           </View>
+          <Typography variant="caption" style={styles.helperText}>
+            {t('Admin.defaultResidentHelp', 'All new users start as residents. Admin roles are assigned later after verification.')}
+          </Typography>
         </View>
 
         <Button
@@ -254,7 +242,6 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   roleOption: {
-    flex: 1,
     padding: spacing.md,
     borderRadius: 12,
     alignItems: 'center',
@@ -264,6 +251,16 @@ const styles = StyleSheet.create({
   activeRole: {
     backgroundColor: colors.primary.light,
     borderColor: colors.primary.light,
+  },
+  lockedRole: {
+    justifyContent: 'center',
+  },
+  lockedRoleText: {
+    fontWeight: '700',
+  },
+  helperText: {
+    marginTop: spacing.sm,
+    color: colors.text.secondary.light,
   },
   submitButton: {
     marginTop: spacing.lg,

@@ -39,8 +39,8 @@ class AuditLogger
                 'reason'         => $reason,
                 'metadata'       => $metadata,
             ]);
-        } catch (Throwable) {
-            report_if(app()->isLocal(), 'Audit log write failed.');
+        } catch (Throwable $e) {
+            report_if(app()->isLocal(), 'Audit log write failed: ' . $e->getMessage());
         }
     }
 }

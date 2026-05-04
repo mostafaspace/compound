@@ -56,8 +56,8 @@ class AccountMergeController extends Controller
 
         /** @var User $actor */
         $actor = $request->user();
-        $this->context->ensureUserCanAccessCompound($actor, $source->compound_id);
-        $this->context->ensureUserCanAccessCompound($actor, $target->compound_id);
+        $this->context->ensureUserAccess($request, $source);
+        $this->context->ensureUserAccess($request, $target);
 
         // Block if either user already has a pending merge
         $existingPending = AccountMerge::query()
@@ -94,7 +94,7 @@ class AccountMergeController extends Controller
         /** @var User $actor */
         $actor = $request->user();
         if ($accountMerge->sourceUser !== null) {
-            $this->context->ensureUserCanAccessCompound($actor, $accountMerge->sourceUser->compound_id);
+            $this->context->ensureUserAccess($request, $accountMerge->sourceUser);
         }
 
         $accountMerge->load(['sourceUser', 'targetUser', 'initiator']);
@@ -110,7 +110,7 @@ class AccountMergeController extends Controller
         /** @var User $actor */
         $actor = $request->user();
         if ($accountMerge->sourceUser !== null) {
-            $this->context->ensureUserCanAccessCompound($actor, $accountMerge->sourceUser->compound_id);
+            $this->context->ensureUserAccess($request, $accountMerge->sourceUser);
         }
 
         $this->service->execute($accountMerge, $request->user());
@@ -126,7 +126,7 @@ class AccountMergeController extends Controller
         /** @var User $actor */
         $actor = $request->user();
         if ($accountMerge->sourceUser !== null) {
-            $this->context->ensureUserCanAccessCompound($actor, $accountMerge->sourceUser->compound_id);
+            $this->context->ensureUserAccess($request, $accountMerge->sourceUser);
         }
 
         if ($accountMerge->status !== AccountMergeStatus::Pending) {

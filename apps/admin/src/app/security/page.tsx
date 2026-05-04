@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
-import { LogoutButton } from "@/components/logout-button";
+import { SiteNav } from "@/components/site-nav";
 import {
   getCurrentUser,
   getSecurityGates,
@@ -10,6 +10,7 @@ import {
   getSecurityIncidents,
   getManualVisitorEntries,
 } from "@/lib/api";
+import { securityBadgeClass } from "@/lib/semantic-badges";
 import { requireAdminUser } from "@/lib/session";
 
 // ─── Small stat card ─────────────────────────────────────────────────────────
@@ -27,18 +28,7 @@ function StatCard({ label, value, sub }: { label: string; value: string | number
 // ─── Status badge ─────────────────────────────────────────────────────────────
 
 function Badge({ status }: { status: string }) {
-  const colorMap: Record<string, string> = {
-    active: "bg-[#e6f3ef] text-brand",
-    draft: "bg-background text-muted",
-    closed: "bg-[#eee] text-muted",
-    allowed: "bg-[#e6f3ef] text-brand",
-    denied: "bg-[#fff3f2] text-danger",
-    emergency: "bg-[#fff3f2] text-danger",
-    denied_entry: "bg-[#fff3f2] text-danger",
-    suspicious_activity: "bg-[#f3ead7] text-[#8a520c]",
-    operational_handover: "bg-[#eaf0ff] text-[#244a8f]",
-  };
-  const cls = colorMap[status] ?? "bg-background text-muted";
+  const cls = securityBadgeClass(status);
   return (
     <span className={`inline-flex rounded-md px-2 py-0.5 text-xs font-semibold ${cls}`}>
       {status.replace(/_/g, " ")}
@@ -47,7 +37,7 @@ function Badge({ status }: { status: string }) {
 }
 
 export default async function SecurityPage() {
-  await requireAdminUser(getCurrentUser, ["super_admin", "compound_admin", "support_agent"]);
+  await requireAdminUser(getCurrentUser, ["super_admin", "compound_admin"]);
 
   const [t, gates, shifts, devices, incidents, manualEntries] = await Promise.all([
     getTranslations("Security"),
@@ -74,6 +64,7 @@ export default async function SecurityPage() {
 
   return (
     <main className="min-h-screen bg-background text-foreground">
+      <SiteNav breadcrumb={[{ label: t("title") }]} />
       {/* Header */}
       <header className="border-b border-line bg-panel">
         <div className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-6 md:flex-row md:items-center md:justify-between lg:px-8">
@@ -94,7 +85,6 @@ export default async function SecurityPage() {
                 {t(`nav.${s.key}`)}
               </Link>
             ))}
-            <LogoutButton />
           </div>
         </div>
       </header>

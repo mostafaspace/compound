@@ -8,6 +8,7 @@ use App\Enums\UserRole;
 use App\Models\AuditLog;
 use App\Models\User;
 use App\Models\UserScopeAssignment;
+use Database\Seeders\RbacSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -19,6 +20,42 @@ use Tests\TestCase;
 class AuthTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_uat_persona_login_self_heals_missing_seed_users_in_non_production(): void
+    {
+        $this->seed(RbacSeeder::class);
+
+        $this->assertDatabaseMissing('users', [
+            'email' => 'security-guard@uat.compound.local',
+        ]);
+
+        $this->postJson('/api/v1/auth/login', [
+            'email' => 'security-guard@uat.compound.local',
+            'password' => 'uat-password-2026',
+            'deviceName' => 'Feature test',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.user.email', 'security-guard@uat.compound.local')
+            ->assertJsonPath('data.user.status', AccountStatus::Active->value)
+            ->assertJsonPath('data.user.role', UserRole::SecurityGuard->value);
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'compound-admin@uat.compound.local',
+            'status' => AccountStatus::Active->value,
+        ]);
+        $this->assertDatabaseHas('users', [
+            'email' => 'resident-owner@uat.compound.local',
+            'status' => AccountStatus::Active->value,
+        ]);
+        $this->assertDatabaseHas('users', [
+            'email' => 'security-guard@uat.compound.local',
+            'status' => AccountStatus::Active->value,
+        ]);
+        $this->assertDatabaseHas('users', [
+            'email' => 'board-member@uat.compound.local',
+            'status' => AccountStatus::Active->value,
+        ]);
+    }
 
     public function test_active_user_can_login_and_fetch_profile(): void
     {
@@ -43,6 +80,68 @@ class AuthTest extends TestCase
             ->getJson('/api/v1/auth/me')
             ->assertOk()
             ->assertJsonPath('data.email', 'admin@example.com');
+    }
+
+    public function test_broadcasting_auth_accepts_sanctum_bearer_tokens_for_private_user_channels(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'broadcast-admin@example.com',
+            'password' => Hash::make('password'),
+            'role' => UserRole::CompoundAdmin->value,
+            'status' => AccountStatus::Active->value,
+        ]);
+
+        $token = $this->postJson('/api/v1/auth/login', [
+            'email' => 'broadcast-admin@example.com',
+            'password' => 'password',
+            'deviceName' => 'Feature test',
+        ])
+            ->assertOk()
+            ->json('data.token');
+
+        $this->withHeader('Authorization', "Bearer {$token}")
+            ->post('/broadcasting/auth', [
+                'socket_id' => '1234.5678',
+                'channel_name' => 'private-user-'.$user->id,
+            ])
+            ->assertOk()
+            ->assertJsonStructure(['auth']);
+    }
+
+    public function test_broadcasting_auth_rejects_private_channel_for_another_user(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'broadcast-owner@example.com',
+            'password' => Hash::make('password'),
+            'role' => UserRole::CompoundAdmin->value,
+            'status' => AccountStatus::Active->value,
+        ]);
+        $otherUser = User::factory()->create();
+
+        $token = $this->postJson('/api/v1/auth/login', [
+            'email' => 'broadcast-owner@example.com',
+            'password' => 'password',
+            'deviceName' => 'Feature test',
+        ])
+            ->assertOk()
+            ->json('data.token');
+
+        $this->withHeader('Authorization', "Bearer {$token}")
+            ->post('/broadcasting/auth', [
+                'socket_id' => '1234.5678',
+                'channel_name' => 'private-user-'.$otherUser->id,
+            ])
+            ->assertForbidden();
+    }
+
+    public function test_broadcasting_auth_rejects_unauthenticated_requests(): void
+    {
+        $user = User::factory()->create();
+
+        $this->post('/broadcasting/auth', [
+            'socket_id' => '1234.5678',
+            'channel_name' => 'private-user-'.$user->id,
+        ])->assertForbidden();
     }
 
     public function test_suspended_user_cannot_login(): void
@@ -187,6 +286,33 @@ class AuthTest extends TestCase
 
         $this->assertSame(
             ['admin:*', 'property:*', 'resident:*', 'finance:read'],
+            $storedToken->abilities,
+        );
+    }
+
+    public function test_president_login_token_abilities_include_issues_and_governance(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'president-login@example.com',
+            'password' => Hash::make('password'),
+            'role' => UserRole::President->value,
+            'status' => AccountStatus::Active->value,
+        ]);
+
+        $token = $this->postJson('/api/v1/auth/login', [
+            'email' => 'president-login@example.com',
+            'password' => 'password',
+            'deviceName' => 'Feature test',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.user.role', UserRole::President->value)
+            ->json('data.token');
+
+        [$tokenId] = explode('|', $token);
+        $storedToken = \Laravel\Sanctum\PersonalAccessToken::query()->findOrFail($tokenId);
+
+        $this->assertSame(
+            ['property:read', 'governance:*', 'finance:read', 'resident:read', 'issues:*'],
             $storedToken->abilities,
         );
     }

@@ -77,10 +77,10 @@ class SecurityOperationsTest extends TestCase
         $this->getJson('/api/v1/security/gates')->assertOk();
     }
 
-    public function test_support_agent_can_list_gates(): void
+    public function test_support_agent_cannot_list_gates(): void
     {
         Sanctum::actingAs($this->makeAdmin(['role' => UserRole::SupportAgent->value]));
-        $this->getJson('/api/v1/security/gates')->assertOk();
+        $this->getJson('/api/v1/security/gates')->assertForbidden();
     }
 
     // ─── Gate CRUD ────────────────────────────────────────────────────────────

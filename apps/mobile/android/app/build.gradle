@@ -92,6 +92,11 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
+        manifestPlaceholders = [
+            usesCleartextTraffic: project.hasProperty("usesCleartextTraffic")
+                ? project.property("usesCleartextTraffic").toString()
+                : "false"
+        ]
     }
     signingConfigs {
         debug {
@@ -112,11 +117,13 @@ android {
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
+            manifestPlaceholders.usesCleartextTraffic = "true"
         }
         release {
             if (hasReleaseSigning) {
                 signingConfig signingConfigs.release
             }
+            manifestPlaceholders.usesCleartextTraffic = "false"
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }

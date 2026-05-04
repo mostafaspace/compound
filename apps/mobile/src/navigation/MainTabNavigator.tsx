@@ -1,7 +1,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useTranslation } from 'react-i18next';
-import { useColorScheme } from 'react-native';
+import { Text, useColorScheme } from 'react-native';
 import { MainTabParamList } from './types';
 import { DashboardScreen } from '../features/dashboard/screens/DashboardScreen';
 import { VisitorsScreen } from '../features/visitors/screens/VisitorsScreen';
@@ -11,15 +11,16 @@ import { MoreNavigator } from './MoreNavigator';
 import { colors, spacing } from '../theme';
 import { usePermission } from '../hooks/usePermission';
 
-// Placeholder for other screens
-import { View, Text } from 'react-native';
-const Placeholder = ({ name }: { name: string }) => (
-  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-    <Text>{name} Screen coming soon</Text>
-  </View>
-);
-
 const Tab = createBottomTabNavigator<MainTabParamList>();
+
+const tabGlyphs: Record<keyof MainTabParamList, string> = {
+  Dashboard: 'DB',
+  Property: 'PR',
+  Visitors: 'VI',
+  Finance: 'FN',
+  Polls: 'PL',
+  More: 'MO',
+};
 
 export const MainTabNavigator = () => {
   const { t } = useTranslation();
@@ -27,7 +28,7 @@ export const MainTabNavigator = () => {
 
   const canViewVisitors = usePermission('view_visitors');
   const canViewFinance = usePermission('view_finance');
-  const canViewGovernance = usePermission('view_governance');
+  const canViewPolls = usePermission('view_governance');
 
   return (
     <Tab.Navigator
@@ -57,13 +58,7 @@ export const MainTabNavigator = () => {
           fontWeight: '600',
         },
         tabBarIcon: ({ color, size }) => {
-          let icon = '•';
-          if (route.name === 'Dashboard') icon = '🏠';
-          if (route.name === 'Visitors') icon = '👥';
-          if (route.name === 'Finance') icon = '💳';
-          if (route.name === 'Governance') icon = '📊';
-          if (route.name === 'More') icon = '•••';
-          return <Text style={{ color, fontSize: 20 }}>{icon}</Text>;
+          return <Text style={{ color, fontSize: 12, fontWeight: '800', letterSpacing: 1 }}>{tabGlyphs[route.name]}</Text>;
         },
       })}
     >
@@ -86,11 +81,11 @@ export const MainTabNavigator = () => {
           options={{ title: t("Finance.label") }}
         />
       )}
-      {canViewGovernance && (
+      {canViewPolls && (
         <Tab.Screen
-          name="Governance"
+          name="Polls"
           component={PollsScreen}
-          options={{ title: t("Governance.label") }}
+          options={{ title: t("Polls.label") }}
         />
       )}
       <Tab.Screen

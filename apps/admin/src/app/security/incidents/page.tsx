@@ -44,7 +44,7 @@ export default async function SecurityIncidentsPage({
 }: {
   searchParams?: Promise<SearchParams>;
 }) {
-  await requireAdminUser(getCurrentUser, ["super_admin", "compound_admin", "support_agent"]);
+  await requireAdminUser(getCurrentUser, ["super_admin", "compound_admin"]);
 
   const params = searchParams ? await searchParams : {};
   const activeType = INCIDENT_TYPES.includes(params.type as SecurityIncidentType | "all")

@@ -146,6 +146,13 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             ->middleware('throttle:issue-create')
             ->name('issues.store');
         Route::post('/issues/{issue}/comments', [IssueCommentController::class, 'store'])->name('issues.comments.store');
+        Route::get('/issues', [IssueController::class, 'index'])->name('issues.index');
+        Route::get('/issues/{issue}', [IssueController::class, 'show'])->name('issues.show');
+        Route::patch('/issues/{issue}', [IssueController::class, 'update'])->name('issues.update');
+        Route::put('/issues/{issue}', [IssueController::class, 'update'])->name('issues.update');
+        Route::post('/issues/{issue}/escalate', [IssueController::class, 'escalate'])->name('issues.escalate');
+        Route::get('/issues/{issue}/attachments', [IssueAttachmentController::class, 'index'])->name('issues.attachments.index');
+        Route::post('/issues/{issue}/attachments', [IssueAttachmentController::class, 'store'])->name('issues.attachments.store');
         Route::get('/my/announcements', [AnnouncementController::class, 'feed'])->name('my.announcements.index');
         Route::get('/announcements/{announcement}', [AnnouncementController::class, 'show'])->name('announcements.show');
         Route::get('/announcements/{announcement}/attachments/{attachment}/download', [AnnouncementController::class, 'downloadAttachment'])
@@ -201,6 +208,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
     Route::middleware(['auth:sanctum', 'role:view_users'])
         ->group(function (): void {
             Route::get('/units', [UnitController::class, 'lookup'])->name('units.lookup');
+            Route::get('/units/unassigned-users', [UnitMembershipController::class, 'unassignedUsers'])->name('units.unassigned-users');
             Route::post('/buildings/{building}/units/import', [UnitController::class, 'import'])->name('buildings.units.import');
             Route::get('/buildings/{building}/units/export', [UnitController::class, 'export'])->name('buildings.units.export');
             Route::apiResource('compounds', CompoundController::class)->except(['destroy']);
@@ -213,7 +221,6 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             Route::post('/buildings/{building}/archive', [BuildingController::class, 'archive'])->name('buildings.archive');
             Route::post('/floors/{floor}/archive', [FloorController::class, 'archive'])->name('floors.archive');
             Route::post('/units/{unit}/archive', [UnitController::class, 'archive'])->name('units.archive');
-            Route::get('/units/unassigned-users', [UnitMembershipController::class, 'unassignedUsers'])->name('units.unassigned-users');
             Route::get('/units/{unit}/memberships', [UnitMembershipController::class, 'index'])->name('units.memberships.index');
             Route::post('/units/{unit}/memberships', [UnitMembershipController::class, 'store'])->name('units.memberships.store');
             Route::patch('/unit-memberships/{unitMembership}', [UnitMembershipController::class, 'update'])
@@ -265,15 +272,6 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
                 ->name('representative-assignments.update');
             Route::post('/representative-assignments/{representativeAssignment}/expire', [RepresentativeAssignmentController::class, 'expire'])
                 ->name('representative-assignments.expire');
-            // Issue Management for admins
-            Route::get('/issues', [IssueController::class, 'index'])->name('issues.index');
-            Route::get('/issues/{issue}', [IssueController::class, 'show'])->name('issues.show');
-            Route::patch('/issues/{issue}', [IssueController::class, 'update'])->name('issues.update');
-            Route::put('/issues/{issue}', [IssueController::class, 'update'])->name('issues.update');
-            Route::post('/issues/{issue}/escalate', [IssueController::class, 'escalate'])->name('issues.escalate');
-            Route::get('/issues/{issue}/attachments', [IssueAttachmentController::class, 'index'])->name('issues.attachments.index');
-            Route::post('/issues/{issue}/attachments', [IssueAttachmentController::class, 'store'])->name('issues.attachments.store');
-
         });
 
     Route::middleware(['auth:sanctum', 'role:view_announcements'])
@@ -409,6 +407,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             Route::post('/votes/{vote}/activate', [VoteController::class, 'activate'])->name('votes.activate');
             Route::post('/votes/{vote}/close', [VoteController::class, 'close'])->name('votes.close');
             Route::post('/votes/{vote}/cancel', [VoteController::class, 'cancel'])->name('votes.cancel');
+            Route::get('/votes/{vote}/voters', [VoteController::class, 'voters'])->name('votes.voters');
         });
 
     // Governance — resident participation routes
@@ -566,14 +565,22 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
 
     // ─── Governance meetings (CM-82) ─────────────────────────────────────────
 
-    // Admin routes: full CRUD for meetings, agenda, participants, minutes, decisions, action items
     Route::middleware(['auth:sanctum', 'role:view_governance'])
         ->prefix('meetings')
         ->name('meetings.')
         ->group(function (): void {
             Route::get('/', [MeetingController::class, 'index'])->name('index');
-            Route::post('/', [MeetingController::class, 'store'])->name('store');
             Route::get('/{meeting}', [MeetingController::class, 'show'])->name('show');
+            Route::get('/{meeting}/participants', [MeetingParticipantController::class, 'index'])->name('participants.index');
+            Route::get('/{meeting}/minutes', [MeetingMinutesController::class, 'show'])->name('minutes.show');
+            Route::get('/action-items', [MeetingActionItemController::class, 'index'])->name('action-items.index');
+        });
+
+    Route::middleware(['auth:sanctum', 'role:manage_governance'])
+        ->prefix('meetings')
+        ->name('meetings.')
+        ->group(function (): void {
+            Route::post('/', [MeetingController::class, 'store'])->name('store');
             Route::patch('/{meeting}', [MeetingController::class, 'update'])->name('update');
             Route::post('/{meeting}/cancel', [MeetingController::class, 'cancel'])->name('cancel');
 
@@ -588,7 +595,6 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             Route::post('/{meeting}/participants/{participant}/confirm-attendance', [MeetingParticipantController::class, 'confirmAttendance'])->name('participants.confirm-attendance');
 
             // Minutes
-            Route::get('/{meeting}/minutes', [MeetingMinutesController::class, 'show'])->name('minutes.show');
             Route::post('/{meeting}/minutes', [MeetingMinutesController::class, 'store'])->name('minutes.store');
             Route::patch('/{meeting}/minutes', [MeetingMinutesController::class, 'update'])->name('minutes.update');
             Route::post('/{meeting}/minutes/publish', [MeetingMinutesController::class, 'publish'])->name('minutes.publish');
@@ -598,7 +604,6 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             Route::delete('/{meeting}/decisions/{decision}', [MeetingDecisionController::class, 'destroy'])->name('decisions.destroy');
 
             // Action items
-            Route::get('/action-items', [MeetingActionItemController::class, 'index'])->name('action-items.index');
             Route::post('/{meeting}/action-items', [MeetingActionItemController::class, 'store'])->name('action-items.store');
             Route::patch('/{meeting}/action-items/{actionItem}', [MeetingActionItemController::class, 'update'])->name('action-items.update');
         });
