@@ -18,10 +18,11 @@ class NotificationService
         string $body,
         array $metadata = [],
         string $priority = 'normal',
+        bool $respectPreferences = true,
     ): ?Notification {
         $user = User::query()->with('notificationPreference')->find($userId);
 
-        if (! $user || ! $this->shouldCreateInAppNotification($user, $category)) {
+        if (! $user || ($respectPreferences && ! $this->shouldCreateInAppNotification($user, $category))) {
             return null;
         }
 

@@ -28,7 +28,8 @@ import { ScreenContainer } from '../../../components/layout/ScreenContainer';
 import { Typography } from '../../../components/ui/Typography';
 import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
-import { colors, spacing } from '../../../theme';
+import { colors, layout, spacing } from '../../../theme';
+import { Icon } from '../../../components/ui/Icon';
 
 const { width } = Dimensions.get('window');
 
@@ -232,7 +233,7 @@ export const CreateVisitorScreen = () => {
             ) : (
               <View style={styles.photoPlaceholder}>
                 <View style={styles.iconCircle}>
-                  <Typography style={{ fontSize: 24 }}>📸</Typography>
+                  <Icon name="camera" color={colors.primary.light} size={24} />
                 </View>
                 <Typography variant="body" style={{ fontWeight: '600', color: colors.primary.light }}>
                   {t("Visitors.addPhoto", "Capture or Upload")}
@@ -294,12 +295,12 @@ export const CreateVisitorScreen = () => {
 
 const styles = StyleSheet.create({
   content: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.xxl,
+    paddingHorizontal: layout.screenGutter,
+    paddingTop: layout.screenTop,
+    paddingBottom: layout.screenBottom,
   },
   header: {
-    marginBottom: spacing.xl,
+    marginBottom: layout.sectionGap,
   },
   headerTitleRow: {
     flexDirection: 'row',
@@ -316,12 +317,12 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   subtitle: {
-    color: '#64748B',
+    color: colors.text.secondary.light,
     fontSize: 14,
   },
   card: {
     borderRadius: 24,
-    padding: spacing.lg,
+    padding: layout.cardPadding,
     marginBottom: spacing.lg,
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.05)',
@@ -381,7 +382,7 @@ const styles = StyleSheet.create({
   },
   photoHint: {
     textAlign: 'center',
-    color: '#94A3B8',
+    color: colors.text.secondary.light,
     marginTop: 4,
     fontSize: 12,
   },
@@ -397,14 +398,14 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 60,
     borderRadius: 18,
-    backgroundColor: '#1D4ED8',
+    backgroundColor: colors.cta.light,
   },
   cancelLink: {
     marginTop: spacing.lg,
     padding: spacing.sm,
   },
   cancelText: {
-    color: '#64748B',
+    color: colors.text.secondary.light,
     fontWeight: '600',
   },
 });

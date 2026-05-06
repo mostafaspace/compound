@@ -7,6 +7,7 @@ use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Resources\UserResource;
+use App\Models\Property\Compound;
 use App\Models\User;
 use App\Support\AuditLogger;
 use Database\Seeders\RbacSeeder;
@@ -19,10 +20,21 @@ use Illuminate\Validation\ValidationException;
 class AuthController extends Controller
 {
     private const SELF_HEALING_UAT_EMAILS = [
+        'super-admin@uat.compound.local',
         'compound-admin@uat.compound.local',
-        'resident-owner@uat.compound.local',
-        'security-guard@uat.compound.local',
+        'president@uat.compound.local',
         'board-member@uat.compound.local',
+        'finance-reviewer@uat.compound.local',
+        'support-agent@uat.compound.local',
+        'resident@uat.compound.local',
+        'resident-owner@uat.compound.local',
+        'resident-tenant@uat.compound.local',
+        'security-guard@uat.compound.local',
+        'ahmed.hassan@uat.compound.local',
+        'sara.mohamed@uat.compound.local',
+        'omar.khalil@uat.compound.local',
+        'nour.eldin@uat.compound.local',
+        'fatima.ibrahim@uat.compound.local',
     ];
 
     public function __construct(private readonly AuditLogger $auditLogger) {}
@@ -155,6 +167,16 @@ class AuthController extends Controller
             return false;
         }
 
-        return ! $user || ! Hash::check($password, $user->password);
+        if (! $user || ! Hash::check($password, $user->password)) {
+            return true;
+        }
+
+        if (in_array($email, ['super-admin@uat.compound.local', 'support-agent@uat.compound.local'], strict: true)) {
+            return $user->compound_id !== null;
+        }
+
+        $nextPointId = Compound::query()->where('code', 'NEXT-POINT')->value('id');
+
+        return $nextPointId !== null && $user->compound_id !== $nextPointId;
     }
 }

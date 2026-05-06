@@ -85,7 +85,7 @@ class IssueController extends Controller
             location: $location,
         );
 
-        return IssueResource::make($issue->load(['reporter', 'assignee', 'unit', 'building']))
+        return IssueResource::make($issue->load(['reporter', 'assignee', 'unit', 'building', 'attachments']))
             ->response()
             ->setStatusCode(201);
     }
@@ -120,13 +120,25 @@ class IssueController extends Controller
             $changes['assigned_to'] = $request->input('assignedTo');
         }
 
+        if ($request->has('category')) {
+            $changes['category'] = $request->input('category');
+        }
+
         if ($request->has('categoryId')) {
             $changes['category'] = $request->input('categoryId');
         }
 
+        if ($request->has('title')) {
+            $changes['title'] = $request->input('title');
+        }
+
+        if ($request->has('description')) {
+            $changes['description'] = $request->input('description');
+        }
+
         $issue = $this->issueService->updateIssue($issue, $changes, $user);
 
-        return IssueResource::make($issue->load(['reporter', 'assignee', 'unit', 'building']))->response();
+        return IssueResource::make($issue->load(['reporter', 'assignee', 'unit', 'building', 'attachments']))->response();
     }
 
     public function escalate(Request $request, Issue $issue): JsonResponse

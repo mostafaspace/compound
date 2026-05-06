@@ -5,7 +5,7 @@ import { getLocale } from "next-intl/server";
 
 import { SiteNav } from "@/components/site-nav";
 import { getCurrentUser, getPoll, getPollVoters } from "@/lib/api";
-import { summarizePollTransparency } from "@/lib/poll-transparency";
+import { summarizePollEngagement, summarizePollTransparency } from "@/lib/poll-transparency";
 import { requireAdminUser } from "@/lib/session";
 import { closePollDetailAction, publishPollDetailAction } from "./actions";
 
@@ -57,6 +57,10 @@ export default async function PollDetailPage({ params, searchParams }: PollDetai
   const options = poll.options ?? [];
   const totalVotes = poll.votesCount ?? 0;
   const transparency = summarizePollTransparency({
+    ...poll,
+    voters,
+  });
+  const engagement = summarizePollEngagement({
     ...poll,
     voters,
   });
@@ -133,6 +137,11 @@ export default async function PollDetailPage({ params, searchParams }: PollDetai
             label="Named ballots"
             value={`${transparency.uniqueVoterCount}`}
             helper={`${transparency.uniqueUnitCount} represented units`}
+          />
+          <StatCard
+            label="Awaiting apartment vote"
+            value={`${engagement.awaitingApartmentVoteCount}`}
+            helper="Eligible apartments that received the poll but do not yet have a visible ballot"
           />
           <StatCard
             label="Latest lifecycle event"
@@ -220,6 +229,46 @@ export default async function PollDetailPage({ params, searchParams }: PollDetai
               )}
             </div>
 
+            <div className="rounded-lg border border-line bg-panel p-5">
+              <h2 className="text-lg font-semibold">Transparency Gaps</h2>
+              <p className="mt-1 text-sm text-muted">
+                Residents who still have outstanding engagement steps on this poll.
+              </p>
+
+              <div className="mt-4 grid gap-4 xl:grid-cols-2">
+                <div className="rounded-lg bg-background p-4">
+                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">Delivered but not opened</div>
+                  {engagement.deliveredButNotOpened.length === 0 ? (
+                    <p className="mt-3 text-sm text-muted">Everyone who received this poll has opened it.</p>
+                  ) : (
+                    <ul className="mt-3 space-y-2 text-sm">
+                      {engagement.deliveredButNotOpened.map((log, idx) => (
+                        <li key={`${log.userId}-${idx}`} className="flex items-center justify-between gap-3">
+                          <span className="font-medium">{log.userName ?? "Unknown"}</span>
+                          <span className="text-muted">{formatDate(log.notifiedAt, locale)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                <div className="rounded-lg bg-background p-4">
+                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">Opened but apartment not voted</div>
+                  {engagement.openedButApartmentNotVoted.length === 0 ? (
+                    <p className="mt-3 text-sm text-muted">Every opened apartment already has a visible ballot.</p>
+                  ) : (
+                    <ul className="mt-3 space-y-2 text-sm">
+                      {engagement.openedButApartmentNotVoted.map((log, idx) => (
+                        <li key={`${log.userId}-${idx}`} className="flex items-center justify-between gap-3">
+                          <span className="font-medium">{log.userName ?? "Unknown"}</span>
+                          <span className="text-muted">{formatDate(log.lastViewedAt, locale)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            </div>
+
             <div className="grid gap-6 xl:grid-cols-2">
               <div className="rounded-lg border border-line bg-panel p-5">
                 <h2 className="text-lg font-semibold">Notification Delivery</h2>
@@ -233,14 +282,17 @@ export default async function PollDetailPage({ params, searchParams }: PollDetai
                       <thead>
                         <tr className="border-b border-line text-left text-xs font-semibold text-muted">
                           <th className="pb-2">Resident</th>
+                          <th className="pb-2">Channel</th>
                           <th className="pb-2">Notified At</th>
                           <th className="pb-2">Status</th>
+                          <th className="pb-2">Delivered At</th>
                         </tr>
                       </thead>
                       <tbody>
                         {poll.notificationLogs.map((log, idx) => (
                           <tr key={`${log.userName ?? "unknown"}-${idx}`} className="border-b border-line last:border-0">
                             <td className="py-2 font-medium">{log.userName ?? "Unknown"}</td>
+                            <td className="py-2 text-muted">{log.channel}</td>
                             <td className="py-2 text-muted">{formatDate(log.notifiedAt, locale)}</td>
                             <td className="py-2">
                               <span
@@ -251,6 +303,7 @@ export default async function PollDetailPage({ params, searchParams }: PollDetai
                                 {log.delivered ? "Delivered" : "Pending"}
                               </span>
                             </td>
+                            <td className="py-2 text-muted">{formatDate(log.deliveredAt, locale)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -267,7 +320,7 @@ export default async function PollDetailPage({ params, searchParams }: PollDetai
                   View logs help admins prove the poll was seen before closure.
                 </p>
 
-                {poll.viewLogs && poll.viewLogs.length > 0 ? (
+                {engagement.openedButApartmentNotVoted.length > 0 || (poll.viewLogs ?? []).some((log) => log.unitId !== null) ? (
                   <div className="mt-4 overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
@@ -279,7 +332,9 @@ export default async function PollDetailPage({ params, searchParams }: PollDetai
                         </tr>
                       </thead>
                       <tbody>
-                        {poll.viewLogs.map((log, idx) => (
+                        {(poll.viewLogs ?? [])
+                          .filter((log) => log.unitId !== null)
+                          .map((log, idx) => (
                           <tr key={`${log.userName ?? "unknown"}-${idx}`} className="border-b border-line last:border-0">
                             <td className="py-2 font-medium">{log.userName ?? "Unknown"}</td>
                             <td className="py-2 text-muted">{formatDate(log.firstViewedAt, locale)}</td>

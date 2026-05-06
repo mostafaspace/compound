@@ -48,7 +48,7 @@ export const linking: LinkingOptions<RootStackParamList> = {
       CreateVisitor: 'visitors/new',
       ShareVisitorPass: 'visitors/share/:visitorId',
       PollDetail: 'polls/:pollId',
-      CreateIssue: 'issues/new',
+      AddEditIssue: 'issues/new',
       IssueDetail: 'issues/detail',
       UploadDocument: 'documents/upload',
       AdminInvitations: 'admin/invitations',

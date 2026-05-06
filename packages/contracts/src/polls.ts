@@ -18,6 +18,12 @@ export interface PollType {
   createdAt: string | null;
 }
 
+export interface PollEligibleUnit {
+  id: string;
+  unitNumber: string | null;
+  isPrimary: boolean;
+}
+
 export interface PollOption {
   id: number;
   label: string;
@@ -35,16 +41,24 @@ export interface PollVoter {
 }
 
 export interface PollViewLog {
+  userId: number;
   userName: string | null;
+  unitId: string | null;
+  unitNumber: string | null;
   firstViewedAt: string | null;
   lastViewedAt: string | null;
   viewCount: number;
 }
 
 export interface PollNotificationLog {
+  userId: number;
   userName: string | null;
+  unitId: string | null;
+  unitNumber: string | null;
+  channel: string;
   notifiedAt: string | null;
   delivered: boolean;
+  deliveredAt: string | null;
 }
 
 export interface Poll {
@@ -68,6 +82,7 @@ export interface Poll {
   updatedAt: string | null;
   options?: PollOption[];
   votesCount: number;
+  selectedUnitId?: string | null;
   hasVoted?: boolean | null;
   userVoteOptionIds?: number[] | null;
   voters?: PollVoter[];
@@ -92,12 +107,16 @@ export interface CreatePollInput {
 
 export interface PollVoteInput {
   optionIds: number[];
+  unitId?: string;
 }
 
 export interface PollEligibilityResult {
   eligible: boolean;
   reason: string | null;
   hasVoted: boolean;
+  selectedUnitId?: string | null;
+  requiresUnitSelection?: boolean;
+  eligibleUnits?: PollEligibleUnit[];
 }
 
 export interface CreatePollTypeInput {

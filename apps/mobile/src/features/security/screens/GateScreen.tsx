@@ -3,33 +3,25 @@ import {
   View,
   StyleSheet,
   FlatList,
-  useColorScheme,
-  SafeAreaView
+  useColorScheme
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
-import { useDispatch } from 'react-redux';
 import { useGetPendingVisitorRequestsQuery, useValidatePassMutation, usePerformVisitorActionMutation } from '../../../services/security';
-import { logout as logoutAction } from '../../../store/authSlice';
-import * as Keychain from "react-native-keychain";
-import { colors, spacing, shadows } from '../../../theme';
+import { colors, layout, spacing, shadows, radii } from '../../../theme';
 import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { Typography } from '../../../components/ui/Typography';
 import { ScreenContainer } from '../../../components/layout/ScreenContainer';
-import { ScreenHeader } from '../../../components/layout/ScreenHeader';
-import { LogoutButton } from '../../../components/ui/LogoutButton';
+import { Icon } from '../../../components/ui/Icon';
 import { formatDate } from '../../../utils/formatters';
 import { visitorStatusPalette } from '../../../theme/semantics';
 import type { GuardStackParamList } from '../../../navigation/types';
 import type { NavigationProp } from '@react-navigation/native';
 
-const authTokenService = "compound.mobile.authToken";
-
 export const GateScreen = () => {
   const { t } = useTranslation();
-  const dispatch = useDispatch();
   const isDark = useColorScheme() === 'dark';
   const navigation = useNavigation<NavigationProp<GuardStackParamList>>();
 
@@ -86,30 +78,32 @@ export const GateScreen = () => {
     }
 
     return (
-      <View style={styles.actionRow}>
-        {item.status !== 'arrived' ? (
+      <View style={{ gap: spacing.md }}>
+        {item.status !== 'arrived' && (
           <Button
             title={t('Security.markArrived', 'Mark Arrived')}
             onPress={() => handleVisitorAction(item.id, 'arrive')}
             variant="outline"
-            style={styles.actionBtn}
+            style={{ height: 44 }}
             loading={isPerforming}
           />
-        ) : null}
-        <Button
-          title={t("Security.allow")}
-          onPress={() => handleVisitorAction(item.id, 'allow')}
-          style={[styles.actionBtn, styles.allowBtn]}
-          loading={isPerforming}
-        />
-        <Button
-          variant="outline"
-          title={t("Security.deny")}
-          onPress={() => handleVisitorAction(item.id, 'deny')}
-          style={[styles.actionBtn, { borderColor: colors.error }]}
-          textStyle={{ color: colors.error }}
-          loading={isPerforming}
-        />
+        )}
+        <View style={styles.actionRow}>
+          <Button
+            title={t("Security.allow")}
+            onPress={() => handleVisitorAction(item.id, 'allow')}
+            style={[styles.actionBtn, styles.allowBtn]}
+            loading={isPerforming}
+          />
+          <Button
+            variant="outline"
+            title={t("Security.deny")}
+            onPress={() => handleVisitorAction(item.id, 'deny')}
+            style={[styles.actionBtn, { borderColor: colors.error }]}
+            textStyle={{ color: colors.error }}
+            loading={isPerforming}
+          />
+        </View>
       </View>
     );
   };
@@ -120,7 +114,12 @@ export const GateScreen = () => {
     return (
       <View style={[styles.card, { backgroundColor: isDark ? colors.surface.dark : colors.surface.light, borderColor: isDark ? colors.border.dark : colors.border.light }]}>
         <View style={styles.cardHeader}>
-          <Typography variant="h3">{item.visitorName}</Typography>
+          <View style={styles.visitorTitle}>
+            <View style={styles.visitorIcon}>
+              <Icon name="visitors" color={colors.primary.light} size={20} />
+            </View>
+            <Typography variant="h3">{item.visitorName}</Typography>
+          </View>
           <StatusBadge
             label={item.status.replace(/_/g, ' ')}
             backgroundColor={statusPalette.background}
@@ -156,6 +155,7 @@ export const GateScreen = () => {
           onPress={() => navigation.navigate('Scanner')}
           variant="outline"
           style={styles.scannerShortcut}
+          leftIcon="qr"
         />
         {securityMessage && (
           <Typography
@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
     padding: 0,
   },
   validationSection: {
-    padding: spacing.lg,
+    padding: layout.cardPadding,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(0,0,0,0.05)',
     ...shadows.sm,
@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
   },
   checkBtn: {
     height: 48,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
   },
   scannerShortcut: {
     marginTop: spacing.sm,
@@ -220,12 +220,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     padding: spacing.sm,
     backgroundColor: 'rgba(0,0,0,0.02)',
-    borderRadius: 8,
+    borderRadius: radii.md,
   },
   listSection: {
     flex: 1,
-    paddingHorizontal: spacing.lg,
-    marginTop: spacing.lg,
+    paddingHorizontal: layout.screenGutter,
+    marginTop: layout.sectionGap,
   },
   subTitle: {
     marginBottom: spacing.md,
@@ -234,10 +234,10 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
   },
   card: {
-    padding: spacing.lg,
-    borderRadius: 20,
+    padding: layout.cardPadding,
+    borderRadius: radii.xl,
     borderWidth: 1,
-    marginBottom: spacing.md,
+    marginBottom: layout.listGap,
     ...shadows.sm,
   },
   cardHeader: {
@@ -245,6 +245,20 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     gap: spacing.sm,
+  },
+  visitorTitle: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  visitorIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceMuted.light,
   },
   visitTime: {
     marginBottom: spacing.md,

@@ -9,14 +9,16 @@ import { Button } from "../../../components/ui/Button";
 import { Typography } from "../../../components/ui/Typography";
 import { RootStackParamList } from "../../../navigation/types";
 import { useGetDocumentsQuery } from "../../../services/property";
-import { colors, spacing } from "../../../theme";
+import { colors, layout, radii, shadows, spacing } from "../../../theme";
+import { Icon } from "../../../components/ui/Icon";
+import { StatusBadge } from "../../../components/ui/StatusBadge";
 
-const statusColors: Record<string, string> = {
-  submitted: "#3b82f6",
-  under_review: "#f97316",
-  approved: "#22c55e",
-  rejected: "#ef4444",
-  missing: "#6b7280",
+const statusTone: Record<string, { background: string; text: string }> = {
+  submitted: { background: colors.palette.blue[50], text: colors.palette.blue[700] },
+  under_review: { background: colors.palette.amber[50], text: colors.palette.amber[600] },
+  approved: { background: colors.palette.emerald[50], text: colors.palette.emerald[600] },
+  rejected: { background: colors.palette.red[50], text: colors.palette.red[600] },
+  missing: { background: colors.surfaceMuted.light, text: colors.text.secondary.light },
 };
 
 const formatBytes = (bytes: number) => {
@@ -42,23 +44,26 @@ export const DocumentsScreen = () => {
       ]}
     >
       <View style={styles.row}>
+        <View style={styles.iconBadge}>
+          <Icon name="documents" color={colors.primary.light} size={20} />
+        </View>
         <View style={styles.docInfo}>
           <Typography variant="h3" numberOfLines={1}>
             {item.originalName}
           </Typography>
-          <Typography variant="caption" style={{ color: "#9ca3af" }}>
+          <Typography variant="caption" style={styles.mutedText}>
             {formatBytes(item.sizeBytes)}
             {item.createdAt ? ` \u2022 ${new Date(item.createdAt).toLocaleDateString()}` : ""}
           </Typography>
         </View>
-        <View style={[styles.badge, { backgroundColor: statusColors[item.status] ?? "#6b7280" }]}>
-          <Typography variant="caption" style={styles.badgeText}>
-            {t(`Documents.statuses.${item.status}`, { defaultValue: item.status })}
-          </Typography>
-        </View>
+        <StatusBadge
+          label={t(`Documents.statuses.${item.status}`, { defaultValue: item.status })}
+          backgroundColor={(statusTone[item.status] ?? statusTone.missing).background}
+          textColor={(statusTone[item.status] ?? statusTone.missing).text}
+        />
       </View>
       {item.documentType?.name ? (
-        <Typography variant="caption" style={{ color: "#6b7280", marginTop: spacing.xs }}>
+        <Typography variant="caption" style={styles.typeText}>
           {item.documentType.name}
         </Typography>
       ) : null}
@@ -92,6 +97,7 @@ export const DocumentsScreen = () => {
           title={t("Documents.upload", { defaultValue: "Upload Document" })}
           onPress={() => navigation.navigate("UploadDocument")}
           style={styles.fab}
+          leftIcon="plus"
         />
       </View>
     </ScreenContainer>
@@ -100,14 +106,15 @@ export const DocumentsScreen = () => {
 
 const styles = StyleSheet.create({
   container: { padding: 0 },
-  listContent: { padding: spacing.md, paddingBottom: 100 },
-  card: { padding: spacing.md, borderRadius: 12, borderWidth: 1, marginBottom: spacing.md },
-  row: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
+  listContent: { padding: layout.screenGutter, paddingBottom: layout.screenBottom + 72 },
+  card: { padding: layout.cardPadding, borderRadius: radii.xl, borderWidth: 1, marginBottom: layout.listGap, ...shadows.sm },
+  row: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: spacing.sm },
+  iconBadge: { width: 40, height: 40, borderRadius: radii.md, alignItems: "center", justifyContent: "center", backgroundColor: colors.surfaceMuted.light },
   docInfo: { flex: 1, marginRight: spacing.sm },
-  badge: { paddingHorizontal: spacing.sm, paddingVertical: 2, borderRadius: 8 },
-  badgeText: { color: "#fff", fontSize: 11, fontWeight: "600" },
-  reviewNote: { color: "#f97316", marginTop: spacing.xs },
+  mutedText: { color: colors.text.secondary.light },
+  typeText: { color: colors.text.secondary.light, marginTop: spacing.xs },
+  reviewNote: { color: colors.warning, marginTop: spacing.xs },
   center: { padding: spacing.xl, alignItems: "center" },
-  fabContainer: { position: "absolute", bottom: spacing.xl, left: spacing.md, right: spacing.md },
-  fab: { borderRadius: 12 },
+  fabContainer: { position: "absolute", bottom: layout.fabInset, left: layout.fabInset, right: layout.fabInset },
+  fab: { borderRadius: radii.lg },
 });

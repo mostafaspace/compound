@@ -8,11 +8,12 @@ import { getEffectiveRoleType } from '@compound/contracts';
 import { selectCurrentUser } from '../../../store/authSlice';
 import { useGetVisitorRequestsQuery, useCancelVisitorMutation } from '../../../services/property';
 import { RootStackParamList } from '../../../navigation/types';
-import { colors, spacing } from '../../../theme';
+import { colors, layout, radii, shadows, spacing } from '../../../theme';
 import { Button } from '../../../components/ui/Button';
 import { Typography } from '../../../components/ui/Typography';
 import { ScreenContainer } from '../../../components/layout/ScreenContainer';
 import { formatDate, formatStatus } from '../../../utils/formatters';
+import { Icon } from '../../../components/ui/Icon';
 
 export const VisitorsScreen = () => {
   const { t } = useTranslation();
@@ -48,13 +49,18 @@ export const VisitorsScreen = () => {
   const renderItem = ({ item }: { item: any }) => (
     <View style={[styles.card, { backgroundColor: isDark ? colors.surface.dark : colors.surface.light, borderColor: isDark ? colors.border.dark : colors.border.light }]}>
       <View style={styles.cardHeader}>
-        <Typography variant="h3">{item.visitorName}</Typography>
+        <View style={styles.titleRow}>
+          <View style={styles.iconBadge}>
+            <Icon name="visitors" color={colors.primary.light} size={20} />
+          </View>
+          <Typography variant="h3" style={styles.visitorName}>{item.visitorName}</Typography>
+        </View>
         <View style={styles.badgeRow}>
           <Typography variant="label">{formatStatus(item.status)}</Typography>
           {item.sharedAt && (
             <View style={styles.sharedBadge}>
               <Typography variant="caption" style={{ color: colors.primary.light, fontWeight: '600' }}>
-                ✓ Shared
+                {t("Visitors.shared", { defaultValue: "Shared" })}
               </Typography>
             </View>
           )}
@@ -70,6 +76,7 @@ export const VisitorsScreen = () => {
             title={t("Visitors.share", "Share Pass")} 
             onPress={() => handleShare(item)}
             style={styles.actionButton}
+            leftIcon="qr"
             textStyle={{ fontSize: 14 }}
           />
           <Button 
@@ -108,6 +115,7 @@ export const VisitorsScreen = () => {
             title={t("Visitors.create", "New Visitor")} 
             onPress={() => navigation.navigate('CreateVisitor')}
             style={styles.fab}
+            leftIcon="plus"
           />
         </View>
       )}
@@ -120,20 +128,39 @@ const styles = StyleSheet.create({
     padding: 0, // Let FlatList handle padding
   },
   listContent: {
-    padding: spacing.md,
-    paddingBottom: 100, // Make room for the FAB
+    padding: layout.screenGutter,
+    paddingBottom: layout.screenBottom + 72,
   },
   card: {
-    padding: spacing.md,
-    borderRadius: 12,
+    padding: layout.cardPadding,
+    borderRadius: radii.xl,
     borderWidth: 1,
-    marginBottom: spacing.md,
+    marginBottom: layout.listGap,
+    ...shadows.sm,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: spacing.xs,
+    gap: spacing.sm,
+  },
+  titleRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  iconBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceMuted.light,
+  },
+  visitorName: {
+    flex: 1,
   },
   badgeRow: {
     flexDirection: 'row',
@@ -144,7 +171,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary.light + '20',
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 4,
+    borderRadius: radii.sm,
   },
   cardText: {
     marginBottom: 2,
@@ -156,9 +183,9 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   actionButton: {
-    height: 36,
+    minHeight: 40,
     paddingHorizontal: spacing.md,
-    borderRadius: 8,
+    borderRadius: radii.md,
   },
   cancelButton: {
     borderColor: colors.error,
@@ -171,16 +198,11 @@ const styles = StyleSheet.create({
   },
   fabContainer: {
     position: 'absolute',
-    bottom: spacing.lg,
-    right: spacing.lg,
-    left: spacing.lg,
+    bottom: layout.fabInset,
+    right: layout.fabInset,
+    left: layout.fabInset,
   },
   fab: {
-    borderRadius: 16,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
+    borderRadius: radii.lg,
   }
 });

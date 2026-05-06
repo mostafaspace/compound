@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -27,6 +27,7 @@ import { useGetOrgChartQuery, useLazyGetOrgChartPersonDetailQuery } from '../../
 import type { OrgChartRepresentative } from '../../../services/orgchart';
 import { colors, spacing, shadows } from '../../../theme';
 import { Typography } from '../../../components/ui/Typography';
+import { Icon } from '../../../components/ui/Icon';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -60,8 +61,14 @@ export const OrgChartScreen = ({ navigation }: any) => {
   const [fetchPersonDetail] = useLazyGetOrgChartPersonDetailQuery();
 
   // 2. State Hooks
-  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
+  const [collapsedIds, setCollapsedIds] = useState<Set<string> | null>(null);
   const [selectedRep, setSelectedRep] = useState<OrgChartRepresentative | null>(null);
+
+  useEffect(() => {
+    if (data && collapsedIds === null) {
+      setCollapsedIds(new Set(data.buildings.map(b => b.id)));
+    }
+  }, [data, collapsedIds]);
   const [containerLayout, setContainerLayout] = useState({ width: 0, height: 0 });
 
   // Refs for gesture handler simultaneous interactions
@@ -88,6 +95,8 @@ export const OrgChartScreen = ({ navigation }: any) => {
   const offset = useRef({ x: 0, y: 80, s: 0.75 }).current;
 
   // 4. Layout Calculation
+  const effectiveCollapsedIds = collapsedIds ?? new Set<string>();
+
   const layoutData = useMemo(() => {
     if (!data) return { nodes: [], links: [] };
     const nodes: any[] = [];
@@ -114,7 +123,7 @@ export const OrgChartScreen = ({ navigation }: any) => {
     data.buildings.forEach((b, i) => {
       const isLeft = i % 2 === 0;
       const bRep = b.representatives.find(r => r.role === 'building_representative');
-      const isCollapsed = collapsedIds.has(b.id);
+      const isCollapsed = effectiveCollapsedIds.has(b.id);
       
       const bNode = {
         id: b.id,
@@ -158,12 +167,12 @@ export const OrgChartScreen = ({ navigation }: any) => {
     });
 
     return { nodes, links };
-  }, [data, collapsedIds, t]);
+  }, [data, effectiveCollapsedIds, t]);
 
   // 6. Interaction Handlers
   const toggleCollapse = useCallback((id: string) => {
     setCollapsedIds(prev => {
-      const next = new Set(prev);
+      const next = new Set(prev ?? []);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
@@ -342,9 +351,13 @@ export const OrgChartScreen = ({ navigation }: any) => {
                                 {node.rep?.user.photoUrl ? (
                                   <Image source={{ uri: node.rep.user.photoUrl }} style={styles.avatarImg} />
                                 ) : (
-                                  <Typography style={[styles.avatarText, node.isVacant && { color: '#94A3B8' }]}>
-                                    {node.isVacant ? '👤' : getInitials(node.name)}
-                                  </Typography>
+                                  node.isVacant ? (
+                                    <Icon name="user" color={colors.text.secondary.light} size={22} />
+                                  ) : (
+                                    <Typography style={styles.avatarText}>
+                                      {getInitials(node.name)}
+                                    </Typography>
+                                  )
                                 )}
                               </View>
                               <View style={{ flex: 1, marginLeft: 10 }}>
@@ -401,7 +414,7 @@ const styles = StyleSheet.create({
   avatarImg: { width: '100%', height: '100%' },
   avatarText: { color: '#FFF', fontSize: 14, fontWeight: '900' },
   nodeName: { fontSize: 12, fontWeight: '900' },
-  nodeLabel: { fontSize: 8, color: '#64748B', fontWeight: '700', marginTop: 1 },
+  nodeLabel: { fontSize: 8, color: colors.text.secondary.light, fontWeight: '700', marginTop: 1 },
   roleBadge: { alignSelf: 'flex-start', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6, marginTop: 6 },
   roleText: { fontSize: 7, fontWeight: '900', letterSpacing: 0.5 },
   collapseBtn: {
@@ -416,5 +429,5 @@ const styles = StyleSheet.create({
     minWidth: 36,
     alignItems: 'center',
   },
-  collapseText: { fontSize: 10, fontWeight: '900', color: '#64748B' },
+  collapseText: { fontSize: 10, fontWeight: '900', color: colors.text.secondary.light },
 });

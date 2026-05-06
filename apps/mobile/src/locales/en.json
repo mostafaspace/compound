@@ -249,6 +249,7 @@
       "visitors": "Visitors",
       "issues": "Issues",
       "announcements": "Announcements",
+      "polls": "Polls",
       "finance": "Finance",
       "system": "System"
     }
@@ -300,7 +301,31 @@
       "escalated": "Escalated",
       "resolved": "Resolved",
       "closed": "Closed"
-    }
+    },
+    "attachments": "Attachments",
+    "attachmentLabel": "Attachments (Optional)",
+    "addAttachment": "Add Photo",
+    "takePhoto": "Take Photo",
+    "chooseFromLibrary": "Choose from Library",
+    "attachmentTooLarge": "Attachment must be less than 10MB",
+    "maxAttachments": "Maximum {{count}} attachments allowed",
+    "routeToLabel": "Route complaint to",
+    "routeToHelp": "Select who should handle this issue",
+    "editSuccess": "Issue updated",
+    "editSuccessMsg": "Your issue has been updated.",
+    "submitSuccess": "Issue reported",
+    "submitSuccessMsg": "Your issue has been submitted for review.",
+    "statusUpdated": "Issue status updated successfully",
+    "updateFailed": "Failed to update issue status",
+    "escalationReasonRequired": "Add an escalation reason before sending this issue upward.",
+    "escalatedSuccess": "Issue escalated successfully.",
+    "escalationFailed": "Failed to escalate this issue.",
+    "escalateNow": "Escalate to President",
+    "escalationReasonPlaceholder": "Explain why this issue needs escalation...",
+    "loadingUnitContext": "Loading your unit information...",
+    "assignmentRequiredTitle": "Unit required",
+    "assignmentRequiredBody": "You must be assigned to a unit before reporting an issue.",
+    "videoAttached": "Video attached"
   },
   "Finance": {
     "label": "Finance",

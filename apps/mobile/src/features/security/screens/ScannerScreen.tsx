@@ -19,9 +19,11 @@ import { ScreenContainer } from '../../../components/layout/ScreenContainer';
 import { Typography } from '../../../components/ui/Typography';
 import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
-import { colors, spacing, shadows } from '../../../theme';
+import { colors, layout, spacing, shadows, radii } from '../../../theme';
+import { Icon } from '../../../components/ui/Icon';
 import {
   appendScannerHistoryEntry,
+  getScannerAvailableActions,
   getScannerPreviewState,
   normalizeScannedVisitorToken,
   type ScannerHistoryEntry,
@@ -47,7 +49,7 @@ function IOSScannerPreview({ onScanned }: { onScanned: (value: string) => void }
   if (previewState.mode === 'fallback') {
     return (
       <View style={styles.placeholder}>
-        <Typography style={styles.placeholderGlyph}>QR</Typography>
+        <Icon name="qr" color={colors.primary.light} size={44} />
         <Typography variant="caption" style={styles.placeholderText}>
           {'No camera is available here. If you are on the iOS Simulator, use manual token entry or test live scanning on a physical iPhone.'}
         </Typography>
@@ -98,6 +100,8 @@ export const ScannerScreen = () => {
 
   const [scanResult, setScanResult] = useState<{
     valid: boolean;
+    scanOutcome: 'valid' | 'expired' | 'already_used' | 'denied' | 'cancelled' | 'not_found' | 'out_of_window';
+    visitorStatus?: 'pending' | 'qr_issued' | 'arrived' | 'allowed' | 'denied' | 'completed' | 'cancelled' | null;
     visitorName?: string;
     visitorRequestId?: string;
     unitNumber?: string;
@@ -130,6 +134,8 @@ export const ScannerScreen = () => {
 
       setScanResult({
         valid: isValid,
+        scanOutcome: result.result,
+        visitorStatus: vr?.status,
         visitorName: vr?.visitorName,
         visitorRequestId: vr?.id,
         unitNumber: vr?.unit?.unitNumber,
@@ -151,6 +157,8 @@ export const ScannerScreen = () => {
 
       setScanResult({
         valid: false,
+        scanOutcome: 'not_found',
+        visitorStatus: null,
         message,
         scannedAt,
       });
@@ -183,7 +191,7 @@ export const ScannerScreen = () => {
     setScannerEnabled(false);
   };
 
-  const handleVisitorAction = async (action: 'arrive' | 'allow' | 'deny') => {
+  const handleVisitorAction = async (action: 'arrive' | 'allow' | 'deny' | 'complete') => {
     if (!scanResult?.visitorRequestId) {
       return;
     }
@@ -198,9 +206,34 @@ export const ScannerScreen = () => {
         arrive: t('Security.arrived', 'Visitor marked as arrived'),
         allow: t('Security.allowed', 'Visitor allowed entry'),
         deny: t('Security.denied', 'Visitor denied entry'),
+        complete: t('Security.completeSuccess', 'Visit marked complete.'),
       };
+      setScanResult((prev) => {
+        if (!prev) {
+          return null;
+        }
 
-      setScanResult((prev) => prev ? { ...prev, message: messageMap[action] } : null);
+        const nextVisitorStatus = {
+          arrive: 'arrived',
+          allow: 'allowed',
+          deny: 'denied',
+          complete: 'completed',
+        } as const;
+
+        const nextScanOutcome = {
+          arrive: prev.scanOutcome,
+          allow: 'already_used',
+          deny: 'denied',
+          complete: 'already_used',
+        } as const;
+
+        return {
+          ...prev,
+          message: messageMap[action],
+          visitorStatus: nextVisitorStatus[action],
+          scanOutcome: nextScanOutcome[action],
+        };
+      });
     } catch (err: any) {
       setScanResult((prev) => prev ? {
         ...prev,
@@ -222,6 +255,12 @@ export const ScannerScreen = () => {
   const canUseNativeScanner = Platform.OS === 'ios' && hasPermission && scannerEnabled;
   const surfaceColor = isDark ? colors.surface.dark : colors.surface.light;
   const borderColor = isDark ? colors.border.dark : colors.border.light;
+  const availableActions = scanResult
+    ? getScannerAvailableActions({
+      scanResult: scanResult.scanOutcome,
+      visitorStatus: scanResult.visitorStatus,
+    })
+    : [];
 
   return (
     <ScreenContainer scrollable style={styles.container}>
@@ -261,14 +300,14 @@ export const ScannerScreen = () => {
         </View>
         {Platform.OS !== 'ios' ? (
           <View style={styles.placeholder}>
-            <Typography style={styles.placeholderGlyph}>QR</Typography>
+            <Icon name="qr" color={colors.primary.light} size={44} />
             <Typography variant="caption" style={styles.placeholderText}>
               {t('Security.iosScannerOnly', { defaultValue: 'Live QR scanning is currently enabled on iPhone. Manual token entry still works below.' })}
             </Typography>
           </View>
         ) : !hasPermission ? (
           <View style={styles.placeholder}>
-            <Typography style={styles.placeholderGlyph}>OK</Typography>
+            <Icon name="camera" color={colors.primary.light} size={44} />
             <Typography variant="caption" style={styles.placeholderText}>
               {t('Security.cameraPermissionNeeded', { defaultValue: 'Camera access is required to scan visitor QR passes.' })}
             </Typography>
@@ -284,7 +323,7 @@ export const ScannerScreen = () => {
           <IOSScannerPreview onScanned={(value) => { void handleProcessToken(value); }} />
         ) : (
           <View style={styles.placeholder}>
-            <Typography style={{ fontSize: 48 }}>▣</Typography>
+            <Icon name="scanner" color={colors.primary.light} size={44} />
             <Typography variant="caption" style={styles.placeholderText}>
               {t('Security.scanAnotherHint', { defaultValue: 'Open the camera when the next visitor pass is ready.' })}
             </Typography>
@@ -309,9 +348,7 @@ export const ScannerScreen = () => {
             ]}
           >
             <View style={styles.resultIcon}>
-              <Typography style={{ fontSize: 48 }}>
-                {scanResult.valid ? '✅' : '❌'}
-              </Typography>
+              <Icon name={scanResult.valid ? 'check' : 'x'} color={scanResult.valid ? colors.success : colors.error} size={42} />
             </View>
             <Typography variant="h2" style={styles.resultTitle}>
               {scanResult.valid
@@ -333,29 +370,48 @@ export const ScannerScreen = () => {
                 {t('Security.unit', 'Unit')}: {scanResult.unitNumber}
               </Typography>
             )}
-            {scanResult.valid && scanResult.visitorRequestId ? (
+            {scanResult.visitorStatus && (
+              <Typography variant="body" style={styles.resultDetail}>
+                {t('Security.currentStatus', 'Current status')}: {scanResult.visitorStatus.replace(/_/g, ' ')}
+              </Typography>
+            )}
+            {scanResult.visitorRequestId && availableActions.length > 0 ? (
               <View style={styles.resultActions}>
-                <Button
-                  title={t('Security.arrive', 'Mark Arrived')}
-                  onPress={() => { void handleVisitorAction('arrive'); }}
-                  variant="outline"
-                  style={styles.resultActionButton}
-                  loading={isPerforming}
-                />
-                <Button
-                  title={t('Security.allow', 'Allow Entry')}
-                  onPress={() => { void handleVisitorAction('allow'); }}
-                  style={styles.resultActionButton}
-                  loading={isPerforming}
-                />
-                <Button
-                  title={t('Security.deny', 'Deny Entry')}
-                  onPress={() => { void handleVisitorAction('deny'); }}
-                  variant="outline"
-                  style={[styles.resultActionButton, { borderColor: colors.error }]}
-                  textStyle={{ color: colors.error }}
-                  loading={isPerforming}
-                />
+                {availableActions.includes('arrive') ? (
+                  <Button
+                    title={t('Security.arrive', 'Mark Arrived')}
+                    onPress={() => { void handleVisitorAction('arrive'); }}
+                    variant="outline"
+                    style={styles.resultActionButton}
+                    loading={isPerforming}
+                  />
+                ) : null}
+                {availableActions.includes('allow') ? (
+                  <Button
+                    title={t('Security.allow', 'Allow Entry')}
+                    onPress={() => { void handleVisitorAction('allow'); }}
+                    style={styles.resultActionButton}
+                    loading={isPerforming}
+                  />
+                ) : null}
+                {availableActions.includes('deny') ? (
+                  <Button
+                    title={t('Security.deny', 'Deny Entry')}
+                    onPress={() => { void handleVisitorAction('deny'); }}
+                    variant="outline"
+                    style={[styles.resultActionButton, { borderColor: colors.error }]}
+                    textStyle={{ color: colors.error }}
+                    loading={isPerforming}
+                  />
+                ) : null}
+                {availableActions.includes('complete') ? (
+                  <Button
+                    title={t('Security.complete', 'Complete')}
+                    onPress={() => { void handleVisitorAction('complete'); }}
+                    style={styles.resultActionButton}
+                    loading={isPerforming}
+                  />
+                ) : null}
               </View>
             ) : null}
             <Button
@@ -411,23 +467,23 @@ export const ScannerScreen = () => {
 
 const styles = StyleSheet.create({
   container: {
-    padding: spacing.lg,
+    padding: layout.screenGutter,
   },
   header: {
-    marginBottom: spacing.xl,
+    marginBottom: layout.sectionGap,
   },
   subtitle: {
     marginTop: spacing.xs,
   },
   cameraCard: {
-    borderRadius: 20,
+    borderRadius: radii.xl,
     borderWidth: 1,
     overflow: 'hidden',
-    marginBottom: spacing.lg,
+    marginBottom: layout.sectionGap,
     minHeight: 320,
   },
   cameraHeader: {
-    padding: spacing.lg,
+    padding: layout.cardPadding,
     paddingBottom: 0,
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -447,7 +503,7 @@ const styles = StyleSheet.create({
   cameraViewport: {
     height: 320,
     margin: spacing.lg,
-    borderRadius: 18,
+    borderRadius: radii.lg,
     overflow: 'hidden',
     backgroundColor: '#000',
   },
@@ -460,7 +516,7 @@ const styles = StyleSheet.create({
   scanFrame: {
     width: 220,
     height: 220,
-    borderRadius: 28,
+    borderRadius: radii.xl,
     borderWidth: 3,
     borderColor: '#fff',
     backgroundColor: 'transparent',
@@ -478,7 +534,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   inputSection: {
-    marginBottom: spacing.xl,
+    marginBottom: layout.sectionGap,
   },
   inputContainer: {
     marginBottom: spacing.md,
@@ -493,14 +549,8 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: layout.cardPadding,
     paddingBottom: spacing.xl,
-  },
-  placeholderGlyph: {
-    color: colors.primary.light,
-    fontSize: 24,
-    fontWeight: '900',
-    letterSpacing: 3,
   },
   placeholderText: {
     marginTop: spacing.md,
@@ -511,12 +561,12 @@ const styles = StyleSheet.create({
     minWidth: 180,
   },
   resultContainer: {
-    marginBottom: spacing.lg,
+    marginBottom: layout.sectionGap,
   },
   resultCard: {
     width: '100%',
-    padding: spacing.xl,
-    borderRadius: 20,
+    padding: layout.heroPadding,
+    borderRadius: radii.xl,
     borderWidth: 2,
     alignItems: 'center',
     ...shadows.premium,
@@ -549,7 +599,7 @@ const styles = StyleSheet.create({
   historyCard: {
     borderRadius: 20,
     borderWidth: 1,
-    padding: spacing.lg,
+    padding: layout.cardPadding,
     marginTop: spacing.sm,
     ...shadows.sm,
   },

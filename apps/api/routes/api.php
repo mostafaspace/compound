@@ -153,6 +153,8 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::post('/issues/{issue}/escalate', [IssueController::class, 'escalate'])->name('issues.escalate');
         Route::get('/issues/{issue}/attachments', [IssueAttachmentController::class, 'index'])->name('issues.attachments.index');
         Route::post('/issues/{issue}/attachments', [IssueAttachmentController::class, 'store'])->name('issues.attachments.store');
+        Route::get('/issues/{issue}/attachments/{attachment}/view', [IssueAttachmentController::class, 'view'])->name('issues.attachments.view');
+        Route::delete('/issues/{issue}/attachments/{attachment}', [IssueAttachmentController::class, 'destroy'])->name('issues.attachments.destroy');
         Route::get('/my/announcements', [AnnouncementController::class, 'feed'])->name('my.announcements.index');
         Route::get('/announcements/{announcement}', [AnnouncementController::class, 'show'])->name('announcements.show');
         Route::get('/announcements/{announcement}/attachments/{attachment}/download', [AnnouncementController::class, 'downloadAttachment'])

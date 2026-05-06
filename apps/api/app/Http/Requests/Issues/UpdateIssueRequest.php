@@ -22,6 +22,9 @@ class UpdateIssueRequest extends FormRequest
             'priority' => ['sometimes', 'required', 'string', Rule::in(['low', 'normal', 'high', 'urgent'])],
             'assignedTo' => ['sometimes', 'nullable', 'integer', Rule::exists('users', 'id')],
             'categoryId' => ['sometimes', 'required', 'string', Rule::in(['maintenance', 'security', 'cleaning', 'noise', 'other'])],
+            'category' => ['sometimes', 'required', 'string', Rule::in(['maintenance', 'security', 'cleaning', 'noise', 'other'])],
+            'title' => ['sometimes', 'required', 'string', 'min:3', 'max:255'],
+            'description' => ['sometimes', 'required', 'string', 'min:2', 'max:5000'],
         ];
     }
 }

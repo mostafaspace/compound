@@ -10,9 +10,9 @@ import { useGetAuditLogsQuery } from '../../../services/admin';
 import { RootStackParamList } from '../../../navigation/types';
 
 const SEVERITY_COLORS: Record<string, string> = {
-  info: '#3b82f6',
-  warning: '#f59e0b',
-  critical: '#ef4444',
+  info: colors.info,
+  warning: colors.warning,
+  critical: colors.error,
 };
 
 export const AuditLogScreen = () => {
@@ -41,7 +41,7 @@ export const AuditLogScreen = () => {
       }}
     >
       <View style={styles.cardHeader}>
-        <View style={[styles.severityDot, { backgroundColor: SEVERITY_COLORS[item.severity] ?? '#6b7280' }]} />
+        <View style={[styles.severityDot, { backgroundColor: SEVERITY_COLORS[item.severity] ?? colors.text.secondary.light }]} />
         <Typography variant="body" style={styles.action}>
           {item.action}
         </Typography>

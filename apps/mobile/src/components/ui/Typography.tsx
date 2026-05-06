@@ -1,6 +1,6 @@
 import React from 'react';
-import { Text, TextStyle, StyleSheet, useColorScheme, StyleProp, Platform } from 'react-native';
-import { colors } from '../../theme';
+import { Text, TextStyle, useColorScheme, StyleProp } from 'react-native';
+import { colors, typography } from '../../theme';
 
 interface TypographyProps {
   children: React.ReactNode;
@@ -23,21 +23,21 @@ export const Typography: React.FC<TypographyProps> = ({
 
     switch (variant) {
       case 'h1':
-        return { fontSize: 28, fontWeight: '800', color: textColor, letterSpacing: -0.5 };
+        return { ...typography.h1, color: textColor };
       case 'h2':
-        return { fontSize: 24, fontWeight: '700', color: textColor, letterSpacing: -0.5 };
+        return { ...typography.h2, color: textColor };
       case 'h3':
-        return { fontSize: 18, fontWeight: '600', color: textColor, letterSpacing: -0.3 };
+        return { ...typography.h3, color: textColor };
       case 'body':
-        return { fontSize: 16, fontWeight: '400', color: textColor };
+        return { ...typography.body, color: textColor };
       case 'caption':
-        return { fontSize: 13, fontWeight: '500', color: mutedColor };
+        return { ...typography.caption, color: mutedColor };
       case 'label':
-        return { fontSize: 12, fontWeight: '700', color: colors.cta.light, textTransform: 'uppercase', letterSpacing: 0.5 };
+        return { ...typography.label, color: isDark ? colors.primary.dark : colors.primary.light };
       case 'error':
-        return { fontSize: 14, fontWeight: '500', color: colors.error };
+        return { fontSize: 14, lineHeight: 20, fontWeight: '600', color: colors.error };
       default:
-        return { fontSize: 16, color: textColor };
+        return { ...typography.body, color: textColor };
     }
   };
 

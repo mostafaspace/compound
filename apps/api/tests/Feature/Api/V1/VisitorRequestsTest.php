@@ -28,6 +28,15 @@ class VisitorRequestsTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->withServerVariables([
+            'REMOTE_ADDR' => '198.51.100.'.random_int(10, 240),
+        ]);
+    }
+
     public function test_verified_resident_can_create_visitor_request_and_qr_pass(): void
     {
         [$resident, $unit] = $this->residentWithVerifiedUnit();

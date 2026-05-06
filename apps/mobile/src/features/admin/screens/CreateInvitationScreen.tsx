@@ -7,7 +7,7 @@ import { ScreenContainer } from '../../../components/layout/ScreenContainer';
 import { Typography } from '../../../components/ui/Typography';
 import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
-import { colors, spacing } from '../../../theme';
+import { colors, layout, spacing } from '../../../theme';
 import { selectCurrentUser } from '../../../store/authSlice';
 import { 
   useGetBuildingsQuery, 
@@ -187,13 +187,14 @@ export const CreateInvitationScreen = () => {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    padding: spacing.lg,
+    padding: layout.screenGutter,
+    paddingBottom: layout.screenBottom,
   },
   title: {
-    marginBottom: spacing.xl,
+    marginBottom: layout.sectionGap,
   },
   section: {
-    marginBottom: spacing.xl,
+    marginBottom: layout.sectionGap,
   },
   label: {
     marginBottom: spacing.sm,

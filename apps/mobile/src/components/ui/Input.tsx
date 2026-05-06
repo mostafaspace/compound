@@ -9,7 +9,8 @@ import {
   ViewStyle,
   Pressable
 } from 'react-native';
-import { colors, spacing } from '../../theme';
+import { colors, spacing, radii, componentSize } from '../../theme';
+import { Icon } from './Icon';
 import { Typography } from './Typography';
 
 interface InputProps extends TextInputProps {
@@ -28,21 +29,26 @@ export const Input: React.FC<InputProps> = ({
   const isDark = useColorScheme() === 'dark';
   const [hidden, setHidden] = useState(true);
   const isPassword = secureTextEntry !== undefined;
+  const surfaceColor = isDark ? colors.surface.dark : colors.surface.light;
+  const mutedSurface = isDark ? colors.surfaceMuted.dark : colors.surfaceMuted.light;
+  const textColor = isDark ? colors.text.primary.dark : colors.text.primary.light;
+  const mutedColor = isDark ? colors.text.secondary.dark : colors.text.secondary.light;
+  const borderColor = error ? colors.error : (isDark ? colors.border.dark : colors.border.light);
 
   return (
     <View style={[styles.container, containerStyle]}>
       {label && <Typography variant="label" style={styles.label}>{label}</Typography>}
       <View style={styles.inputWrapper}>
         <TextInput
-          placeholderTextColor={isDark ? "#718096" : "#9ca3af"}
+          placeholderTextColor={mutedColor}
           secureTextEntry={isPassword ? hidden : undefined}
           style={[
             styles.input,
             isPassword && styles.inputWithToggle,
             {
-              backgroundColor: isDark ? "#2d3748" : "#f9fafb",
-              color: isDark ? "#f9fafb" : "#111827",
-              borderColor: error ? colors.error : (isDark ? "#4a5568" : "#d1d5db"),
+              backgroundColor: props.editable === false ? mutedSurface : surfaceColor,
+              color: textColor,
+              borderColor,
             },
             props.style
           ]}
@@ -56,9 +62,7 @@ export const Input: React.FC<InputProps> = ({
             accessibilityRole="button"
             hitSlop={8}
           >
-            <Typography style={[styles.eyeIcon, { color: isDark ? '#94A3B8' : '#6B7280' }]}>
-              {hidden ? '👁' : '👁‍🗨'}
-            </Typography>
+            <Icon name={hidden ? 'eye' : 'eye-off'} color={mutedColor} size={20} />
           </Pressable>
         )}
       </View>
@@ -80,8 +84,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   input: {
-    height: 54,
-    borderRadius: 16,
+    minHeight: componentSize.input,
+    borderRadius: radii.lg,
     borderWidth: 1.5,
     paddingHorizontal: spacing.lg,
     fontSize: 16,
@@ -92,14 +96,11 @@ const styles = StyleSheet.create({
   },
   eyeButton: {
     position: 'absolute',
-    right: 12,
-    height: 54,
+    right: spacing.sm,
+    minHeight: componentSize.touch,
     justifyContent: 'center',
     alignItems: 'center',
-    width: 32,
-  },
-  eyeIcon: {
-    fontSize: 20,
+    width: componentSize.touch,
   },
   error: {
     marginTop: spacing.xs,

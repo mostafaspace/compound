@@ -15,13 +15,15 @@ export const pollsApi = api.injectEndpoints({
       transformResponse: (response: PaginatedEnvelope<Poll>) => response.data,
       providesTags: ["Poll"],
     }),
-    getPoll: builder.query<Poll, string>({
-      query: (id) => `/polls/${id}`,
+    getPoll: builder.query<Poll, { pollId: string; unitId?: string | null }>({
+      query: ({ pollId, unitId }) =>
+        unitId ? `/polls/${pollId}?unitId=${encodeURIComponent(unitId)}` : `/polls/${pollId}`,
       transformResponse: (response: ApiEnvelope<Poll>) => response.data,
-      providesTags: (_result, _err, id) => [{ type: "Poll" as const, id }],
+      providesTags: (_result, _err, { pollId }) => [{ type: "Poll" as const, id: pollId }],
     }),
-    getPollEligibility: builder.query<PollEligibilityResult, string>({
-      query: (id) => `/polls/${id}/eligibility`,
+    getPollEligibility: builder.query<PollEligibilityResult, { pollId: string; unitId?: string | null }>({
+      query: ({ pollId, unitId }) =>
+        unitId ? `/polls/${pollId}/eligibility?unitId=${encodeURIComponent(unitId)}` : `/polls/${pollId}/eligibility`,
       transformResponse: (response: ApiEnvelope<PollEligibilityResult>) => response.data,
     }),
     getPollVoters: builder.query<PollVoter[], string>({
@@ -30,22 +32,22 @@ export const pollsApi = api.injectEndpoints({
       providesTags: (_result, _err, id) => [{ type: "Poll" as const, id }],
     }),
     castPollVote: builder.mutation<void, { pollId: string } & PollVoteInput>({
-      query: ({ pollId, optionIds }) => ({
+      query: ({ pollId, optionIds, unitId }) => ({
         url: `/polls/${pollId}/vote`,
         method: "POST",
-        body: { optionIds },
+        body: { optionIds, unitId },
       }),
       invalidatesTags: (_result: void | undefined, _err: unknown, { pollId }: { pollId: string } & PollVoteInput) => [
         { type: "Poll" as const, id: pollId },
         "Poll",
       ],
     }),
-    removePollVote: builder.mutation<void, string>({
-      query: (pollId) => ({
-        url: `/polls/${pollId}/vote`,
+    removePollVote: builder.mutation<void, { pollId: string; unitId?: string | null }>({
+      query: ({ pollId, unitId }) => ({
+        url: unitId ? `/polls/${pollId}/vote?unitId=${encodeURIComponent(unitId)}` : `/polls/${pollId}/vote`,
         method: "DELETE",
       }),
-      invalidatesTags: (_result: void | undefined, _err: unknown, pollId: string) => [
+      invalidatesTags: (_result: void | undefined, _err: unknown, { pollId }) => [
         { type: "Poll" as const, id: pollId },
         "Poll",
       ],

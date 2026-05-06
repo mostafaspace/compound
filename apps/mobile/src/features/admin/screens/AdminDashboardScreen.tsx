@@ -7,8 +7,9 @@ import Svg, { Defs, LinearGradient as SvgGradient, Stop, Rect } from 'react-nati
 
 import { ScreenContainer } from '../../../components/layout/ScreenContainer';
 import { Typography } from '../../../components/ui/Typography';
-import { colors, spacing, shadows } from '../../../theme';
+import { colors, layout, spacing, shadows, radii } from '../../../theme';
 import { useGetOperationalAnalyticsQuery } from '../../../services/admin';
+import { Icon, type AppIconName } from '../../../components/ui/Icon';
 import {
   type AdminDashboardActionRoute,
   getAdminDashboardNavigationTarget,
@@ -33,22 +34,22 @@ export const AdminDashboardScreen = () => {
     navigation.navigate(target.screen as any, target.params as any);
   };
 
-  const getActionIcon = (route: AdminDashboardActionRoute) => {
+  const getActionIcon = (route: AdminDashboardActionRoute): AppIconName => {
     switch (route) {
       case 'Visitors':
-        return 'VI';
+        return 'visitors';
       case 'Units':
-        return 'UN';
+        return 'units';
       case 'Finance':
-        return 'FN';
+        return 'finance';
       case 'AuditLog':
-        return 'AU';
+        return 'shield';
       case 'AdminInvitations':
-        return 'IN';
+        return 'user';
       case 'Polls':
-        return 'PL';
+        return 'polls';
       default:
-        return 'ME';
+        return 'more';
     }
   };
 
@@ -71,10 +72,15 @@ export const AdminDashboardScreen = () => {
     }
   };
 
-  const renderStatCard = (label: string, value: number | string, color: string, icon: string) => (
-    <View style={[styles.statCard, { backgroundColor: isDark ? colors.surface.dark : colors.surface.light }]}>
-      <View style={[styles.statIconContainer, { backgroundColor: color + '15' }]}>
-        <Typography style={styles.iconText}>{icon}</Typography>
+  const renderStatCard = (label: string, value: number | string, color: string, icon: AppIconName, onPress?: () => void) => (
+    <TouchableOpacity 
+      disabled={!onPress}
+      onPress={onPress}
+      style={[styles.statCard, { backgroundColor: isDark ? colors.surface.dark : colors.surface.light, borderColor: isDark ? colors.border.dark : colors.border.light }]}
+      accessibilityRole={onPress ? 'button' : undefined}
+    >
+      <View style={[styles.statIconContainer, { backgroundColor: isDark ? colors.surfaceMuted.dark : colors.surfaceMuted.light }]}>
+        <Icon name={icon} color={color} size={22} />
       </View>
       <View>
         <Typography variant="h2" style={{ color: color, fontSize: 24, fontWeight: '800' }}>
@@ -84,11 +90,11 @@ export const AdminDashboardScreen = () => {
           {label}
         </Typography>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 
   return (
-    <ScreenContainer edges={['left', 'right', 'bottom']} style={{ backgroundColor: isDark ? colors.background.dark : '#f8fafc' }}>
+    <ScreenContainer edges={['left', 'right', 'bottom']} style={{ backgroundColor: isDark ? colors.background.dark : colors.background.light }}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -103,10 +109,12 @@ export const AdminDashboardScreen = () => {
             </Typography>
           </View>
           <TouchableOpacity
-            style={[styles.profileButton, { backgroundColor: isDark ? '#1e293b' : '#fff' }]}
+            style={[styles.profileButton, { backgroundColor: isDark ? colors.surface.dark : colors.surface.light, borderColor: isDark ? colors.border.dark : colors.border.light }]}
             onPress={() => navigateToTarget('profile')}
+            accessibilityRole="button"
+            accessibilityLabel={t('Common.profile', 'Profile')}
           >
-            <Typography style={styles.iconText}>ME</Typography>
+            <Icon name="user" color={colors.primary.light} size={22} />
           </TouchableOpacity>
         </View>
 
@@ -153,8 +161,20 @@ export const AdminDashboardScreen = () => {
                 {t('Admin.attentionNeeded', 'Attention Needed')}
               </Typography>
               <View style={styles.statsGrid}>
-                {renderStatCard(t('Admin.pending', 'Pending'), analytics?.verifications?.pendingReview ?? 0, colors.warning, 'RV')}
-                {renderStatCard(t('Admin.activeIssues', 'Issues'), analytics?.issues?.new ?? 0, colors.error, 'IS')}
+                {renderStatCard(
+                  t('Admin.pending', 'Pending'), 
+                  analytics?.verifications?.pendingReview ?? 0, 
+                  colors.warning, 
+                  'shield',
+                  () => navigateToTarget('profile') // Profile handles pending verifications
+                )}
+                {renderStatCard(
+                  t('Admin.activeIssues', 'Issues'), 
+                  analytics?.issues?.new ?? 0, 
+                  colors.error, 
+                  'issues',
+                  () => navigation.navigate('More', { screen: 'Issues' })
+                )}
               </View>
             </View>
 
@@ -168,12 +188,13 @@ export const AdminDashboardScreen = () => {
                     key={i}
                     style={[
                       styles.actionCard,
-                      { backgroundColor: isDark ? colors.surface.dark : colors.surface.light }
+                      { backgroundColor: isDark ? colors.surface.dark : colors.surface.light, borderColor: isDark ? colors.border.dark : colors.border.light }
                     ]}
                     onPress={() => navigateToTarget(action.route)}
+                    accessibilityRole="button"
                   >
                     <View style={styles.actionIconBg}>
-                      <Typography style={{ fontSize: 24 }}>{getActionIcon(action.route)}</Typography>
+                      <Icon name={getActionIcon(action.route)} color={colors.primary.light} size={24} />
                     </View>
                     <Typography variant="label" style={styles.actionLabel}>
                       {getActionLabel(action.route)}
@@ -188,7 +209,7 @@ export const AdminDashboardScreen = () => {
               <Typography variant="h3" style={styles.sectionTitle}>
                 {t('Admin.health', 'System Health')}
               </Typography>
-              <View style={[styles.healthCard, { backgroundColor: isDark ? colors.surface.dark : colors.surface.light }]}>
+              <View style={[styles.healthCard, { backgroundColor: isDark ? colors.surface.dark : colors.surface.light, borderColor: isDark ? colors.border.dark : colors.border.light }]}>
                 <View style={styles.healthRow}>
                   <Typography variant="body" style={styles.healthLabel}>Announcement Reach</Typography>
                   <Typography variant="body" style={styles.healthValue}>
@@ -217,19 +238,18 @@ export const AdminDashboardScreen = () => {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    padding: spacing.lg,
-    paddingBottom: spacing.xl * 2,
+    padding: layout.screenGutter,
+    paddingBottom: layout.screenBottom,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.lg,
+    marginBottom: layout.sectionGap,
   },
   headerTitle: {
     fontSize: 28,
     fontWeight: '800',
-    letterSpacing: -0.5,
   },
   subtitle: {
     color: colors.text.secondary.light,
@@ -239,23 +259,17 @@ const styles = StyleSheet.create({
   profileButton: {
     width: 48,
     height: 48,
-    borderRadius: 24,
+    borderRadius: radii.pill,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
+    borderColor: colors.border.light,
     ...shadows.sm,
-  },
-  iconText: {
-    color: colors.primary.light,
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 1,
   },
   heroContainer: {
     height: 140,
-    marginBottom: spacing.xl,
-    borderRadius: 24,
+    marginBottom: layout.sectionGap,
+    borderRadius: radii.xl,
     overflow: 'hidden',
     ...shadows.md,
   },
@@ -270,13 +284,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
   },
   heroValue: {
-    color: '#fff',
+    color: colors.text.inverse,
     fontSize: 32,
     fontWeight: '800',
     textAlign: 'center',
   },
   heroLabel: {
-    color: 'rgba(255,255,255,0.8)',
+    color: colors.palette.ink[100],
     fontSize: 12,
     fontWeight: '600',
     textAlign: 'center',
@@ -285,7 +299,7 @@ const styles = StyleSheet.create({
   heroDivider: {
     width: 1,
     height: 40,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(255,255,255,0.28)',
   },
   loadingContainer: {
     height: 200,
@@ -293,7 +307,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   section: {
-    marginBottom: spacing.xl,
+    marginBottom: layout.sectionGap,
   },
   sectionTitle: {
     marginBottom: spacing.md,
@@ -303,23 +317,23 @@ const styles = StyleSheet.create({
   },
   statsGrid: {
     flexDirection: 'row',
-    gap: spacing.md,
+    gap: layout.cardGap,
   },
   statCard: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    padding: spacing.md,
-    borderRadius: 20,
+    padding: layout.cardPadding,
+    borderRadius: radii.xl,
     gap: spacing.sm,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
+    borderColor: colors.border.light,
     ...shadows.sm,
   },
   statIconContainer: {
     width: 44,
     height: 44,
-    borderRadius: 12,
+    borderRadius: radii.md,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -331,22 +345,22 @@ const styles = StyleSheet.create({
   quickActionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.md,
+    gap: layout.cardGap,
   },
   actionCard: {
     width: (width - spacing.lg * 2 - spacing.md * 2) / 3,
     paddingVertical: spacing.lg,
-    borderRadius: 20,
+    borderRadius: radii.xl,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
+    borderColor: colors.border.light,
     ...shadows.sm,
   },
   actionIconBg: {
     width: 56,
     height: 56,
-    borderRadius: 18,
-    backgroundColor: 'rgba(0,0,0,0.02)',
+    borderRadius: radii.lg,
+    backgroundColor: colors.surfaceMuted.light,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.sm,
@@ -357,10 +371,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   healthCard: {
-    padding: spacing.lg,
-    borderRadius: 20,
+    padding: layout.cardPadding,
+    borderRadius: radii.xl,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
+    borderColor: colors.border.light,
     ...shadows.sm,
   },
   healthRow: {

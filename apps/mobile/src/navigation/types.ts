@@ -9,7 +9,7 @@ export type RootStackParamList = {
   CreateVisitor: undefined;
   ShareVisitorPass: { visitorId: string };
   PollDetail: { pollId: string };
-  CreateIssue: undefined;
+  AddEditIssue: { issue?: Issue };
   IssueDetail: { issue: Issue };
   UploadDocument: undefined;
   AdminInvitations: undefined;

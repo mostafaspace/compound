@@ -10,8 +10,9 @@ import { useGetVisitorRequestQuery, useMarkAsSharedMutation } from '../../../ser
 import { ScreenContainer } from '../../../components/layout/ScreenContainer';
 import { Typography } from '../../../components/ui/Typography';
 import { Button } from '../../../components/ui/Button';
-import { colors, spacing, shadows } from '../../../theme';
+import { colors, layout, spacing, shadows } from '../../../theme';
 import { formatDate } from '../../../utils/formatters';
+import { Icon } from '../../../components/ui/Icon';
 
 type ShareVisitorPassRouteProp = RouteProp<RootStackParamList, 'ShareVisitorPass'>;
 
@@ -51,7 +52,7 @@ export const ShareVisitorPassScreen = () => {
       <ScreenContainer style={styles.center}>
         <Typography variant="h3" style={{ marginBottom: spacing.md }}>Could not load pass</Typography>
         <Typography style={{ marginBottom: spacing.sm }}>There was an error retrieving the visitor pass details.</Typography>
-        <Typography variant="caption" style={{ color: colors.error, marginBottom: spacing.xl, textAlign: 'center' }}>
+        <Typography variant="caption" style={{ color: colors.error, marginBottom: layout.sectionGap, textAlign: 'center' }}>
           {error ? JSON.stringify(error) : 'Visitor not found'}
         </Typography>
         <Button title="Back to Dashboard" onPress={() => navigation.popToTop()} />
@@ -65,7 +66,7 @@ export const ShareVisitorPassScreen = () => {
         <Typography variant="h3" style={{ marginBottom: spacing.md }}>
           {t("Visitors.passUnavailable", { defaultValue: "Pass unavailable" })}
         </Typography>
-        <Typography style={{ marginBottom: spacing.xl, textAlign: 'center' }}>
+        <Typography style={{ marginBottom: layout.sectionGap, textAlign: 'center' }}>
           {t("Visitors.passUnavailableBody", {
             defaultValue: "This visitor pass does not have a QR token yet. Please refresh or regenerate the pass before sharing it.",
           })}
@@ -146,7 +147,7 @@ export const ShareVisitorPassScreen = () => {
                     <Image source={{ uri: visitor.pictureUrl }} style={styles.visitorPhoto} />
                   ) : (
                     <View style={styles.photoPlaceholder}>
-                      <Typography style={{ color: '#718096', fontSize: 24 }}>👤</Typography>
+                      <Icon name="user" color={colors.text.secondary.light} size={24} />
                     </View>
                   )}
                 </View>
@@ -242,7 +243,7 @@ const styles = StyleSheet.create({
   },
   cardWrapper: {
     width: '100%',
-    marginBottom: spacing.xl,
+    marginBottom: layout.sectionGap,
   },
   viewShotContainer: {
     width: '100%',
@@ -301,20 +302,20 @@ const styles = StyleSheet.create({
   qrContainer: {
     padding: spacing.xl,
     borderRadius: 24,
-    marginBottom: spacing.xl,
+    marginBottom: layout.sectionGap,
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.05)',
     ...shadows.sm,
   },
   nameHeader: {
     alignItems: 'center',
-    marginBottom: spacing.xl,
+    marginBottom: layout.sectionGap,
   },
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
     width: '100%',
-    marginBottom: spacing.xl,
+    marginBottom: layout.sectionGap,
     paddingHorizontal: spacing.md,
   },
   dot: {
@@ -357,7 +358,7 @@ const styles = StyleSheet.create({
   },
   actions: {
     width: '100%',
-    marginTop: spacing.xl,
+    marginTop: layout.sectionGap,
     paddingHorizontal: spacing.md,
   },
   shareButton: {

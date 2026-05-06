@@ -13,34 +13,33 @@ use App\Models\Property\Unit;
 use App\Models\Property\UnitMembership;
 use App\Models\User;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 
 class NextPointSeeder extends Seeder
 {
     public function run(): void
     {
-        // Clear all compound-related data first
-        DB::statement('SET FOREIGN_KEY_CHECKS=0');
-        UnitMembership::query()->delete();
-        Unit::query()->delete();
-        Floor::query()->delete();
-        Building::query()->delete();
-        Compound::query()->delete();
-        DB::statement('SET FOREIGN_KEY_CHECKS=1');
-
-        $compound = Compound::query()->create([
+        $compound = Compound::query()->updateOrCreate([
+            'code' => 'NEXT-POINT',
+        ], [
             'name'      => 'Next Point',
             'legal_name'=> 'Next Point Compound Owners Association',
-            'code'      => 'NEXT-POINT',
             'timezone'  => 'Africa/Cairo',
             'currency'  => 'EGP',
             'status'    => 'active',
             'metadata'  => [
-                'location'    => 'New Cairo, 5th Settlement',
-                'developer'   => 'Next Home Development',
-                'total_units' => 600,
-                'website'     => 'https://nexthome-egy.com',
-                'phone'       => '19699',
+                'location'          => 'Mokattam - Cairo',
+                'address'           => 'Behind Shooting Club - Middle Plateau - Maadi Ring Road',
+                'developer'         => 'Next Home Development',
+                'project_kind'      => ['residential', 'commercial', 'administrative'],
+                'residential_units' => 3000,
+                'resident_capacity' => 11000,
+                'green_area_sqm'    => 12000,
+                'area_range_sqm'    => ['min' => 96, 'max' => 324],
+                'payment_plan'      => ['down_payment_from_percent' => 30, 'installments_up_to_months' => 72],
+                'website'           => 'https://nexthome-egy.com',
+                'logo_url'          => 'https://nexthome-egy.com/media/1986/logo-02.png',
+                'phone'             => '19699',
+                'seed_note'         => 'Representative UAT fixture based on public Next Home pages; not a complete 3000-unit inventory.',
             ],
         ]);
 
@@ -50,30 +49,34 @@ class NextPointSeeder extends Seeder
         // ── Building definitions ─────────────────────────────────────────────
         // A-J = residential, K = commercial, L = residential
         $buildingDefs = [
-            'A' => ['label' => 'Building A', 'type' => 'residential'],
-            'B' => ['label' => 'Building B', 'type' => 'residential'],
-            'C' => ['label' => 'Building C', 'type' => 'residential'],
-            'D' => ['label' => 'Building D', 'type' => 'residential'],
-            'E' => ['label' => 'Building E', 'type' => 'residential'],
-            'F' => ['label' => 'Building F', 'type' => 'residential'],
-            'G' => ['label' => 'Building G', 'type' => 'residential'],
-            'H' => ['label' => 'Building H', 'type' => 'residential'],
-            'I' => ['label' => 'Building I', 'type' => 'residential'],
-            'J' => ['label' => 'Building J', 'type' => 'residential'],
-            'K' => ['label' => 'Building K', 'type' => 'commercial'],
-            'L' => ['label' => 'Building L', 'type' => 'residential'],
+            'A' => ['label' => 'Building A', 'type' => 'residential', 'image' => 'https://nexthome-egy.com/media/1699/a.jpg'],
+            'B' => ['label' => 'Building B', 'type' => 'residential', 'image' => 'https://nexthome-egy.com/media/1700/b.jpg'],
+            'C' => ['label' => 'Building C', 'type' => 'residential', 'image' => 'https://nexthome-egy.com/media/1701/c.jpg'],
+            'D' => ['label' => 'Building D', 'type' => 'residential', 'image' => 'https://nexthome-egy.com/media/1702/d.jpg'],
+            'E' => ['label' => 'Building E', 'type' => 'residential', 'image' => 'https://nexthome-egy.com/media/1703/e.jpg'],
+            'F' => ['label' => 'Building F', 'type' => 'residential', 'image' => 'https://nexthome-egy.com/media/1704/f.jpg'],
+            'G' => ['label' => 'Building G', 'type' => 'residential', 'image' => 'https://nexthome-egy.com/media/1705/g.jpg'],
+            'H' => ['label' => 'Building H', 'type' => 'residential', 'image' => 'https://nexthome-egy.com/media/1706/h04-1.jpg'],
+            'I' => ['label' => 'Building I', 'type' => 'residential', 'image' => 'https://nexthome-egy.com/media/1707/i.jpg'],
+            'J' => ['label' => 'Building J', 'type' => 'residential', 'image' => 'https://nexthome-egy.com/media/1708/j.jpg'],
+            'K' => ['label' => 'Building K', 'type' => 'commercial', 'image' => 'https://nexthome-egy.com/media/1709/k.jpg'],
+            'L' => ['label' => 'Building L', 'type' => 'residential', 'image' => 'https://nexthome-egy.com/media/1710/l.jpg'],
         ];
 
         $firstUnit = null;
         $sortIndex = 0;
 
         foreach ($buildingDefs as $code => $def) {
-            $building = Building::query()->create([
+            $building = Building::query()->updateOrCreate([
                 'compound_id' => $compound->id,
-                'name'        => $def['label'],
                 'code'        => $code,
+            ], [
+                'name'        => $def['label'],
                 'sort_order'  => $sortIndex++,
-                'metadata'    => ['type' => $def['type']],
+                'metadata'    => [
+                    'type' => $def['type'],
+                    'image_url' => $def['image'],
+                ],
             ]);
 
             if ($def['type'] === 'commercial') {
@@ -87,9 +90,10 @@ class NextPointSeeder extends Seeder
 
         // ── Assign demo resident to first unit in Building H ────────────────
         if ($firstUnit instanceof Unit && $resident && $admin) {
-            UnitMembership::query()->create([
+            UnitMembership::query()->updateOrCreate([
                 'unit_id'             => $firstUnit->id,
                 'user_id'             => $resident->id,
+            ], [
                 'relation_type'       => UnitRelationType::Owner->value,
                 'starts_at'           => now()->toDateString(),
                 'is_primary'          => true,
@@ -173,19 +177,21 @@ class NextPointSeeder extends Seeder
         ];
 
         foreach ($floorUnits as $level => $units) {
-            $floor = Floor::query()->create([
+            $floor = Floor::query()->updateOrCreate([
                 'building_id'  => $building->id,
-                'label'        => "Floor {$level}",
                 'level_number' => $level,
+            ], [
+                'label'        => "Floor {$level}",
                 'sort_order'   => $level,
             ]);
 
             foreach ($units as [$unitNumber, $type, $area, $beds]) {
-                $unit = Unit::query()->create([
+                $unit = Unit::query()->updateOrCreate([
                     'compound_id' => $compound->id,
                     'building_id' => $building->id,
-                    'floor_id'    => $floor->id,
                     'unit_number' => $unitNumber,
+                ], [
+                    'floor_id'    => $floor->id,
                     'type'        => $type->value,
                     'area_sqm'    => $area,
                     'bedrooms'    => $beds,
@@ -221,19 +227,21 @@ class NextPointSeeder extends Seeder
         ];
 
         foreach ($floors as $level => [$label, $units]) {
-            $floor = Floor::query()->create([
+            $floor = Floor::query()->updateOrCreate([
                 'building_id'  => $building->id,
-                'label'        => $label,
                 'level_number' => $level,
+            ], [
+                'label'        => $label,
                 'sort_order'   => $level,
             ]);
 
             foreach ($units as [$unitNumber, $type, $area, $beds]) {
-                Unit::query()->create([
+                Unit::query()->updateOrCreate([
                     'compound_id' => $compound->id,
                     'building_id' => $building->id,
-                    'floor_id'    => $floor->id,
                     'unit_number' => $unitNumber,
+                ], [
+                    'floor_id'    => $floor->id,
                     'type'        => $type->value,
                     'area_sqm'    => $area,
                     'bedrooms'    => $beds,
@@ -257,10 +265,11 @@ class NextPointSeeder extends Seeder
 
         for ($level = 0; $level <= 11; $level++) {
             $label = $level === 0 ? 'Ground' : "Floor {$level}";
-            $floor = Floor::query()->create([
+            $floor = Floor::query()->updateOrCreate([
                 'building_id'  => $building->id,
-                'label'        => $label,
                 'level_number' => $level,
+            ], [
+                'label'        => $label,
                 'sort_order'   => $level,
             ]);
 
@@ -271,11 +280,12 @@ class NextPointSeeder extends Seeder
                 $typeCode = $type === UnitType::Studio ? 'R' : 'R';
                 $unitNumber = "{$code}{$typeCode}-{$levelCode}-F{$flatNum}";
 
-                Unit::query()->create([
+                Unit::query()->updateOrCreate([
                     'compound_id' => $compound->id,
                     'building_id' => $building->id,
-                    'floor_id'    => $floor->id,
                     'unit_number' => $unitNumber,
+                ], [
+                    'floor_id'    => $floor->id,
                     'type'        => $type->value,
                     'area_sqm'    => $area,
                     'bedrooms'    => $beds,

@@ -8,6 +8,7 @@ enum NotificationCategory: string
     case Visitors = 'visitors';
     case Issues = 'issues';
     case Announcements = 'announcements';
+    case Polls = 'polls';
     case Finance = 'finance';
     case System = 'system';
 }

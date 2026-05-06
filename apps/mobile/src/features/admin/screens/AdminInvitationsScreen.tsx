@@ -5,7 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { ScreenContainer } from '../../../components/layout/ScreenContainer';
 import { Typography } from '../../../components/ui/Typography';
-import { colors, spacing } from '../../../theme';
+import { colors, layout, radii, shadows, spacing } from '../../../theme';
 import { useGetResidentInvitationsQuery } from '../../../services/admin';
 import { RootStackParamList } from '../../../navigation/types';
 import { Button } from '../../../components/ui/Button';
@@ -107,23 +107,19 @@ export const AdminInvitationsScreen = () => {
 
 const styles = StyleSheet.create({
   listContent: {
-    padding: spacing.lg,
-    paddingBottom: 100,
+    padding: layout.screenGutter,
+    paddingBottom: layout.screenBottom + 72,
   },
   header: {
-    marginBottom: spacing.xl,
+    marginBottom: layout.sectionGap,
   },
   card: {
-    borderRadius: 16,
-    padding: spacing.lg,
-    marginBottom: spacing.md,
+    borderRadius: radii.xl,
+    padding: layout.cardPadding,
+    marginBottom: layout.listGap,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
+    borderColor: colors.border.light,
+    ...shadows.sm,
   },
   cardHeader: {
     flexDirection: 'row',

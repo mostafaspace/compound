@@ -19,6 +19,7 @@ class IssueAttachmentResource extends JsonResource
             'originalName' => $this->original_name,
             'mimeType' => $this->mime_type,
             'size' => $this->size,
+            'url' => "/issues/{$this->issue_id}/attachments/{$this->id}/view",
             'createdAt' => $this->created_at?->toIso8601String(),
         ];
     }

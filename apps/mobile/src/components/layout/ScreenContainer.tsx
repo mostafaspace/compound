@@ -10,7 +10,7 @@ import {
   ScrollView
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, spacing } from '../../theme';
+import { colors, layout } from '../../theme';
 
 interface ScreenContainerProps {
   children: React.ReactNode;
@@ -53,14 +53,12 @@ export const ScreenContainer: React.FC<ScreenContainerProps> = ({
             content
           )}
         </KeyboardAvoidingView>
+      ) : scrollable ? (
+        <ScrollView contentContainerStyle={styles.scrollGrow}>
+          {content}
+        </ScrollView>
       ) : (
-        scrollable ? (
-          <ScrollView contentContainerStyle={styles.scrollGrow}>
-            {content}
-          </ScrollView>
-        ) : (
-          content
-        )
+        content
       )}
     </SafeAreaView>
   );
@@ -75,10 +73,11 @@ const styles = StyleSheet.create({
   },
   scrollGrow: {
     flexGrow: 1,
+    paddingBottom: layout.screenBottom,
   },
   inner: {
     flex: 1,
-    paddingHorizontal: spacing.md, // Base padding
-    paddingTop: spacing.md,
+    paddingHorizontal: layout.screenGutter,
+    paddingTop: layout.screenTop,
   },
 });

@@ -17,7 +17,7 @@ import { usePushNotifications } from '../hooks/usePushNotifications';
 import { CreateVisitorScreen } from '../features/visitors/screens/CreateVisitorScreen';
 import { ShareVisitorPassScreen } from '../features/visitors/screens/ShareVisitorPassScreen';
 import { PollDetailScreen } from '../features/polls/screens/PollDetailScreen';
-import { CreateIssueScreen } from '../features/issues/screens/CreateIssueScreen';
+import { AddEditIssueScreen } from '../features/issues/screens/AddEditIssueScreen';
 import { IssueDetailScreen } from '../features/issues/screens/IssueDetailScreen';
 import { UploadDocumentScreen } from '../features/documents/screens/UploadDocumentScreen';
 import { AdminInvitationsScreen } from '../features/admin/screens/AdminInvitationsScreen';
@@ -89,12 +89,19 @@ export const RootNavigator = () => {
               }}
             />
             <Stack.Screen
-              name="CreateIssue"
-              component={CreateIssueScreen}
-              options={{
+              name="AddEditIssue"
+              component={AddEditIssueScreen}
+              options={({ route }) => ({
                 headerShown: true,
-                header: () => <ScreenHeader title={t("Issues.create", { defaultValue: "Report Issue" })} />
-              }}
+                header: () => (
+                  <ScreenHeader 
+                    title={route.params?.issue 
+                      ? t("Issues.edit", { defaultValue: "Edit Issue" }) 
+                      : t("Issues.create", { defaultValue: "Report Issue" })
+                    } 
+                  />
+                )
+              })}
             />
             <Stack.Screen
               name="IssueDetail"

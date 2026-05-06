@@ -2,6 +2,7 @@
 
 namespace App\Models\Polls;
 
+use App\Models\Property\Unit;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -13,6 +14,8 @@ class PollNotificationLog extends Model
     protected $fillable = [
         'poll_id',
         'user_id',
+        'unit_id',
+        'unit_number',
         'notified_at',
         'channel',
         'delivered',
@@ -38,5 +41,11 @@ class PollNotificationLog extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /** @return BelongsTo<Unit, $this> */
+    public function unit(): BelongsTo
+    {
+        return $this->belongsTo(Unit::class);
     }
 }

@@ -2,7 +2,7 @@ import React from 'react';
 import { View, StyleSheet, FlatList, useColorScheme } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useGetUnitsQuery } from '../../../services/property';
-import { colors, spacing } from '../../../theme';
+import { colors, layout, radii, shadows, spacing } from '../../../theme';
 import { Typography } from '../../../components/ui/Typography';
 import { ScreenContainer } from '../../../components/layout/ScreenContainer';
 
@@ -53,13 +53,15 @@ const styles = StyleSheet.create({
     padding: 0,
   },
   listContent: {
-    padding: spacing.md,
+    padding: layout.screenGutter,
+    paddingBottom: layout.screenBottom,
   },
   card: {
-    padding: spacing.lg,
-    borderRadius: 12,
+    padding: layout.cardPadding,
+    borderRadius: radii.xl,
     borderWidth: 1,
-    marginBottom: spacing.md,
+    marginBottom: layout.listGap,
+    ...shadows.sm,
   },
   header: {
     flexDirection: 'row',
@@ -71,13 +73,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 2,
     backgroundColor: 'rgba(20, 184, 166, 0.1)',
-    borderRadius: 4,
+    borderRadius: radii.sm,
   },
   badgeText: {
     fontSize: 11,
   },
   detail: {
-    color: '#6b7280',
+    color: colors.text.secondary.light,
     marginTop: 2,
     marginBottom: 4,
   },

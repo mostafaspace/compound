@@ -137,7 +137,7 @@ class NotificationsTest extends TestCase
             'quietHoursStart' => '22:00',
             'quietHoursEnd' => '06:30',
             'quietHoursTimezone' => 'Africa/Cairo',
-            'mutedCategories' => ['finance', 'visitors'],
+            'mutedCategories' => ['finance', 'visitors', 'polls'],
         ])
             ->assertOk()
             ->assertJsonPath('data.emailEnabled', false)
@@ -146,7 +146,8 @@ class NotificationsTest extends TestCase
             ->assertJsonPath('data.quietHoursEnd', '06:30')
             ->assertJsonPath('data.quietHoursTimezone', 'Africa/Cairo')
             ->assertJsonPath('data.mutedCategories.0', 'finance')
-            ->assertJsonPath('data.mutedCategories.1', 'visitors');
+            ->assertJsonPath('data.mutedCategories.1', 'visitors')
+            ->assertJsonPath('data.mutedCategories.2', 'polls');
 
         $this->assertDatabaseHas('audit_logs', [
             'actor_id' => $user->id,
@@ -183,9 +184,19 @@ class NotificationsTest extends TestCase
             title: 'Documents reviewed',
             body: 'A document has been reviewed.',
         ));
+        NotificationPreference::query()->create([
+            'user_id' => $enabledUser->id,
+            'muted_categories' => [NotificationCategory::Polls->value],
+        ]);
+        $this->assertNull($service->create(
+            userId: $enabledUser->id,
+            category: NotificationCategory::Polls,
+            title: 'New poll available',
+            body: 'A new poll has been published.',
+        ));
 
         $notification = $service->create(
-            userId: $enabledUser->id,
+            userId: User::factory()->create()->id,
             category: NotificationCategory::Visitors,
             title: 'Visitor arrived',
             body: 'A visitor arrived at the gate.',

@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, StyleSheet, useColorScheme } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { ScreenContainer } from '../../../components/layout/ScreenContainer';
 import { Typography } from '../../../components/ui/Typography';
-import { colors, spacing } from '../../../theme';
+import { layout, spacing } from '../../../theme';
+import { ActionTile } from '../../../components/ui/ActionTile';
 
 /**
  * Resident dashboard - shows unit info, upcoming visitors, payments, etc.
@@ -11,7 +12,6 @@ import { colors, spacing } from '../../../theme';
  */
 export const ResidentDashboardScreen = () => {
   const { t } = useTranslation();
-  const isDark = useColorScheme() === 'dark';
 
   return (
     <ScreenContainer style={styles.container} edges={['left', 'right']}>
@@ -30,30 +30,10 @@ export const ResidentDashboardScreen = () => {
           {t('Resident.quickActions', 'Quick Actions')}
         </Typography>
         <View style={styles.quickActionsGrid}>
-          <View style={[styles.actionCard, { backgroundColor: isDark ? colors.surface.dark : colors.surface.light }]}>
-            <Typography style={styles.actionGlyph}>VI</Typography>
-            <Typography variant="body" style={styles.actionLabel}>
-              {t('Visitors.label', 'Visitors')}
-            </Typography>
-          </View>
-          <View style={[styles.actionCard, { backgroundColor: isDark ? colors.surface.dark : colors.surface.light }]}>
-            <Typography style={styles.actionGlyph}>FN</Typography>
-            <Typography variant="body" style={styles.actionLabel}>
-              {t('Finance.label', 'Finance')}
-            </Typography>
-          </View>
-          <View style={[styles.actionCard, { backgroundColor: isDark ? colors.surface.dark : colors.surface.light }]}>
-            <Typography style={styles.actionGlyph}>IS</Typography>
-            <Typography variant="body" style={styles.actionLabel}>
-              {t('Resident.maintenance', 'Maintenance')}
-            </Typography>
-          </View>
-          <View style={[styles.actionCard, { backgroundColor: isDark ? colors.surface.dark : colors.surface.light }]}>
-            <Typography style={styles.actionGlyph}>AN</Typography>
-            <Typography variant="body" style={styles.actionLabel}>
-              {t('Resident.announcements', 'Announcements')}
-            </Typography>
-          </View>
+          <ActionTile title={t('Visitors.label', 'Visitors')} icon="visitors" />
+          <ActionTile title={t('Finance.label', 'Finance')} icon="finance" tone="info" />
+          <ActionTile title={t('Resident.maintenance', 'Maintenance')} icon="issues" tone="warning" />
+          <ActionTile title={t('Resident.announcements', 'Announcements')} icon="polls" tone="success" />
         </View>
       </View>
 
@@ -72,16 +52,16 @@ export const ResidentDashboardScreen = () => {
 
 const styles = StyleSheet.create({
   container: {
-    padding: spacing.lg,
+    padding: layout.screenGutter,
   },
   header: {
-    marginBottom: spacing.xl,
+    marginBottom: layout.sectionGap,
   },
   subtitle: {
     marginTop: spacing.xs,
   },
   section: {
-    marginBottom: spacing.xl,
+    marginBottom: layout.sectionGap,
   },
   sectionTitle: {
     marginBottom: spacing.md,
@@ -90,25 +70,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.md,
-  },
-  actionCard: {
-    flex: 1,
-    width: '45%',
-    padding: spacing.md,
-    borderRadius: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
-  },
-  actionGlyph: {
-    color: colors.primary.light,
-    fontSize: 16,
-    fontWeight: '900',
-    letterSpacing: 2,
-  },
-  actionLabel: {
-    marginTop: spacing.sm,
-    textAlign: 'center',
   },
   placeholderText: {
     textAlign: 'center',

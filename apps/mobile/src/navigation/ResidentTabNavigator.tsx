@@ -1,27 +1,28 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useTranslation } from 'react-i18next';
-import { useColorScheme, Text } from 'react-native';
+import { useColorScheme, View } from 'react-native';
 import { MainTabParamList } from './types';
 import { DashboardScreen } from '../features/dashboard/screens/DashboardScreen';
 import { VisitorsScreen } from '../features/visitors/screens/VisitorsScreen';
 import { AccountsScreen } from '../features/finance/screens/AccountsScreen';
 import { PollsScreen } from '../features/polls/screens/PollsScreen';
 import { MoreNavigator } from './MoreNavigator';
-import { colors, spacing } from '../theme';
+import { colors, componentSize, radii, spacing } from '../theme';
 import { usePermission } from '../hooks/usePermission';
 import { LogoutButton } from '../components/ui/LogoutButton';
 import { ScreenHeader } from '../components/layout/ScreenHeader';
+import { Icon, type AppIconName } from '../components/ui/Icon';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
-const tabGlyphs: Record<keyof MainTabParamList, string> = {
-  Dashboard: 'DB',
-  Property: 'PR',
-  Visitors: 'VI',
-  Finance: 'FN',
-  Polls: 'PL',
-  More: 'MO',
+const tabIcons: Record<keyof MainTabParamList, AppIconName> = {
+  Dashboard: 'dashboard',
+  Property: 'building',
+  Visitors: 'visitors',
+  Finance: 'finance',
+  Polls: 'polls',
+  More: 'more',
 };
 
 export const ResidentTabNavigator = () => {
@@ -33,12 +34,13 @@ export const ResidentTabNavigator = () => {
     <Tab.Navigator
       screenOptions={({ route }) => ({
         tabBarActiveTintColor: isDark ? colors.cta.dark : colors.primary.light,
-        tabBarInactiveTintColor: isDark ? '#9ca3af' : '#6b7280',
+        tabBarInactiveTintColor: isDark ? colors.text.secondary.dark : colors.text.secondary.light,
         tabBarStyle: {
           backgroundColor: isDark ? colors.surface.dark : colors.surface.light,
           borderTopColor: isDark ? colors.border.dark : colors.border.light,
-          paddingBottom: spacing.xs,
-          height: 60,
+          paddingBottom: spacing.sm,
+          paddingTop: spacing.xs,
+          height: componentSize.tabBar,
         },
         headerStyle: {
           backgroundColor: isDark ? colors.surface.dark : colors.surface.light,
@@ -58,7 +60,11 @@ export const ResidentTabNavigator = () => {
           fontWeight: '600',
         },
         tabBarIcon: ({ color, size }) => {
-          return <Text style={{ color, fontSize: 12, fontWeight: '800', letterSpacing: 1 }}>{tabGlyphs[route.name]}</Text>;
+          return (
+            <View style={{ width: 32, height: 28, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center' }}>
+              <Icon name={tabIcons[route.name]} color={color} size={size ?? 22} />
+            </View>
+          );
         },
       })}
     >

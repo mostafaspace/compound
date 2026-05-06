@@ -9,7 +9,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Typography } from '../ui/Typography';
-import { colors, shadows } from '../../theme';
+import { colors, componentSize, radii, shadows, spacing } from '../../theme';
+import { Icon } from '../ui/Icon';
 
 interface ScreenHeaderProps {
   title: string;
@@ -30,7 +31,7 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
       styles.header, 
       { 
         backgroundColor: isDark ? colors.surface.dark : colors.surface.light,
-        borderBottomColor: isDark ? '#1E293B' : '#F1F5F9'
+        borderBottomColor: isDark ? colors.border.dark : colors.border.light,
       }
     ]}>
       <SafeAreaView edges={['top']}>
@@ -41,16 +42,16 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
                 onPress={() => navigation.goBack()} 
                 style={styles.backBtn}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                accessibilityRole="button"
+                accessibilityLabel="Go back"
               >
-                <Typography style={[styles.backIcon, { color: isDark ? '#F8FAFC' : '#0F172A' }]}>
-                  ←
-                </Typography>
+                <Icon name="arrow-left" color={isDark ? colors.text.primary.dark : colors.text.primary.light} size={22} />
               </Pressable>
             )}
           </View>
 
           <View style={styles.titleContainer}>
-            <Typography numberOfLines={1} style={[styles.title, { color: isDark ? '#F8FAFC' : '#0F172A' }]}>
+            <Typography numberOfLines={1} style={styles.title}>
               {title}
             </Typography>
           </View>
@@ -75,7 +76,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 8,
+    paddingHorizontal: spacing.sm,
   },
   leftContainer: {
     width: 60,
@@ -94,19 +95,13 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 17,
-    fontWeight: '900',
-    letterSpacing: -0.3,
+    fontWeight: '800',
   },
   backBtn: {
-    width: 44,
-    height: 44,
+    width: componentSize.touch,
+    height: componentSize.touch,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 22,
-  },
-  backIcon: {
-    fontSize: 24,
-    fontWeight: '900',
-    marginTop: Platform.OS === 'ios' ? -2 : 0,
+    borderRadius: radii.pill,
   },
 });

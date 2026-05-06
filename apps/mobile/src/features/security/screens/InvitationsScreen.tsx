@@ -9,6 +9,7 @@ import { Button } from '../../../components/ui/Button';
 import { colors, spacing, shadows } from '../../../theme';
 import { visitorStatusPalette } from '../../../theme/semantics';
 import { formatDate } from '../../../utils/formatters';
+import { Icon } from '../../../components/ui/Icon';
 
 export const InvitationsScreen = () => {
   const { t } = useTranslation();
@@ -136,7 +137,7 @@ export const InvitationsScreen = () => {
         onRefresh={refetch}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Typography style={styles.emptyGlyph}>IN</Typography>
+            <Icon name="visitors" color={colors.primary.light} size={40} />
             <Typography variant="h3" style={styles.emptyTitle}>
               {t('Security.noPending', 'No Pending Invitations')}
             </Typography>
@@ -212,12 +213,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: spacing.xxl,
-  },
-  emptyGlyph: {
-    color: colors.primary.light,
-    fontSize: 24,
-    fontWeight: '900',
-    letterSpacing: 3,
   },
   emptyTitle: {
     marginTop: spacing.md,

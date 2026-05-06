@@ -26,8 +26,8 @@ class PollTransparencySeeder extends Seeder
 
         $admin = User::query()->where('email', 'compound-admin@uat.compound.local')->first();
         $residents = User::query()
-            ->where('compound_id', $compound->id)
             ->whereIn('role', ['resident_owner', 'resident_tenant'])
+            ->whereHas('unitMemberships.unit', fn ($query) => $query->where('compound_id', $compound->id))
             ->get();
 
         if ($residents->isEmpty()) {
@@ -70,8 +70,8 @@ class PollTransparencySeeder extends Seeder
                 'poll_type_id'  => $type->id,
                 'description'   => 'Vote on the preferred pool schedule for summer 2026. The winning option will take effect June 1.',
                 'status'        => 'active',
-                'scope'         => 'compound_wide',
-                'eligibility'   => 'all_residents',
+                'scope'         => 'compound',
+                'eligibility'   => 'all_verified',
                 'allow_multiple' => false,
                 'starts_at'     => Carbon::now()->subDays(3),
                 'ends_at'       => Carbon::now()->addDays(11),
@@ -144,8 +144,8 @@ class PollTransparencySeeder extends Seeder
                 'poll_type_id'  => $type->id,
                 'description'   => 'Approve or reject the proposed EGP 1.2M annual maintenance budget for 2026.',
                 'status'        => 'closed',
-                'scope'         => 'compound_wide',
-                'eligibility'   => 'unit_owners',
+                'scope'         => 'compound',
+                'eligibility'   => 'owners_only',
                 'allow_multiple' => false,
                 'starts_at'     => Carbon::now()->subDays(30),
                 'ends_at'       => Carbon::now()->subDays(16),
@@ -214,8 +214,8 @@ class PollTransparencySeeder extends Seeder
                 'poll_type_id'  => $type->id,
                 'description'   => 'Should the compound switch to assigned parking with stickers, or keep open-lot parking?',
                 'status'        => 'draft',
-                'scope'         => 'compound_wide',
-                'eligibility'   => 'all_residents',
+                'scope'         => 'compound',
+                'eligibility'   => 'all_verified',
                 'allow_multiple' => false,
                 'starts_at'     => Carbon::now()->addDays(7),
                 'ends_at'       => Carbon::now()->addDays(21),

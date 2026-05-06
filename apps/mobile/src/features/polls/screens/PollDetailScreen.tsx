@@ -20,9 +20,10 @@ import {
   useClosePollMutation,
 } from '../../../services/polls';
 import { getEffectiveRoleType } from '@compound/contracts';
+import type { PollEligibleUnit } from '@compound/contracts';
 import { useSelector } from 'react-redux';
 import { selectCurrentUser } from '../../../store/authSlice';
-import { colors, spacing } from '../../../theme';
+import { colors, layout, radii, shadows, spacing } from '../../../theme';
 import { Typography } from '../../../components/ui/Typography';
 import { Button } from '../../../components/ui/Button';
 import { ScreenContainer } from '../../../components/layout/ScreenContainer';
@@ -63,14 +64,14 @@ const AnimatedBar = ({
     <View
       style={[
         styles.barTrack,
-        { backgroundColor: isDark ? '#374151' : '#e5e7eb' },
+        { backgroundColor: isDark ? colors.border.dark : colors.border.light },
       ]}
     >
       <Animated.View
         style={[
           styles.barFill,
           {
-            backgroundColor: selected ? colors.primary.dark : (isDark ? '#6b7280' : '#9ca3af'),
+            backgroundColor: selected ? colors.primary.light : (isDark ? colors.text.secondary.dark : colors.text.secondary.light),
             width: widthAnim.interpolate({
               inputRange: [0, 100],
               outputRange: ['0%', '100%'],
@@ -85,11 +86,10 @@ const AnimatedBar = ({
 export const PollDetailScreen = ({ route, navigation }: Props) => {
   const { pollId } = route.params;
   const isDark = useColorScheme() === 'dark';
+  const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
 
-  const { data: poll, isLoading, refetch } = useGetPollQuery(pollId);
-  const { data: eligibility } = useGetPollEligibilityQuery(pollId, {
-    skip: !poll || poll.status !== 'active',
-  });
+  const { data: poll, isLoading, refetch } = useGetPollQuery({ pollId, unitId: selectedUnitId });
+  const { data: eligibility } = useGetPollEligibilityQuery({ pollId, unitId: selectedUnitId });
   const { data: voters } = useGetPollVotersQuery(pollId);
   const user = useSelector(selectCurrentUser);
   const roleType = getEffectiveRoleType(user);
@@ -106,13 +106,30 @@ export const PollDetailScreen = ({ route, navigation }: Props) => {
 
   const isActive = poll?.status === 'active';
   const isDraft = poll?.status === 'draft';
+  const hasStarted = !poll?.startsAt || new Date(poll.startsAt).getTime() <= Date.now();
   const hasVoted = poll?.hasVoted ?? eligibility?.hasVoted ?? false;
   const isEligible = eligibility?.eligible ?? false;
+  const eligibleUnits: PollEligibleUnit[] = eligibility?.eligibleUnits ?? [];
+  const requiresUnitSelection = eligibility?.requiresUnitSelection ?? false;
   const allowMultiple = poll?.allowMultiple ?? false;
   const maxChoices = poll?.maxChoices ?? null;
+  const votingOpen = isActive && hasStarted;
 
   const options: PollOption[] = poll?.options ?? [];
   const totalVotes = poll?.votesCount ?? 0;
+  const selectedUnit = eligibleUnits.find((unit) => unit.id === selectedUnitId) ?? null;
+
+  useEffect(() => {
+    if (!eligibility) {
+      return;
+    }
+
+    if (selectedUnitId && eligibleUnits.some((unit) => unit.id === selectedUnitId)) {
+      return;
+    }
+
+    setSelectedUnitId(eligibility.selectedUnitId ?? eligibleUnits[0]?.id ?? null);
+  }, [eligibility, eligibleUnits, selectedUnitId]);
 
   const toggleOption = (optionId: number) => {
     if (!allowMultiple) {
@@ -133,7 +150,7 @@ export const PollDetailScreen = ({ route, navigation }: Props) => {
     setErrorMsg(null);
     setSuccessMsg(null);
     try {
-      await castVote({ pollId, optionIds: selectedOptionIds }).unwrap();
+      await castVote({ pollId, optionIds: selectedOptionIds, unitId: selectedUnitId ?? undefined }).unwrap();
       setSuccessMsg('Your vote has been recorded!');
       setSelectedOptionIds([]);
       refetch();
@@ -146,7 +163,7 @@ export const PollDetailScreen = ({ route, navigation }: Props) => {
     setErrorMsg(null);
     setSuccessMsg(null);
     try {
-      await removeVote(pollId).unwrap();
+      await removeVote({ pollId, unitId: selectedUnitId ?? undefined }).unwrap();
       setSuccessMsg('Your vote has been removed.');
       setSelectedOptionIds([]);
       refetch();
@@ -199,8 +216,9 @@ export const PollDetailScreen = ({ route, navigation }: Props) => {
     );
   }
 
-  const showResults = (hasVoted || !isActive) && !isDraft;
+  const showResults = !isDraft;
   const statusPalette = pollStatusPalette(poll.status);
+  const mutedText = isDark ? colors.text.secondary.dark : colors.text.secondary.light;
 
   return (
     <ScreenContainer withKeyboard={false} style={styles.container}>
@@ -216,7 +234,7 @@ export const PollDetailScreen = ({ route, navigation }: Props) => {
         {poll.description ? (
           <Typography
             variant="body"
-            style={[styles.description, { color: isDark ? '#9ca3af' : '#6b7280' }]}
+            style={[styles.description, { color: mutedText }]}
           >
             {poll.description}
           </Typography>
@@ -249,11 +267,11 @@ export const PollDetailScreen = ({ route, navigation }: Props) => {
             />
           )}
           {allowMultiple ? (
-            <Typography variant="caption" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>
+            <Typography variant="caption" style={{ color: mutedText }}>
               Multi-choice{maxChoices ? ` (max ${maxChoices})` : ''}
             </Typography>
           ) : null}
-          <Typography variant="caption" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>
+          <Typography variant="caption" style={{ color: mutedText }}>
             {totalVotes} votes
           </Typography>
         </View>
@@ -261,16 +279,65 @@ export const PollDetailScreen = ({ route, navigation }: Props) => {
         {/* Success / Error banners */}
         {successMsg ? (
           <View style={styles.successBanner}>
-            <Typography variant="body" style={{ color: '#065f46', fontWeight: '600' }}>
+            <Typography variant="body" style={{ color: colors.palette.emerald[600], fontWeight: '600' }}>
               {successMsg}
             </Typography>
           </View>
         ) : null}
         {errorMsg ? (
           <View style={styles.errorBanner}>
-            <Typography variant="body" style={{ color: '#991b1b', fontWeight: '600' }}>
+            <Typography variant="body" style={{ color: colors.palette.red[600], fontWeight: '600' }}>
               {errorMsg}
             </Typography>
+          </View>
+        ) : null}
+
+        {eligibleUnits.length > 1 ? (
+          <View
+            style={[
+              styles.unitSelectorCard,
+              {
+                backgroundColor: isDark ? colors.surface.dark : colors.surface.light,
+                borderColor: isDark ? colors.border.dark : colors.border.light,
+              },
+            ]}
+          >
+            <Typography variant="h3" style={styles.optionsTitle}>
+              Voting Apartment
+            </Typography>
+            <Typography variant="caption" style={styles.votersHelper}>
+              Choose which apartment should cast this ballot. Each apartment can submit one ballot per poll.
+            </Typography>
+            <View style={styles.unitChipRow}>
+              {eligibleUnits.map((unit) => {
+                const active = unit.id === selectedUnitId;
+                return (
+                  <Pressable
+                    key={unit.id}
+                    onPress={() => {
+                      setSelectedUnitId(unit.id);
+                      setSelectedOptionIds([]);
+                      setErrorMsg(null);
+                      setSuccessMsg(null);
+                    }}
+                    style={[
+                      styles.unitChip,
+                      {
+                        borderColor: active ? colors.primary.dark : (isDark ? colors.border.dark : colors.border.light),
+                        backgroundColor: active ? colors.palette.blue[50] : 'transparent',
+                      },
+                    ]}
+                  >
+                    <Typography
+                      variant="caption"
+                      style={[styles.unitChipText, active ? { color: colors.primary.dark, fontWeight: '700' } : null]}
+                    >
+                      {unit.unitNumber ? `Unit ${unit.unitNumber}` : 'Apartment'}
+                    </Typography>
+                  </Pressable>
+                );
+              })}
+            </View>
           </View>
         ) : null}
 
@@ -294,12 +361,13 @@ export const PollDetailScreen = ({ route, navigation }: Props) => {
               const optPct = pct(opt.votesCount);
               const isSelected = selectedOptionIds.includes(opt.id);
               const userVoted = poll.userVoteOptionIds?.includes(opt.id) ?? false;
+              const optionVoters = (voters ?? []).filter((voter) => voter.options.includes(opt.label));
 
               return (
                 <Pressable
                   key={opt.id}
                   onPress={() => {
-                    if (isActive && isEligible) {
+                    if (votingOpen && isEligible) {
                       toggleOption(opt.id);
                     }
                   }}
@@ -325,7 +393,7 @@ export const PollDetailScreen = ({ route, navigation }: Props) => {
                           isSelected || userVoted
                             ? { backgroundColor: colors.primary.dark, borderColor: colors.primary.dark }
                             : {
-                                borderColor: isDark ? '#6b7280' : '#d1d5db',
+                                borderColor: isDark ? colors.border.dark : colors.border.light,
                                 backgroundColor: 'transparent',
                               },
                         ]}
@@ -349,7 +417,7 @@ export const PollDetailScreen = ({ route, navigation }: Props) => {
                     {showResults ? (
                       <Typography
                         variant="caption"
-                        style={{ color: isDark ? '#9ca3af' : '#6b7280', minWidth: 50, textAlign: 'right' }}
+                        style={{ color: mutedText, minWidth: 50, textAlign: 'right' }}
                       >
                         {opt.votesCount} ({optPct}%)
                       </Typography>
@@ -364,13 +432,11 @@ export const PollDetailScreen = ({ route, navigation }: Props) => {
                         selected={userVoted}
                       />
                       {/* Show names of people who voted for this option (WhatsApp style) */}
-                      {voters && voters.length > 0 && (
+                      {optionVoters.length > 0 && (
                         <View style={styles.optionVoters}>
-                          {voters
-                            .filter(v => v.options.includes(opt.label))
-                            .map((v, i) => (
+                          {optionVoters.map((v, i) => (
                               <Typography key={i} variant="caption" style={styles.optionVoterName}>
-                                {v.userName}{i < voters.filter(v => v.options.includes(opt.label)).length - 1 ? ', ' : ''}
+                                {v.userName}{i < optionVoters.length - 1 ? ', ' : ''}
                               </Typography>
                             ))}
                         </View>
@@ -384,24 +450,32 @@ export const PollDetailScreen = ({ route, navigation }: Props) => {
         </View>
 
         {/* Vote action */}
-        {isActive && isEligible && (!hasVoted || selectedOptionIds.length > 0) ? (
+        {!hasStarted && isActive ? (
+          <View style={styles.infoBox}>
+            <Typography variant="body" style={styles.infoText}>
+              Voting opens at {poll.startsAt ? new Date(poll.startsAt).toLocaleString() : 'the scheduled start time'}.
+            </Typography>
+          </View>
+        ) : votingOpen && isEligible && (!hasVoted || selectedOptionIds.length > 0) ? (
           <Button
             title={isCasting ? 'Submitting…' : (hasVoted ? 'Update Vote' : 'Submit Vote')}
             onPress={handleVote}
-            disabled={selectedOptionIds.length === 0 || isCasting}
+            disabled={selectedOptionIds.length === 0 || isCasting || (requiresUnitSelection && !selectedUnitId)}
             loading={isCasting}
             style={styles.voteButton}
           />
-        ) : isActive && !hasVoted && eligibility && !isEligible ? (
+        ) : votingOpen && !hasVoted && eligibility && !isEligible ? (
           <View style={styles.ineligibleBox}>
             <Typography variant="body" style={styles.ineligibleText}>
               You are not eligible to vote in this poll.
             </Typography>
           </View>
-        ) : isActive && hasVoted && selectedOptionIds.length === 0 ? (
+        ) : votingOpen && hasVoted && selectedOptionIds.length === 0 ? (
           <View style={styles.votedBox}>
             <Typography variant="body" style={styles.votedText}>
-              You voted. Tap another option to change your vote while the poll is open.
+              {selectedUnit?.unitNumber
+                ? `Unit ${selectedUnit.unitNumber} already has a ballot. Tap another option to replace it or remove it while the poll is open.`
+                : 'Your apartment already has a ballot. Tap another option to replace it or remove it while the poll is open.'}
             </Typography>
             <Button
               title={isRemoving ? 'Removing…' : 'Remove My Vote'}
@@ -414,6 +488,45 @@ export const PollDetailScreen = ({ route, navigation }: Props) => {
             />
           </View>
         ) : null}
+
+        <View
+          style={[
+            styles.votersCard,
+            {
+              backgroundColor: isDark ? colors.surface.dark : colors.surface.light,
+              borderColor: isDark ? colors.border.dark : colors.border.light,
+            },
+          ]}
+        >
+          <Typography variant="h3" style={styles.optionsTitle}>
+            Named Ballots
+          </Typography>
+          <Typography variant="caption" style={styles.votersHelper}>
+            Every ballot is visible with the resident, apartment, choice, and timestamp for full transparency.
+          </Typography>
+          {(voters ?? []).length === 0 ? (
+            <Typography variant="caption" style={styles.emptyStateText}>
+              No ballots have been recorded yet.
+            </Typography>
+          ) : (
+            (voters ?? []).map((voter, index) => (
+              <View key={`${voter.userId}-${index}`} style={styles.voterRow}>
+                <View style={styles.voterInfo}>
+                  <Typography variant="label">{voter.userName ?? 'Unknown resident'}</Typography>
+                  <Typography variant="caption" style={styles.voterMeta}>
+                    {voter.unitNumber ? `Unit ${voter.unitNumber}` : 'Unit not recorded'}
+                  </Typography>
+                  <Typography variant="caption" style={styles.voterMeta}>
+                    {voter.options.join(', ') || 'No option recorded'}
+                  </Typography>
+                </View>
+                <Typography variant="caption" style={styles.voterMeta}>
+                  {voter.votedAt ? new Date(voter.votedAt).toLocaleString() : 'No timestamp'}
+                </Typography>
+              </View>
+            ))
+          )}
+        </View>
 
         {/* Transparency Logs */}
         {isAdmin && (
@@ -461,8 +574,8 @@ const styles = StyleSheet.create({
     padding: 0,
   },
   scroll: {
-    padding: spacing.md,
-    paddingBottom: spacing.xl,
+    padding: layout.screenGutter,
+    paddingBottom: layout.screenBottom,
   },
   center: {
     flex: 1,
@@ -489,7 +602,7 @@ const styles = StyleSheet.create({
   inlineAction: {
     height: 32,
     paddingHorizontal: spacing.md,
-    borderRadius: 8,
+    borderRadius: radii.md,
     borderWidth: 1.5,
   },
   inlineActionText: {
@@ -497,28 +610,51 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   successBanner: {
-    backgroundColor: '#d1fae5',
-    borderRadius: 8,
-    padding: spacing.md,
-    marginBottom: spacing.md,
+    backgroundColor: colors.palette.emerald[50],
+    borderRadius: radii.md,
+    padding: layout.cardPadding,
+    marginBottom: layout.listGap,
   },
   errorBanner: {
-    backgroundColor: '#fee2e2',
-    borderRadius: 8,
-    padding: spacing.md,
-    marginBottom: spacing.md,
+    backgroundColor: colors.palette.red[50],
+    borderRadius: radii.md,
+    padding: layout.cardPadding,
+    marginBottom: layout.listGap,
   },
   optionsCard: {
-    borderRadius: 12,
+    borderRadius: radii.xl,
     borderWidth: 1,
-    padding: spacing.lg,
-    marginBottom: spacing.md,
+    padding: layout.cardPadding,
+    marginBottom: layout.listGap,
+    ...shadows.sm,
+  },
+  unitSelectorCard: {
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    padding: layout.cardPadding,
+    marginBottom: layout.listGap,
+    ...shadows.sm,
   },
   optionsTitle: {
     marginBottom: spacing.md,
   },
+  unitChipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  unitChip: {
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  unitChipText: {
+    color: colors.text.secondary.light,
+  },
   optionRow: {
-    borderRadius: 10,
+    borderRadius: radii.md,
     borderWidth: 1.5,
     padding: spacing.md,
     marginBottom: spacing.sm,
@@ -553,7 +689,7 @@ const styles = StyleSheet.create({
   },
   checkmark: {
     fontSize: 11,
-    color: '#fff',
+    color: colors.text.inverse,
     fontWeight: '700',
   },
   optionLabel: {
@@ -573,21 +709,32 @@ const styles = StyleSheet.create({
   voteButton: {
     marginTop: spacing.sm,
   },
+  infoBox: {
+    backgroundColor: colors.palette.blue[50],
+    borderRadius: radii.md,
+    padding: layout.cardPadding,
+    marginTop: spacing.sm,
+  },
+  infoText: {
+    color: colors.palette.blue[700],
+    textAlign: 'center',
+    fontWeight: '600',
+  },
   ineligibleBox: {
-    backgroundColor: '#fee2e2',
-    borderRadius: 8,
-    padding: spacing.md,
+    backgroundColor: colors.palette.red[50],
+    borderRadius: radii.md,
+    padding: layout.cardPadding,
     marginTop: spacing.sm,
   },
   ineligibleText: {
-    color: '#991b1b',
+    color: colors.palette.red[600],
     textAlign: 'center',
     fontWeight: '600',
   },
   votedBox: {
     backgroundColor: 'rgba(20, 184, 166, 0.08)',
-    borderRadius: 8,
-    padding: spacing.md,
+    borderRadius: radii.md,
+    padding: layout.cardPadding,
     marginTop: spacing.sm,
     borderWidth: 1,
     borderColor: colors.primary.dark,
@@ -601,22 +748,34 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   votersCard: {
-    borderRadius: 12,
+    borderRadius: radii.xl,
     borderWidth: 1,
-    padding: spacing.lg,
-    marginTop: spacing.md,
+    padding: layout.cardPadding,
+    marginTop: layout.listGap,
+    ...shadows.sm,
   },
   voterRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     paddingVertical: spacing.sm,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: colors.border.light,
+    gap: spacing.md,
   },
   voterInfo: {
     flex: 1,
     gap: 2,
+  },
+  voterMeta: {
+    color: colors.text.secondary.light,
+  },
+  votersHelper: {
+    color: colors.text.secondary.light,
+    marginBottom: spacing.md,
+  },
+  emptyStateText: {
+    color: colors.text.secondary.light,
   },
   optionVoters: {
     flexDirection: 'row',
@@ -630,23 +789,23 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   logsSection: {
-    marginTop: spacing.xl,
-    paddingTop: spacing.lg,
+    marginTop: layout.sectionGap,
+    paddingTop: layout.sectionGap,
     borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
+    borderTopColor: colors.border.light,
   },
   logsTitle: {
     marginBottom: spacing.md,
   },
   logCard: {
-    marginBottom: spacing.md,
+    marginBottom: layout.listGap,
     backgroundColor: 'rgba(0,0,0,0.02)',
-    padding: spacing.md,
-    borderRadius: 12,
+    padding: layout.cardPadding,
+    borderRadius: radii.lg,
   },
   logLabel: {
     marginBottom: spacing.sm,
-    color: '#374151',
+    color: colors.text.primary.light,
   },
   logRow: {
     flexDirection: 'row',
@@ -654,7 +813,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   logTime: {
-    color: '#9ca3af',
+    color: colors.text.secondary.light,
   },
   logStatus: {
     fontWeight: '600',

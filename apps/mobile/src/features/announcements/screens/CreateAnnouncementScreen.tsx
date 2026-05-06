@@ -5,7 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import { ScreenContainer } from '../../../components/layout/ScreenContainer';
 import { Typography } from '../../../components/ui/Typography';
 import { Button } from '../../../components/ui/Button';
-import { colors, spacing } from '../../../theme';
+import { colors, layout, spacing } from '../../../theme';
 import { useCreateAnnouncementMutation } from '../../../services/property';
 
 export const CreateAnnouncementScreen = () => {
@@ -119,10 +119,10 @@ export const CreateAnnouncementScreen = () => {
 
 const styles = StyleSheet.create({
   scroll: {
-    padding: spacing.lg,
+    paddingBottom: layout.screenBottom,
   },
   header: {
-    marginBottom: spacing.xl,
+    marginBottom: layout.sectionGap,
   },
   form: {
     gap: spacing.lg,

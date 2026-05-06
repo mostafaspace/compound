@@ -10,6 +10,18 @@ import {
   ScrollView,
   TouchableOpacity
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { useDispatch } from 'react-redux';
+import * as Keychain from "react-native-keychain";
+import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
+import { useLoginMutation } from '../../../services/auth';
+import { setCredentials } from '../../../store/authSlice';
+import { Button } from '../../../components/ui/Button';
+import { Input } from '../../../components/ui/Input';
+import { Typography } from '../../../components/ui/Typography';
+import { colors, spacing, shadows, radii } from '../../../theme';
+import { Icon } from '../../../components/ui/Icon';
+import { uatPersonaEmails, uatPersonaPassword } from '../login-personas';
 
 const PersonaChip = ({
   label,
@@ -31,7 +43,7 @@ const PersonaChip = ({
     style={{
       paddingHorizontal: 12,
       paddingVertical: 6,
-      borderRadius: 12,
+      borderRadius: radii.pill,
       backgroundColor: disabled ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.05)',
       marginRight: 8,
       borderWidth: 1,
@@ -39,20 +51,9 @@ const PersonaChip = ({
       opacity: disabled ? 0.5 : 1,
     }}
   >
-    <Typography style={{ color: '#94A3B8', fontSize: 12, fontWeight: '700' }}>{label}</Typography>
+    <Typography style={{ color: colors.palette.ink[300], fontSize: 12, fontWeight: '700' }}>{label}</Typography>
   </TouchableOpacity>
 );
-import { useTranslation } from 'react-i18next';
-import { useDispatch } from 'react-redux';
-import * as Keychain from "react-native-keychain";
-import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
-import { useLoginMutation } from '../../../services/auth';
-import { setCredentials } from '../../../store/authSlice';
-import { Button } from '../../../components/ui/Button';
-import { Input } from '../../../components/ui/Input';
-import { Typography } from '../../../components/ui/Typography';
-import { colors, spacing, shadows } from '../../../theme';
-import { uatPersonaEmails, uatPersonaPassword } from '../login-personas';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const authTokenService = "compound.mobile.authToken";
@@ -173,7 +174,7 @@ export const LoginScreen = () => {
           <View style={styles.inner}>
               <View style={styles.header}>
                 <View style={styles.logoCircle}>
-                  <Typography style={styles.logoEmoji}>🏢</Typography>
+                  <Icon name="building" color={colors.palette.ink[50]} size={38} />
                 </View>
                 <Typography variant="h1" style={[styles.brandTitle, { color: '#FFFFFF' }]}>
                   {t("App.brand", { defaultValue: "Compound" })}
@@ -187,7 +188,7 @@ export const LoginScreen = () => {
                 <Typography variant="h2" style={[styles.signInTitle, { color: '#FFFFFF' }]}>
                   {t("Auth.signIn", { defaultValue: "Welcome Back" })}
                 </Typography>
-                <Typography variant="caption" style={[styles.instructions, { color: '#64748B' }]}>
+                <Typography variant="caption" style={styles.instructions}>
                   {t("Auth.instructions", { defaultValue: "Please enter your credentials to continue" })}
                 </Typography>
 
@@ -233,16 +234,8 @@ export const LoginScreen = () => {
                       }
                     }}
                     placeholder={t("Auth.emailPlaceholder", { defaultValue: "name@example.com" })}
-                    placeholderTextColor="#64748B"
-                    style={{
-                      color: '#FFFFFF',
-                      backgroundColor: '#1E293B',
-                      borderColor: '#3B82F6',
-                      borderWidth: 1.5,
-                      height: 56,
-                      paddingHorizontal: 20,
-                      borderRadius: 16,
-                    }}
+                    placeholderTextColor={colors.palette.ink[500]}
+                    style={styles.loginInput}
                     value={email}
                     error={errorMap.email}
                   />
@@ -261,16 +254,8 @@ export const LoginScreen = () => {
                       }
                     }}
                     placeholder={t("Auth.passwordPlaceholder", { defaultValue: "••••••••" })}
-                    placeholderTextColor="#64748B"
-                    style={{
-                      color: '#FFFFFF',
-                      backgroundColor: '#1E293B',
-                      borderColor: '#3B82F6',
-                      borderWidth: 1.5,
-                      height: 56,
-                      paddingHorizontal: 20,
-                      borderRadius: 16,
-                    }}
+                    placeholderTextColor={colors.palette.ink[500]}
+                    style={styles.loginInput}
                     secureTextEntry
                     value={password}
                     error={errorMap.password}
@@ -349,9 +334,6 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.1)',
     marginBottom: 16,
   },
-  logoEmoji: {
-    fontSize: 40,
-  },
   brandTitle: {
     color: '#FFFFFF',
     fontWeight: '900',
@@ -377,7 +359,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   instructions: {
-    color: '#64748B',
+    color: colors.palette.ink[500],
     marginBottom: 24,
   },
   errorBanner: {
@@ -400,8 +382,16 @@ const styles = StyleSheet.create({
   loginButton: {
     marginTop: 10,
     height: 56,
-    borderRadius: 18,
-    backgroundColor: '#4F46E5',
+    borderRadius: radii.lg,
+  },
+  loginInput: {
+    color: '#FFFFFF',
+    backgroundColor: colors.palette.ink[800],
+    borderColor: colors.palette.blue[500],
+    borderWidth: 1.5,
+    minHeight: 56,
+    paddingHorizontal: 20,
+    borderRadius: radii.lg,
   },
   forgotBtn: {
     marginTop: 20,
@@ -419,7 +409,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   footerText: {
-    color: '#64748B',
+    color: colors.palette.ink[500],
   },
   footerLink: {
     color: '#818CF8',
@@ -439,7 +429,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   devHint: {
-    color: '#64748B',
+    color: colors.palette.ink[500],
     marginBottom: 12,
   },
   personaScroll: {

@@ -5,7 +5,9 @@ namespace Database\Seeders;
 use App\Enums\AccountStatus;
 use App\Enums\ContactVisibility;
 use App\Enums\RepresentativeRole;
+use App\Enums\UnitRelationType;
 use App\Enums\UserRole;
+use App\Enums\VerificationStatus;
 use App\Models\Finance\UnitAccount;
 use App\Models\Property\Building;
 use App\Models\Property\Compound;
@@ -39,6 +41,7 @@ class UatSeeder extends Seeder
         $floor     = $this->seedFloor($building);
         $units     = $this->seedUnits($building, $floor);
         $this->seedPersonas($compound, $units);
+        $this->seedUnitMemberships($units);
         $this->seedChargeTypes();
         $this->seedUnitAccounts($units);
         $this->seedOrgChart($compound, $building, $floor);
@@ -48,32 +51,25 @@ class UatSeeder extends Seeder
 
     private function seedCompound(): Compound
     {
-        return Compound::query()->firstOrCreate(
-            ['name' => 'UAT Demo Compound'],
-            [
-                'legal_name' => 'UAT Demo Compound LLC',
-                'code'       => 'UAT-DEMO',
-                'timezone'   => 'Africa/Cairo',
-                'currency'   => 'EGP',
-                'status'     => 'active',
-            ],
-        );
+        $this->call(NextPointSeeder::class);
+
+        return Compound::query()->where('code', 'NEXT-POINT')->firstOrFail();
     }
 
     private function seedBuilding(Compound $compound): Building
     {
-        return Building::query()->firstOrCreate(
-            ['compound_id' => $compound->id, 'name' => 'Building A'],
-            ['code' => 'BLD-A'],
-        );
+        return Building::query()
+            ->where('compound_id', $compound->id)
+            ->where('code', 'A')
+            ->firstOrFail();
     }
 
     private function seedFloor(Building $building): Floor
     {
-        return Floor::query()->firstOrCreate(
-            ['building_id' => $building->id, 'level_number' => 1],
-            ['label' => 'Ground Floor'],
-        );
+        return Floor::query()
+            ->where('building_id', $building->id)
+            ->where('level_number', 1)
+            ->firstOrFail();
     }
 
     /**
@@ -82,17 +78,13 @@ class UatSeeder extends Seeder
     private function seedUnits(Building $building, Floor $floor): array
     {
         $units = [];
-        foreach (['101', '102', '103'] as $number) {
-            $units[$number] = Unit::query()->firstOrCreate(
-                ['building_id' => $building->id, 'unit_number' => $number],
-                [
-                    'compound_id' => $building->compound_id,
-                    'floor_id'    => $floor->id,
-                    'type'        => 'apartment',
-                    'area_sqm'    => 120.0,
-                    'status'      => 'active',
-                ],
-            );
+
+        foreach (['AR-F1-F1', 'AR-F1-F2', 'AR-F1-F3', 'AR-F1-F4'] as $number) {
+            $units[$number] = Unit::query()
+                ->where('building_id', $building->id)
+                ->where('floor_id', $floor->id)
+                ->where('unit_number', $number)
+                ->firstOrFail();
         }
 
         return $units;
@@ -120,6 +112,13 @@ class UatSeeder extends Seeder
                 'name'        => 'UAT Compound Admin',
                 'phone'       => '+201100000002',
                 'role'        => UserRole::CompoundAdmin->value,
+                'compound_id' => $compound->id,
+            ],
+            [
+                'email'       => 'president@uat.compound.local',
+                'name'        => 'UAT President',
+                'phone'       => '+201100000009',
+                'role'        => UserRole::President->value,
                 'compound_id' => $compound->id,
             ],
             [
@@ -151,6 +150,13 @@ class UatSeeder extends Seeder
                 'compound_id' => null,
             ],
             [
+                'email'       => 'resident@uat.compound.local',
+                'name'        => 'UAT Resident',
+                'phone'       => '+201100000010',
+                'role'        => UserRole::Resident->value,
+                'compound_id' => $compound->id,
+            ],
+            [
                 'email'       => 'resident-owner@uat.compound.local',
                 'name'        => 'UAT Resident Owner',
                 'phone'       => '+201100000007',
@@ -177,41 +183,55 @@ class UatSeeder extends Seeder
         }
     }
 
+    /**
+     * @param  array<string, Unit>  $units
+     */
+    private function seedUnitMemberships(array $units): void
+    {
+        $admin = User::query()->where('email', 'compound-admin@uat.compound.local')->first();
+
+        $assignments = [
+            'resident@uat.compound.local' => ['unit' => 'AR-F1-F1', 'relation' => UnitRelationType::Resident],
+            'resident-owner@uat.compound.local' => ['unit' => 'AR-F1-F2', 'relation' => UnitRelationType::Owner],
+            'resident-tenant@uat.compound.local' => ['unit' => 'AR-F1-F3', 'relation' => UnitRelationType::Tenant],
+        ];
+
+        foreach ($assignments as $email => $assignment) {
+            $user = User::query()->where('email', $email)->first();
+            $unit = $units[$assignment['unit']] ?? null;
+
+            if (! $user || ! $unit) {
+                continue;
+            }
+
+            $unit->memberships()->updateOrCreate([
+                'user_id' => $user->id,
+            ], [
+                'relation_type' => $assignment['relation']->value,
+                'starts_at' => now()->toDateString(),
+                'is_primary' => true,
+                'verification_status' => VerificationStatus::Verified->value,
+                'created_by' => $admin?->id,
+            ]);
+        }
+    }
+
     // ─── Org chart demo data ──────────────────────────────────────────────────
 
     private function seedOrgChart(Compound $compound, Building $buildingA, Floor $groundFloor): void
     {
         $password = Hash::make(self::PASSWORD);
 
+        RepresentativeAssignment::query()
+            ->whereIn('user_id', User::query()->where('email', 'like', '%@uat.compound.local')->select('id'))
+            ->delete();
+
         // ── Extra buildings ───────────────────────────────────────────────────
-        $buildingB = Building::query()->firstOrCreate(
-            ['compound_id' => $compound->id, 'name' => 'Building B'],
-            ['code' => 'BLD-B'],
-        );
-        $buildingC = Building::query()->firstOrCreate(
-            ['compound_id' => $compound->id, 'name' => 'Building C'],
-            ['code' => 'BLD-C'],
-        );
+        $buildingB = Building::query()->where('compound_id', $compound->id)->where('code', 'B')->firstOrFail();
 
         // ── Extra floors ──────────────────────────────────────────────────────
-        $floorA1 = Floor::query()->firstOrCreate(
-            ['building_id' => $buildingA->id, 'level_number' => 2],
-            ['label' => 'Floor 1'],
-        );
-
-        $floorB0 = Floor::query()->firstOrCreate(
-            ['building_id' => $buildingB->id, 'level_number' => 1],
-            ['label' => 'Ground Floor'],
-        );
-        $floorB1 = Floor::query()->firstOrCreate(
-            ['building_id' => $buildingB->id, 'level_number' => 2],
-            ['label' => 'Floor 1'],
-        );
-
-        $floorC0 = Floor::query()->firstOrCreate(
-            ['building_id' => $buildingC->id, 'level_number' => 1],
-            ['label' => 'Ground Floor'],
-        );
+        $floorB1 = Floor::query()->where('building_id', $buildingB->id)->where('level_number', 1)->firstOrFail();
+        $floorB2 = Floor::query()->where('building_id', $buildingB->id)->where('level_number', 2)->firstOrFail();
 
         // ── Org chart users ───────────────────────────────────────────────────
         $orgUsers = [
@@ -235,12 +255,49 @@ class UatSeeder extends Seeder
             );
         }
 
+        $admin = User::query()->where('email', 'compound-admin@uat.compound.local')->first();
+        $orgMemberships = [
+            'ahmed.hassan@uat.compound.local' => Unit::query()->where('building_id', $buildingA->id)->where('unit_number', 'AR-F2-F1')->first(),
+            'sara.mohamed@uat.compound.local' => Unit::query()->where('building_id', $buildingB->id)->where('unit_number', 'BR-F2-F1')->first(),
+            'omar.khalil@uat.compound.local' => Unit::query()->where('building_id', $buildingA->id)->where('unit_number', 'AR-F1-F4')->first(),
+            'nour.eldin@uat.compound.local' => Unit::query()->where('building_id', $buildingB->id)->where('unit_number', 'BR-F1-F1')->first(),
+            'fatima.ibrahim@uat.compound.local' => Unit::query()->where('building_id', $buildingB->id)->where('unit_number', 'BR-F2-F2')->first(),
+        ];
+
+        foreach ($orgMemberships as $email => $unit) {
+            if (! $unit) {
+                continue;
+            }
+
+            $unit->memberships()->updateOrCreate([
+                'user_id' => $users[$email]->id,
+            ], [
+                'relation_type' => UnitRelationType::Owner->value,
+                'starts_at' => now()->toDateString(),
+                'is_primary' => true,
+                'verification_status' => VerificationStatus::Verified->value,
+                'created_by' => $admin?->id,
+            ]);
+        }
+
         // Reuse existing UAT personas for leadership roles
+        $president = User::query()->where('email', 'president@uat.compound.local')->first();
         $boardMember    = User::query()->where('email', 'board-member@uat.compound.local')->first();
         $financeReviewer = User::query()->where('email', 'finance-reviewer@uat.compound.local')->first();
 
         // ── Representative assignments ─────────────────────────────────────────
         $assignments = [];
+
+        if ($president) {
+            $assignments[] = [
+                'compound_id'        => $compound->id,
+                'building_id'        => null,
+                'floor_id'           => null,
+                'user_id'            => $president->id,
+                'role'               => RepresentativeRole::President->value,
+                'contact_visibility' => ContactVisibility::AllResidents->value,
+            ];
+        }
 
         if ($boardMember) {
             $assignments[] = [
@@ -248,7 +305,7 @@ class UatSeeder extends Seeder
                 'building_id'        => null,
                 'floor_id'           => null,
                 'user_id'            => $boardMember->id,
-                'role'               => RepresentativeRole::President->value,
+                'role'               => RepresentativeRole::AssociationMember->value,
                 'contact_visibility' => ContactVisibility::AllResidents->value,
             ];
         }
@@ -294,7 +351,7 @@ class UatSeeder extends Seeder
         $assignments[] = [
             'compound_id'        => $compound->id,
             'building_id'        => $buildingB->id,
-            'floor_id'           => $floorB0->id,
+            'floor_id'           => $floorB1->id,
             'user_id'            => $users['nour.eldin@uat.compound.local']->id,
             'role'               => RepresentativeRole::FloorRepresentative->value,
             'contact_visibility' => ContactVisibility::FloorResidents->value,
@@ -302,7 +359,7 @@ class UatSeeder extends Seeder
         $assignments[] = [
             'compound_id'        => $compound->id,
             'building_id'        => $buildingB->id,
-            'floor_id'           => $floorB1->id,
+            'floor_id'           => $floorB2->id,
             'user_id'            => $users['fatima.ibrahim@uat.compound.local']->id,
             'role'               => RepresentativeRole::FloorRepresentative->value,
             'contact_visibility' => ContactVisibility::FloorResidents->value,

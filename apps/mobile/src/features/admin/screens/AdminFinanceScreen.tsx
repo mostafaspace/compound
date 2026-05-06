@@ -6,7 +6,7 @@ import {
   useApprovePaymentMutation, 
   useRejectPaymentMutation 
 } from '../../../services/admin';
-import { colors, spacing } from '../../../theme';
+import { colors, layout, radii, spacing } from '../../../theme';
 import { Typography } from '../../../components/ui/Typography';
 import { ScreenContainer } from '../../../components/layout/ScreenContainer';
 import { Button } from '../../../components/ui/Button';
@@ -137,7 +137,13 @@ export const AdminFinanceScreen = () => {
               { backgroundColor: filter === f ? colors.primary.light : (isDark ? colors.background.dark : "#f3f4f6") }
             ]}
           >
-            <Typography variant="label" style={{ color: filter === f ? "#fff" : (isDark ? "#9ca3af" : "#6b7280"), textTransform: 'capitalize' }}>
+            <Typography
+              variant="label"
+              style={{
+                color: filter === f ? colors.text.inverse : (isDark ? colors.text.secondary.dark : colors.text.secondary.light),
+                textTransform: 'capitalize',
+              }}
+            >
               {t(`Common.${f}`, f)}
             </Typography>
           </Pressable>
@@ -168,27 +174,27 @@ const styles = StyleSheet.create({
     padding: 0,
   },
   header: {
-    padding: spacing.lg,
+    padding: layout.screenGutter,
     paddingBottom: spacing.md,
   },
   filterRow: {
     flexDirection: 'row',
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: layout.screenGutter,
     gap: spacing.sm,
     marginBottom: spacing.md,
   },
   filterChip: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    borderRadius: 20,
+    borderRadius: radii.pill,
   },
   listContent: {
-    padding: spacing.lg,
+    padding: layout.screenGutter,
     paddingTop: 0,
   },
   card: {
-    padding: spacing.lg,
-    borderRadius: 20,
+    padding: layout.cardPadding,
+    borderRadius: radii.xl,
     borderWidth: 1,
     marginBottom: spacing.md,
   },

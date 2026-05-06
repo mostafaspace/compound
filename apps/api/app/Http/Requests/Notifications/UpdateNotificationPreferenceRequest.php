@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Notifications;
 
+use App\Enums\NotificationCategory;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -24,7 +25,7 @@ class UpdateNotificationPreferenceRequest extends FormRequest
             'mutedCategories' => ['nullable', 'array'],
             'mutedCategories.*' => [
                 'string',
-                Rule::in(['documents', 'visitors', 'issues', 'announcements', 'finance', 'system']),
+                Rule::in(array_column(NotificationCategory::cases(), 'value')),
             ],
         ];
     }

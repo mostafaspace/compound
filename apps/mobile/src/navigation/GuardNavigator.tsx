@@ -1,20 +1,21 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useTranslation } from 'react-i18next';
-import { useColorScheme, Text } from 'react-native';
+import { useColorScheme, View } from 'react-native';
 import { GuardStackParamList } from './types';
 import { GateScreen } from '../features/security/screens/GateScreen';
 import { ScannerScreen } from '../features/security/screens/ScannerScreen';
 import { InvitationsScreen } from '../features/security/screens/InvitationsScreen';
-import { colors, spacing } from '../theme';
+import { colors, componentSize, radii, spacing } from '../theme';
 import { LogoutButton } from '../components/ui/LogoutButton';
+import { Icon, type AppIconName } from '../components/ui/Icon';
 
 const Tab = createBottomTabNavigator<GuardStackParamList>();
 
-const tabGlyphs: Record<keyof GuardStackParamList, string> = {
-  Gate: 'GT',
-  Scanner: 'QR',
-  Invitations: 'IN',
+const tabIcons: Record<keyof GuardStackParamList, AppIconName> = {
+  Gate: 'gate',
+  Scanner: 'qr',
+  Invitations: 'visitors',
 };
 
 export const GuardNavigator = () => {
@@ -25,12 +26,13 @@ export const GuardNavigator = () => {
     <Tab.Navigator
       screenOptions={({ route }) => ({
         tabBarActiveTintColor: isDark ? colors.cta.dark : colors.primary.light,
-        tabBarInactiveTintColor: isDark ? '#9ca3af' : '#6b7280',
+        tabBarInactiveTintColor: isDark ? colors.text.secondary.dark : colors.text.secondary.light,
         tabBarStyle: {
           backgroundColor: isDark ? colors.surface.dark : colors.surface.light,
           borderTopColor: isDark ? colors.border.dark : colors.border.light,
-          paddingBottom: spacing.xs,
-          height: 60,
+          paddingBottom: spacing.sm,
+          paddingTop: spacing.xs,
+          height: componentSize.tabBar,
         },
         headerStyle: {
           backgroundColor: isDark ? colors.surface.dark : colors.surface.light,
@@ -50,7 +52,11 @@ export const GuardNavigator = () => {
           fontWeight: '600',
         },
         tabBarIcon: ({ color, size }) => {
-          return <Text style={{ color, fontSize: 12, fontWeight: '800', letterSpacing: 1 }}>{tabGlyphs[route.name]}</Text>;
+          return (
+            <View style={{ width: 32, height: 28, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center' }}>
+              <Icon name={tabIcons[route.name]} color={color} size={size ?? 22} />
+            </View>
+          );
         },
       })}
     >

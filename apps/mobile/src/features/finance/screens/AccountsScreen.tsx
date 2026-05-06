@@ -12,12 +12,13 @@ import {
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useGetUnitAccountsQuery, useGetAccountDetailQuery, useSubmitPaymentMutation } from '../../../services/finance';
-import { colors, spacing, shadows, glass } from '../../../theme';
+import { colors, layout, radii, shadows, spacing } from '../../../theme';
 import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
 import { Typography } from '../../../components/ui/Typography';
 import { ScreenContainer } from '../../../components/layout/ScreenContainer';
 import { formatDate } from '../../../utils/formatters';
+import { Icon } from '../../../components/ui/Icon';
 
 export const AccountsScreen = () => {
   const { t } = useTranslation();
@@ -71,14 +72,21 @@ export const AccountsScreen = () => {
   const renderAccountItem = ({ item }: { item: any }) => (
     <View style={[
       styles.card, 
-      isDark ? glass.dark : glass.light,
-      shadows.lg
+      {
+        backgroundColor: isDark ? colors.surface.dark : colors.surface.light,
+        borderColor: isDark ? colors.border.dark : colors.border.light,
+      },
     ]}>
-      <View style={styles.rowBetween}>
-        <Typography variant="label">{t("Finance.balance")}</Typography>
-        <Typography variant="h2" style={{ color: parseFloat(item.balance) < 0 ? colors.error : colors.success }}>
-          {item.balance} {item.currency}
-        </Typography>
+      <View style={styles.cardTop}>
+        <View style={styles.iconBadge}>
+          <Icon name="finance" color={colors.primary.light} size={22} />
+        </View>
+        <View style={styles.balanceBlock}>
+          <Typography variant="label">{t("Finance.balance")}</Typography>
+          <Typography variant="h2" style={{ color: parseFloat(item.balance) < 0 ? colors.error : colors.success }}>
+            {item.balance} {item.currency}
+          </Typography>
+        </View>
       </View>
       
       <Button 
@@ -86,6 +94,7 @@ export const AccountsScreen = () => {
         title={t("Finance.viewStatement")} 
         onPress={() => setSelectedAccountId(selectedAccountId === item.id ? null : item.id)}
         style={styles.actionButton}
+        rightIcon="chevron-right"
       />
 
       {selectedAccountId === item.id && (
@@ -111,6 +120,7 @@ export const AccountsScreen = () => {
                 title={t("Finance.submitPayment")} 
                 onPress={() => setShowPaymentModal(true)}
                 style={styles.paymentButton}
+                leftIcon="plus"
               />
             </>
           )}
@@ -194,13 +204,32 @@ const styles = StyleSheet.create({
     padding: 0,
   },
   listContent: {
-    padding: spacing.md,
+    padding: layout.screenGutter,
+    paddingBottom: layout.screenBottom,
   },
   card: {
-    padding: spacing.xl,
-    borderRadius: 20,
-    marginBottom: spacing.lg,
+    padding: layout.heroPadding,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    marginBottom: layout.listGap,
     overflow: 'hidden',
+    ...shadows.sm,
+  },
+  cardTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  iconBadge: {
+    width: 48,
+    height: 48,
+    borderRadius: radii.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceMuted.light,
+  },
+  balanceBlock: {
+    flex: 1,
   },
   rowBetween: {
     flexDirection: 'row',
@@ -214,7 +243,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
     paddingTop: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
+    borderTopColor: colors.border.light,
   },
   subTitle: {
     marginBottom: spacing.sm,
@@ -222,7 +251,7 @@ const styles = StyleSheet.create({
   transactionItem: {
     paddingVertical: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
+    borderBottomColor: colors.border.light,
   },
   transactionText: {
     fontWeight: '500',
@@ -241,12 +270,12 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(7, 17, 31, 0.58)',
     justifyContent: 'flex-end',
   },
   modalContent: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: radii.xl,
+    borderTopRightRadius: radii.xl,
     padding: spacing.xl,
     maxHeight: '80%',
   },
@@ -269,20 +298,20 @@ const styles = StyleSheet.create({
   methodChip: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    borderRadius: 20,
+    borderRadius: radii.pill,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: colors.border.light,
   },
   methodChipSelected: {
-    backgroundColor: colors.primary.dark,
-    borderColor: colors.primary.dark,
+    backgroundColor: colors.primary.light,
+    borderColor: colors.primary.light,
   },
   methodText: {
     fontSize: 12,
-    color: '#4b5563',
+    color: colors.text.secondary.light,
   },
   methodTextSelected: {
-    color: '#fff',
+    color: colors.text.inverse,
     fontWeight: '600',
   },
   message: {

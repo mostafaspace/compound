@@ -8,7 +8,8 @@ import { ScreenContainer } from "../../../components/layout/ScreenContainer";
 import { Button } from "../../../components/ui/Button";
 import { Typography } from "../../../components/ui/Typography";
 import { useGetDocumentTypesQuery, useUploadDocumentMutation } from "../../../services/property";
-import { colors, spacing } from "../../../theme";
+import { colors, layout, radii, spacing } from "../../../theme";
+import { Icon } from "../../../components/ui/Icon";
 
 type PickedFile = {
   uri: string;
@@ -84,7 +85,7 @@ export const UploadDocumentScreen = () => {
   const activeDocumentTypes = documentTypes.filter((documentType: DocumentType) => documentType.isActive);
 
   return (
-    <ScreenContainer withKeyboard style={styles.container}>
+    <ScreenContainer withKeyboard>
       <ScrollView contentContainerStyle={styles.scroll}>
         <Typography variant="label" style={[styles.label, { color: text }]}>
           {t("Documents.typeLabel", { defaultValue: "Document type" })}
@@ -104,13 +105,13 @@ export const UploadDocumentScreen = () => {
                         ? colors.primary.dark
                         : colors.primary.light
                       : surface,
-                  borderColor: selectedTypeId === documentType.id ? "transparent" : border,
+                borderColor: selectedTypeId === documentType.id ? "transparent" : border,
                 },
               ]}
             >
               <Typography
                 variant="caption"
-                style={{ color: selectedTypeId === documentType.id ? "#fff" : text, fontWeight: "600" }}
+                style={{ color: selectedTypeId === documentType.id ? colors.text.inverse : text, fontWeight: "600" }}
               >
                 {documentType.name}
               </Typography>
@@ -129,7 +130,8 @@ export const UploadDocumentScreen = () => {
         </Typography>
 
         <Pressable onPress={handlePickFile} style={[styles.filePicker, { backgroundColor: surface, borderColor: border }]}>
-          <Typography style={{ color: pickedFile ? text : "#9ca3af" }}>
+          <Icon name="documents" color={pickedFile ? colors.primary.light : colors.text.secondary.light} size={24} />
+          <Typography style={{ color: pickedFile ? text : colors.text.secondary.light, textAlign: "center" }}>
             {pickedFile ? pickedFile.name : t("Documents.chooseFile", { defaultValue: "Tap to choose file..." })}
           </Typography>
         </Pressable>
@@ -139,6 +141,7 @@ export const UploadDocumentScreen = () => {
           onPress={handleUpload}
           loading={isLoading}
           style={styles.submitBtn}
+          leftIcon="plus"
         />
       </ScrollView>
     </ScreenContainer>
@@ -146,12 +149,11 @@ export const UploadDocumentScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { padding: 0 },
-  scroll: { padding: spacing.lg, paddingBottom: 60 },
+  scroll: { paddingBottom: layout.screenBottom },
   label: { marginBottom: spacing.xs, marginTop: spacing.md, fontWeight: "600" },
   typeList: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
-  typeChip: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: 20, borderWidth: 1 },
-  filePicker: { borderWidth: 1, borderRadius: 10, padding: spacing.lg, borderStyle: "dashed", alignItems: "center" },
+  typeChip: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radii.pill, borderWidth: 1 },
+  filePicker: { borderWidth: 1, borderRadius: radii.xl, padding: layout.heroPadding, borderStyle: "dashed", alignItems: "center", gap: spacing.sm },
   helperText: { marginTop: spacing.sm },
-  submitBtn: { marginTop: spacing.xl, borderRadius: 12 },
+  submitBtn: { marginTop: layout.sectionGap, borderRadius: radii.lg },
 });

@@ -57,6 +57,16 @@ export const propertyApi = api.injectEndpoints({
       transformResponse: (response: ApiEnvelope<Issue[]>) => response.data,
       providesTags: ["Issue"],
     }),
+    getAllIssues: builder.query<Issue[], void>({
+      query: () => "/issues?perPage=50",
+      transformResponse: (response: PaginatedEnvelope<Issue>) => response.data,
+      providesTags: ["Issue"],
+    }),
+    getIssue: builder.query<Issue, string | number>({
+      query: (id) => `/issues/${id}`,
+      transformResponse: (response: ApiEnvelope<Issue>) => response.data,
+      providesTags: (_result, _error, id) => [{ type: "Issue", id }],
+    }),
     getNotifications: builder.query<UserNotification[], void>({
       query: () => "/notifications?perPage=20",
       transformResponse: (response: PaginatedEnvelope<UserNotification>) => response.data,
@@ -93,6 +103,24 @@ export const propertyApi = api.injectEndpoints({
         body,
       }),
       transformResponse: (response: ApiEnvelope<Issue>) => response.data,
+      invalidatesTags: ["Issue"],
+    }),
+    uploadIssueAttachment: builder.mutation<any, { issueId: string | number; formData: FormData }>({
+      query: ({ issueId, formData }) => ({
+        url: `/issues/${issueId}/attachments`,
+        method: "POST",
+        body: formData,
+        // Typically RTK Query needs to NOT set Content-Type header so the browser/fetch sets multipart/form-data boundary
+        // We might not need to do anything special here as RTK Query handles FormData automatically,
+        // but depending on setup it should work.
+      }),
+      invalidatesTags: ["Issue"],
+    }),
+    deleteIssueAttachment: builder.mutation<void, { issueId: string | number; attachmentId: string | number }>({
+      query: ({ issueId, attachmentId }) => ({
+        url: `/issues/${issueId}/attachments/${attachmentId}`,
+        method: "DELETE",
+      }),
       invalidatesTags: ["Issue"],
     }),
     createVisitor: builder.mutation<VisitorRequest, any>({
@@ -164,6 +192,8 @@ export const {
   useCancelVisitorMutation,
   useMarkAsSharedMutation,
   useGetIssuesQuery,
+  useGetAllIssuesQuery,
+  useGetIssueQuery,
   useGetNotificationsQuery,
   useGetAnnouncementsQuery,
   useAcknowledgeAnnouncementMutation,
@@ -171,6 +201,7 @@ export const {
   useGetDocumentTypesQuery,
   useGetDocumentsQuery,
   useCreateIssueMutation,
+  useUploadIssueAttachmentMutation,
   useCreateVisitorMutation,
   useUploadDocumentMutation,
   useUpdateIssueMutation,
@@ -178,4 +209,5 @@ export const {
   useCreateAnnouncementMutation,
   useMarkNotificationReadMutation,
   useArchiveNotificationMutation,
+  useDeleteIssueAttachmentMutation,
 } = propertyApi;

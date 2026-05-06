@@ -13,7 +13,7 @@ const localApiBaseUrl = Platform.select({
 });
 
 const configuredApiBaseUrl = process.env.COMPOUND_API_BASE_URL?.trim();
-const defaultApiBaseUrl = configuredApiBaseUrl || localApiBaseUrl;
+export const defaultApiBaseUrl = (configuredApiBaseUrl || localApiBaseUrl).replace(/\/+$/, "");
 
 const prepareHeaders = (headers: Headers, getState: () => unknown) => {
   headers.set("Accept", "application/json");
@@ -181,10 +181,15 @@ const baseQueryWithFallback: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQ
   if (result.error && result.error.status === 'FETCH_ERROR') {
     api.dispatch(setOfflineState({ isOffline: true, error: "Network Error: Could not connect to server" }));
   } else if (result.error && result.error.status === 401) {
-    api.dispatch(logout());
-    await Keychain.resetGenericPassword({ service: authTokenService });
-
     const state = api.getState() as any;
+    if (state.auth.token) {
+      api.dispatch(logout());
+      setTimeout(() => {
+        api.dispatch({ type: "api/resetApiState" });
+      }, 100);
+      await Keychain.resetGenericPassword({ service: authTokenService });
+    }
+
     if (state.system?.isOffline) {
       api.dispatch(setOfflineState({ isOffline: false }));
     }

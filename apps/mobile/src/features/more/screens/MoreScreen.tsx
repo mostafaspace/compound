@@ -9,7 +9,8 @@ import { useSelector } from "react-redux";
 import { selectCurrentUser } from "../../../store/authSlice";
 import { getEffectiveRoleType } from "@compound/contracts";
 import { MoreStackParamList } from "../../../navigation/types";
-import { colors, spacing } from "../../../theme";
+import { colors, layout, radii, shadows, spacing } from "../../../theme";
+import { Icon, type AppIconName } from "../../../components/ui/Icon";
 
 type MoreScreenNavigationProp = StackNavigationProp<MoreStackParamList, "MoreHome">;
 
@@ -22,37 +23,40 @@ export const MoreScreen = ({ navigation }: { navigation: MoreScreenNavigationPro
   const isAdmin = roleType === 'admin';
 
   const canViewAnnouncements = usePermission("view_announcements");
-  const canViewOrgChart = usePermission("view_org_chart") || isAdmin;
+  const canViewOrgChart = usePermission("view_org_chart") || isAdmin || roleType === 'resident';
 
-  const sections = [
+  const sections: Array<{
+    title: string;
+    items: Array<{ id: string; label: string; icon: AppIconName; screen: string; show: boolean }>;
+  }> = [
     {
       title: t("More.sections.property", "Property & Community"),
       items: [
         {
           id: "property",
           label: t("Property.label", "Property Registry"),
-          icon: "PR",
+          icon: "building",
           screen: "Property",
           show: true,
         },
         {
           id: "announcements",
           label: t("Announcements.label", "Announcements"),
-          icon: "AN",
+          icon: "announcements",
           screen: "Announcements",
           show: canViewAnnouncements,
         },
         {
           id: "orgchart",
           label: t("OrgChart.label", "Org Chart"),
-          icon: "OC",
+          icon: "building",
           screen: "OrgChart",
           show: canViewOrgChart,
         },
         {
           id: "polls",
           label: t("Polls.label", "Polls"),
-          icon: "PL",
+          icon: "polls",
           screen: "Polls",
           show: true,
         },
@@ -64,7 +68,7 @@ export const MoreScreen = ({ navigation }: { navigation: MoreScreenNavigationPro
         {
           id: "issues",
           label: t("Issues.label", "Issues & Complaints"),
-          icon: "IS",
+          icon: "issues",
           screen: "Issues",
           show: true,
         },
@@ -76,35 +80,35 @@ export const MoreScreen = ({ navigation }: { navigation: MoreScreenNavigationPro
         {
           id: "documents",
           label: t("Documents.label", "Documents"),
-          icon: "DC",
+          icon: "documents",
           screen: "Documents",
           show: true,
         },
         {
           id: "verification",
           label: t("Verification.label", "Verification Status"),
-          icon: "ID",
+          icon: "id",
           screen: "VerificationStatus",
           show: true,
         },
         {
           id: "notifications",
           label: t("Notifications.label", "Notifications"),
-          icon: "NT",
+          icon: "notifications",
           screen: "Notifications",
           show: true,
         },
         {
           id: "privacy",
           label: t("Privacy.label", "Privacy & Consents"),
-          icon: "PV",
+          icon: "privacy",
           screen: "PrivacySettings",
           show: true,
         },
         {
           id: "settings",
           label: t("Common.settings", "Settings"),
-          icon: "ST",
+          icon: "settings",
           screen: "Settings",
           show: true,
         },
@@ -143,16 +147,12 @@ export const MoreScreen = ({ navigation }: { navigation: MoreScreenNavigationPro
                   ]}
                 >
                   <View style={styles.row}>
-                    <View style={[styles.iconBadge, { backgroundColor: isDark ? "#1E293B" : "#F1F5F9" }]}>
-                      <Typography style={styles.iconText}>
-                        {item.icon}
-                      </Typography>
+                    <View style={[styles.iconBadge, { backgroundColor: isDark ? colors.surfaceMuted.dark : colors.surfaceMuted.light }]}>
+                      <Icon name={item.icon} color={colors.primary.light} size={22} />
                     </View>
                     <Typography variant="h3" style={styles.label}>{item.label}</Typography>
                   </View>
-                  <Typography variant="h3" style={styles.arrow}>
-                    {"›"}
-                  </Typography>
+                  <Icon name="chevron-right" color={isDark ? colors.text.secondary.dark : colors.text.secondary.light} size={20} />
                 </Pressable>
               ))}
             </View>
@@ -166,39 +166,27 @@ export const MoreScreen = ({ navigation }: { navigation: MoreScreenNavigationPro
 
 const styles = StyleSheet.create({
   container: {
-    paddingTop: spacing.lg,
+    paddingTop: layout.screenTop,
   },
   section: {
-    marginBottom: spacing.xl,
-    paddingHorizontal: spacing.lg,
+    marginBottom: layout.sectionGap,
   },
   sectionTitle: {
     marginBottom: spacing.sm,
-    marginLeft: spacing.xs,
-    color: "#64748B",
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    fontSize: 10,
-    fontWeight: '700',
   },
   group: {
-    borderRadius: 20,
+    borderRadius: radii.xl,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
+    borderColor: colors.border.light,
+    ...shadows.sm,
   },
   menuItem: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: spacing.md,
-    paddingVertical: spacing.lg,
-    minHeight: 80,
+    padding: layout.cardPadding,
+    minHeight: 72,
   },
   borderBottom: {
     borderBottomWidth: 1,
@@ -218,19 +206,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  iconText: {
-    color: colors.primary.light,
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 1,
-  },
   label: {
     fontSize: 16,
     fontWeight: '600',
-  },
-  arrow: {
-    color: "#94A3B8",
-    fontSize: 24,
-    fontWeight: '300',
   },
 });

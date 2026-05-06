@@ -11,9 +11,10 @@ import {
   useGetUnassignedUsersQuery,
   useUpdateUnitMembershipMutation,
 } from '../../../services/admin';
-import { colors, spacing } from '../../../theme';
+import { colors, layout, spacing } from '../../../theme';
 import { Typography } from '../../../components/ui/Typography';
 import { ScreenContainer } from '../../../components/layout/ScreenContainer';
+import { Icon } from '../../../components/ui/Icon';
 
 export const AdminUnitsScreen = () => {
   const { t } = useTranslation();
@@ -158,7 +159,7 @@ export const AdminUnitsScreen = () => {
       ]}
     >
       <View style={styles.buildingHeader}>
-        <Typography style={{ fontSize: 24 }}>🏢</Typography>
+        <Icon name="building" color={colors.primary.light} size={24} />
         <View style={styles.buildingInfo}>
           <Typography variant="h3">{item.name}</Typography>
           <Typography variant="caption">{item.unitsCount} {t("Property.unitsCount", { defaultValue: "Units" })}</Typography>
@@ -436,22 +437,22 @@ const styles = StyleSheet.create({
     padding: 0,
   },
   header: {
-    padding: spacing.lg,
+    padding: layout.screenGutter,
     paddingBottom: 0,
   },
   buildingsSection: {
     paddingVertical: spacing.md,
   },
   sectionTitle: {
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: layout.screenGutter,
     marginBottom: spacing.sm,
     fontSize: 14,
     textTransform: 'uppercase',
-    color: '#64748B',
+    color: colors.text.secondary.light,
     fontWeight: '700',
   },
   buildingList: {
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: layout.screenGutter,
     gap: spacing.md,
   },
   buildingCard: {
@@ -475,10 +476,10 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   unitListContent: {
-    padding: spacing.lg,
+    padding: layout.screenGutter,
   },
   unitCard: {
-    padding: spacing.lg,
+    padding: layout.cardPadding,
     borderRadius: 16,
     borderWidth: 2,
     marginBottom: spacing.md,
@@ -495,7 +496,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   unitDetail: {
-    color: '#64748B',
+    color: colors.text.secondary.light,
     marginTop: 2,
     marginBottom: 4,
   },
@@ -505,7 +506,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   emptyText: {
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: layout.screenGutter,
     fontStyle: 'italic',
   },
   center: {
@@ -515,12 +516,12 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl,
   },
   assignmentSection: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xl,
+    paddingHorizontal: layout.screenGutter,
+    paddingBottom: layout.screenBottom,
     gap: spacing.sm,
   },
   assignmentCopy: {
-    color: '#64748B',
+    color: colors.text.secondary.light,
     marginBottom: spacing.sm,
   },
   unassignedList: {

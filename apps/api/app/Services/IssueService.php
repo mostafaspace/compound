@@ -117,6 +117,14 @@ class IssueService
             $issue->category = $changes['category'];
         }
 
+        if (isset($changes['title'])) {
+            $issue->title = $changes['title'];
+        }
+
+        if (isset($changes['description'])) {
+            $issue->description = $changes['description'];
+        }
+
         $issue->save();
 
         // Notify reporter if status changed
@@ -308,7 +316,10 @@ class IssueService
         $path = $file->storeAs(
             'issue-attachments/'.$issue->id,
             Str::ulid()->toBase32().'.'.$extension,
-            $disk,
+            [
+                'disk' => $disk,
+                'visibility' => 'public',
+            ]
         );
 
         $attachment = IssueAttachment::create([
@@ -335,6 +346,29 @@ class IssueService
         );
 
         return $attachment;
+    }
+
+    public function deleteAttachment(IssueAttachment $attachment, User $actor): void
+    {
+        \Illuminate\Support\Facades\Storage::disk($attachment->disk)->delete($attachment->path);
+        
+        $issueId = $attachment->issue_id;
+        $attachmentId = $attachment->id;
+        $originalName = $attachment->original_name;
+
+        $attachment->delete();
+
+        $this->auditLogger->record(
+            action: 'issue.attachment_deleted',
+            actor: $actor,
+            auditableType: Issue::class,
+            auditableId: $issueId,
+            metadata: [
+                'issueId' => $issueId,
+                'attachmentId' => $attachmentId,
+                'originalName' => $originalName,
+            ],
+        );
     }
 
     public function userCanAccessIssue(User $user, Issue $issue): bool
@@ -366,8 +400,13 @@ class IssueService
 
     public function userCanManageIssue(User $user, Issue $issue): bool
     {
-        return $this->isPrivilegedIssueManager($user)
-            && $this->compoundContext->userCanAccessCompoundById($user, $issue->compound_id);
+        // Reporter can edit their own issue if it's not resolved yet
+        if ($issue->reported_by === $user->id && !in_array($issue->status, ['resolved', 'closed'])) {
+            return true;
+        }
+
+        // Managers and security can manage issues
+        return $user->hasAnyRole(['super_admin', 'compound_admin', 'president', 'board_member', 'support_agent', 'security_head', 'security_guard']);
     }
 
     public function userCanEscalateIssue(User $user, Issue $issue): bool

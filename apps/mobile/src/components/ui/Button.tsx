@@ -7,9 +7,11 @@ import {
   ViewStyle, 
   TextStyle, 
   useColorScheme,
-  StyleProp
+  StyleProp,
+  View
 } from 'react-native';
-import { colors, spacing, shadows } from '../../theme';
+import { colors, spacing, shadows, radii, componentSize, opacity } from '../../theme';
+import { Icon, type AppIconName } from './Icon';
 
 interface ButtonProps {
   onPress: () => void;
@@ -21,6 +23,8 @@ interface ButtonProps {
   textStyle?: StyleProp<TextStyle>;
   testID?: string;
   accessibilityLabel?: string;
+  leftIcon?: AppIconName;
+  rightIcon?: AppIconName;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -33,6 +37,8 @@ export const Button: React.FC<ButtonProps> = ({
   textStyle,
   testID,
   accessibilityLabel,
+  leftIcon,
+  rightIcon,
 }) => {
   const isDark = useColorScheme() === 'dark';
   
@@ -53,7 +59,7 @@ export const Button: React.FC<ButtonProps> = ({
         break;
       case 'secondary':
         base.push({ 
-          backgroundColor: isDark ? colors.surface.dark : colors.surface.light, 
+          backgroundColor: isDark ? colors.surfaceMuted.dark : colors.surface.light,
           borderWidth: 1, 
           borderColor: isDark ? colors.border.dark : colors.border.light,
           ...shadows.md,
@@ -63,7 +69,7 @@ export const Button: React.FC<ButtonProps> = ({
         base.push({ 
           backgroundColor: 'transparent', 
           borderWidth: 1.5, 
-          borderColor: isDark ? colors.text.primary.dark : colors.text.primary.light 
+          borderColor: isDark ? colors.border.dark : colors.border.light,
         });
         break;
       case 'ghost':
@@ -79,7 +85,7 @@ export const Button: React.FC<ButtonProps> = ({
     if (textStyle) base.push(textStyle);
     
     if (variant === 'primary') {
-      base.push({ color: '#ffffff' });
+      base.push({ color: colors.text.inverse });
     } else if (variant === 'outline' || variant === 'ghost') {
       base.push({ color: isDark ? colors.text.primary.dark : colors.text.primary.light });
     } else {
@@ -88,6 +94,10 @@ export const Button: React.FC<ButtonProps> = ({
     
     return base;
   };
+
+  const iconColor = variant === 'primary'
+    ? colors.text.inverse
+    : (isDark ? colors.text.primary.dark : colors.text.primary.light);
 
   return (
     <Pressable
@@ -104,9 +114,13 @@ export const Button: React.FC<ButtonProps> = ({
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'primary' ? '#ffffff' : (isDark ? colors.cta.dark : colors.cta.light)} />
+        <ActivityIndicator color={variant === 'primary' ? colors.text.inverse : (isDark ? colors.cta.dark : colors.cta.light)} />
       ) : (
-        <Text style={getTextStyle()}>{title}</Text>
+        <View style={styles.content}>
+          {leftIcon ? <Icon name={leftIcon} color={iconColor} size={18} /> : null}
+          <Text style={getTextStyle()}>{title}</Text>
+          {rightIcon ? <Icon name={rightIcon} color={iconColor} size={18} /> : null}
+        </View>
       )}
     </Pressable>
   );
@@ -114,22 +128,27 @@ export const Button: React.FC<ButtonProps> = ({
 
 const styles = StyleSheet.create({
   button: {
-    height: 56,
+    minHeight: componentSize.button,
     paddingHorizontal: spacing.xl,
-    borderRadius: 16,
+    borderRadius: radii.lg,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
   },
+  content: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+  },
   text: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '700',
-    letterSpacing: -0.2,
   },
   pressed: {
-    opacity: 0.9,
+    opacity: opacity.pressed,
   },
   disabled: {
-    opacity: 0.5,
+    opacity: opacity.disabled,
   },
 });

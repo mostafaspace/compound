@@ -5,7 +5,8 @@ import type { UserPolicyConsent } from "@compound/contracts";
 import { ScreenContainer } from "../../../components/layout/ScreenContainer";
 import { Typography } from "../../../components/ui/Typography";
 import { useGetConsentsQuery } from "../../../services/privacy";
-import { colors, spacing } from "../../../theme";
+import { colors, layout, radii, shadows, spacing } from "../../../theme";
+import { Icon } from "../../../components/ui/Icon";
 
 export const PrivacySettingsScreen = () => {
   const { t } = useTranslation();
@@ -35,18 +36,23 @@ export const PrivacySettingsScreen = () => {
           activeConsents.map((consent: UserPolicyConsent) => (
             <View key={consent.id} style={[styles.card, { backgroundColor: surface, borderColor: border }]}>
               <View style={styles.row}>
-                <Typography variant="h3" style={{ color: text }}>
-                  {t(`Privacy.policies.${consent.policyType}`, {
-                    defaultValue: consent.policyType.replace(/_/g, " "),
-                  })}
-                </Typography>
+                <View style={styles.titleRow}>
+                  <View style={styles.iconBadge}>
+                    <Icon name="privacy" color={colors.primary.light} size={20} />
+                  </View>
+                  <Typography variant="h3" style={[styles.title, { color: text }]}>
+                    {t(`Privacy.policies.${consent.policyType}`, {
+                      defaultValue: consent.policyType.replace(/_/g, " "),
+                    })}
+                  </Typography>
+                </View>
                 <View style={styles.activeBadge}>
                   <Typography variant="caption" style={styles.activeBadgeText}>
                     {t("Common.active", { defaultValue: "Active" })}
                   </Typography>
                 </View>
               </View>
-              <Typography variant="caption" style={{ color: "#6b7280" }}>
+              <Typography variant="caption" style={styles.mutedText}>
                 {t("Privacy.version", { defaultValue: "Version {{v}}", v: consent.policyVersion })} {"\u2022"}{" "}
                 {new Date(consent.acceptedAt).toLocaleDateString()}
               </Typography>
@@ -59,10 +65,14 @@ export const PrivacySettingsScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  scroll: { padding: spacing.md },
+  scroll: { padding: layout.screenGutter, paddingBottom: layout.screenBottom },
   heading: { marginBottom: spacing.md },
-  card: { padding: spacing.md, borderRadius: 12, borderWidth: 1, marginBottom: spacing.md },
-  row: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.xs },
-  activeBadge: { backgroundColor: "#22c55e", paddingHorizontal: spacing.sm, paddingVertical: 2, borderRadius: 8 },
-  activeBadgeText: { color: "#fff", fontSize: 11, fontWeight: "600" },
+  card: { padding: layout.cardPadding, borderRadius: radii.xl, borderWidth: 1, marginBottom: layout.listGap, ...shadows.sm },
+  row: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.xs, gap: spacing.sm },
+  titleRow: { flex: 1, flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  iconBadge: { width: 40, height: 40, borderRadius: radii.md, alignItems: "center", justifyContent: "center", backgroundColor: colors.surfaceMuted.light },
+  title: { flex: 1 },
+  activeBadge: { backgroundColor: colors.success, paddingHorizontal: spacing.sm, paddingVertical: 2, borderRadius: radii.pill },
+  activeBadgeText: { color: colors.text.inverse, fontSize: 11, fontWeight: "600" },
+  mutedText: { color: colors.text.secondary.light },
 });

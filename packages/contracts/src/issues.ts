@@ -41,6 +41,7 @@ export interface Issue {
   assignee?: AuthenticatedUser | null;
   comments?: IssueComment[];
   attachments?: IssueAttachment[];
+  metadata?: Record<string, any>;
 }
 
 export interface IssueComment {
@@ -83,5 +84,6 @@ export interface IssueAttachment {
   originalName: string;
   mimeType: string | null;
   size: number;
+  url: string;
   createdAt: string;
 }

@@ -37,6 +37,39 @@ export interface ScannerHistoryEntry {
   scannedAt: string;
 }
 
+export type ScannerAction = "arrive" | "allow" | "deny" | "complete";
+
+export function getScannerAvailableActions(args: {
+  scanResult: "valid" | "expired" | "already_used" | "denied" | "cancelled" | "not_found" | "out_of_window";
+  visitorStatus: "pending" | "qr_issued" | "arrived" | "allowed" | "denied" | "completed" | "cancelled" | null | undefined;
+}): ScannerAction[] {
+  const { scanResult, visitorStatus } = args;
+
+  if (!visitorStatus) {
+    return [];
+  }
+
+  if (visitorStatus === "allowed") {
+    return scanResult === "valid" || scanResult === "already_used"
+      ? ["complete"]
+      : [];
+  }
+
+  if (scanResult !== "valid") {
+    return [];
+  }
+
+  if (visitorStatus === "pending" || visitorStatus === "qr_issued") {
+    return ["arrive", "allow", "deny"];
+  }
+
+  if (visitorStatus === "arrived") {
+    return ["allow", "deny"];
+  }
+
+  return [];
+}
+
 export function appendScannerHistoryEntry(
   history: ScannerHistoryEntry[],
   entry: ScannerHistoryEntry,

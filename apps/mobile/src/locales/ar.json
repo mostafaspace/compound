@@ -249,6 +249,7 @@
       "visitors": "الزوار",
       "issues": "البلاغات",
       "announcements": "الإعلانات",
+      "polls": "التصويت",
       "finance": "المالية",
       "system": "النظام"
     }
@@ -300,7 +301,31 @@
       "normal": "عادية",
       "high": "مرتفعة",
       "urgent": "عاجلة"
-    }
+    },
+    "attachments": "المرفقات",
+    "attachmentLabel": "المرفقات (اختياري)",
+    "addAttachment": "إضافة صورة",
+    "takePhoto": "التقاط صورة",
+    "chooseFromLibrary": "اختيار من المعرض",
+    "attachmentTooLarge": "حجم المرفق يجب أن يكون أقل من 10 ميجابايت",
+    "maxAttachments": "الحد الأقصى {{count}} مرفقات",
+    "routeToLabel": "توجيه الشكوى إلى",
+    "routeToHelp": "اختر الجهة المسؤولة عن معالجة هذا البلاغ",
+    "editSuccess": "تم تحديث البلاغ",
+    "editSuccessMsg": "تم تحديث البلاغ بنجاح.",
+    "submitSuccess": "تم إرسال البلاغ",
+    "submitSuccessMsg": "تم إرسال البلاغ للمراجعة.",
+    "statusUpdated": "تم تحديث حالة البلاغ بنجاح",
+    "updateFailed": "فشل تحديث حالة البلاغ",
+    "escalationReasonRequired": "أضف سبب التصعيد قبل رفع البلاغ.",
+    "escalatedSuccess": "تم تصعيد البلاغ بنجاح.",
+    "escalationFailed": "فشل تصعيد البلاغ.",
+    "escalateNow": "تصعيد إلى الرئيس",
+    "escalationReasonPlaceholder": "اشرح سبب الحاجة لتصعيد هذا البلاغ...",
+    "loadingUnitContext": "جاري تحميل بيانات الوحدة...",
+    "assignmentRequiredTitle": "الوحدة مطلوبة",
+    "assignmentRequiredBody": "يجب أن تكون مسجلاً في وحدة قبل تقديم بلاغ.",
+    "videoAttached": "فيديو مرفق"
   },
   "Finance": {
     "label": "المالية",

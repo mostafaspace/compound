@@ -1,7 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { appendScannerHistoryEntry, getScannerPreviewState, normalizeScannedVisitorToken } from "./scanner-utils.ts";
+import {
+  appendScannerHistoryEntry,
+  getScannerAvailableActions,
+  getScannerPreviewState,
+  normalizeScannedVisitorToken,
+} from "./scanner-utils.ts";
 
 test("normalizeScannedVisitorToken returns direct QR tokens unchanged", () => {
   const token = "abc123def456ghi789jkl012mno345pq678rst901uvw234xyz567";
@@ -81,5 +86,35 @@ test("appendScannerHistoryEntry puts newest scans first and caps history", () =>
       history[0],
       history[1],
     ]
+  );
+});
+
+test("getScannerAvailableActions offers arrive allow and deny for pending valid passes", () => {
+  assert.deepEqual(
+    getScannerAvailableActions({
+      scanResult: "valid",
+      visitorStatus: "pending",
+    }),
+    ["arrive", "allow", "deny"]
+  );
+});
+
+test("getScannerAvailableActions removes arrive once the visitor is already marked arrived", () => {
+  assert.deepEqual(
+    getScannerAvailableActions({
+      scanResult: "valid",
+      visitorStatus: "arrived",
+    }),
+    ["allow", "deny"]
+  );
+});
+
+test("getScannerAvailableActions offers complete for already used allowed passes", () => {
+  assert.deepEqual(
+    getScannerAvailableActions({
+      scanResult: "already_used",
+      visitorStatus: "allowed",
+    }),
+    ["complete"]
   );
 });

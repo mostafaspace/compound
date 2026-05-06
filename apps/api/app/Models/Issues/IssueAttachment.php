@@ -43,4 +43,9 @@ class IssueAttachment extends Model
     {
         return $this->belongsTo(User::class, 'uploaded_by');
     }
+
+    public function getUrlAttribute(): string
+    {
+        return \Illuminate\Support\Facades\Storage::disk($this->disk)->url($this->path);
+    }
 }

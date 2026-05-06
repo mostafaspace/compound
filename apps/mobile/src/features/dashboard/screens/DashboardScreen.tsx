@@ -1,28 +1,25 @@
 import React from 'react';
-import { View, StyleSheet, useColorScheme, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, useColorScheme, Pressable } from 'react-native';
 import { formatRoleLabel, getPrimaryEffectiveRole } from '@compound/contracts';
 import { useTranslation } from 'react-i18next';
-import { useSelector, useDispatch } from 'react-redux';
+import { useSelector } from 'react-redux';
 import { useNavigation } from '@react-navigation/native';
-import { selectCurrentUser, logout as logoutAction } from '../../../store/authSlice';
-import { colors, spacing } from '../../../theme';
-import { Button } from '../../../components/ui/Button';
+import { selectCurrentUser } from '../../../store/authSlice';
+import { colors, layout, radii, shadows, spacing } from '../../../theme';
 import { Typography } from '../../../components/ui/Typography';
 import { ScreenContainer } from '../../../components/layout/ScreenContainer';
 import { useGetDashboardQuery } from '../../../services/dashboard';
-import * as Keychain from "react-native-keychain";
-
-const authTokenService = "compound.mobile.authToken";
-const visitorTokenService = "compound.mobile.visitorPassTokens";
+import { Card } from '../../../components/ui/Card';
+import { Icon, type AppIconName } from '../../../components/ui/Icon';
 
 const shortcutRouteMap: Record<string, { screen: string; params?: object }> = {
   '/units/assign': { screen: 'Admin', params: { screen: 'Units' } },
   '/visitors/create': { screen: 'CreateVisitor' },
-  '/issues/create': { screen: 'CreateIssue' },
+  '/issues/create': { screen: 'AddEditIssue' },
   '/polls': { screen: 'Main', params: { screen: 'Polls' } },
-  '/org-chart': { screen: 'Main', params: { screen: 'More', params: { screen: 'OrgChart' } } },
+  '/org-chart': { screen: 'Main', params: { screen: 'More', params: { screen: 'OrgChart', initial: false } } },
   '/visitors': { screen: 'Main', params: { screen: 'Visitors' } },
-  '/issues': { screen: 'Main', params: { screen: 'More', params: { screen: 'Issues' } } },
+  '/issues': { screen: 'Main', params: { screen: 'More', params: { screen: 'Issues', initial: false } } },
   '/security/scanner': { screen: 'Guard', params: { screen: 'Scanner' } },
   '/security/entries': { screen: 'Guard', params: { screen: 'Gate' } },
   '/security/manual-entry': { screen: 'Guard', params: { screen: 'Gate' } },
@@ -33,15 +30,8 @@ export const DashboardScreen = () => {
   const { t } = useTranslation();
   const isDark = useColorScheme() === 'dark';
   const user = useSelector(selectCurrentUser);
-  const dispatch = useDispatch();
   const navigation = useNavigation<any>();
   const { data: dashboard } = useGetDashboardQuery();
-
-  const handleSignOut = async () => {
-    await Keychain.resetGenericPassword({ service: authTokenService });
-    await Keychain.resetGenericPassword({ service: visitorTokenService });
-    dispatch(logoutAction());
-  };
 
   const navigateToRoute = (route: string) => {
     const mapping = shortcutRouteMap[route];
@@ -55,58 +45,69 @@ export const DashboardScreen = () => {
   const primaryRole = getPrimaryEffectiveRole(user);
   const attentionItems = dashboard?.attentionItems ?? [];
   const shortcuts = dashboard?.shortcuts ?? [];
+  const shortcutIcon = (route: string): AppIconName => {
+    if (route.includes('visitor')) return 'visitors';
+    if (route.includes('finance')) return 'finance';
+    if (route.includes('poll')) return 'polls';
+    if (route.includes('issue')) return 'issues';
+    if (route.includes('security')) return 'qr';
+    if (route.includes('unit')) return 'units';
+    if (route.includes('org-chart')) return 'building';
+    return 'dashboard';
+  };
 
   return (
     <ScreenContainer scrollable>
-      <View style={styles.header}>
-        <Typography variant="label">{t("App.brand")}</Typography>
-        <Typography variant="h1">{t("App.title")}</Typography>
-        <Typography variant="caption">{t("App.subtitle")}</Typography>
-      </View>
-
-      <View style={[styles.welcomePanel, { backgroundColor: isDark ? colors.surface.dark : colors.surface.light, borderColor: isDark ? colors.border.dark : colors.border.light }]}>
-        <Typography variant="label" style={styles.panelLabel}>{t("Auth.signedIn")}</Typography>
-        <Typography variant="h2">{user.name}</Typography>
-        <Typography style={styles.userRole}>
+      <Card style={styles.hero}>
+        <View style={styles.heroTop}>
+          <View style={styles.heroIcon}>
+            <Icon name="building" color={colors.primary.light} size={26} />
+          </View>
+          <Typography variant="label">{t("Auth.signedIn")}</Typography>
+        </View>
+        <Typography variant="h1" style={styles.heroTitle}>{user.name}</Typography>
+        <Typography variant="body" style={styles.heroSubtitle}>
           {t(`Common.roles.${primaryRole}`, { defaultValue: formatRoleLabel(primaryRole) })}
         </Typography>
-      </View>
+      </Card>
 
-      {/* Attention items — things that need user action */}
       {attentionItems.length > 0 && (
         <View style={styles.attentionSection}>
           <Typography variant="h3" style={styles.sectionTitle}>
             {t("Dashboard.needsAttention", { defaultValue: "Needs Your Attention" })}
           </Typography>
           {attentionItems.map((item, index) => (
-            <TouchableOpacity
+            <Pressable
               key={item.type + index}
               style={[styles.attentionItem, { backgroundColor: isDark ? colors.surface.dark : colors.surface.light, borderColor: isDark ? colors.border.dark : colors.border.light }]}
               onPress={() => navigateToRoute(item.route)}
-              activeOpacity={0.7}
+              accessibilityRole="button"
             >
               <View style={styles.attentionBadge}>
                 <Typography style={styles.attentionCount}>{item.count}</Typography>
               </View>
               <Typography style={styles.attentionLabel}>{item.label}</Typography>
-            </TouchableOpacity>
+              <Icon name="chevron-right" color={isDark ? colors.text.secondary.dark : colors.text.secondary.light} size={20} />
+            </Pressable>
           ))}
         </View>
       )}
 
-      {/* Quick action shortcuts — clickable */}
       <View style={styles.quickActions}>
         <Typography variant="h3" style={styles.sectionTitle}>{t("QuickActions.label")}</Typography>
         <View style={styles.grid}>
           {shortcuts.map((shortcut) => (
-            <TouchableOpacity
+            <Pressable
               key={shortcut.key}
               style={[styles.widget, { backgroundColor: isDark ? colors.surface.dark : colors.surface.light, borderColor: isDark ? colors.border.dark : colors.border.light }]}
               onPress={() => navigateToRoute(shortcut.route)}
-              activeOpacity={0.7}
+              accessibilityRole="button"
             >
-              <Typography variant="label">{shortcut.label}</Typography>
-            </TouchableOpacity>
+              <View style={styles.widgetIcon}>
+                <Icon name={shortcutIcon(shortcut.route)} color={colors.primary.light} size={22} />
+              </View>
+              <Typography variant="body" style={styles.widgetLabel}>{shortcut.label}</Typography>
+            </Pressable>
           ))}
           {shortcuts.length === 0 && (
             <Typography variant="caption">
@@ -115,84 +116,98 @@ export const DashboardScreen = () => {
           )}
         </View>
       </View>
-
-      <Button
-        variant="outline"
-        title={t("Auth.signOut")}
-        onPress={handleSignOut}
-        style={styles.signOutButton}
-      />
     </ScreenContainer>
   );
 };
 
 const styles = StyleSheet.create({
-  header: {
-    marginBottom: spacing.xl,
+  hero: {
+    marginBottom: layout.sectionGap,
   },
-  welcomePanel: {
-    padding: spacing.lg,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: spacing.lg,
+  heroTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
   },
-  panelLabel: {
+  heroIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: radii.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.palette.teal[50],
+  },
+  heroTitle: {
     marginBottom: spacing.xs,
-    color: '#6b7280',
   },
-  userRole: {
-    fontWeight: '600',
-    color: colors.primary.dark,
-    marginTop: spacing.xs,
+  heroSubtitle: {
+    color: colors.primary.light,
+    fontWeight: '700',
   },
   sectionTitle: {
     marginBottom: spacing.md,
   },
   attentionSection: {
-    marginBottom: spacing.lg,
+    marginBottom: layout.sectionGap,
   },
   attentionItem: {
+    minHeight: 68,
     flexDirection: 'row',
     alignItems: 'center',
-    padding: spacing.md,
-    borderRadius: 12,
+    padding: layout.cardPadding,
+    borderRadius: radii.lg,
     borderWidth: 1,
     marginBottom: spacing.sm,
+    ...shadows.sm,
   },
   attentionBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    backgroundColor: '#fef2f2',
+    minWidth: 40,
+    height: 40,
+    borderRadius: radii.md,
+    backgroundColor: colors.palette.red[50],
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
+    paddingHorizontal: spacing.sm,
   },
   attentionCount: {
-    fontWeight: '700',
-    color: '#dc2626',
-    fontSize: 14,
+    fontWeight: '800',
+    color: colors.error,
+    fontSize: 15,
   },
   attentionLabel: {
     flex: 1,
-    fontWeight: '500',
+    fontWeight: '700',
   },
   quickActions: {
-    marginBottom: spacing.xl,
+    marginBottom: layout.sectionGap,
   },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.md,
+    gap: layout.cardGap,
   },
   widget: {
-    padding: spacing.md,
-    borderRadius: 12,
+    flexGrow: 1,
+    flexBasis: '45%',
+    minHeight: 132,
+    padding: layout.cardPadding,
+    borderRadius: radii.xl,
     borderWidth: 1,
-    minWidth: 100,
-    alignItems: 'center',
+    justifyContent: 'space-between',
+    ...shadows.sm,
   },
-  signOutButton: {
-    marginTop: spacing.xl,
+  widgetIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: radii.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceMuted.light,
+    marginBottom: spacing.md,
+  },
+  widgetLabel: {
+    fontWeight: '800',
   },
 });

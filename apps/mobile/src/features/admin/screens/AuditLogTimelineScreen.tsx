@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { RouteProp, useRoute } from '@react-navigation/native';
 import { ScreenContainer } from '../../../components/layout/ScreenContainer';
 import { Typography } from '../../../components/ui/Typography';
-import { colors, spacing } from '../../../theme';
+import { colors, layout, spacing } from '../../../theme';
 import { useGetAuditLogTimelineQuery } from '../../../services/admin';
 import { RootStackParamList } from '../../../navigation/types';
 
@@ -80,7 +80,7 @@ export const AuditLogTimelineScreen = () => {
 
 const styles = StyleSheet.create({
   header: {
-    padding: spacing.lg,
+    padding: layout.screenGutter,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(0,0,0,0.05)',
   },
@@ -90,7 +90,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   listContent: {
-    padding: spacing.lg,
+    padding: layout.screenGutter,
+    paddingBottom: layout.screenBottom,
   },
   timelineItem: {
     flexDirection: 'row',

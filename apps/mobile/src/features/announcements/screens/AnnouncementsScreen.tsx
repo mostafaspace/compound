@@ -2,7 +2,7 @@ import React from 'react';
 import { View, StyleSheet, FlatList, useColorScheme } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useGetAnnouncementsQuery, useAcknowledgeAnnouncementMutation } from '../../../services/property';
-import { colors, spacing } from '../../../theme';
+import { colors, layout, radii, shadows, spacing } from '../../../theme';
 import { Button } from '../../../components/ui/Button';
 import { Typography } from '../../../components/ui/Typography';
 import { ScreenContainer } from '../../../components/layout/ScreenContainer';
@@ -13,6 +13,7 @@ import { getEffectiveRoleType } from '@compound/contracts';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../../../navigation/types';
+import { Icon } from '../../../components/ui/Icon';
 
 export const AnnouncementsScreen = () => {
   const { t } = useTranslation();
@@ -28,7 +29,12 @@ export const AnnouncementsScreen = () => {
 
   const renderItem = ({ item }: { item: any }) => (
     <View style={[styles.card, { backgroundColor: isDark ? colors.surface.dark : colors.surface.light, borderColor: isDark ? colors.border.dark : colors.border.light }]}>
-      <Typography variant="h3">{item.title}</Typography>
+      <View style={styles.titleRow}>
+        <View style={styles.iconBadge}>
+          <Icon name="announcements" color={colors.primary.light} size={20} />
+        </View>
+        <Typography variant="h3" style={styles.title}>{item.title}</Typography>
+      </View>
       <Typography variant="body" style={styles.content}>{item.content}</Typography>
       <View style={styles.footer}>
         <Typography variant="caption">{formatDate(item.createdAt)}</Typography>
@@ -65,7 +71,10 @@ export const AnnouncementsScreen = () => {
             </Typography>
           </View>
         }
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[
+          styles.listContent,
+          { paddingBottom: isAdmin ? layout.screenBottom + 72 : layout.screenBottom },
+        ]}
       />
       {isAdmin && (
         <View style={styles.fabContainer}>
@@ -73,6 +82,7 @@ export const AnnouncementsScreen = () => {
             title={t("Announcements.create", "New Announcement")}
             onPress={() => navigation.navigate('CreateAnnouncement' as any)}
             style={styles.fab}
+            leftIcon="plus"
           />
         </View>
       )}
@@ -85,16 +95,33 @@ const styles = StyleSheet.create({
     padding: 0,
   },
   listContent: {
-    padding: spacing.md,
+    padding: layout.screenGutter,
   },
   card: {
-    padding: spacing.lg,
-    borderRadius: 12,
+    padding: layout.cardPadding,
+    borderRadius: radii.xl,
     borderWidth: 1,
-    marginBottom: spacing.md,
+    marginBottom: layout.listGap,
+    ...shadows.sm,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  iconBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceMuted.light,
+  },
+  title: {
+    flex: 1,
   },
   content: {
-    color: '#4b5563',
+    color: colors.text.secondary.light,
     lineHeight: 22,
     marginTop: spacing.xs,
     marginBottom: spacing.md,
@@ -107,12 +134,12 @@ const styles = StyleSheet.create({
   categoryBadge: {
     paddingHorizontal: 8,
     paddingVertical: 2,
-    backgroundColor: 'rgba(0,0,0,0.05)',
-    borderRadius: 4,
+    backgroundColor: colors.surfaceMuted.light,
+    borderRadius: radii.sm,
   },
   categoryText: {
     fontSize: 10,
-    color: '#6b7280',
+    color: colors.text.secondary.light,
   },
   ackButton: {
     marginTop: spacing.md,
@@ -125,16 +152,11 @@ const styles = StyleSheet.create({
   },
   fabContainer: {
     position: 'absolute',
-    bottom: spacing.lg,
-    right: spacing.lg,
-    left: spacing.lg,
+    bottom: layout.fabInset,
+    right: layout.fabInset,
+    left: layout.fabInset,
   },
   fab: {
-    borderRadius: 16,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
+    borderRadius: radii.lg,
   }
 });

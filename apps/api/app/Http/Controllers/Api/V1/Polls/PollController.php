@@ -15,7 +15,11 @@ use App\Models\Polls\PollVote;
 use App\Models\Property\UnitMembership;
 use App\Models\User;
 use App\Services\CompoundContextService;
+use App\Services\NotificationService;
+use App\Enums\NotificationCategory;
 use App\Support\AuditLogger;
+use Illuminate\Support\Collection;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -28,6 +32,7 @@ class PollController extends Controller
     public function __construct(
         private readonly CompoundContextService $compoundContext,
         private readonly AuditLogger $auditLogger,
+        private readonly NotificationService $notificationService,
     ) {}
 
     /**
@@ -183,28 +188,43 @@ class PollController extends Controller
         $user = $request->user();
         $this->authorizePollAccess($user, $poll);
 
-        if (Schema::hasTable('poll_view_logs')) {
+        $selection = $this->resolveUnitSelection($request, $poll, $user, false);
+        $selectedUnitId = $selection['selectedUnitId'];
+
+        if (! $this->isAdmin($user) && Schema::hasTable('poll_view_logs')) {
+            $unitContext = $this->resolveScopedUnitContext($poll, $user, $selectedUnitId);
             $log = PollViewLog::firstOrNew(['poll_id' => $poll->id, 'user_id' => $user->id]);
             if (!$log->exists) {
                 $log->first_viewed_at = now();
                 $log->view_count = 0;
+                if (Schema::hasColumn('poll_view_logs', 'unit_id')) {
+                    $log->unit_id = $unitContext['unit_id'];
+                }
+                if (Schema::hasColumn('poll_view_logs', 'unit_number')) {
+                    $log->unit_number = $unitContext['unit_number'];
+                }
             }
             $log->last_viewed_at = now();
             $log->view_count++;
             $log->save();
         }
 
-        $eagerLoads = ['options', 'pollType', 'votes.user', 'votes.options', 'viewLogs.user', 'notificationLogs.user'];
+        $eagerLoads = [
+            'options',
+            'pollType',
+            'votes.user',
+            'votes.options',
+            'viewLogs.user.unitMemberships.unit',
+            'notificationLogs.user.unitMemberships.unit',
+        ];
         if (Schema::hasColumn('poll_votes', 'unit_id')) {
             $eagerLoads[] = 'votes.unit';
         }
         $poll->load($eagerLoads);
 
-        $pollVote = PollVote::with('options')
-            ->where('poll_id', $poll->id)
-            ->where('user_id', $user->id)
-            ->first();
+        $pollVote = $this->resolveCurrentBallot($poll, $user, $selectedUnitId);
 
+        $poll->setAttribute('selected_unit_id', $selectedUnitId);
         $poll->setAttribute('has_voted', $pollVote !== null);
         $poll->setAttribute(
             'user_vote_option_ids',
@@ -388,7 +408,10 @@ class PollController extends Controller
         $user = $request->user();
         $this->authorizePollAccess($user, $poll);
 
-        $hasVoted = PollVote::where('poll_id', $poll->id)->where('user_id', $user->id)->exists();
+        $selection = $this->resolveUnitSelection($request, $poll, $user, false);
+        $hasVoted = $selection['selectedUnitId']
+            ? $this->resolveCurrentBallot($poll, $user, $selection['selectedUnitId']) !== null
+            : false;
         [$eligible, $reason] = $this->checkEligibility($poll, $user);
 
         return response()->json([
@@ -396,6 +419,9 @@ class PollController extends Controller
                 'eligible' => $eligible,
                 'reason'   => $reason,
                 'hasVoted' => $hasVoted,
+                'selectedUnitId' => $selection['selectedUnitId'],
+                'requiresUnitSelection' => $selection['requiresUnitSelection'],
+                'eligibleUnits' => $selection['eligibleUnits'],
             ],
         ]);
     }
@@ -409,6 +435,10 @@ class PollController extends Controller
             return response()->json(['message' => 'This poll is not currently active.'], 422);
         }
 
+        if ($poll->starts_at && $poll->starts_at->isFuture()) {
+            return response()->json(['message' => 'Voting for this poll has not started yet.'], 422);
+        }
+
         if ($poll->ends_at && $poll->ends_at->isPast()) {
             return response()->json(['message' => 'This poll has ended.'], 422);
         }
@@ -419,37 +449,36 @@ class PollController extends Controller
         }
 
         $hasUnitColumn = Schema::hasColumn('poll_votes', 'unit_id');
-        $unitId = $hasUnitColumn ? $this->resolveVoterUnitId($poll, $user) : null;
+        $selection = $hasUnitColumn
+            ? $this->resolveUnitSelection($request, $poll, $user, true)
+            : ['selectedUnitId' => null, 'eligibleUnits' => [], 'requiresUnitSelection' => false, 'invalidRequestedUnit' => false];
+        $unitId = $hasUnitColumn ? $selection['selectedUnitId'] : null;
+
+        if (($selection['invalidRequestedUnit'] ?? false) === true) {
+            return response()->json([
+                'message' => 'Selected apartment is not eligible for this poll.',
+                'reason' => 'invalid_unit_selection',
+                'eligibleUnits' => $selection['eligibleUnits'],
+            ], 422);
+        }
+
+        if ($hasUnitColumn && ($selection['requiresUnitSelection'] ?? false) === true && ! $request->filled('unitId')) {
+            return response()->json([
+                'message' => 'Select which apartment should cast this ballot.',
+                'reason' => 'unit_selection_required',
+                'selectedUnitId' => $selection['selectedUnitId'],
+                'eligibleUnits' => $selection['eligibleUnits'],
+            ], 422);
+        }
 
         if ($hasUnitColumn && $unitId === null) {
             return response()->json(['message' => 'No valid unit membership found for this poll.'], 403);
         }
 
-        $existingVote = null;
-        if ($hasUnitColumn && $unitId) {
-            $existingVote = PollVote::where('poll_id', $poll->id)
-                ->where('unit_id', $unitId)
-                ->first();
-
-            if ($existingVote && $existingVote->user_id !== $user->id) {
-                return response()->json([
-                    'message' => 'Your apartment has already voted in this poll.',
-                    'reason' => 'apartment_already_voted',
-                ], 409);
-            }
-        } else {
-            $existingVote = PollVote::where('poll_id', $poll->id)
-                ->where('user_id', $user->id)
-                ->first();
-
-            if ($existingVote) {
-                return response()->json(['message' => 'You have already voted in this poll.', 'reason' => 'already_voted'], 409);
-            }
-        }
-
         $validated = $request->validate([
+            'unitId' => ['nullable', 'string'],
             'optionIds'   => ['required', 'array', 'min:1'],
-            'optionIds.*' => ['integer', Rule::exists('poll_options', 'id')->where('poll_id', $poll->id)],
+            'optionIds.*' => ['integer', 'distinct', Rule::exists('poll_options', 'id')->where('poll_id', $poll->id)],
         ]);
 
         $optionIds = $validated['optionIds'];
@@ -464,28 +493,45 @@ class PollController extends Controller
             ], 422);
         }
 
-        DB::transaction(function () use ($poll, $user, $unitId, $optionIds, $existingVote, $hasUnitColumn): void {
-            if ($existingVote) {
-                $oldOptionIds = $existingVote->options()->pluck('poll_options.id')->toArray();
-                PollOption::whereIn('id', $oldOptionIds)->decrement('votes_count');
-                $existingVote->options()->detach();
-                $existingVote->delete();
+        try {
+            DB::transaction(function () use ($poll, $user, $unitId, $optionIds, $hasUnitColumn): void {
+                Poll::query()->whereKey($poll->id)->lockForUpdate()->first();
+
+                $existingVote = $this->resolveCurrentBallot($poll, $user, $unitId, true);
+
+                if ($existingVote) {
+                    $oldOptionIds = $existingVote->options()->pluck('poll_options.id')->toArray();
+                    if ($oldOptionIds !== []) {
+                        PollOption::whereIn('id', $oldOptionIds)->decrement('votes_count');
+                    }
+                    $existingVote->options()->detach();
+                    $existingVote->delete();
+                }
+
+                $voteData = [
+                    'poll_id'  => $poll->id,
+                    'user_id'  => $user->id,
+                    'voted_at' => now(),
+                ];
+                if ($hasUnitColumn) {
+                    $voteData['unit_id'] = $unitId;
+                }
+
+                $pollVote = PollVote::create($voteData);
+
+                $pollVote->options()->attach($optionIds);
+                PollOption::whereIn('id', $optionIds)->increment('votes_count');
+            });
+        } catch (QueryException $exception) {
+            if (str_contains(strtolower($exception->getMessage()), 'poll_votes_poll_unit_unique')) {
+                return response()->json([
+                    'message' => 'Your apartment has already voted in this poll.',
+                    'reason' => 'apartment_already_voted',
+                ], 409);
             }
 
-            $voteData = [
-                'poll_id'  => $poll->id,
-                'user_id'  => $user->id,
-                'voted_at' => now(),
-            ];
-            if ($hasUnitColumn) {
-                $voteData['unit_id'] = $unitId;
-            }
-
-            $pollVote = PollVote::create($voteData);
-
-            $pollVote->options()->attach($optionIds);
-            PollOption::whereIn('id', $optionIds)->increment('votes_count');
-        });
+            throw $exception;
+        }
 
         $this->auditLogger->record(
             'polls.voted',
@@ -512,13 +558,34 @@ class PollController extends Controller
             return response()->json(['message' => 'Cannot remove vote after poll is closed.'], 422);
         }
 
+        if ($poll->starts_at && $poll->starts_at->isFuture()) {
+            return response()->json(['message' => 'Voting for this poll has not started yet.'], 422);
+        }
+
         if ($poll->ends_at && $poll->ends_at->isPast()) {
             return response()->json(['message' => 'This poll has ended.'], 422);
         }
 
-        $existingVote = PollVote::where('poll_id', $poll->id)
-            ->where('user_id', $user->id)
-            ->first();
+        $selection = $this->resolveUnitSelection($request, $poll, $user, true);
+
+        if ($selection['invalidRequestedUnit'] === true) {
+            return response()->json([
+                'message' => 'Selected apartment is not eligible for this poll.',
+                'reason' => 'invalid_unit_selection',
+                'eligibleUnits' => $selection['eligibleUnits'],
+            ], 422);
+        }
+
+        if ($selection['requiresUnitSelection'] === true && ! $request->filled('unitId')) {
+            return response()->json([
+                'message' => 'Select which apartment ballot should be removed.',
+                'reason' => 'unit_selection_required',
+                'selectedUnitId' => $selection['selectedUnitId'],
+                'eligibleUnits' => $selection['eligibleUnits'],
+            ], 422);
+        }
+
+        $existingVote = $this->resolveCurrentBallot($poll, $user, $selection['selectedUnitId']);
 
         if (! $existingVote) {
             return response()->json(['message' => 'You have not voted in this poll.'], 404);
@@ -586,6 +653,8 @@ class PollController extends Controller
             return;
         }
 
+        abort_if($poll->status === PollStatus::Draft->value, 403);
+
         $query = $user->unitMemberships()
             ->activeForAccess()
             ->whereHas('unit', function ($q) use ($poll) {
@@ -600,43 +669,162 @@ class PollController extends Controller
 
     private function resolveVoterUnitId(Poll $poll, User $user): ?string
     {
-        $membership = $user->unitMemberships()
-            ->activeForAccess()
-            ->whereHas('unit', function ($q) use ($poll) {
-                $q->where('compound_id', $poll->compound_id);
-                if ($poll->scope === 'building' && $poll->building_id) {
-                    $q->where('building_id', $poll->building_id);
-                }
-            })
-            ->first();
+        $membership = $this->resolveScopedMembership($poll, $user);
 
         return $membership?->unit_id;
     }
 
     private function dispatchPollNotifications(Poll $poll): void
     {
-        $query = UnitMembership::query()
+        $memberships = UnitMembership::query()
             ->activeForAccess()
+            ->with('unit:id,unit_number,compound_id,building_id')
             ->whereHas('unit', function ($q) use ($poll) {
                 $q->where('compound_id', $poll->compound_id);
                 if ($poll->scope === 'building' && $poll->building_id) {
                     $q->where('building_id', $poll->building_id);
                 }
-            });
+            })
+            ->orderByDesc('is_primary')
+            ->get()
+            ->groupBy('user_id')
+            ->map(fn ($group) => $group->first());
 
-        $userIds = $query->pluck('user_id')->unique();
+        $recipients = User::query()
+            ->whereIn('id', $memberships->keys()->all())
+            ->get(['id']);
 
         $now = now();
-        $logs = $userIds->map(fn ($userId) => [
-            'poll_id'     => $poll->id,
-            'user_id'     => $userId,
-            'notified_at' => $now,
-            'channel'     => 'in_app',
-            'delivered'   => true,
-            'delivered_at' => $now,
-        ])->toArray();
+        $logs = [];
 
-        PollNotificationLog::insert($logs);
+        foreach ($recipients as $recipient) {
+            $membership = $memberships->get($recipient->id);
+            $notification = $this->notificationService->create(
+                userId: $recipient->id,
+                category: NotificationCategory::Polls,
+                title: "New poll: {$poll->title}",
+                body: 'A new poll is open for review and voting.',
+                metadata: [
+                    'pollId' => $poll->id,
+                    'actionUrl' => "/polls/{$poll->id}",
+                    'titleEn' => "New poll: {$poll->title}",
+                    'bodyEn' => 'A new poll is open for review and voting.',
+                    'titleAr' => "تصويت جديد: {$poll->title}",
+                    'bodyAr' => 'يوجد تصويت جديد متاح للمراجعة والإدلاء بالصوت.',
+                ],
+                priority: 'high',
+                respectPreferences: false,
+            );
+
+            $logs[] = [
+                'poll_id' => $poll->id,
+                'user_id' => $recipient->id,
+                'unit_id' => Schema::hasColumn('poll_notification_logs', 'unit_id') ? $membership?->unit_id : null,
+                'unit_number' => Schema::hasColumn('poll_notification_logs', 'unit_number') ? $membership?->unit?->unit_number : null,
+                'notified_at' => $now,
+                'channel' => 'in_app',
+                'delivered' => $notification !== null,
+                'delivered_at' => $notification ? $now : null,
+            ];
+        }
+
+        if ($logs !== []) {
+            PollNotificationLog::insert($logs);
+        }
+    }
+
+    /**
+     * @return array{unit_id: string|null, unit_number: string|null}
+     */
+    private function resolveScopedUnitContext(Poll $poll, User $user, ?string $selectedUnitId = null): array
+    {
+        $membership = $this->resolveScopedMembership($poll, $user, $selectedUnitId);
+
+        return [
+            'unit_id' => $membership?->unit_id,
+            'unit_number' => $membership?->unit?->unit_number,
+        ];
+    }
+
+    private function resolveScopedMembership(Poll $poll, User $user, ?string $selectedUnitId = null): ?UnitMembership
+    {
+        $memberships = $this->resolveEligibleMemberships($poll, $user);
+
+        if ($selectedUnitId !== null) {
+            return $memberships->firstWhere('unit_id', $selectedUnitId);
+        }
+
+        return $memberships->first();
+    }
+
+    /**
+     * @return Collection<int, UnitMembership>
+     */
+    private function resolveEligibleMemberships(Poll $poll, User $user): Collection
+    {
+        $memberships = $user->unitMemberships()
+            ->activeForAccess()
+            ->with('unit:id,unit_number,compound_id,building_id')
+            ->whereHas('unit', function ($q) use ($poll) {
+                $q->where('compound_id', $poll->compound_id);
+                if ($poll->scope === 'building' && $poll->building_id) {
+                    $q->where('building_id', $poll->building_id);
+                }
+            })
+            ->orderByDesc('is_primary')
+            ->get()
+            ->unique('unit_id')
+            ->values();
+
+        return match ($poll->eligibility) {
+            VoteEligibility::OwnersOnly->value => $memberships->filter(
+                fn (UnitMembership $membership) => in_array($membership->relation_type->value, ['owner', 'representative'], true)
+            )->values(),
+            VoteEligibility::OwnersAndResidents->value => $memberships->filter(
+                fn (UnitMembership $membership) => in_array($membership->relation_type->value, ['owner', 'representative', 'resident'], true)
+            )->values(),
+            default => $memberships,
+        };
+    }
+
+    /**
+     * @return array{
+     *   selectedUnitId: string|null,
+     *   requiresUnitSelection: bool,
+     *   eligibleUnits: array<int, array{id: string, unitNumber: string|null, isPrimary: bool}>,
+     *   invalidRequestedUnit: bool
+     * }
+     */
+    private function resolveUnitSelection(Request $request, Poll $poll, User $user, bool $requireExplicitWhenMultiple): array
+    {
+        $memberships = $this->isAdmin($user)
+            ? collect()
+            : $this->resolveEligibleMemberships($poll, $user);
+
+        $eligibleUnits = $memberships->map(fn (UnitMembership $membership) => [
+            'id' => $membership->unit_id,
+            'unitNumber' => $membership->unit?->unit_number,
+            'isPrimary' => (bool) $membership->is_primary,
+        ])->values()->all();
+
+        $requiresUnitSelection = count($eligibleUnits) > 1;
+        $requestedUnitId = $request->input('unitId') ?: $request->query('unitId');
+        $selectedMembership = null;
+        $invalidRequestedUnit = false;
+
+        if ($requestedUnitId !== null && $requestedUnitId !== '') {
+            $selectedMembership = $memberships->firstWhere('unit_id', (string) $requestedUnitId);
+            $invalidRequestedUnit = $selectedMembership === null;
+        } elseif (! $requireExplicitWhenMultiple || count($eligibleUnits) <= 1) {
+            $selectedMembership = $memberships->first();
+        }
+
+        return [
+            'selectedUnitId' => $selectedMembership?->unit_id,
+            'requiresUnitSelection' => $requiresUnitSelection,
+            'eligibleUnits' => $eligibleUnits,
+            'invalidRequestedUnit' => $invalidRequestedUnit,
+        ];
     }
 
     /** @return array{0: bool, 1: string|null} */
@@ -680,5 +868,32 @@ class PollController extends Controller
         }
 
         return [true, null];
+    }
+
+    private function resolveCurrentBallot(
+        Poll $poll,
+        User $user,
+        ?string $resolvedUnitId = null,
+        bool $lockForUpdate = false,
+    ): ?PollVote {
+        $query = PollVote::with('options')->where('poll_id', $poll->id);
+
+        if (Schema::hasColumn('poll_votes', 'unit_id')) {
+            $unitId = $resolvedUnitId ?? $this->resolveVoterUnitId($poll, $user);
+
+            if ($unitId === null) {
+                return null;
+            }
+
+            $query->where('unit_id', $unitId);
+        } else {
+            $query->where('user_id', $user->id);
+        }
+
+        if ($lockForUpdate) {
+            $query->lockForUpdate();
+        }
+
+        return $query->first();
     }
 }

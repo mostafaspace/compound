@@ -2,6 +2,7 @@
 
 namespace App\Models\Polls;
 
+use App\Models\Property\Unit;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -13,6 +14,8 @@ class PollViewLog extends Model
     protected $fillable = [
         'poll_id',
         'user_id',
+        'unit_id',
+        'unit_number',
         'first_viewed_at',
         'last_viewed_at',
         'view_count',
@@ -37,5 +40,11 @@ class PollViewLog extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /** @return BelongsTo<Unit, $this> */
+    public function unit(): BelongsTo
+    {
+        return $this->belongsTo(Unit::class);
     }
 }
