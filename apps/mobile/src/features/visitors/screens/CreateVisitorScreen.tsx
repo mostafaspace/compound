@@ -30,6 +30,7 @@ import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
 import { colors, layout, spacing } from '../../../theme';
 import { Icon } from '../../../components/ui/Icon';
+import { isRtlLanguage, rowDirectionStyle, textDirectionStyle } from '../../../i18n/direction';
 
 const { width } = Dimensions.get('window');
 
@@ -44,8 +45,9 @@ const visitorSchema = z.object({
 type VisitorFormData = z.infer<typeof visitorSchema>;
 
 export const CreateVisitorScreen = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const isDark = useColorScheme() === 'dark';
+  const isRtl = isRtlLanguage(i18n.language);
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   
   const user = useSelector(selectCurrentUser);
@@ -141,7 +143,7 @@ export const CreateVisitorScreen = () => {
       >
 
         <View style={[styles.card, { backgroundColor: isDark ? colors.surface.dark : colors.surface.light }]}>
-          <Typography variant="label" style={styles.cardHeader}>
+          <Typography variant="label" style={[styles.cardHeader, textDirectionStyle(isRtl)]}>
             {t("Visitors.visitorDetails", "Visitor Information")}
           </Typography>
           
@@ -176,8 +178,8 @@ export const CreateVisitorScreen = () => {
             )}
           />
 
-          <View style={styles.row}>
-            <View style={{ flex: 1.5, marginRight: spacing.md }}>
+          <View style={[styles.row, rowDirectionStyle(isRtl)]}>
+            <View style={{ flex: 1.5, marginEnd: spacing.md }}>
               <Controller
                 control={control}
                 name="vehiclePlate"
@@ -213,7 +215,7 @@ export const CreateVisitorScreen = () => {
         </View>
 
         <View style={[styles.card, { backgroundColor: isDark ? colors.surface.dark : colors.surface.light }]}>
-          <Typography variant="label" style={styles.cardHeader}>
+          <Typography variant="label" style={[styles.cardHeader, textDirectionStyle(isRtl)]}>
             {t("Visitors.photo", "Visitor Photo (Optional)")}
           </Typography>
           
@@ -235,7 +237,7 @@ export const CreateVisitorScreen = () => {
                 <View style={styles.iconCircle}>
                   <Icon name="camera" color={colors.primary.light} size={24} />
                 </View>
-                <Typography variant="body" style={{ fontWeight: '600', color: colors.primary.light }}>
+                <Typography variant="body" style={[{ fontWeight: '600', color: colors.primary.light }, textDirectionStyle(isRtl)]}>
                   {t("Visitors.addPhoto", "Capture or Upload")}
                 </Typography>
                 <Typography variant="caption" style={styles.photoHint}>

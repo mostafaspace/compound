@@ -10,8 +10,10 @@ import {
   StyleProp,
   View
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { colors, spacing, shadows, radii, componentSize, opacity } from '../../theme';
 import { Icon, type AppIconName } from './Icon';
+import { isRtlLanguage, rowDirectionStyle, centerTextDirectionStyle } from '../../i18n/direction';
 
 interface ButtonProps {
   onPress: () => void;
@@ -41,6 +43,9 @@ export const Button: React.FC<ButtonProps> = ({
   rightIcon,
 }) => {
   const isDark = useColorScheme() === 'dark';
+  const { i18n } = useTranslation();
+  const isRtl = isRtlLanguage(i18n.language);
+  const resolvedRightIcon = rightIcon === 'chevron-right' && isRtl ? 'chevron-left' : rightIcon;
   
   const getButtonStyle = () => {
     const base: any[] = [styles.button];
@@ -116,10 +121,10 @@ export const Button: React.FC<ButtonProps> = ({
       {loading ? (
         <ActivityIndicator color={variant === 'primary' ? colors.text.inverse : (isDark ? colors.cta.dark : colors.cta.light)} />
       ) : (
-        <View style={styles.content}>
+        <View style={[styles.content, rowDirectionStyle(isRtl)]}>
           {leftIcon ? <Icon name={leftIcon} color={iconColor} size={18} /> : null}
-          <Text style={getTextStyle()}>{title}</Text>
-          {rightIcon ? <Icon name={rightIcon} color={iconColor} size={18} /> : null}
+          <Text style={[...getTextStyle(), centerTextDirectionStyle(isRtl)]}>{title}</Text>
+          {resolvedRightIcon ? <Icon name={resolvedRightIcon} color={iconColor} size={18} /> : null}
         </View>
       )}
     </Pressable>

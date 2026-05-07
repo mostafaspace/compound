@@ -17,10 +17,12 @@ import { ScreenContainer } from '../../../components/layout/ScreenContainer';
 import type { Issue } from '@compound/contracts';
 import { formatDate } from '../../../utils/formatters';
 import { Icon } from '../../../components/ui/Icon';
+import { isRtlLanguage, rowDirectionStyle, textDirectionStyle } from '../../../i18n/direction';
 
 export const IssuesScreen = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const isDark = useColorScheme() === 'dark';
+  const isRtl = isRtlLanguage(i18n.language);
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   
   const user = useSelector(selectCurrentUser);
@@ -50,12 +52,12 @@ export const IssuesScreen = () => {
         ]}
         accessibilityRole="button"
       >
-        <View style={styles.cardHeader}>
-          <View style={styles.titleRow}>
+        <View style={[styles.cardHeader, rowDirectionStyle(isRtl)]}>
+          <View style={[styles.titleRow, rowDirectionStyle(isRtl)]}>
             <View style={styles.iconBadge}>
               <Icon name="issues" color={colors.primary.light} size={20} />
             </View>
-            <Typography variant="h3" numberOfLines={1} style={styles.title}>
+            <Typography variant="h3" numberOfLines={1} style={[styles.title, textDirectionStyle(isRtl)]}>
               {item.title}
             </Typography>
           </View>
@@ -65,17 +67,17 @@ export const IssuesScreen = () => {
             textColor={statusPalette.text}
           />
         </View>
-        <View style={styles.row}>
+        <View style={[styles.row, rowDirectionStyle(isRtl)]}>
           <StatusBadge
             label={t(`Issues.priorities.${item.priority}`, { defaultValue: item.priority })}
             backgroundColor={priorityPalette.background}
             textColor={priorityPalette.text}
           />
-          <Typography variant="caption" style={styles.category}>
+          <Typography variant="caption" style={[styles.category, textDirectionStyle(isRtl)]}>
             {t(`Issues.categories.${item.category}`, { defaultValue: item.category })}
           </Typography>
         </View>
-        <Typography variant="caption" style={styles.date}>
+        <Typography variant="caption" style={[styles.date, textDirectionStyle(isRtl)]}>
           {formatDate(item.createdAt)}
         </Typography>
       </Pressable>
@@ -118,12 +120,12 @@ const styles = StyleSheet.create({
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.sm, gap: spacing.sm },
   titleRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   iconBadge: { width: 40, height: 40, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceMuted.light },
-  title: { flex: 1, marginRight: spacing.sm },
+  title: { flex: 1, marginEnd: spacing.sm },
   row: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.xs, alignItems: 'center', flexWrap: 'wrap' },
   category: { color: colors.text.secondary.light, textTransform: 'capitalize' },
   date: { color: colors.text.secondary.light, marginBottom: spacing.sm },
   detailBtn: { alignSelf: 'flex-start', paddingHorizontal: 0 },
   center: { padding: spacing.xl, alignItems: 'center' },
-  fabContainer: { position: 'absolute', bottom: layout.fabInset, left: layout.fabInset, right: layout.fabInset },
+  fabContainer: { position: 'absolute', bottom: layout.fabInset, start: layout.fabInset, end: layout.fabInset },
   fab: { borderRadius: radii.lg },
 });

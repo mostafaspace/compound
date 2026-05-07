@@ -11,6 +11,7 @@ import { ScreenContainer } from '../../../components/layout/ScreenContainer';
 import { useGetDashboardQuery } from '../../../services/dashboard';
 import { Card } from '../../../components/ui/Card';
 import { Icon, type AppIconName } from '../../../components/ui/Icon';
+import { isRtlLanguage, rowDirectionStyle, textDirectionStyle } from '../../../i18n/direction';
 
 const shortcutRouteMap: Record<string, { screen: string; params?: object }> = {
   '/units/assign': { screen: 'Admin', params: { screen: 'Units' } },
@@ -27,8 +28,9 @@ const shortcutRouteMap: Record<string, { screen: string; params?: object }> = {
 };
 
 export const DashboardScreen = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const isDark = useColorScheme() === 'dark';
+  const isRtl = isRtlLanguage(i18n.language);
   const user = useSelector(selectCurrentUser);
   const navigation = useNavigation<any>();
   const { data: dashboard } = useGetDashboardQuery();
@@ -59,42 +61,42 @@ export const DashboardScreen = () => {
   return (
     <ScreenContainer scrollable>
       <Card style={styles.hero}>
-        <View style={styles.heroTop}>
+        <View style={[styles.heroTop, rowDirectionStyle(isRtl)]}>
           <View style={styles.heroIcon}>
             <Icon name="building" color={colors.primary.light} size={26} />
           </View>
           <Typography variant="label">{t("Auth.signedIn")}</Typography>
         </View>
-        <Typography variant="h1" style={styles.heroTitle}>{user.name}</Typography>
-        <Typography variant="body" style={styles.heroSubtitle}>
+        <Typography variant="h1" style={[styles.heroTitle, textDirectionStyle(isRtl)]}>{user.name}</Typography>
+        <Typography variant="body" style={[styles.heroSubtitle, textDirectionStyle(isRtl)]}>
           {t(`Common.roles.${primaryRole}`, { defaultValue: formatRoleLabel(primaryRole) })}
         </Typography>
       </Card>
 
       {attentionItems.length > 0 && (
         <View style={styles.attentionSection}>
-          <Typography variant="h3" style={styles.sectionTitle}>
+          <Typography variant="h3" style={[styles.sectionTitle, textDirectionStyle(isRtl)]}>
             {t("Dashboard.needsAttention", { defaultValue: "Needs Your Attention" })}
           </Typography>
           {attentionItems.map((item, index) => (
             <Pressable
               key={item.type + index}
-              style={[styles.attentionItem, { backgroundColor: isDark ? colors.surface.dark : colors.surface.light, borderColor: isDark ? colors.border.dark : colors.border.light }]}
+              style={[styles.attentionItem, rowDirectionStyle(isRtl), { backgroundColor: isDark ? colors.surface.dark : colors.surface.light, borderColor: isDark ? colors.border.dark : colors.border.light }]}
               onPress={() => navigateToRoute(item.route)}
               accessibilityRole="button"
             >
               <View style={styles.attentionBadge}>
                 <Typography style={styles.attentionCount}>{item.count}</Typography>
               </View>
-              <Typography style={styles.attentionLabel}>{item.label}</Typography>
-              <Icon name="chevron-right" color={isDark ? colors.text.secondary.dark : colors.text.secondary.light} size={20} />
+              <Typography style={[styles.attentionLabel, textDirectionStyle(isRtl)]}>{item.label}</Typography>
+              <Icon name={isRtl ? "chevron-left" : "chevron-right"} color={isDark ? colors.text.secondary.dark : colors.text.secondary.light} size={20} />
             </Pressable>
           ))}
         </View>
       )}
 
       <View style={styles.quickActions}>
-        <Typography variant="h3" style={styles.sectionTitle}>{t("QuickActions.label")}</Typography>
+        <Typography variant="h3" style={[styles.sectionTitle, textDirectionStyle(isRtl)]}>{t("QuickActions.label")}</Typography>
         <View style={styles.grid}>
           {shortcuts.map((shortcut) => (
             <Pressable
@@ -106,7 +108,7 @@ export const DashboardScreen = () => {
               <View style={styles.widgetIcon}>
                 <Icon name={shortcutIcon(shortcut.route)} color={colors.primary.light} size={22} />
               </View>
-              <Typography variant="body" style={styles.widgetLabel}>{shortcut.label}</Typography>
+              <Typography variant="body" style={[styles.widgetLabel, textDirectionStyle(isRtl)]}>{shortcut.label}</Typography>
             </Pressable>
           ))}
           {shortcuts.length === 0 && (
@@ -168,7 +170,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.palette.red[50],
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing.md,
+    marginEnd: spacing.md,
     paddingHorizontal: spacing.sm,
   },
   attentionCount: {

@@ -120,7 +120,7 @@ const styles = StyleSheet.create({
   },
   rightColumn: {
     flex: 1,
-    paddingLeft: spacing.md,
+    paddingStart: spacing.md,
     paddingBottom: spacing.xl,
   },
   action: {

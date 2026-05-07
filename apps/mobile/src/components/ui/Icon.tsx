@@ -6,6 +6,7 @@ export type AppIconName =
   | 'announcements'
   | 'arrow-left'
   | 'arrow-right'
+  | 'chevron-left'
   | 'building'
   | 'camera'
   | 'check'
@@ -97,6 +98,7 @@ export function Icon({
       ) : null}
       {name === 'check' ? <Path {...strokeProps} d="m20 6-11 11-5-5" /> : null}
       {name === 'chevron-right' ? <Path {...strokeProps} d="m9 18 6-6-6-6" /> : null}
+      {name === 'chevron-left' ? <Path {...strokeProps} d="m15 18-6-6 6-6" /> : null}
       {name === 'dashboard' ? (
         <>
           <Rect {...strokeProps} x="3" y="3" width="7" height="9" rx="2" />

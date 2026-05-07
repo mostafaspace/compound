@@ -199,8 +199,8 @@ const styles = StyleSheet.create({
   fabContainer: {
     position: 'absolute',
     bottom: layout.fabInset,
-    right: layout.fabInset,
-    left: layout.fabInset,
+    end: layout.fabInset,
+    start: layout.fabInset,
   },
   fab: {
     borderRadius: radii.lg,

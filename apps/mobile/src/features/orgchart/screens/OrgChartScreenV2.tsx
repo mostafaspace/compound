@@ -360,7 +360,7 @@ export const OrgChartScreen = ({ navigation }: any) => {
                                   )
                                 )}
                               </View>
-                              <View style={{ flex: 1, marginLeft: 10 }}>
+                              <View style={{ flex: 1, marginStart: 10 }}>
                                 <Typography numberOfLines={1} style={[styles.nodeName, { color: isDark ? '#F8FAFC' : '#0F172A' }]}>
                                   {node.name}
                                 </Typography>

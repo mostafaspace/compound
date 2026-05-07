@@ -10,7 +10,10 @@ import {
   ScrollView
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSelector } from 'react-redux';
 import { colors, layout } from '../../theme';
+import { selectLanguagePreference } from '../../store/systemSlice';
+import { appDirectionStyle, isRtlLanguage } from '../../i18n/direction';
 
 interface ScreenContainerProps {
   children: React.ReactNode;
@@ -30,9 +33,11 @@ export const ScreenContainer: React.FC<ScreenContainerProps> = ({
   edges = DEFAULT_EDGES,
 }) => {
   const isDark = useColorScheme() === 'dark';
+  const language = useSelector(selectLanguagePreference);
+  const isRtl = isRtlLanguage(language);
   
   const content = (
-    <View style={[styles.inner, style]}>
+    <View style={[styles.inner, appDirectionStyle(isRtl), style]}>
       {children}
     </View>
   );

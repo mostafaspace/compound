@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border.light,
   },
   attachmentCard: {
-    marginRight: spacing.xs,
+    marginEnd: spacing.xs,
     borderRadius: radii.md,
     overflow: "hidden",
     borderWidth: 1,

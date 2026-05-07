@@ -11,12 +11,14 @@ import { getEffectiveRoleType } from "@compound/contracts";
 import { MoreStackParamList } from "../../../navigation/types";
 import { colors, layout, radii, shadows, spacing } from "../../../theme";
 import { Icon, type AppIconName } from "../../../components/ui/Icon";
+import { isRtlLanguage, rowDirectionStyle, textDirectionStyle } from "../../../i18n/direction";
 
 type MoreScreenNavigationProp = StackNavigationProp<MoreStackParamList, "MoreHome">;
 
 export const MoreScreen = ({ navigation }: { navigation: MoreScreenNavigationProp }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const isDark = useColorScheme() === "dark";
+  const isRtl = isRtlLanguage(i18n.language);
 
   const user = useSelector(selectCurrentUser);
   const roleType = getEffectiveRoleType(user);
@@ -127,7 +129,7 @@ export const MoreScreen = ({ navigation }: { navigation: MoreScreenNavigationPro
 
         return (
           <View key={idx} style={styles.section}>
-            <Typography variant="label" style={styles.sectionTitle}>
+            <Typography variant="label" style={[styles.sectionTitle, textDirectionStyle(isRtl)]}>
               {section.title}
             </Typography>
             <View style={[
@@ -140,18 +142,19 @@ export const MoreScreen = ({ navigation }: { navigation: MoreScreenNavigationPro
                   onPress={() => navigation.navigate(item.screen as any)}
                   style={({ pressed }) => [
                     styles.menuItem,
+                    rowDirectionStyle(isRtl),
                     itemIdx < visibleItems.length - 1 && styles.borderBottom,
                     { borderBottomColor: isDark ? colors.border.dark : colors.border.light },
                     pressed && styles.menuItemPressed,
                   ]}
                 >
-                  <View style={styles.row}>
+                  <View style={[styles.row, rowDirectionStyle(isRtl)]}>
                     <View style={[styles.iconBadge, { backgroundColor: isDark ? colors.surfaceMuted.dark : colors.surfaceMuted.light }]}>
                       <Icon name={item.icon} color={colors.primary.light} size={22} />
                     </View>
-                    <Typography variant="h3" style={styles.label}>{item.label}</Typography>
+                    <Typography variant="h3" style={[styles.label, textDirectionStyle(isRtl)]}>{item.label}</Typography>
                   </View>
-                  <Icon name="chevron-right" color={isDark ? colors.text.secondary.dark : colors.text.secondary.light} size={20} />
+                  <Icon name={isRtl ? "chevron-left" : "chevron-right"} color={isDark ? colors.text.secondary.dark : colors.text.secondary.light} size={20} />
                 </Pressable>
               ))}
             </View>

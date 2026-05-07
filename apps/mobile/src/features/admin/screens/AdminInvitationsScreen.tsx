@@ -153,7 +153,7 @@ const styles = StyleSheet.create({
   },
   label: {
     color: colors.text.secondary.light,
-    marginRight: spacing.xs,
+    marginEnd: spacing.xs,
   },
   value: {
     fontWeight: '600',
@@ -177,8 +177,8 @@ const styles = StyleSheet.create({
   fabContainer: {
     position: 'absolute',
     bottom: spacing.xl,
-    left: spacing.lg,
-    right: spacing.lg,
+    start: spacing.lg,
+    end: spacing.lg,
   },
   fab: {
     borderRadius: 30,

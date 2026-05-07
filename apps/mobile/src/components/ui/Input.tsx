@@ -97,10 +97,10 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   inputWithToggle: {
-    paddingRight: 48,
+    paddingEnd: 48,
   },
   inputWithToggleRtl: {
-    paddingLeft: 48,
+    paddingStart: 48,
   },
   eyeButton: {
     position: 'absolute',
@@ -110,10 +110,10 @@ const styles = StyleSheet.create({
     width: componentSize.touch,
   },
   eyeButtonLtr: {
-    right: spacing.sm,
+    end: spacing.sm,
   },
   eyeButtonRtl: {
-    left: spacing.sm,
+    start: spacing.sm,
   },
   error: {
     marginTop: spacing.xs,

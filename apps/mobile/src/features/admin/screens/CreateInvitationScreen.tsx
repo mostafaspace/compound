@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 20,
-    marginRight: spacing.sm,
+    marginEnd: spacing.sm,
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.05)',
   },

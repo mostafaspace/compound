@@ -19,6 +19,7 @@ import { defaultApiBaseUrl } from '../../../services/api';
 import { useSelector } from 'react-redux';
 import { selectCurrentToken } from '../../../store/authSlice';
 import { Icon } from '../../../components/ui/Icon';
+import { isRtlLanguage, rowDirectionStyle, textDirectionStyle } from '../../../i18n/direction';
 
 const CATEGORIES = issueCategoryValues;
 const PRIORITIES = issuePriorityValues;
@@ -43,8 +44,9 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>;
 
 export const AddEditIssueScreen = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const isDark = useColorScheme() === 'dark';
+  const isRtl = isRtlLanguage(i18n.language);
   const route = useRoute<RouteProp<RootStackParamList, 'AddEditIssue'>>();
   const { issue } = route.params || {};
 
@@ -166,7 +168,7 @@ export const AddEditIssueScreen = () => {
     value: T,
     onChange: (v: T) => void,
   ) => (
-    <View style={styles.chips}>
+    <View style={[styles.chips, rowDirectionStyle(isRtl)]}>
       {options.map((opt) => (
         <Button
           key={opt}
@@ -187,7 +189,7 @@ export const AddEditIssueScreen = () => {
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="always">
         {!isEdit && (
           <>
-            <Typography variant="label" style={[styles.label, { color: text, marginTop: 0 }]}>
+            <Typography variant="label" style={[styles.label, { color: text, marginTop: 0 }, textDirectionStyle(isRtl)]}>
               {t('Issues.routeToLabel', { defaultValue: 'Route complaint to' })}
             </Typography>
             <Controller
@@ -197,7 +199,7 @@ export const AddEditIssueScreen = () => {
                 renderChips('targetRole', availableTargetRoles, value, onChange)
               }
             />
-            <Typography variant="caption" style={styles.helperText}>
+            <Typography variant="caption" style={[styles.helperText, textDirectionStyle(isRtl)]}>
               {submitBlockReason === 'loading'
                 ? t('Issues.loadingUnitContext')
                 : submitBlockReason === 'missing-unit'
@@ -207,7 +209,7 @@ export const AddEditIssueScreen = () => {
           </>
         )}
 
-        <Typography variant="label" style={[styles.label, { color: text, marginTop: isEdit ? 0 : spacing.sm }]}>
+        <Typography variant="label" style={[styles.label, { color: text, marginTop: isEdit ? 0 : spacing.sm }, textDirectionStyle(isRtl)]}>
           {t('Issues.categoryLabel', { defaultValue: 'Category' })}
         </Typography>
         <Controller
@@ -216,7 +218,7 @@ export const AddEditIssueScreen = () => {
           render={({ field: { value, onChange } }) => renderChips('category', CATEGORIES, value, onChange)}
         />
 
-        <Typography variant="label" style={[styles.label, { color: text }]}>
+        <Typography variant="label" style={[styles.label, { color: text }, textDirectionStyle(isRtl)]}>
           {t('Issues.priorityLabel', { defaultValue: 'Priority' })}
         </Typography>
         <Controller
@@ -225,7 +227,7 @@ export const AddEditIssueScreen = () => {
           render={({ field: { value, onChange } }) => renderChips('priority', PRIORITIES, value, onChange)}
         />
 
-        <Typography variant="label" style={[styles.label, { color: text }]}>
+        <Typography variant="label" style={[styles.label, { color: text }, textDirectionStyle(isRtl)]}>
           {t('Issues.titleLabel', { defaultValue: 'Title' })}
         </Typography>
         <Controller
@@ -237,7 +239,7 @@ export const AddEditIssueScreen = () => {
                 backgroundColor: surface,
                 borderColor: errors.title ? colors.error : border,
                 color: text,
-              }]}
+              }, textDirectionStyle(isRtl)]}
               value={value}
               onChangeText={onChange}
               onBlur={onBlur}
@@ -249,10 +251,10 @@ export const AddEditIssueScreen = () => {
           )}
         />
         {errors.title && (
-          <Typography variant="caption" style={styles.error}>{errors.title.message}</Typography>
+          <Typography variant="caption" style={[styles.error, textDirectionStyle(isRtl)]}>{errors.title.message}</Typography>
         )}
 
-        <Typography variant="label" style={[styles.label, { color: text }]}>
+        <Typography variant="label" style={[styles.label, { color: text }, textDirectionStyle(isRtl)]}>
           {t('Issues.descriptionLabel', { defaultValue: 'Description' })}
         </Typography>
         <Controller
@@ -265,7 +267,7 @@ export const AddEditIssueScreen = () => {
                 backgroundColor: surface,
                 borderColor: errors.description ? colors.error : border,
                 color: text,
-              }]}
+              }, textDirectionStyle(isRtl)]}
               value={value}
               onChangeText={onChange}
               onBlur={onBlur}
@@ -280,11 +282,11 @@ export const AddEditIssueScreen = () => {
           )}
         />
         {errors.description && (
-          <Typography variant="caption" style={styles.error}>{errors.description.message}</Typography>
+          <Typography variant="caption" style={[styles.error, textDirectionStyle(isRtl)]}>{errors.description.message}</Typography>
         )}
 
-        <View style={styles.attachmentHeader}>
-          <Typography variant="label" style={[styles.label, { color: text, marginTop: 0, marginBottom: 0 }]}>
+        <View style={[styles.attachmentHeader, rowDirectionStyle(isRtl)]}>
+          <Typography variant="label" style={[styles.label, { color: text, marginTop: 0, marginBottom: 0 }, textDirectionStyle(isRtl)]}>
             {t('Issues.attachmentLabel', { defaultValue: 'Attachments (Optional)' })}
           </Typography>
           <Typography variant="caption" style={styles.helperText}>
@@ -338,7 +340,7 @@ export const AddEditIssueScreen = () => {
 
         {canAddMore && (
           <TouchableOpacity
-            style={[styles.attachBtn, { borderColor: border, backgroundColor: surface }]}
+            style={[styles.attachBtn, rowDirectionStyle(isRtl), { borderColor: border, backgroundColor: surface }]}
             onPress={showAttachmentOptions}
           >
             <Icon name="plus" color={colors.primary.light} size={18} />
@@ -391,9 +393,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   attachmentPreviewContainer: {
-    marginRight: spacing.sm,
+    marginEnd: spacing.sm,
     paddingTop: 6,
-    paddingRight: 6,
+    paddingEnd: 6,
     position: 'relative',
     alignSelf: 'flex-start',
   },
@@ -411,7 +413,7 @@ const styles = StyleSheet.create({
   removeAttachmentBtn: {
     position: 'absolute',
     top: 0,
-    right: 0,
+    end: 0,
     backgroundColor: colors.error,
     width: 22,
     height: 22,

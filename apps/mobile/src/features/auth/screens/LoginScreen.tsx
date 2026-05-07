@@ -58,7 +58,7 @@ const PersonaChip = ({
       paddingVertical: 6,
       borderRadius: radii.pill,
       backgroundColor: disabled ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.05)',
-      marginRight: 8,
+      marginEnd: 8,
       borderWidth: 1,
       borderColor: 'rgba(255,255,255,0.1)',
       opacity: disabled ? 0.5 : 1,
