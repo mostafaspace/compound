@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\AccountMergeController;
 use App\Http\Controllers\Api\V1\AnnouncementController;
 use App\Http\Controllers\Api\V1\Apartments\ApartmentController;
+use App\Http\Controllers\Api\V1\Apartments\ApartmentParkingSpotController;
 use App\Http\Controllers\Api\V1\Apartments\ApartmentResidentController;
 use App\Http\Controllers\Api\V1\Apartments\ApartmentVehicleController;
 use App\Http\Controllers\Api\V1\AuditLogController;
@@ -121,6 +122,10 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             ->parameters(['vehicles' => 'vehicle'])
             ->only(['index', 'store', 'update', 'destroy'])
             ->names('apartments.vehicles');
+        Route::apiResource('/apartments/{unit}/parking-spots', ApartmentParkingSpotController::class)
+            ->parameters(['parking-spots' => 'parkingSpot'])
+            ->only(['index', 'store', 'update', 'destroy'])
+            ->names('apartments.parking-spots');
 
         // ─── Localization (CM-85) ─────────────────────────────────────────
         // Returns effective locale settings for the current compound.
