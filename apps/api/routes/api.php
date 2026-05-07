@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\AccountMergeController;
 use App\Http\Controllers\Api\V1\AnnouncementController;
 use App\Http\Controllers\Api\V1\Apartments\ApartmentController;
+use App\Http\Controllers\Api\V1\Apartments\ApartmentDocumentController;
 use App\Http\Controllers\Api\V1\Apartments\ApartmentNoteController;
 use App\Http\Controllers\Api\V1\Apartments\ApartmentParkingSpotController;
 use App\Http\Controllers\Api\V1\Apartments\ApartmentResidentController;
@@ -132,6 +133,16 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::post('/apartments/{unit}/notes', [ApartmentNoteController::class, 'store'])->name('apartments.notes.store');
         Route::get('/apartments/{unit}/violations', [ApartmentViolationController::class, 'index'])
             ->name('apartments.violations.index');
+        Route::get('/apartments/{unit}/documents', [ApartmentDocumentController::class, 'index'])
+            ->name('apartments.documents.index');
+        Route::post('/apartments/{unit}/documents', [ApartmentDocumentController::class, 'store'])
+            ->middleware('throttle:document-upload')
+            ->name('apartments.documents.store');
+        Route::post('/apartments/{unit}/documents/{document}/replace', [ApartmentDocumentController::class, 'replace'])
+            ->middleware('throttle:document-upload')
+            ->name('apartments.documents.replace');
+        Route::get('/apartments/{unit}/documents/{document}/download', [ApartmentDocumentController::class, 'download'])
+            ->name('apartments.documents.download');
 
         // ─── Localization (CM-85) ─────────────────────────────────────────
         // Returns effective locale settings for the current compound.
