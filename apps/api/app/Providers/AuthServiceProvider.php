@@ -2,9 +2,11 @@
 
 namespace App\Providers;
 
+use App\Models\Apartments\ViolationRule;
 use App\Models\Property\Unit;
 use App\Models\User;
 use App\Policies\Apartments\ApartmentPolicy;
+use App\Policies\Apartments\ViolationRulePolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 use Illuminate\Support\Facades\Gate;
 
@@ -15,6 +17,7 @@ class AuthServiceProvider extends ServiceProvider
      */
     protected $policies = [
         Unit::class => ApartmentPolicy::class,
+        ViolationRule::class => ViolationRulePolicy::class,
     ];
 
     public function boot(): void

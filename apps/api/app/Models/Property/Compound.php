@@ -3,6 +3,7 @@
 namespace App\Models\Property;
 
 use App\Enums\CompoundStatus;
+use App\Models\Apartments\ViolationRule;
 use Database\Factories\Property\CompoundFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -50,5 +51,13 @@ class Compound extends Model
     public function units(): HasMany
     {
         return $this->hasMany(Unit::class);
+    }
+
+    /**
+     * @return HasMany<ViolationRule, $this>
+     */
+    public function violationRules(): HasMany
+    {
+        return $this->hasMany(ViolationRule::class);
     }
 }

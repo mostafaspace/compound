@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AccountMergeController;
+use App\Http\Controllers\Api\V1\Admin\Apartments\ViolationRuleController as AdminViolationRuleController;
 use App\Http\Controllers\Api\V1\AnnouncementController;
 use App\Http\Controllers\Api\V1\Apartments\ApartmentController;
 use App\Http\Controllers\Api\V1\Apartments\ApartmentDocumentController;
@@ -143,6 +144,11 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             ->name('apartments.documents.replace');
         Route::get('/apartments/{unit}/documents/{document}/download', [ApartmentDocumentController::class, 'download'])
             ->name('apartments.documents.download');
+
+        Route::apiResource('/admin/compounds/{compound}/violation-rules', AdminViolationRuleController::class)
+            ->parameters(['violation-rules' => 'rule'])
+            ->only(['index', 'store', 'update', 'destroy'])
+            ->names('admin.compounds.violation-rules');
 
         // ─── Localization (CM-85) ─────────────────────────────────────────
         // Returns effective locale settings for the current compound.
