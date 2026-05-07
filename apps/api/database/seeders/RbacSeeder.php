@@ -5,16 +5,17 @@ namespace Database\Seeders;
 use App\Enums\Permission;
 use App\Enums\UserRole;
 use Illuminate\Database\Seeder;
-use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission as SpatiePermission;
+use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 
 class RbacSeeder extends Seeder
 {
     public function run(): void
     {
-        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
-        // Create all 25 permissions
+        // Create all defined permissions
         foreach (Permission::values() as $perm) {
             SpatiePermission::firstOrCreate(['name' => $perm, 'guard_name' => 'sanctum']);
         }
@@ -36,7 +37,8 @@ class RbacSeeder extends Seeder
                 Permission::ViewOrgChart, Permission::ViewAnalytics,
                 Permission::ViewAuditLogs, Permission::ViewMeetings,
                 Permission::ManageMeetings, Permission::ViewMaintenance,
-                Permission::ManageMaintenance, Permission::ManageSettings,
+                Permission::ManageMaintenance, Permission::ApartmentsAdmin,
+                Permission::ManageSettings,
             ),
 
             'building_supervisor' => $p(
@@ -65,6 +67,7 @@ class RbacSeeder extends Seeder
             UserRole::FinanceReviewer->value => $p(
                 Permission::ViewFinance, Permission::ManageFinance,
                 Permission::ViewUsers,
+                Permission::ApartmentsAdmin, Permission::ApplyApartmentViolation,
             ),
 
             UserRole::SecurityGuard->value => $p(
