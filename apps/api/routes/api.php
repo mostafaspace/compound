@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AccountMergeController;
+use App\Http\Controllers\Api\V1\Admin\Apartments\ApartmentDocumentReviewController as AdminApartmentDocumentReviewController;
 use App\Http\Controllers\Api\V1\Admin\Apartments\ViolationApplicationController as AdminViolationApplicationController;
 use App\Http\Controllers\Api\V1\Admin\Apartments\ViolationRuleController as AdminViolationRuleController;
 use App\Http\Controllers\Api\V1\AnnouncementController;
@@ -156,6 +157,10 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             ->name('admin.apartment-violations.paid');
         Route::patch('/admin/apartment-violations/{violation}/waive', [AdminViolationApplicationController::class, 'markWaived'])
             ->name('admin.apartment-violations.waive');
+        Route::get('/admin/document-reviews', [AdminApartmentDocumentReviewController::class, 'index'])
+            ->name('admin.document-reviews.index');
+        Route::patch('/admin/document-reviews/{version}', [AdminApartmentDocumentReviewController::class, 'update'])
+            ->name('admin.document-reviews.update');
 
         // ─── Localization (CM-85) ─────────────────────────────────────────
         // Returns effective locale settings for the current compound.
