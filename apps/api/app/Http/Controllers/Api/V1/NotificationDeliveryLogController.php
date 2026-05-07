@@ -6,6 +6,7 @@ use App\Enums\DeliveryStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\NotificationDeliveryLogResource;
 use App\Models\NotificationDeliveryLog;
+use App\Models\User;
 use App\Services\CompoundContextService;
 use App\Services\ExternalNotificationService;
 use Illuminate\Http\JsonResponse;
@@ -26,7 +27,7 @@ class NotificationDeliveryLogController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $compoundId = $this->context->resolve($request);
-        $status     = $request->query('status');
+        $status = $request->query('status');
 
         $query = NotificationDeliveryLog::query()
             ->with('notification')
@@ -92,17 +93,17 @@ class NotificationDeliveryLogController extends Controller
         $query->where(function ($scoped) use ($compoundId): void {
             $scoped
                 ->where('compound_id', $compoundId)
-                ->orWhereHas('unitMemberships.unit', fn ($unitQuery) => $unitQuery->where('compound_id', $compoundId));
+                ->orWhereHas('apartmentResidents.unit', fn ($unitQuery) => $unitQuery->where('compound_id', $compoundId));
         });
     }
 
-    private function userBelongsToCompound(\App\Models\User $user, string $compoundId): bool
+    private function userBelongsToCompound(User $user, string $compoundId): bool
     {
         if ($user->compound_id === $compoundId) {
             return true;
         }
 
-        return $user->unitMemberships()
+        return $user->apartmentResidents()
             ->whereHas('unit', fn ($unitQuery) => $unitQuery->where('compound_id', $compoundId))
             ->exists();
     }

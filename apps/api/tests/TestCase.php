@@ -28,9 +28,11 @@ abstract class TestCase extends BaseTestCase
     {
         $values = [
             'APP_ENV' => 'testing',
+            'CACHE_STORE' => 'array',
             'DB_CONNECTION' => 'sqlite',
             'DB_DATABASE' => ':memory:',
             'DB_URL' => '',
+            'SESSION_DRIVER' => 'array',
         ];
 
         foreach ($values as $key => $value) {

@@ -13,11 +13,13 @@ use App\Models\User;
 use Database\Seeders\RbacSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class OwnerRegistrationTest extends TestCase
@@ -28,8 +30,8 @@ class OwnerRegistrationTest extends TestCase
     {
         parent::setUp();
 
-        $this->withoutMiddleware(\Illuminate\Routing\Middleware\ThrottleRequests::class);
-        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        $this->withoutMiddleware(ThrottleRequests::class);
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
         $this->seed(RbacSeeder::class);
         Storage::fake('local');
     }
@@ -150,7 +152,7 @@ class OwnerRegistrationTest extends TestCase
 
         $this->assertSame(AccountStatus::Active, $user->status);
         $this->assertSame(UserRole::Resident, $user->role);
-        $this->assertDatabaseHas('unit_memberships', [
+        $this->assertDatabaseHas('apartment_residents', [
             'unit_id' => $unit->id,
             'user_id' => $user->id,
             'relation_type' => UnitRelationType::Owner->value,

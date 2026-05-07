@@ -5,14 +5,17 @@ namespace App\Http\Controllers\Api\V1;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RepresentativeAssignmentResource;
+use App\Models\Property\Building;
 use App\Models\Property\Compound;
+use App\Models\Property\Floor;
 use App\Models\Property\Unit;
 use App\Models\RepresentativeAssignment;
 use App\Models\User;
-use App\Services\OrgChartService;
 use App\Services\CompoundContextService;
+use App\Services\OrgChartService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class OrgChartController extends Controller
 {
@@ -77,11 +80,11 @@ class OrgChartController extends Controller
                 'photo_url' => $user->photo_url,
                 'roles' => $user->roles()->pluck('name'),
                 'managed_scopes' => $managedScopes,
-            ]
+            ],
         ]);
     }
 
-    public function assignBuildingHead(Request $request, \App\Models\Property\Building $building): JsonResponse
+    public function assignBuildingHead(Request $request, Building $building): JsonResponse
     {
         /** @var User $actor */
         $actor = $request->user();
@@ -91,7 +94,7 @@ class OrgChartController extends Controller
             'userId' => 'required|exists:users,id',
         ]);
 
-        \Illuminate\Support\Facades\DB::transaction(function () use ($building, $request, $actor) {
+        DB::transaction(function () use ($building, $request, $actor) {
             // Expire old building reps
             RepresentativeAssignment::query()
                 ->active()
@@ -116,7 +119,7 @@ class OrgChartController extends Controller
         return response()->json(['message' => 'Building head assigned successfully.']);
     }
 
-    public function assignFloorRepresentative(Request $request, \App\Models\Property\Floor $floor): JsonResponse
+    public function assignFloorRepresentative(Request $request, Floor $floor): JsonResponse
     {
         /** @var User $actor */
         $actor = $request->user();
@@ -126,7 +129,7 @@ class OrgChartController extends Controller
             'userId' => 'required|exists:users,id',
         ]);
 
-        \Illuminate\Support\Facades\DB::transaction(function () use ($floor, $request, $actor) {
+        DB::transaction(function () use ($floor, $request, $actor) {
             // Expire old floor reps
             RepresentativeAssignment::query()
                 ->active()
@@ -225,7 +228,7 @@ class OrgChartController extends Controller
             return;
         }
 
-        $hasMembership = $viewer->unitMemberships()
+        $hasMembership = $viewer->apartmentResidents()
             ->activeForAccess()
             ->whereHas('unit', fn ($query) => $query->where('compound_id', $compoundId))
             ->exists();
@@ -244,7 +247,7 @@ class OrgChartController extends Controller
             return;
         }
 
-        $hasMembership = $viewer->unitMemberships()
+        $hasMembership = $viewer->apartmentResidents()
             ->activeForAccess()
             ->where('unit_id', $unit->id)
             ->exists();

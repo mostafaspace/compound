@@ -96,7 +96,7 @@ class IssuesTest extends TestCase
             'status' => AccountStatus::Active->value,
         ]);
 
-        $unit->memberships()->create([
+        $unit->apartmentResidents()->create([
             'user_id' => $resident->id,
             'relation_type' => UnitRelationType::Owner->value,
             'starts_at' => now()->toDateString(),
@@ -724,7 +724,7 @@ class IssuesTest extends TestCase
             'compound_id' => null,
             'status' => AccountStatus::Active->value,
         ]);
-        $unitA->memberships()->create([
+        $unitA->apartmentResidents()->create([
             'user_id' => $scopedAdmin->id,
             'relation_type' => UnitRelationType::Owner->value,
             'starts_at' => now()->toDateString(),
@@ -853,7 +853,7 @@ class IssuesTest extends TestCase
         ]);
         $unit = $this->makeUnit();
 
-        $unit->memberships()->create([
+        $unit->apartmentResidents()->create([
             'user_id' => $resident->id,
             'relation_type' => UnitRelationType::Owner->value,
             'starts_at' => now()->toDateString(),

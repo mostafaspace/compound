@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Support\AuditLogger;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class IssueService
@@ -350,8 +351,8 @@ class IssueService
 
     public function deleteAttachment(IssueAttachment $attachment, User $actor): void
     {
-        \Illuminate\Support\Facades\Storage::disk($attachment->disk)->delete($attachment->path);
-        
+        Storage::disk($attachment->disk)->delete($attachment->path);
+
         $issueId = $attachment->issue_id;
         $attachmentId = $attachment->id;
         $originalName = $attachment->original_name;
@@ -401,12 +402,23 @@ class IssueService
     public function userCanManageIssue(User $user, Issue $issue): bool
     {
         // Reporter can edit their own issue if it's not resolved yet
-        if ($issue->reported_by === $user->id && !in_array($issue->status, ['resolved', 'closed'])) {
+        if ($issue->reported_by === $user->id && ! in_array($issue->status, ['resolved', 'closed'])) {
             return true;
         }
 
-        // Managers and security can manage issues
-        return $user->hasAnyRole(['super_admin', 'compound_admin', 'president', 'board_member', 'support_agent', 'security_head', 'security_guard']);
+        if (! $user->hasAnyEffectiveRole([
+            UserRole::SuperAdmin,
+            UserRole::CompoundAdmin,
+            UserRole::President,
+            UserRole::BoardMember,
+            UserRole::SupportAgent,
+            UserRole::SecurityGuard,
+            'security_head',
+        ])) {
+            return false;
+        }
+
+        return $this->compoundContext->userCanAccessCompoundById($user, $issue->compound_id);
     }
 
     public function userCanEscalateIssue(User $user, Issue $issue): bool
@@ -423,7 +435,7 @@ class IssueService
     /**
      * Apply role-based scope filtering on the issues query for list endpoints.
      *
-     * @param Builder<Issue> $query
+     * @param  Builder<Issue>  $query
      * @return Builder<Issue>
      */
     public function applyScopeForUser(Builder $query, User $user): Builder

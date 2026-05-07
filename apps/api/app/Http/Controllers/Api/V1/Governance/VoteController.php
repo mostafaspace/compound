@@ -10,7 +10,6 @@ use App\Enums\VoteType;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Governance\VoteResource;
 use App\Models\Governance\Vote;
-use App\Models\Governance\VoteOption;
 use App\Models\Governance\VoteParticipation;
 use App\Models\User;
 use App\Services\CompoundContextService;
@@ -49,8 +48,8 @@ class VoteController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $validated = $request->validate([
-            'status'     => ['nullable', 'string', Rule::in(array_column(VoteStatus::cases(), 'value'))],
-            'type'       => ['nullable', 'string', Rule::in(array_column(VoteType::cases(), 'value'))],
+            'status' => ['nullable', 'string', Rule::in(array_column(VoteStatus::cases(), 'value'))],
+            'type' => ['nullable', 'string', Rule::in(array_column(VoteType::cases(), 'value'))],
             'compoundId' => ['nullable', 'string'],
         ]);
 
@@ -62,7 +61,7 @@ class VoteController extends Controller
         if (! $isAdmin) {
             // Residents only see active votes in their verified compounds
             $query->where('status', VoteStatus::Active->value);
-            $verifiedCompoundIds = $user->unitMemberships()
+            $verifiedCompoundIds = $user->apartmentResidents()
                 ->activeForAccess()
                 ->with('unit:id,compound_id')
                 ->get()
@@ -106,19 +105,19 @@ class VoteController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'compoundId'            => ['required', 'string', 'exists:compounds,id'],
-            'buildingId'            => ['nullable', 'string', 'exists:buildings,id'],
-            'type'                  => ['required', 'string', Rule::in(array_column(VoteType::cases(), 'value'))],
-            'title'                 => ['required', 'string', 'max:255'],
-            'description'           => ['nullable', 'string'],
-            'scope'                 => ['nullable', 'string', Rule::in(array_column(VoteScope::cases(), 'value'))],
-            'eligibility'           => ['nullable', 'string', Rule::in(array_column(VoteEligibility::cases(), 'value'))],
+            'compoundId' => ['required', 'string', 'exists:compounds,id'],
+            'buildingId' => ['nullable', 'string', 'exists:buildings,id'],
+            'type' => ['required', 'string', Rule::in(array_column(VoteType::cases(), 'value'))],
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'scope' => ['nullable', 'string', Rule::in(array_column(VoteScope::cases(), 'value'))],
+            'eligibility' => ['nullable', 'string', Rule::in(array_column(VoteEligibility::cases(), 'value'))],
             'requiresDocCompliance' => ['nullable', 'boolean'],
-            'isAnonymous'           => ['nullable', 'boolean'],
-            'startsAt'              => ['nullable', 'date', 'before:endsAt'],
-            'endsAt'                => ['nullable', 'date', 'after:now'],
-            'options'               => ['required', 'array', 'min:2'],
-            'options.*.label'       => ['required', 'string', 'max:255'],
+            'isAnonymous' => ['nullable', 'boolean'],
+            'startsAt' => ['nullable', 'date', 'before:endsAt'],
+            'endsAt' => ['nullable', 'date', 'after:now'],
+            'options' => ['required', 'array', 'min:2'],
+            'options.*.label' => ['required', 'string', 'max:255'],
         ]);
         /** @var User $actor */
         $actor = $request->user();
@@ -132,24 +131,24 @@ class VoteController extends Controller
         }
 
         $vote = Vote::create([
-            'compound_id'             => $validated['compoundId'],
-            'building_id'             => $validated['buildingId'] ?? null,
-            'type'                    => $validated['type'],
-            'title'                   => $validated['title'],
-            'description'             => $validated['description'] ?? null,
-            'status'                  => VoteStatus::Draft->value,
-            'scope'                   => $validated['scope'] ?? VoteScope::Compound->value,
-            'eligibility'             => $validated['eligibility'] ?? VoteEligibility::OwnersOnly->value,
+            'compound_id' => $validated['compoundId'],
+            'building_id' => $validated['buildingId'] ?? null,
+            'type' => $validated['type'],
+            'title' => $validated['title'],
+            'description' => $validated['description'] ?? null,
+            'status' => VoteStatus::Draft->value,
+            'scope' => $validated['scope'] ?? VoteScope::Compound->value,
+            'eligibility' => $validated['eligibility'] ?? VoteEligibility::OwnersOnly->value,
             'requires_doc_compliance' => $validated['requiresDocCompliance'] ?? false,
-            'is_anonymous'            => $validated['isAnonymous'] ?? false,
-            'starts_at'               => $validated['startsAt'] ?? null,
-            'ends_at'                 => $validated['endsAt'] ?? null,
-            'created_by'              => $actor->id,
+            'is_anonymous' => $validated['isAnonymous'] ?? false,
+            'starts_at' => $validated['startsAt'] ?? null,
+            'ends_at' => $validated['endsAt'] ?? null,
+            'created_by' => $actor->id,
         ]);
 
         foreach ($validated['options'] as $index => $optionData) {
             $vote->options()->create([
-                'label'      => $optionData['label'],
+                'label' => $optionData['label'],
                 'sort_order' => $index,
             ]);
         }
@@ -198,34 +197,34 @@ class VoteController extends Controller
         }
 
         $validated = $request->validate([
-            'title'                 => ['sometimes', 'required', 'string', 'max:255'],
-            'description'           => ['nullable', 'string'],
-            'scope'                 => ['sometimes', 'string', Rule::in(array_column(VoteScope::cases(), 'value'))],
-            'eligibility'           => ['sometimes', 'string', Rule::in(array_column(VoteEligibility::cases(), 'value'))],
+            'title' => ['sometimes', 'required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'scope' => ['sometimes', 'string', Rule::in(array_column(VoteScope::cases(), 'value'))],
+            'eligibility' => ['sometimes', 'string', Rule::in(array_column(VoteEligibility::cases(), 'value'))],
             'requiresDocCompliance' => ['sometimes', 'boolean'],
-            'isAnonymous'           => ['sometimes', 'boolean'],
-            'startsAt'              => ['nullable', 'date', 'before:endsAt'],
-            'endsAt'                => ['nullable', 'date', 'after:now'],
-            'options'               => ['sometimes', 'array', 'min:2'],
-            'options.*.label'       => ['required_with:options', 'string', 'max:255'],
+            'isAnonymous' => ['sometimes', 'boolean'],
+            'startsAt' => ['nullable', 'date', 'before:endsAt'],
+            'endsAt' => ['nullable', 'date', 'after:now'],
+            'options' => ['sometimes', 'array', 'min:2'],
+            'options.*.label' => ['required_with:options', 'string', 'max:255'],
         ]);
 
         $vote->update(array_filter([
-            'title'                   => $validated['title'] ?? null,
-            'description'             => $validated['description'] ?? null,
-            'scope'                   => $validated['scope'] ?? null,
-            'eligibility'             => $validated['eligibility'] ?? null,
+            'title' => $validated['title'] ?? null,
+            'description' => $validated['description'] ?? null,
+            'scope' => $validated['scope'] ?? null,
+            'eligibility' => $validated['eligibility'] ?? null,
             'requires_doc_compliance' => $validated['requiresDocCompliance'] ?? null,
-            'is_anonymous'            => $validated['isAnonymous'] ?? null,
-            'starts_at'               => $validated['startsAt'] ?? null,
-            'ends_at'                 => $validated['endsAt'] ?? null,
+            'is_anonymous' => $validated['isAnonymous'] ?? null,
+            'starts_at' => $validated['startsAt'] ?? null,
+            'ends_at' => $validated['endsAt'] ?? null,
         ], fn ($v) => ! is_null($v)));
 
         if (isset($validated['options'])) {
             $vote->options()->delete();
             foreach ($validated['options'] as $index => $optionData) {
                 $vote->options()->create([
-                    'label'      => $optionData['label'],
+                    'label' => $optionData['label'],
                     'sort_order' => $index,
                 ]);
             }
@@ -352,7 +351,7 @@ class VoteController extends Controller
         if (! $eligibility['eligible']) {
             return response()->json([
                 'message' => 'You are not eligible to vote.',
-                'reason'  => $eligibility['reason'],
+                'reason' => $eligibility['reason'],
             ], 403);
         }
 
@@ -361,7 +360,7 @@ class VoteController extends Controller
         if ($unitId === null) {
             return response()->json([
                 'message' => 'No valid unit membership found for this vote.',
-                'reason'  => 'no_unit_membership',
+                'reason' => 'no_unit_membership',
             ], 403);
         }
 
@@ -369,7 +368,7 @@ class VoteController extends Controller
         if (VoteParticipation::query()->where('vote_id', $vote->id)->where('user_id', $user->id)->exists()) {
             return response()->json([
                 'message' => 'You have already voted in this election.',
-                'reason'  => 'already_voted',
+                'reason' => 'already_voted',
             ], 409);
         }
 
@@ -377,7 +376,7 @@ class VoteController extends Controller
         if (VoteParticipation::query()->where('vote_id', $vote->id)->where('unit_id', $unitId)->exists()) {
             return response()->json([
                 'message' => 'Your apartment has already voted in this election.',
-                'reason'  => 'apartment_already_voted',
+                'reason' => 'apartment_already_voted',
             ], 409);
         }
 
@@ -386,10 +385,10 @@ class VoteController extends Controller
         ]);
 
         VoteParticipation::create([
-            'vote_id'              => $vote->id,
-            'user_id'              => $user->id,
-            'unit_id'              => $unitId,
-            'option_id'            => $validated['optionId'],
+            'vote_id' => $vote->id,
+            'user_id' => $user->id,
+            'unit_id' => $unitId,
+            'option_id' => $validated['optionId'],
             'eligibility_snapshot' => $eligibility['snapshot'],
         ]);
 
@@ -428,13 +427,13 @@ class VoteController extends Controller
             ->get();
 
         $votersList = $participations->map(fn (VoteParticipation $p) => [
-            'userId'     => $p->user_id,
-            'userName'   => $p->user?->name,
-            'unitId'     => $p->unit_id,
+            'userId' => $p->user_id,
+            'userName' => $p->user?->name,
+            'unitId' => $p->unit_id,
             'unitNumber' => $p->unit?->unit_number,
-            'optionId'   => $p->option_id,
-            'option'     => $p->option?->label,
-            'votedAt'    => $p->created_at?->toIso8601String(),
+            'optionId' => $p->option_id,
+            'option' => $p->option?->label,
+            'votedAt' => $p->created_at?->toIso8601String(),
         ]);
 
         return response()->json(['data' => $votersList->toArray()]);
@@ -456,7 +455,7 @@ class VoteController extends Controller
         return response()->json([
             'data' => [
                 'eligible' => $result['eligible'],
-                'reason'   => $result['reason'],
+                'reason' => $result['reason'],
                 'hasVoted' => $hasVoted,
             ],
         ]);
@@ -467,15 +466,15 @@ class VoteController extends Controller
      *
      * @return array{eligible: bool, reason: string|null, snapshot: array<string, mixed>}
      */
-    private function checkEligibility(Vote $vote, \App\Models\User $user): array
+    private function checkEligibility(Vote $vote, User $user): array
     {
         $effectiveRoleNames = $user->effectiveRoleNames();
         $isResidentOwner = $user->hasEffectiveRole(UserRole::ResidentOwner);
         $isResidentTenant = $user->hasEffectiveRole(UserRole::ResidentTenant);
 
         $snapshot = [
-            'userId'   => $user->id,
-            'role'     => $isResidentOwner
+            'userId' => $user->id,
+            'role' => $isResidentOwner
                 ? UserRole::ResidentOwner->value
                 : ($isResidentTenant ? UserRole::ResidentTenant->value : ($effectiveRoleNames[0] ?? ($user->role->value ?? $user->role))),
             'effectiveRoles' => $effectiveRoleNames,
@@ -515,7 +514,7 @@ class VoteController extends Controller
 
         // Building scope check
         if ($vote->scope === VoteScope::Building->value && $vote->building_id) {
-            $isInBuilding = $user->unitMemberships()
+            $isInBuilding = $user->apartmentResidents()
                 ->activeForAccess()
                 ->whereHas('unit', fn ($q) => $q->where('building_id', $vote->building_id))
                 ->exists();
@@ -527,7 +526,7 @@ class VoteController extends Controller
 
         // Document compliance check
         if ($vote->requires_doc_compliance) {
-            $isVerified = $user->unitMemberships()
+            $isVerified = $user->apartmentResidents()
                 ->activeForAccess()
                 ->whereHas('unit', fn ($q) => $q->where('compound_id', $vote->compound_id))
                 ->exists();
@@ -547,7 +546,7 @@ class VoteController extends Controller
 
     private function resolveVoterUnitId(Vote $vote, User $user): ?string
     {
-        $membership = $user->unitMemberships()
+        $membership = $user->apartmentResidents()
             ->activeForAccess()
             ->whereHas('unit', function ($q) use ($vote): void {
                 $q->where('compound_id', $vote->compound_id);
@@ -575,7 +574,7 @@ class VoteController extends Controller
             return;
         }
 
-        $hasMembership = $user->unitMemberships()
+        $hasMembership = $user->apartmentResidents()
             ->activeForAccess()
             ->whereHas('unit', fn ($query) => $query->where('compound_id', $vote->compound_id))
             ->exists();

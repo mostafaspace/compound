@@ -27,6 +27,7 @@ use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Spatie\Permission\Models\Permission as SpatiePermission;
 use Spatie\Permission\Models\Role as SpatieRole;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class OnboardingAndDocumentsTest extends TestCase
@@ -37,7 +38,7 @@ class OnboardingAndDocumentsTest extends TestCase
     {
         parent::setUp();
 
-        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 
     public function test_admin_can_invite_and_resident_can_accept(): void
@@ -92,7 +93,7 @@ class OnboardingAndDocumentsTest extends TestCase
             'email' => 'nora.owner@example.com',
             'delivery_count' => 1,
         ]);
-        $this->assertDatabaseHas('unit_memberships', [
+        $this->assertDatabaseHas('apartment_residents', [
             'unit_id' => $unit->id,
             'user_id' => $resident->id,
             'relation_type' => UnitRelationType::Owner->value,
@@ -267,7 +268,7 @@ class OnboardingAndDocumentsTest extends TestCase
         ]);
         $adminA->assignRole($compoundHeadRole);
         $adminA->givePermissionTo($viewUsersPermission);
-        $unitA->memberships()->create([
+        $unitA->apartmentResidents()->create([
             'user_id' => $adminA->id,
             'relation_type' => UnitRelationType::Owner->value,
             'verification_status' => VerificationStatus::Verified->value,
@@ -330,7 +331,7 @@ class OnboardingAndDocumentsTest extends TestCase
         ]);
         $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
 
-        $unit->memberships()->create([
+        $unit->apartmentResidents()->create([
             'user_id' => $resident->id,
             'relation_type' => UnitRelationType::Owner->value,
             'verification_status' => VerificationStatus::Verified->value,
@@ -522,7 +523,7 @@ class OnboardingAndDocumentsTest extends TestCase
         ]);
         $admin->assignRole($compoundHeadRole);
         $admin->givePermissionTo($viewUsersPermission);
-        Unit::query()->findOrFail($unitA->id)->memberships()->create([
+        Unit::query()->findOrFail($unitA->id)->apartmentResidents()->create([
             'user_id' => $admin->id,
             'relation_type' => UnitRelationType::Owner->value,
             'verification_status' => VerificationStatus::Verified->value,
@@ -591,7 +592,7 @@ class OnboardingAndDocumentsTest extends TestCase
             ->for($building)
             ->create(['floor_id' => null, 'unit_number' => 'B-202']);
 
-        $unit->memberships()->create([
+        $unit->apartmentResidents()->create([
             'user_id' => $resident->id,
             'relation_type' => UnitRelationType::Owner->value,
             'is_primary' => true,
@@ -622,7 +623,7 @@ class OnboardingAndDocumentsTest extends TestCase
             'id' => $resident->id,
             'status' => AccountStatus::Active->value,
         ]);
-        $this->assertDatabaseHas('unit_memberships', [
+        $this->assertDatabaseHas('apartment_residents', [
             'unit_id' => $unit->id,
             'user_id' => $resident->id,
             'verification_status' => VerificationStatus::Verified->value,
@@ -724,7 +725,7 @@ class OnboardingAndDocumentsTest extends TestCase
         ]);
         $admin->assignRole($compoundHeadRole);
         $admin->givePermissionTo($viewUsersPermission);
-        $unitA->memberships()->create([
+        $unitA->apartmentResidents()->create([
             'user_id' => $admin->id,
             'relation_type' => UnitRelationType::Owner->value,
             'verification_status' => VerificationStatus::Verified->value,
@@ -740,14 +741,14 @@ class OnboardingAndDocumentsTest extends TestCase
             'status' => AccountStatus::PendingReview->value,
         ]);
 
-        $unitA->memberships()->create([
+        $unitA->apartmentResidents()->create([
             'user_id' => $residentA->id,
             'relation_type' => UnitRelationType::Owner->value,
             'is_primary' => true,
             'verification_status' => VerificationStatus::Pending->value,
             'created_by' => $admin->id,
         ]);
-        $unitB->memberships()->create([
+        $unitB->apartmentResidents()->create([
             'user_id' => $residentB->id,
             'relation_type' => UnitRelationType::Owner->value,
             'is_primary' => true,
@@ -805,7 +806,7 @@ class OnboardingAndDocumentsTest extends TestCase
             'status' => AccountStatus::PendingReview->value,
         ]);
 
-        $unit->memberships()->create([
+        $unit->apartmentResidents()->create([
             'user_id' => $resident->id,
             'relation_type' => UnitRelationType::Tenant->value,
             'starts_at' => now()->subDay(),

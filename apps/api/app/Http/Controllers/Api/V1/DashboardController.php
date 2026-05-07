@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
+use App\Models\Apartments\ApartmentResident;
 use App\Models\Issues\Issue;
-use App\Models\Property\UnitMembership;
 use App\Models\RepresentativeAssignment;
 use App\Models\User;
 use App\Models\Visitors\VisitorRequest;
@@ -83,7 +83,7 @@ class DashboardController extends Controller
             }
 
             $unassignedUsers = User::query()
-                ->whereDoesntHave('unitMemberships', fn ($q) => $q->whereNull('ends_at'))
+                ->whereDoesntHave('apartmentResidents', fn ($q) => $q->whereNull('ends_at'))
                 ->when($compoundId, fn ($q) => $q->where('compound_id', $compoundId))
                 ->where(function ($query): void {
                     $query
@@ -179,7 +179,7 @@ class DashboardController extends Controller
         $stats = [];
 
         if ($user->hasAnyEffectiveRole([UserRole::SuperAdmin, UserRole::CompoundAdmin, UserRole::President])) {
-            $stats['totalResidents'] = UnitMembership::query()
+            $stats['totalResidents'] = ApartmentResident::query()
                 ->whereNull('ends_at')
                 ->when($compoundId, fn ($q) => $q->whereHas('unit', fn ($uq) => $uq->where('compound_id', $compoundId)))
                 ->count();

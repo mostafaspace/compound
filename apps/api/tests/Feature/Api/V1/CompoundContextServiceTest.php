@@ -5,10 +5,10 @@ namespace Tests\Feature\Api\V1;
 use App\Enums\AccountStatus;
 use App\Enums\Permission;
 use App\Enums\UserRole;
+use App\Models\Apartments\ApartmentResident;
 use App\Models\Property\Building;
 use App\Models\Property\Compound;
 use App\Models\Property\Unit;
-use App\Models\Property\UnitMembership;
 use App\Models\User;
 use App\Services\CompoundContextService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -63,7 +63,7 @@ class CompoundContextServiceTest extends TestCase
         ]);
         $user->assignRole($compoundHeadRole);
 
-        UnitMembership::factory()->create([
+        ApartmentResident::factory()->create([
             'unit_id' => $unitA->id,
             'user_id' => $user->id,
             'verification_status' => 'verified',

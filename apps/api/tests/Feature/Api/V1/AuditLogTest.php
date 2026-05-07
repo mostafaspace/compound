@@ -4,11 +4,11 @@ namespace Tests\Feature\Api\V1;
 
 use App\Enums\AccountStatus;
 use App\Enums\UserRole;
+use App\Models\Apartments\ApartmentResident;
 use App\Models\AuditLog;
 use App\Models\Property\Building;
 use App\Models\Property\Compound;
 use App\Models\Property\Unit;
-use App\Models\Property\UnitMembership;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -28,7 +28,7 @@ class AuditLogTest extends TestCase
             'status' => AccountStatus::Active->value,
         ]);
 
-        UnitMembership::factory()->create([
+        ApartmentResident::factory()->create([
             'user_id' => $resident->id,
             'unit_id' => $unit->id,
         ]);
@@ -51,7 +51,7 @@ class AuditLogTest extends TestCase
             'status' => AccountStatus::Active->value,
         ]);
         $unit = Unit::factory()->for($compound)->for($building)->create(['floor_id' => null]);
-        UnitMembership::factory()->create([
+        ApartmentResident::factory()->create([
             'user_id' => $actor->id,
             'unit_id' => $unit->id,
         ]);

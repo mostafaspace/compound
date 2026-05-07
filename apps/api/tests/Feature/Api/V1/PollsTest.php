@@ -2,10 +2,11 @@
 
 namespace Tests\Feature\Api\V1;
 
-use App\Enums\Permission;
 use App\Enums\NotificationCategory;
+use App\Enums\Permission;
 use App\Enums\PollStatus;
 use App\Enums\UserRole;
+use App\Models\Apartments\ApartmentResident;
 use App\Models\Polls\Poll;
 use App\Models\Polls\PollOption;
 use App\Models\Polls\PollType;
@@ -13,12 +14,12 @@ use App\Models\Polls\PollVote;
 use App\Models\Property\Building;
 use App\Models\Property\Compound;
 use App\Models\Property\Unit;
-use App\Models\Property\UnitMembership;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Spatie\Permission\Models\Permission as SpatiePermission;
 use Spatie\Permission\Models\Role as SpatieRole;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class PollsTest extends TestCase
@@ -29,7 +30,7 @@ class PollsTest extends TestCase
     {
         parent::setUp();
 
-        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 
     public function test_effective_compound_head_is_treated_as_admin_for_poll_index_even_when_legacy_role_is_stale(): void
@@ -89,7 +90,7 @@ class PollsTest extends TestCase
             'compound_id' => null,
         ]);
         $admin->assignRole($compoundHeadRole);
-        UnitMembership::factory()->create([
+        ApartmentResident::factory()->create([
             'unit_id' => $unitA->id,
             'user_id' => $admin->id,
             'verification_status' => 'verified',
@@ -148,7 +149,7 @@ class PollsTest extends TestCase
             'compound_id' => $compoundB->id,
         ]);
         $admin->assignRole($compoundHeadRole);
-        UnitMembership::factory()->create([
+        ApartmentResident::factory()->create([
             'unit_id' => $unitA->id,
             'user_id' => $admin->id,
             'verification_status' => 'verified',
@@ -197,7 +198,7 @@ class PollsTest extends TestCase
             'role' => UserRole::ResidentOwner->value,
             'compound_id' => null,
         ]);
-        UnitMembership::factory()->create([
+        ApartmentResident::factory()->create([
             'unit_id' => $unitA->id,
             'user_id' => $resident->id,
             'verification_status' => 'verified',
@@ -237,7 +238,7 @@ class PollsTest extends TestCase
             'compound_id' => null,
         ]);
         $admin->assignRole($compoundHeadRole);
-        UnitMembership::factory()->create([
+        ApartmentResident::factory()->create([
             'unit_id' => $unitA->id,
             'user_id' => $admin->id,
             'verification_status' => 'verified',
@@ -310,7 +311,7 @@ class PollsTest extends TestCase
         $unit = Unit::factory()->for($compound)->for($building)->create(['floor_id' => null]);
 
         $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value, 'compound_id' => null]);
-        UnitMembership::factory()->create([
+        ApartmentResident::factory()->create([
             'unit_id' => $unit->id,
             'user_id' => $resident->id,
             'verification_status' => 'verified',
@@ -368,7 +369,7 @@ class PollsTest extends TestCase
 
         $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value, 'compound_id' => null]);
 
-        UnitMembership::factory()->create([
+        ApartmentResident::factory()->create([
             'unit_id' => $unitA->id,
             'user_id' => $resident->id,
             'verification_status' => 'verified',
@@ -376,7 +377,7 @@ class PollsTest extends TestCase
             'ends_at' => null,
             'is_primary' => true,
         ]);
-        UnitMembership::factory()->create([
+        ApartmentResident::factory()->create([
             'unit_id' => $unitB->id,
             'user_id' => $resident->id,
             'verification_status' => 'verified',
@@ -419,7 +420,7 @@ class PollsTest extends TestCase
         $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value, 'compound_id' => null]);
 
         foreach ([$unitA, $unitB] as $index => $unit) {
-            UnitMembership::factory()->create([
+            ApartmentResident::factory()->create([
                 'unit_id' => $unit->id,
                 'user_id' => $resident->id,
                 'verification_status' => 'verified',
@@ -480,7 +481,7 @@ class PollsTest extends TestCase
         $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value, 'compound_id' => null]);
 
         foreach ([$unitA, $unitB] as $index => $unit) {
-            UnitMembership::factory()->create([
+            ApartmentResident::factory()->create([
                 'unit_id' => $unit->id,
                 'user_id' => $resident->id,
                 'verification_status' => 'verified',
@@ -530,7 +531,7 @@ class PollsTest extends TestCase
         $spouse = User::factory()->create(['role' => UserRole::ResidentOwner->value, 'compound_id' => null]);
 
         foreach ([$owner, $spouse] as $user) {
-            UnitMembership::factory()->create([
+            ApartmentResident::factory()->create([
                 'unit_id' => $unit->id,
                 'user_id' => $user->id,
                 'verification_status' => 'verified',
@@ -585,7 +586,7 @@ class PollsTest extends TestCase
         $spouse = User::factory()->create(['role' => UserRole::ResidentOwner->value, 'compound_id' => null]);
 
         foreach ([$owner, $spouse] as $user) {
-            UnitMembership::factory()->create([
+            ApartmentResident::factory()->create([
                 'unit_id' => $unit->id,
                 'user_id' => $user->id,
                 'verification_status' => 'verified',
@@ -627,7 +628,7 @@ class PollsTest extends TestCase
         $unit = Unit::factory()->for($compound)->for($building)->create(['floor_id' => null]);
 
         $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value, 'compound_id' => null]);
-        UnitMembership::factory()->create([
+        ApartmentResident::factory()->create([
             'unit_id' => $unit->id,
             'user_id' => $resident->id,
             'verification_status' => 'verified',
@@ -663,7 +664,7 @@ class PollsTest extends TestCase
         $unit = Unit::factory()->for($compound)->for($building)->create(['floor_id' => null]);
 
         $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value, 'compound_id' => null]);
-        UnitMembership::factory()->create([
+        ApartmentResident::factory()->create([
             'unit_id' => $unit->id,
             'user_id' => $resident->id,
             'verification_status' => 'verified',
@@ -695,7 +696,7 @@ class PollsTest extends TestCase
         $unit = Unit::factory()->for($compound)->for($building)->create(['floor_id' => null]);
         $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value, 'compound_id' => null]);
 
-        UnitMembership::factory()->create([
+        ApartmentResident::factory()->create([
             'unit_id' => $unit->id,
             'user_id' => $resident->id,
             'verification_status' => 'verified',
@@ -728,7 +729,7 @@ class PollsTest extends TestCase
 
         $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value, 'compound_id' => $compound->id]);
         $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value, 'compound_id' => null]);
-        UnitMembership::factory()->create([
+        ApartmentResident::factory()->create([
             'unit_id' => $unit->id,
             'user_id' => $resident->id,
             'verification_status' => 'verified',
@@ -776,7 +777,7 @@ class PollsTest extends TestCase
             'name' => 'Resident Transparency',
         ]);
 
-        UnitMembership::factory()->create([
+        ApartmentResident::factory()->create([
             'unit_id' => $unit->id,
             'user_id' => $resident->id,
             'verification_status' => 'verified',
@@ -862,7 +863,7 @@ class PollsTest extends TestCase
             'name' => 'Snapshot Resident',
         ]);
 
-        $membership = UnitMembership::factory()->create([
+        $membership = ApartmentResident::factory()->create([
             'unit_id' => $unit->id,
             'user_id' => $resident->id,
             'verification_status' => 'verified',
@@ -909,7 +910,7 @@ class PollsTest extends TestCase
             'compound_id' => null,
         ]);
 
-        UnitMembership::factory()->create([
+        ApartmentResident::factory()->create([
             'unit_id' => $unit->id,
             'user_id' => $resident->id,
             'verification_status' => 'verified',
@@ -955,14 +956,14 @@ class PollsTest extends TestCase
             'name' => 'Viewer Resident',
         ]);
 
-        UnitMembership::factory()->create([
+        ApartmentResident::factory()->create([
             'unit_id' => $unitA->id,
             'user_id' => $voter->id,
             'verification_status' => 'verified',
             'starts_at' => now()->subYear(),
             'ends_at' => null,
         ]);
-        UnitMembership::factory()->create([
+        ApartmentResident::factory()->create([
             'unit_id' => $unitB->id,
             'user_id' => $viewer->id,
             'verification_status' => 'verified',
@@ -1016,7 +1017,7 @@ class PollsTest extends TestCase
         ]);
 
         foreach ([$resident, $residentTwo] as $user) {
-            UnitMembership::factory()->create([
+            ApartmentResident::factory()->create([
                 'unit_id' => $unit->id,
                 'user_id' => $user->id,
                 'verification_status' => 'verified',

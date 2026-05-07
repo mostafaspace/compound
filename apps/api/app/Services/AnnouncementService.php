@@ -16,9 +16,7 @@ use Illuminate\Support\Collection;
 
 class AnnouncementService
 {
-    public function __construct(private NotificationService $notificationService)
-    {
-    }
+    public function __construct(private NotificationService $notificationService) {}
 
     /**
      * @return Collection<int, User>
@@ -36,12 +34,12 @@ class AnnouncementService
             AnnouncementTargetType::Floor => $this->whereScopedToUnits($query, 'floor_id', $announcement->target_ids ?? []),
             AnnouncementTargetType::Unit => $this->whereScopedToUnits($query, 'id', $announcement->target_ids ?? []),
             AnnouncementTargetType::All => $announcement->requires_verified_membership
-                ? $query->whereHas('unitMemberships', fn (Builder $membership): Builder => $membership->activeForAccess())
+                ? $query->whereHas('apartmentResidents', fn (Builder $membership): Builder => $membership->activeForAccess())
                 : $query,
         };
 
         if ($announcement->requires_verified_membership && $announcement->target_type === AnnouncementTargetType::Role) {
-            $query->whereHas('unitMemberships', fn (Builder $membership): Builder => $membership->activeForAccess());
+            $query->whereHas('apartmentResidents', fn (Builder $membership): Builder => $membership->activeForAccess());
         }
 
         return $query->get()->unique('id')->values();
@@ -49,7 +47,7 @@ class AnnouncementService
 
     public function applyVisibleToUser(Builder $query, User $user): Builder
     {
-        $memberships = $user->unitMemberships()
+        $memberships = $user->apartmentResidents()
             ->activeForAccess()
             ->with('unit')
             ->get();
@@ -318,7 +316,7 @@ class AnnouncementService
      */
     private function whereScopedToUnits(Builder $query, string $unitColumn, array $ids): void
     {
-        $query->whereHas('unitMemberships', function (Builder $membership) use ($unitColumn, $ids): void {
+        $query->whereHas('apartmentResidents', function (Builder $membership) use ($unitColumn, $ids): void {
             $membership
                 ->activeForAccess()
                 ->whereHas('unit', function (Builder $unitQuery) use ($unitColumn, $ids): void {

@@ -279,7 +279,7 @@ class ChargesTest extends TestCase
             'compound_id' => null,
         ]);
         $managedUnit = $this->createUnitForCompound($compoundA, 'A-401');
-        $managedUnit->memberships()->create([
+        $managedUnit->apartmentResidents()->create([
             'user_id' => $admin->id,
             'relation_type' => UnitRelationType::Owner->value,
             'verification_status' => VerificationStatus::Verified->value,
@@ -519,7 +519,7 @@ class ChargesTest extends TestCase
             'compound_id' => null,
         ]);
         $managedUnit = $this->createUnitForCompound($compoundA, 'A-501');
-        $managedUnit->memberships()->create([
+        $managedUnit->apartmentResidents()->create([
             'user_id' => $admin->id,
             'relation_type' => UnitRelationType::Owner->value,
             'verification_status' => VerificationStatus::Verified->value,

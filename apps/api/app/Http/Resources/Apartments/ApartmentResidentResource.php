@@ -1,15 +1,17 @@
 <?php
 
-namespace App\Http\Resources;
+namespace App\Http\Resources\Apartments;
 
-use App\Models\Property\UnitMembership;
+use App\Http\Resources\UnitResource;
+use App\Http\Resources\UserResource;
+use App\Models\Apartments\ApartmentResident;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * @mixin UnitMembership
+ * @mixin ApartmentResident
  */
-class UnitMembershipResource extends JsonResource
+class ApartmentResidentResource extends JsonResource
 {
     /**
      * @return array<string, mixed>
@@ -32,10 +34,7 @@ class UnitMembershipResource extends JsonResource
             'phonePublic' => $this->phone_public,
             'residentEmail' => $this->resident_email,
             'emailPublic' => $this->email_public,
-            'hasVehicle' => $this->has_vehicle,
-            'vehiclePlate' => $this->vehicle_plate,
-            'parkingSpotCode' => $this->parking_spot_code,
-            'garageStickerCode' => $this->garage_sticker_code,
+            'photoPath' => $this->photo_path,
             'createdAt' => $this->created_at?->toJSON(),
             'updatedAt' => $this->updated_at?->toJSON(),
         ];

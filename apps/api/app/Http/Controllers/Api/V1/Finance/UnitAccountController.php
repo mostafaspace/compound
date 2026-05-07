@@ -54,7 +54,7 @@ class UnitAccountController extends Controller
 
         $accounts = UnitAccount::query()
             ->with(['unit.building', 'unit.compound'])
-            ->whereHas('unit.memberships', function ($query) use ($user): void {
+            ->whereHas('unit.apartmentResidents', function ($query) use ($user): void {
                 $query->where('user_id', $user->id)
                     ->where('verification_status', 'verified')
                     ->where(function ($query): void {

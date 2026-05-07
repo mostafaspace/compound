@@ -9,7 +9,7 @@ use App\Enums\VerificationStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Onboarding\VerificationDecisionRequest;
 use App\Http\Resources\VerificationRequestResource;
-use App\Models\Property\UnitMembership;
+use App\Models\Apartments\ApartmentResident;
 use App\Models\User;
 use App\Models\VerificationRequest;
 use App\Notifications\VerificationDecisionNotification;
@@ -195,7 +195,7 @@ class VerificationRequestController extends Controller
             $q->whereHas('unit', fn ($sub) => $this->compoundContext->scopePropertyQuery($sub, $user))
                 ->orWhereHas('residentInvitation.unit', fn ($sub) => $this->compoundContext->scopePropertyQuery($sub, $user))
                 ->orWhereHas('user', function ($subUser) use ($user): void {
-                    $subUser->whereHas('unitMemberships.unit', fn ($subUnit) => $this->compoundContext->scopePropertyQuery($subUnit, $user));
+                    $subUser->whereHas('apartmentResidents.unit', fn ($subUnit) => $this->compoundContext->scopePropertyQuery($subUnit, $user));
                 });
         });
     }
@@ -214,8 +214,8 @@ class VerificationRequestController extends Controller
             $canAccess = $this->compoundContext->userCanAccessUnit($user, $verificationRequest->residentInvitation->unit_id);
         } else {
             // Check if they can access any of the user's unit memberships
-            $verificationRequest->loadMissing('user.unitMemberships.unit');
-            $canAccess = $verificationRequest->user->unitMemberships->contains(function ($m) use ($user) {
+            $verificationRequest->loadMissing('user.apartmentResidents.unit');
+            $canAccess = $verificationRequest->user->apartmentResidents->contains(function ($m) use ($user) {
                 return $m->unit_id && $this->compoundContext->userCanAccessUnit($user, $m->unit_id);
             });
         }
@@ -225,7 +225,7 @@ class VerificationRequestController extends Controller
 
     private function verificationRequestBelongsToCompound(VerificationRequest $verificationRequest, string $compoundId): bool
     {
-        $verificationRequest->loadMissing(['residentInvitation.unit', 'unit', 'user.unitMemberships.unit']);
+        $verificationRequest->loadMissing(['residentInvitation.unit', 'unit', 'user.apartmentResidents.unit']);
 
         if ($verificationRequest->unit?->compound_id === $compoundId) {
             return true;
@@ -235,7 +235,7 @@ class VerificationRequestController extends Controller
             return true;
         }
 
-        return $verificationRequest->user?->unitMemberships
+        return $verificationRequest->user?->apartmentResidents
             ->contains(fn ($membership): bool => $membership->unit?->compound_id === $compoundId) ?? false;
     }
 
@@ -245,7 +245,7 @@ class VerificationRequestController extends Controller
             return;
         }
 
-        UnitMembership::query()
+        ApartmentResident::query()
             ->where('user_id', $verificationRequest->user_id)
             ->where('unit_id', $verificationRequest->unit_id)
             ->whereNull('ends_at')

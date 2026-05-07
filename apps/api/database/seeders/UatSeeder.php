@@ -36,12 +36,12 @@ class UatSeeder extends Seeder
 
     public function run(): void
     {
-        $compound  = $this->seedCompound();
-        $building  = $this->seedBuilding($compound);
-        $floor     = $this->seedFloor($building);
-        $units     = $this->seedUnits($building, $floor);
+        $compound = $this->seedCompound();
+        $building = $this->seedBuilding($compound);
+        $floor = $this->seedFloor($building);
+        $units = $this->seedUnits($building, $floor);
         $this->seedPersonas($compound, $units);
-        $this->seedUnitMemberships($units);
+        $this->seedApartmentResidents($units);
         $this->seedChargeTypes();
         $this->seedUnitAccounts($units);
         $this->seedOrgChart($compound, $building, $floor);
@@ -101,73 +101,73 @@ class UatSeeder extends Seeder
 
         $personas = [
             [
-                'email'       => 'super-admin@uat.compound.local',
-                'name'        => 'UAT Super Admin',
-                'phone'       => '+201100000001',
-                'role'        => UserRole::SuperAdmin->value,
+                'email' => 'super-admin@uat.compound.local',
+                'name' => 'UAT Super Admin',
+                'phone' => '+201100000001',
+                'role' => UserRole::SuperAdmin->value,
                 'compound_id' => null,
             ],
             [
-                'email'       => 'compound-admin@uat.compound.local',
-                'name'        => 'UAT Compound Admin',
-                'phone'       => '+201100000002',
-                'role'        => UserRole::CompoundAdmin->value,
+                'email' => 'compound-admin@uat.compound.local',
+                'name' => 'UAT Compound Admin',
+                'phone' => '+201100000002',
+                'role' => UserRole::CompoundAdmin->value,
                 'compound_id' => $compound->id,
             ],
             [
-                'email'       => 'president@uat.compound.local',
-                'name'        => 'UAT President',
-                'phone'       => '+201100000009',
-                'role'        => UserRole::President->value,
+                'email' => 'president@uat.compound.local',
+                'name' => 'UAT President',
+                'phone' => '+201100000009',
+                'role' => UserRole::President->value,
                 'compound_id' => $compound->id,
             ],
             [
-                'email'       => 'board-member@uat.compound.local',
-                'name'        => 'UAT Board Member',
-                'phone'       => '+201100000003',
-                'role'        => UserRole::BoardMember->value,
+                'email' => 'board-member@uat.compound.local',
+                'name' => 'UAT Board Member',
+                'phone' => '+201100000003',
+                'role' => UserRole::BoardMember->value,
                 'compound_id' => $compound->id,
             ],
             [
-                'email'       => 'finance-reviewer@uat.compound.local',
-                'name'        => 'UAT Finance Reviewer',
-                'phone'       => '+201100000004',
-                'role'        => UserRole::FinanceReviewer->value,
+                'email' => 'finance-reviewer@uat.compound.local',
+                'name' => 'UAT Finance Reviewer',
+                'phone' => '+201100000004',
+                'role' => UserRole::FinanceReviewer->value,
                 'compound_id' => $compound->id,
             ],
             [
-                'email'       => 'security-guard@uat.compound.local',
-                'name'        => 'UAT Security Guard',
-                'phone'       => '+201100000005',
-                'role'        => UserRole::SecurityGuard->value,
+                'email' => 'security-guard@uat.compound.local',
+                'name' => 'UAT Security Guard',
+                'phone' => '+201100000005',
+                'role' => UserRole::SecurityGuard->value,
                 'compound_id' => $compound->id,
             ],
             [
-                'email'       => 'support-agent@uat.compound.local',
-                'name'        => 'UAT Support Agent',
-                'phone'       => '+201100000006',
-                'role'        => UserRole::SupportAgent->value,
+                'email' => 'support-agent@uat.compound.local',
+                'name' => 'UAT Support Agent',
+                'phone' => '+201100000006',
+                'role' => UserRole::SupportAgent->value,
                 'compound_id' => null,
             ],
             [
-                'email'       => 'resident@uat.compound.local',
-                'name'        => 'UAT Resident',
-                'phone'       => '+201100000010',
-                'role'        => UserRole::Resident->value,
+                'email' => 'resident@uat.compound.local',
+                'name' => 'UAT Resident',
+                'phone' => '+201100000010',
+                'role' => UserRole::Resident->value,
                 'compound_id' => $compound->id,
             ],
             [
-                'email'       => 'resident-owner@uat.compound.local',
-                'name'        => 'UAT Resident Owner',
-                'phone'       => '+201100000007',
-                'role'        => UserRole::ResidentOwner->value,
+                'email' => 'resident-owner@uat.compound.local',
+                'name' => 'UAT Resident Owner',
+                'phone' => '+201100000007',
+                'role' => UserRole::ResidentOwner->value,
                 'compound_id' => $compound->id,
             ],
             [
-                'email'       => 'resident-tenant@uat.compound.local',
-                'name'        => 'UAT Resident Tenant',
-                'phone'       => '+201100000008',
-                'role'        => UserRole::ResidentTenant->value,
+                'email' => 'resident-tenant@uat.compound.local',
+                'name' => 'UAT Resident Tenant',
+                'phone' => '+201100000008',
+                'role' => UserRole::ResidentTenant->value,
                 'compound_id' => $compound->id,
             ],
         ];
@@ -176,7 +176,7 @@ class UatSeeder extends Seeder
             User::query()->updateOrCreate(
                 ['email' => $attrs['email']],
                 array_merge($attrs, [
-                    'status'   => AccountStatus::Active->value,
+                    'status' => AccountStatus::Active->value,
                     'password' => $password,
                 ]),
             );
@@ -186,7 +186,7 @@ class UatSeeder extends Seeder
     /**
      * @param  array<string, Unit>  $units
      */
-    private function seedUnitMemberships(array $units): void
+    private function seedApartmentResidents(array $units): void
     {
         $admin = User::query()->where('email', 'compound-admin@uat.compound.local')->first();
 
@@ -204,7 +204,7 @@ class UatSeeder extends Seeder
                 continue;
             }
 
-            $unit->memberships()->updateOrCreate([
+            $unit->apartmentResidents()->updateOrCreate([
                 'user_id' => $user->id,
             ], [
                 'relation_type' => $assignment['relation']->value,
@@ -235,11 +235,11 @@ class UatSeeder extends Seeder
 
         // ── Org chart users ───────────────────────────────────────────────────
         $orgUsers = [
-            'ahmed.hassan@uat.compound.local'   => ['name' => 'Ahmed Hassan',   'phone' => '+201100000020'],
-            'sara.mohamed@uat.compound.local'    => ['name' => 'Sara Mohamed',   'phone' => '+201100000021'],
-            'omar.khalil@uat.compound.local'     => ['name' => 'Omar Khalil',    'phone' => '+201100000022'],
-            'nour.eldin@uat.compound.local'      => ['name' => 'Nour El-Din',    'phone' => '+201100000023'],
-            'fatima.ibrahim@uat.compound.local'  => ['name' => 'Fatima Ibrahim', 'phone' => '+201100000024'],
+            'ahmed.hassan@uat.compound.local' => ['name' => 'Ahmed Hassan',   'phone' => '+201100000020'],
+            'sara.mohamed@uat.compound.local' => ['name' => 'Sara Mohamed',   'phone' => '+201100000021'],
+            'omar.khalil@uat.compound.local' => ['name' => 'Omar Khalil',    'phone' => '+201100000022'],
+            'nour.eldin@uat.compound.local' => ['name' => 'Nour El-Din',    'phone' => '+201100000023'],
+            'fatima.ibrahim@uat.compound.local' => ['name' => 'Fatima Ibrahim', 'phone' => '+201100000024'],
         ];
 
         $users = [];
@@ -247,10 +247,10 @@ class UatSeeder extends Seeder
             $users[$email] = User::query()->updateOrCreate(
                 ['email' => $email],
                 array_merge($attrs, [
-                    'role'        => UserRole::ResidentOwner->value,
+                    'role' => UserRole::ResidentOwner->value,
                     'compound_id' => $compound->id,
-                    'status'      => AccountStatus::Active->value,
-                    'password'    => $password,
+                    'status' => AccountStatus::Active->value,
+                    'password' => $password,
                 ]),
             );
         }
@@ -269,7 +269,7 @@ class UatSeeder extends Seeder
                 continue;
             }
 
-            $unit->memberships()->updateOrCreate([
+            $unit->apartmentResidents()->updateOrCreate([
                 'user_id' => $users[$email]->id,
             ], [
                 'relation_type' => UnitRelationType::Owner->value,
@@ -282,7 +282,7 @@ class UatSeeder extends Seeder
 
         // Reuse existing UAT personas for leadership roles
         $president = User::query()->where('email', 'president@uat.compound.local')->first();
-        $boardMember    = User::query()->where('email', 'board-member@uat.compound.local')->first();
+        $boardMember = User::query()->where('email', 'board-member@uat.compound.local')->first();
         $financeReviewer = User::query()->where('email', 'finance-reviewer@uat.compound.local')->first();
 
         // ── Representative assignments ─────────────────────────────────────────
@@ -290,78 +290,78 @@ class UatSeeder extends Seeder
 
         if ($president) {
             $assignments[] = [
-                'compound_id'        => $compound->id,
-                'building_id'        => null,
-                'floor_id'           => null,
-                'user_id'            => $president->id,
-                'role'               => RepresentativeRole::President->value,
+                'compound_id' => $compound->id,
+                'building_id' => null,
+                'floor_id' => null,
+                'user_id' => $president->id,
+                'role' => RepresentativeRole::President->value,
                 'contact_visibility' => ContactVisibility::AllResidents->value,
             ];
         }
 
         if ($boardMember) {
             $assignments[] = [
-                'compound_id'        => $compound->id,
-                'building_id'        => null,
-                'floor_id'           => null,
-                'user_id'            => $boardMember->id,
-                'role'               => RepresentativeRole::AssociationMember->value,
+                'compound_id' => $compound->id,
+                'building_id' => null,
+                'floor_id' => null,
+                'user_id' => $boardMember->id,
+                'role' => RepresentativeRole::AssociationMember->value,
                 'contact_visibility' => ContactVisibility::AllResidents->value,
             ];
         }
 
         if ($financeReviewer) {
             $assignments[] = [
-                'compound_id'        => $compound->id,
-                'building_id'        => null,
-                'floor_id'           => null,
-                'user_id'            => $financeReviewer->id,
-                'role'               => RepresentativeRole::Treasurer->value,
+                'compound_id' => $compound->id,
+                'building_id' => null,
+                'floor_id' => null,
+                'user_id' => $financeReviewer->id,
+                'role' => RepresentativeRole::Treasurer->value,
                 'contact_visibility' => ContactVisibility::AllResidents->value,
             ];
         }
 
         // Building representatives
         $assignments[] = [
-            'compound_id'        => $compound->id,
-            'building_id'        => $buildingA->id,
-            'floor_id'           => null,
-            'user_id'            => $users['ahmed.hassan@uat.compound.local']->id,
-            'role'               => RepresentativeRole::BuildingRepresentative->value,
+            'compound_id' => $compound->id,
+            'building_id' => $buildingA->id,
+            'floor_id' => null,
+            'user_id' => $users['ahmed.hassan@uat.compound.local']->id,
+            'role' => RepresentativeRole::BuildingRepresentative->value,
             'contact_visibility' => ContactVisibility::BuildingResidents->value,
         ];
         $assignments[] = [
-            'compound_id'        => $compound->id,
-            'building_id'        => $buildingB->id,
-            'floor_id'           => null,
-            'user_id'            => $users['sara.mohamed@uat.compound.local']->id,
-            'role'               => RepresentativeRole::BuildingRepresentative->value,
+            'compound_id' => $compound->id,
+            'building_id' => $buildingB->id,
+            'floor_id' => null,
+            'user_id' => $users['sara.mohamed@uat.compound.local']->id,
+            'role' => RepresentativeRole::BuildingRepresentative->value,
             'contact_visibility' => ContactVisibility::BuildingResidents->value,
         ];
 
         // Floor representatives
         $assignments[] = [
-            'compound_id'        => $compound->id,
-            'building_id'        => $buildingA->id,
-            'floor_id'           => $groundFloor->id,
-            'user_id'            => $users['omar.khalil@uat.compound.local']->id,
-            'role'               => RepresentativeRole::FloorRepresentative->value,
+            'compound_id' => $compound->id,
+            'building_id' => $buildingA->id,
+            'floor_id' => $groundFloor->id,
+            'user_id' => $users['omar.khalil@uat.compound.local']->id,
+            'role' => RepresentativeRole::FloorRepresentative->value,
             'contact_visibility' => ContactVisibility::FloorResidents->value,
         ];
         $assignments[] = [
-            'compound_id'        => $compound->id,
-            'building_id'        => $buildingB->id,
-            'floor_id'           => $floorB1->id,
-            'user_id'            => $users['nour.eldin@uat.compound.local']->id,
-            'role'               => RepresentativeRole::FloorRepresentative->value,
+            'compound_id' => $compound->id,
+            'building_id' => $buildingB->id,
+            'floor_id' => $floorB1->id,
+            'user_id' => $users['nour.eldin@uat.compound.local']->id,
+            'role' => RepresentativeRole::FloorRepresentative->value,
             'contact_visibility' => ContactVisibility::FloorResidents->value,
         ];
         $assignments[] = [
-            'compound_id'        => $compound->id,
-            'building_id'        => $buildingB->id,
-            'floor_id'           => $floorB2->id,
-            'user_id'            => $users['fatima.ibrahim@uat.compound.local']->id,
-            'role'               => RepresentativeRole::FloorRepresentative->value,
+            'compound_id' => $compound->id,
+            'building_id' => $buildingB->id,
+            'floor_id' => $floorB2->id,
+            'user_id' => $users['fatima.ibrahim@uat.compound.local']->id,
+            'role' => RepresentativeRole::FloorRepresentative->value,
             'contact_visibility' => ContactVisibility::FloorResidents->value,
         ];
 
@@ -370,9 +370,9 @@ class UatSeeder extends Seeder
                 [
                     'compound_id' => $attrs['compound_id'],
                     'building_id' => $attrs['building_id'],
-                    'floor_id'    => $attrs['floor_id'],
-                    'user_id'     => $attrs['user_id'],
-                    'role'        => $attrs['role'],
+                    'floor_id' => $attrs['floor_id'],
+                    'user_id' => $attrs['user_id'],
+                    'role' => $attrs['role'],
                 ],
                 array_merge($attrs, [
                     'starts_at' => now()->startOfYear()->toDateString(),
@@ -395,11 +395,16 @@ class UatSeeder extends Seeder
      */
     private function seedUnitAccounts(array $units): void
     {
-        foreach ($units as $unit) {
+        $compoundId = collect($units)->first()?->compound_id;
+        $accountUnits = $compoundId === null
+            ? collect($units)
+            : Unit::query()->where('compound_id', $compoundId)->get();
+
+        foreach ($accountUnits as $unit) {
             UnitAccount::query()->firstOrCreate(
                 ['unit_id' => $unit->id],
                 [
-                    'balance'  => 0.0,
+                    'balance' => 0.0,
                     'currency' => 'EGP',
                 ],
             );

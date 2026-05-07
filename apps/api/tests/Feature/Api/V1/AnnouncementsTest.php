@@ -11,11 +11,11 @@ use App\Enums\UnitRelationType;
 use App\Enums\UserRole;
 use App\Enums\VerificationStatus;
 use App\Models\Announcements\Announcement;
+use App\Models\Apartments\ApartmentResident;
 use App\Models\Property\Building;
 use App\Models\Property\Compound;
 use App\Models\Property\Floor;
 use App\Models\Property\Unit;
-use App\Models\Property\UnitMembership;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -23,6 +23,7 @@ use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Spatie\Permission\Models\Permission as SpatiePermission;
 use Spatie\Permission\Models\Role as SpatieRole;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class AnnouncementsTest extends TestCase
@@ -33,7 +34,7 @@ class AnnouncementsTest extends TestCase
     {
         parent::setUp();
 
-        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 
     public function test_admin_can_publish_building_announcement_to_targeted_residents_only(): void
@@ -667,7 +668,7 @@ class AnnouncementsTest extends TestCase
         ]);
         $adminA->assignRole($compoundHeadRole);
         $adminA->givePermissionTo($manageAnnouncements, $viewAnnouncements);
-        UnitMembership::factory()->create([
+        ApartmentResident::factory()->create([
             'unit_id' => $unitA->id,
             'user_id' => $adminA->id,
             'verification_status' => VerificationStatus::Verified->value,
@@ -739,13 +740,13 @@ class AnnouncementsTest extends TestCase
         $unit = Unit::factory()->for($compound)->for($building)->for($floor)->create();
         $otherUnit = Unit::factory()->for($compound)->for($otherBuilding)->for($otherFloor)->create();
 
-        UnitMembership::query()->create([
+        ApartmentResident::query()->create([
             'unit_id' => $unit->id,
             'user_id' => $resident->id,
             'relation_type' => UnitRelationType::Owner->value,
             'verification_status' => VerificationStatus::Verified->value,
         ]);
-        UnitMembership::query()->create([
+        ApartmentResident::query()->create([
             'unit_id' => $otherUnit->id,
             'user_id' => $otherResident->id,
             'relation_type' => UnitRelationType::Owner->value,

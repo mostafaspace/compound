@@ -8,6 +8,7 @@ use App\Http\Resources\RepresentativeAssignmentResource;
 use App\Models\Property\Compound;
 use App\Models\RepresentativeAssignment;
 use App\Models\User;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 
 class OrgChartService
@@ -48,7 +49,7 @@ class OrgChartService
             $compoundLevel = $assignments->filter(fn ($a) => $a->building_id === null && $a->floor_id === null);
 
             $buildings = $compound->buildings()
-                ->with(['floors.units.memberships.user'])
+                ->with(['floors.units.apartmentResidents.user'])
                 ->orderBy('sort_order')
                 ->get()
                 ->map(function ($building) use ($buildingLevel, $floorLevel, $isAdmin, $viewer, $viewerScope) {
@@ -73,10 +74,10 @@ class OrgChartService
                                 'id' => $floor->id,
                                 'label' => $floor->label,
                                 'representatives' => $this->serializeAssignments($fAssignments->values()),
-                                'units' => $floor->units->map(fn($u) => [
+                                'units' => $floor->units->map(fn ($u) => [
                                     'id' => $u->id,
                                     'unitNumber' => $u->unit_number,
-                                    'residents' => $u->memberships->map(fn($m) => [
+                                    'residents' => $u->apartmentResidents->map(fn ($m) => [
                                         'id' => $m->user->id,
                                         'name' => $m->user->name,
                                         'photoUrl' => $m->user->photo_url,
@@ -143,7 +144,7 @@ class OrgChartService
      */
     private function resolveViewerScope(User $viewer): array
     {
-        $memberships = $viewer->unitMemberships()
+        $memberships = $viewer->apartmentResidents()
             ->activeForAccess()
             ->with('unit:id,compound_id,building_id,floor_id')
             ->get();
@@ -161,7 +162,7 @@ class OrgChartService
     }
 
     /**
-     * @param \Illuminate\Support\Collection<int, RepresentativeAssignment> $assignments
+     * @param  Collection<int, RepresentativeAssignment>  $assignments
      * @return array<int, array<string, mixed>>
      */
     private function serializeAssignments($assignments): array

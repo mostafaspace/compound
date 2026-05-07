@@ -5,10 +5,10 @@ namespace Tests\Feature\Api\V1;
 use App\Enums\UnitRelationType;
 use App\Enums\UserRole;
 use App\Enums\VerificationStatus;
+use App\Models\Apartments\ApartmentResident;
 use App\Models\Property\Building;
 use App\Models\Property\Compound;
 use App\Models\Property\Unit;
-use App\Models\Property\UnitMembership;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -70,7 +70,7 @@ class DashboardTest extends TestCase
             'compound_id' => $compound->id,
         ]);
 
-        UnitMembership::query()->create([
+        ApartmentResident::query()->create([
             'unit_id' => $unit->id,
             'user_id' => $assignedResident->id,
             'relation_type' => UnitRelationType::Owner->value,

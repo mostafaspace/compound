@@ -10,7 +10,7 @@ use App\Http\Requests\Property\ImportUnitsRequest;
 use App\Http\Requests\Property\IndexUnitsRequest;
 use App\Http\Requests\Property\StoreUnitRequest;
 use App\Http\Requests\Property\UpdateUnitRequest;
-use App\Http\Resources\UnitMembershipResource;
+use App\Http\Resources\Apartments\ApartmentResidentResource;
 use App\Http\Resources\UnitResource;
 use App\Models\Property\Building;
 use App\Models\Property\Unit;
@@ -44,7 +44,7 @@ class UnitController extends Controller
         $hasExplicitScopeAssignments = $actor->scopeAssignments()->exists();
 
         $units = Unit::query()
-            ->with(['compound', 'building', 'floor', 'memberships.user'])
+            ->with(['compound', 'building', 'floor', 'apartmentResidents.user'])
             ->when(! $request->boolean('includeArchived'), function (Builder $query): void {
                 $query->whereNull('archived_at')->where('status', '!=', UnitStatus::Archived->value);
             })
@@ -72,7 +72,7 @@ class UnitController extends Controller
                         ->orWhereHas('building', function (Builder $query) use ($like): void {
                             $query->where('name', 'like', $like)->orWhere('code', 'like', $like);
                         })
-                        ->orWhereHas('memberships.user', function (Builder $query) use ($like): void {
+                        ->orWhereHas('apartmentResidents.user', function (Builder $query) use ($like): void {
                             $query->where('name', 'like', $like)->orWhere('email', 'like', $like);
                         });
                 });
@@ -83,7 +83,7 @@ class UnitController extends Controller
                     || ($validated['verificationStatus'] ?? null)
                     || $request->boolean('activeMembershipOnly'),
                 function (Builder $query) use ($request, $validated): void {
-                    $query->whereHas('memberships', function (Builder $query) use ($request, $validated): void {
+                    $query->whereHas('apartmentResidents', function (Builder $query) use ($request, $validated): void {
                         $query
                             ->when($validated['userId'] ?? null, fn (Builder $query, int $userId) => $query->where('user_id', $userId))
                             ->when($validated['relationType'] ?? null, fn (Builder $query, string $relationType) => $query->where('relation_type', $relationType))
@@ -131,6 +131,7 @@ class UnitController extends Controller
                         'row' => $rowNumber,
                         'errors' => ['unitNumber' => ['Duplicate unit number in import file.']],
                     ];
+
                     continue;
                 }
 
@@ -160,6 +161,7 @@ class UnitController extends Controller
                     'row' => $rowNumber,
                     'errors' => $validator->errors()->toArray(),
                 ];
+
                 continue;
             }
 
@@ -280,7 +282,7 @@ class UnitController extends Controller
     {
         abort_unless($this->compoundContext->userCanAccessUnit($request->user(), $unit->id), Response::HTTP_FORBIDDEN);
 
-        return UnitResource::make($unit->load(['compound', 'building', 'floor', 'memberships.user']));
+        return UnitResource::make($unit->load(['compound', 'building', 'floor', 'apartmentResidents.user']));
     }
 
     public function mine(Request $request): AnonymousResourceCollection
@@ -288,7 +290,7 @@ class UnitController extends Controller
         $perPage = min(max($request->integer('perPage', 15), 1), 100);
 
         $memberships = $request->user()
-            ->unitMemberships()
+            ->apartmentResidents()
             ->activeForAccess()
             ->with(['unit.compound', 'unit.building', 'unit.floor'])
             ->orderByDesc('is_primary')
@@ -297,7 +299,7 @@ class UnitController extends Controller
             ->paginate($perPage)
             ->withQueryString();
 
-        return UnitMembershipResource::collection($memberships);
+        return ApartmentResidentResource::collection($memberships);
     }
 
     public function update(UpdateUnitRequest $request, Unit $unit): UnitResource
@@ -344,7 +346,7 @@ class UnitController extends Controller
             'reason' => $validated['reason'] ?? null,
         ]);
 
-        return UnitResource::make($unit->refresh()->load(['memberships.user']));
+        return UnitResource::make($unit->refresh()->load(['apartmentResidents.user']));
     }
 
     /**

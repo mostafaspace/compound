@@ -172,7 +172,7 @@ class UserDocumentController extends Controller
         return $query->where(function ($q) use ($user): void {
             $q->whereHas('unit', fn ($sub) => $this->compoundContext->scopePropertyQuery($sub, $user))
                 ->orWhereHas('user', function ($subUser) use ($user): void {
-                    $subUser->whereHas('unitMemberships.unit', fn ($subUnit) => $this->compoundContext->scopePropertyQuery($subUnit, $user));
+                    $subUser->whereHas('apartmentResidents.unit', fn ($subUnit) => $this->compoundContext->scopePropertyQuery($subUnit, $user));
                 });
         });
     }
@@ -188,7 +188,7 @@ class UserDocumentController extends Controller
                 return;
             }
 
-            abort_unless($this->userHasUnitMembership($actor->id, $unitId), Response::HTTP_FORBIDDEN);
+            abort_unless($this->userHasApartmentResident($actor->id, $unitId), Response::HTTP_FORBIDDEN);
 
             return;
         }
@@ -218,8 +218,8 @@ class UserDocumentController extends Controller
             $canAccess = $this->compoundContext->userCanAccessUnit($user, $userDocument->unit_id);
         } else {
             // Check if they can access any of the user's unit memberships
-            $userDocument->loadMissing('user.unitMemberships.unit');
-            $canAccess = $userDocument->user->unitMemberships->contains(function ($m) use ($user) {
+            $userDocument->loadMissing('user.apartmentResidents.unit');
+            $canAccess = $userDocument->user->apartmentResidents->contains(function ($m) use ($user) {
                 return $m->unit_id && $this->compoundContext->userCanAccessUnit($user, $m->unit_id);
             });
         }
@@ -241,21 +241,21 @@ class UserDocumentController extends Controller
 
     private function documentBelongsToCompound(UserDocument $userDocument, string $compoundId): bool
     {
-        $userDocument->loadMissing(['unit', 'user.unitMemberships.unit']);
+        $userDocument->loadMissing(['unit', 'user.apartmentResidents.unit']);
 
         if ($userDocument->unit?->compound_id === $compoundId) {
             return true;
         }
 
-        return $userDocument->user?->unitMemberships
+        return $userDocument->user?->apartmentResidents
             ->contains(fn ($membership): bool => $membership->unit?->compound_id === $compoundId) ?? false;
     }
 
-    private function userHasUnitMembership(int $userId, string $unitId): bool
+    private function userHasApartmentResident(int $userId, string $unitId): bool
     {
         return User::query()
             ->whereKey($userId)
-            ->whereHas('unitMemberships', fn ($query) => $query->where('unit_id', $unitId))
+            ->whereHas('apartmentResidents', fn ($query) => $query->where('unit_id', $unitId))
             ->exists();
     }
 
@@ -263,7 +263,7 @@ class UserDocumentController extends Controller
     {
         return User::query()
             ->whereKey($userId)
-            ->whereHas('unitMemberships.unit', fn ($query) => $query->where('compound_id', $compoundId))
+            ->whereHas('apartmentResidents.unit', fn ($query) => $query->where('compound_id', $compoundId))
             ->exists();
     }
 }

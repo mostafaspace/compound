@@ -4,6 +4,7 @@ namespace App\Models\Property;
 
 use App\Enums\UnitStatus;
 use App\Enums\UnitType;
+use App\Models\Apartments\ApartmentResident;
 use App\Models\User;
 use Database\Factories\Property\UnitFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
@@ -27,6 +28,8 @@ class Unit extends Model
         'area_sqm',
         'bedrooms',
         'status',
+        'has_vehicle',
+        'has_parking',
         'metadata',
         'archived_at',
         'archived_by',
@@ -42,6 +45,8 @@ class Unit extends Model
             'metadata' => 'array',
             'status' => UnitStatus::class,
             'type' => UnitType::class,
+            'has_vehicle' => 'boolean',
+            'has_parking' => 'boolean',
         ];
     }
 
@@ -70,11 +75,11 @@ class Unit extends Model
     }
 
     /**
-     * @return HasMany<UnitMembership, $this>
+     * @return HasMany<ApartmentResident, $this>
      */
-    public function memberships(): HasMany
+    public function apartmentResidents(): HasMany
     {
-        return $this->hasMany(UnitMembership::class);
+        return $this->hasMany(ApartmentResident::class);
     }
 
     /**
@@ -82,7 +87,7 @@ class Unit extends Model
      */
     public function users(): BelongsToMany
     {
-        return $this->belongsToMany(User::class, 'unit_memberships')
+        return $this->belongsToMany(User::class, 'apartment_residents')
             ->withPivot(['relation_type', 'starts_at', 'ends_at', 'is_primary', 'verification_status'])
             ->withTimestamps();
     }

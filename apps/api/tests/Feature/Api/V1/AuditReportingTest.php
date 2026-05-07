@@ -5,12 +5,13 @@ namespace Tests\Feature\Api\V1;
 use App\Enums\AccountStatus;
 use App\Enums\AuditSeverity;
 use App\Enums\UserRole;
+use App\Models\Apartments\ApartmentResident;
 use App\Models\AuditLog;
 use App\Models\Property\Building;
 use App\Models\Property\Compound;
 use App\Models\Property\Unit;
-use App\Models\Property\UnitMembership;
 use App\Models\User;
+use App\Support\AuditLogger;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -23,7 +24,7 @@ class AuditReportingTest extends TestCase
     private function makeAdmin(array $attrs = []): User
     {
         return User::factory()->create(array_merge([
-            'role'   => UserRole::SuperAdmin->value,
+            'role' => UserRole::SuperAdmin->value,
             'status' => AccountStatus::Active->value,
         ], $attrs));
     }
@@ -36,11 +37,11 @@ class AuditReportingTest extends TestCase
         }
 
         return AuditLog::query()->create(array_merge([
-            'action'      => 'test.action',
-            'method'      => 'PATCH',
-            'path'        => 'api/v1/test',
+            'action' => 'test.action',
+            'method' => 'PATCH',
+            'path' => 'api/v1/test',
             'status_code' => 200,
-            'metadata'    => $metadata,
+            'metadata' => $metadata,
         ], $attrs));
     }
 
@@ -54,7 +55,7 @@ class AuditReportingTest extends TestCase
             'status' => AccountStatus::Active->value,
         ]);
 
-        UnitMembership::factory()->create([
+        ApartmentResident::factory()->create([
             'user_id' => $resident->id,
             'unit_id' => $unit->id,
         ]);
@@ -101,14 +102,14 @@ class AuditReportingTest extends TestCase
         $admin = $this->makeAdmin();
 
         $this->makeLog([
-            'action'         => 'documents.reviewed',
+            'action' => 'documents.reviewed',
             'auditable_type' => 'user_document',
-            'auditable_id'   => '42',
+            'auditable_id' => '42',
         ]);
         $this->makeLog([
-            'action'         => 'documents.uploaded',
+            'action' => 'documents.uploaded',
             'auditable_type' => 'user_document',
-            'auditable_id'   => '99',
+            'auditable_id' => '99',
         ]);
 
         Sanctum::actingAs($admin);
@@ -124,9 +125,9 @@ class AuditReportingTest extends TestCase
         $admin = $this->makeAdmin();
 
         $this->makeLog([
-            'action'   => 'admin.account_suspended',
+            'action' => 'admin.account_suspended',
             'severity' => AuditSeverity::Critical,
-            'reason'   => 'Repeated payment failures',
+            'reason' => 'Repeated payment failures',
         ]);
 
         Sanctum::actingAs($admin);
@@ -160,23 +161,23 @@ class AuditReportingTest extends TestCase
 
         // Three events for document #7
         $this->makeLog([
-            'action'         => 'documents.uploaded',
+            'action' => 'documents.uploaded',
             'auditable_type' => 'user_document',
-            'auditable_id'   => '7',
-            'created_at'     => now()->subHours(3),
+            'auditable_id' => '7',
+            'created_at' => now()->subHours(3),
         ]);
         $this->makeLog([
-            'action'         => 'documents.reviewed',
+            'action' => 'documents.reviewed',
             'auditable_type' => 'user_document',
-            'auditable_id'   => '7',
-            'created_at'     => now()->subHours(1),
+            'auditable_id' => '7',
+            'created_at' => now()->subHours(1),
         ]);
 
         // Unrelated event
         $this->makeLog([
-            'action'         => 'documents.uploaded',
+            'action' => 'documents.uploaded',
             'auditable_type' => 'user_document',
-            'auditable_id'   => '99',
+            'auditable_id' => '99',
         ]);
 
         Sanctum::actingAs($admin);
@@ -208,22 +209,22 @@ class AuditReportingTest extends TestCase
         $compoundB = Compound::factory()->create();
 
         $adminA = User::factory()->create([
-            'role'        => UserRole::CompoundAdmin->value,
+            'role' => UserRole::CompoundAdmin->value,
             'compound_id' => $compoundA->id,
-            'status'      => AccountStatus::Active->value,
+            'status' => AccountStatus::Active->value,
         ]);
         $actorB = User::factory()->create([
-            'role'        => UserRole::SupportAgent->value,
+            'role' => UserRole::SupportAgent->value,
             'compound_id' => $compoundB->id,
-            'status'      => AccountStatus::Active->value,
+            'status' => AccountStatus::Active->value,
         ]);
 
         // Log for entity in compound B
         $this->makeLog([
-            'actor_id'       => $actorB->id,
-            'action'         => 'documents.reviewed',
+            'actor_id' => $actorB->id,
+            'action' => 'documents.reviewed',
             'auditable_type' => 'user_document',
-            'auditable_id'   => '55',
+            'auditable_id' => '55',
         ]);
 
         Sanctum::actingAs($adminA);
@@ -328,9 +329,9 @@ class AuditReportingTest extends TestCase
         $admin = $this->makeAdmin(['name' => 'Test Reviewer']);
 
         $this->makeLog([
-            'action'   => 'finance.payment_submitted',
+            'action' => 'finance.payment_submitted',
             'severity' => AuditSeverity::Warning,
-            'reason'   => 'Manual override',
+            'reason' => 'Manual override',
         ]);
 
         Sanctum::actingAs($admin);
@@ -364,7 +365,7 @@ class AuditReportingTest extends TestCase
     public function test_residents_cannot_access_export(): void
     {
         $resident = User::factory()->create([
-            'role'   => UserRole::ResidentOwner->value,
+            'role' => UserRole::ResidentOwner->value,
             'status' => AccountStatus::Active->value,
         ]);
 
@@ -376,8 +377,8 @@ class AuditReportingTest extends TestCase
 
     public function test_audit_logger_records_severity_and_reason(): void
     {
-        $actor  = User::factory()->create();
-        $logger = app(\App\Support\AuditLogger::class);
+        $actor = User::factory()->create();
+        $logger = app(AuditLogger::class);
 
         $logger->record(
             'settings.critical_change',
@@ -387,9 +388,9 @@ class AuditReportingTest extends TestCase
         );
 
         $this->assertDatabaseHas('audit_logs', [
-            'action'   => 'settings.critical_change',
+            'action' => 'settings.critical_change',
             'severity' => 'critical',
-            'reason'   => 'Emergency maintenance',
+            'reason' => 'Emergency maintenance',
         ]);
     }
 }

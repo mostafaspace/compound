@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\AccountMergeStatus;
 use App\Enums\AccountStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\AuditLogResource;
 use App\Http\Resources\UserResource;
+use App\Models\AccountMerge;
 use App\Models\AuditLog;
 use App\Models\User;
 use App\Services\CompoundContextService;
@@ -23,9 +25,9 @@ class UserSupportViewController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $validated = $request->validate([
-            'q'       => ['nullable', 'string', 'max:160'],
-            'status'  => ['nullable', 'string'],
-            'role'    => ['nullable', 'string'],
+            'q' => ['nullable', 'string', 'max:160'],
+            'status' => ['nullable', 'string'],
+            'role' => ['nullable', 'string'],
             'perPage' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
@@ -69,10 +71,10 @@ class UserSupportViewController extends Controller
 
         $user->loadMissing([
             'roles',
-            'unitMemberships.unit',
+            'apartmentResidents.unit',
             'documents',
             'verificationRequests' => fn ($q) => $q->latest()->limit(5),
-            'residentInvitations'  => fn ($q) => $q->latest()->limit(5),
+            'residentInvitations' => fn ($q) => $q->latest()->limit(5),
         ]);
 
         // Recent audit events where this user was the actor
@@ -87,41 +89,41 @@ class UserSupportViewController extends Controller
         $docCounts = $user->documents->groupBy('status')->map->count();
 
         // Unit memberships (all, not just active)
-        $memberships = $user->unitMemberships->map(fn ($m) => [
-            'id'                  => $m->id,
-            'unit_id'             => $m->unit_id,
-            'unit_name'           => $m->unit?->name,
-            'unit_number'         => $m->unit?->number,
-            'relation_type'       => $m->relation_type?->value,
-            'starts_at'           => $m->starts_at?->toDateString(),
-            'ends_at'             => $m->ends_at?->toDateString(),
-            'is_primary'          => $m->is_primary,
+        $memberships = $user->apartmentResidents->map(fn ($m) => [
+            'id' => $m->id,
+            'unit_id' => $m->unit_id,
+            'unit_name' => $m->unit?->name,
+            'unit_number' => $m->unit?->number,
+            'relation_type' => $m->relation_type?->value,
+            'starts_at' => $m->starts_at?->toDateString(),
+            'ends_at' => $m->ends_at?->toDateString(),
+            'is_primary' => $m->is_primary,
             'verification_status' => $m->verification_status?->value,
         ])->all();
 
         // Active merges (as source or target)
-        $activeMerges = \App\Models\AccountMerge::query()
+        $activeMerges = AccountMerge::query()
             ->where(function ($q) use ($user): void {
                 $q->where('source_user_id', $user->id)
-                  ->orWhere('target_user_id', $user->id);
+                    ->orWhere('target_user_id', $user->id);
             })
-            ->where('status', \App\Enums\AccountMergeStatus::Pending->value)
+            ->where('status', AccountMergeStatus::Pending->value)
             ->with(['sourceUser', 'targetUser'])
             ->get();
 
         return response()->json([
-            'user'              => UserResource::make($user),
-            'memberships'       => $memberships,
-            'documentCounts'    => $docCounts,
+            'user' => UserResource::make($user),
+            'memberships' => $memberships,
+            'documentCounts' => $docCounts,
             'verificationStatus' => $user->verificationRequests->first()?->status?->value,
             'recentAuditEvents' => AuditLogResource::collection($recentAuditEvents),
-            'activeMerges'      => $activeMerges->map(fn ($m) => [
-                'id'             => $m->id,
-                'sourceUserId'   => $m->source_user_id,
-                'targetUserId'   => $m->target_user_id,
-                'status'         => $m->status?->value,
-                'notes'          => $m->notes,
-                'createdAt'      => $m->created_at?->toIso8601String(),
+            'activeMerges' => $activeMerges->map(fn ($m) => [
+                'id' => $m->id,
+                'sourceUserId' => $m->source_user_id,
+                'targetUserId' => $m->target_user_id,
+                'status' => $m->status?->value,
+                'notes' => $m->notes,
+                'createdAt' => $m->created_at?->toIso8601String(),
             ])->all(),
         ]);
     }
@@ -148,14 +150,14 @@ class UserSupportViewController extends Controller
             ->where(function ($q) use ($user): void {
                 // Exact email match, or similar name (within same compound)
                 $q->where('email', $user->email)
-                  ->orWhere(function ($inner) use ($user): void {
-                      $nameParts = explode(' ', strtolower($user->name));
-                      foreach ($nameParts as $part) {
-                          if (strlen($part) > 2) {
-                              $inner->orWhere('name', 'like', '%'.$part.'%');
-                          }
-                      }
-                  });
+                    ->orWhere(function ($inner) use ($user): void {
+                        $nameParts = explode(' ', strtolower($user->name));
+                        foreach ($nameParts as $part) {
+                            if (strlen($part) > 2) {
+                                $inner->orWhere('name', 'like', '%'.$part.'%');
+                            }
+                        }
+                    });
             })
             ->limit(10)
             ->get();
@@ -169,7 +171,7 @@ class UserSupportViewController extends Controller
         $query->where(function ($scoped) use ($compoundIds): void {
             $scoped
                 ->whereIn('compound_id', $compoundIds)
-                ->orWhereHas('unitMemberships.unit', fn ($unitQuery) => $unitQuery->whereIn('compound_id', $compoundIds));
+                ->orWhereHas('apartmentResidents.unit', fn ($unitQuery) => $unitQuery->whereIn('compound_id', $compoundIds));
         });
     }
 
@@ -206,7 +208,7 @@ class UserSupportViewController extends Controller
             return true;
         }
 
-        return $user->unitMemberships()
+        return $user->apartmentResidents()
             ->whereHas('unit', fn ($unitQuery) => $unitQuery->whereIn('compound_id', $compoundIds))
             ->exists();
     }

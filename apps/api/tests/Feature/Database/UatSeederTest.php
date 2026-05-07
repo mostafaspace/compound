@@ -66,7 +66,7 @@ class UatSeederTest extends TestCase
         $this->assertSame(
             $residentIds->count(),
             $nextPoint->units()
-                ->whereHas('memberships', fn ($query) => $query->whereIn('user_id', $residentIds))
+                ->whereHas('apartmentResidents', fn ($query) => $query->whereIn('user_id', $residentIds))
                 ->count(),
         );
 

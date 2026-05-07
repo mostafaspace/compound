@@ -8,11 +8,11 @@ use App\Enums\UnitStatus;
 use App\Enums\UnitType;
 use App\Enums\UserRole;
 use App\Enums\VerificationStatus;
+use App\Models\Apartments\ApartmentResident;
 use App\Models\Property\Building;
 use App\Models\Property\Compound;
 use App\Models\Property\Floor;
 use App\Models\Property\Unit;
-use App\Models\Property\UnitMembership;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -60,7 +60,7 @@ class PropertyRegistryTest extends TestCase
             'role' => UserRole::CompoundAdmin->value,
             'compound_id' => null,
         ]);
-        UnitMembership::query()->create([
+        ApartmentResident::query()->create([
             'unit_id' => $unitA->id,
             'user_id' => $admin->id,
             'relation_type' => UnitRelationType::Owner->value,
@@ -105,7 +105,7 @@ class PropertyRegistryTest extends TestCase
             'role' => UserRole::CompoundAdmin->value,
             'compound_id' => $compoundB->id,
         ]);
-        UnitMembership::query()->create([
+        ApartmentResident::query()->create([
             'unit_id' => $unitA->id,
             'user_id' => $admin->id,
             'relation_type' => UnitRelationType::Owner->value,
@@ -262,7 +262,7 @@ class PropertyRegistryTest extends TestCase
         ]);
     }
 
-    public function test_building_detail_includes_unit_memberships_for_assignment_views(): void
+    public function test_building_detail_includes_apartment_residents_for_assignment_views(): void
     {
         $compound = Compound::factory()->create();
         $building = Building::factory()->for($compound)->create();
@@ -277,7 +277,7 @@ class PropertyRegistryTest extends TestCase
             'compound_id' => $compound->id,
         ]);
 
-        UnitMembership::query()->create([
+        ApartmentResident::query()->create([
             'unit_id' => $unit->id,
             'user_id' => $resident->id,
             'relation_type' => UnitRelationType::Owner->value,
@@ -291,7 +291,7 @@ class PropertyRegistryTest extends TestCase
         $this->getJson("/api/v1/buildings/{$building->id}")
             ->assertOk()
             ->assertJsonPath('data.units.0.unitNumber', '101')
-            ->assertJsonPath('data.units.0.memberships.0.user.email', 'owner.lookup@example.test');
+            ->assertJsonPath('data.units.0.apartmentResidents.0.user.email', 'owner.lookup@example.test');
     }
 
     public function test_unassigned_users_endpoint_returns_only_resident_candidates(): void
@@ -328,7 +328,7 @@ class PropertyRegistryTest extends TestCase
             ->assertJsonPath('data.data.0.email', $resident->email);
     }
 
-    public function test_it_manages_unit_memberships(): void
+    public function test_it_manages_apartment_residents(): void
     {
         $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
         $compound = Compound::factory()->create();
@@ -359,7 +359,7 @@ class PropertyRegistryTest extends TestCase
 
         $this->getJson("/api/v1/units/{$unit->id}")
             ->assertOk()
-            ->assertJsonPath('data.memberships.0.user.email', $resident->email);
+            ->assertJsonPath('data.apartmentResidents.0.user.email', $resident->email);
 
         $this->postJson("/api/v1/unit-memberships/{$membershipId}/end")
             ->assertOk()
@@ -367,7 +367,7 @@ class PropertyRegistryTest extends TestCase
             ->assertJsonPath('data.endsAt', now()->toDateString());
     }
 
-    public function test_it_updates_unit_membership_resident_profile_and_vehicle_fields(): void
+    public function test_it_updates_apartment_resident_profile_fields(): void
     {
         $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
         $compound = Compound::factory()->create();
@@ -383,7 +383,7 @@ class PropertyRegistryTest extends TestCase
             ->for($building)
             ->create(['floor_id' => null, 'unit_number' => '306']);
 
-        $membership = UnitMembership::query()->create([
+        $membership = ApartmentResident::query()->create([
             'unit_id' => $unit->id,
             'user_id' => $resident->id,
             'relation_type' => UnitRelationType::Resident->value,
@@ -398,10 +398,6 @@ class PropertyRegistryTest extends TestCase
             'phonePublic' => true,
             'residentEmail' => 'ahmed.ali@example.test',
             'emailPublic' => false,
-            'hasVehicle' => true,
-            'vehiclePlate' => 'XYZ-987',
-            'parkingSpotCode' => 'P-42',
-            'garageStickerCode' => 'GS-77',
             'verificationStatus' => VerificationStatus::Verified->value,
         ])
             ->assertOk()
@@ -410,28 +406,20 @@ class PropertyRegistryTest extends TestCase
             ->assertJsonPath('data.phonePublic', true)
             ->assertJsonPath('data.residentEmail', 'ahmed.ali@example.test')
             ->assertJsonPath('data.emailPublic', false)
-            ->assertJsonPath('data.hasVehicle', true)
-            ->assertJsonPath('data.vehiclePlate', 'XYZ-987')
-            ->assertJsonPath('data.parkingSpotCode', 'P-42')
-            ->assertJsonPath('data.garageStickerCode', 'GS-77')
             ->assertJsonPath('data.verificationStatus', VerificationStatus::Verified->value);
 
-        $this->assertDatabaseHas('unit_memberships', [
+        $this->assertDatabaseHas('apartment_residents', [
             'id' => $membership->id,
             'resident_name' => 'Ahmed Ali',
             'resident_phone' => '+201001112223',
             'phone_public' => true,
             'resident_email' => 'ahmed.ali@example.test',
             'email_public' => false,
-            'has_vehicle' => true,
-            'vehicle_plate' => 'XYZ-987',
-            'parking_spot_code' => 'P-42',
-            'garage_sticker_code' => 'GS-77',
             'verification_status' => VerificationStatus::Verified->value,
         ]);
     }
 
-    public function test_scoped_admin_cannot_manage_other_compound_unit_memberships(): void
+    public function test_scoped_admin_cannot_manage_other_compound_apartment_residents(): void
     {
         $compoundA = Compound::factory()->create();
         $compoundB = Compound::factory()->create();
@@ -442,7 +430,7 @@ class PropertyRegistryTest extends TestCase
         $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
         $buildingB = Building::factory()->for($compoundB)->create();
         $unitB = Unit::factory()->for($compoundB)->for($buildingB)->create(['floor_id' => null]);
-        $membership = UnitMembership::query()->create([
+        $membership = ApartmentResident::query()->create([
             'unit_id' => $unitB->id,
             'user_id' => $resident->id,
             'relation_type' => UnitRelationType::Owner->value,
@@ -462,14 +450,14 @@ class PropertyRegistryTest extends TestCase
         ])->assertForbidden();
         $this->postJson("/api/v1/unit-memberships/{$membership->id}/end")->assertForbidden();
 
-        $this->assertDatabaseHas('unit_memberships', [
+        $this->assertDatabaseHas('apartment_residents', [
             'id' => $membership->id,
             'verification_status' => VerificationStatus::Verified->value,
             'ends_at' => null,
         ]);
     }
 
-    public function test_membership_scoped_compound_admin_cannot_manage_other_compound_unit_memberships_when_compound_id_is_null(): void
+    public function test_membership_scoped_compound_admin_cannot_manage_other_compound_apartment_residents_when_compound_id_is_null(): void
     {
         $compoundA = Compound::factory()->create();
         $compoundB = Compound::factory()->create();
@@ -482,14 +470,14 @@ class PropertyRegistryTest extends TestCase
         $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
         $unitA = Unit::factory()->for($compoundA)->for($buildingA)->create(['floor_id' => null]);
         $unitB = Unit::factory()->for($compoundB)->for($buildingB)->create(['floor_id' => null]);
-        $membership = UnitMembership::query()->create([
+        $membership = ApartmentResident::query()->create([
             'unit_id' => $unitB->id,
             'user_id' => $resident->id,
             'relation_type' => UnitRelationType::Owner->value,
             'starts_at' => now()->toDateString(),
             'verification_status' => VerificationStatus::Verified->value,
         ]);
-        UnitMembership::query()->create([
+        ApartmentResident::query()->create([
             'unit_id' => $unitA->id,
             'user_id' => $adminA->id,
             'relation_type' => UnitRelationType::Owner->value,
@@ -547,7 +535,7 @@ class PropertyRegistryTest extends TestCase
                 'status' => UnitStatus::Vacant->value,
             ]);
 
-        UnitMembership::query()->create([
+        ApartmentResident::query()->create([
             'unit_id' => $matchingUnit->id,
             'user_id' => $resident->id,
             'relation_type' => UnitRelationType::Owner->value,
@@ -555,7 +543,7 @@ class PropertyRegistryTest extends TestCase
             'is_primary' => true,
             'verification_status' => VerificationStatus::Verified->value,
         ]);
-        UnitMembership::query()->create([
+        ApartmentResident::query()->create([
             'unit_id' => $nonMatchingUnit->id,
             'user_id' => $otherResident->id,
             'relation_type' => UnitRelationType::Tenant->value,
@@ -581,7 +569,7 @@ class PropertyRegistryTest extends TestCase
             ->assertJsonPath('data.0.compound.id', $compound->id)
             ->assertJsonPath('data.0.building.id', $building->id)
             ->assertJsonPath('data.0.floor.id', $floor->id)
-            ->assertJsonPath('data.0.memberships.0.user.email', 'owner.lookup@example.test');
+            ->assertJsonPath('data.0.apartmentResidents.0.user.email', 'owner.lookup@example.test');
     }
 
     public function test_membership_scoped_compound_admin_lookup_is_limited_to_own_compound_when_compound_id_is_null(): void
@@ -597,7 +585,7 @@ class PropertyRegistryTest extends TestCase
             'role' => UserRole::CompoundAdmin->value,
             'compound_id' => null,
         ]);
-        UnitMembership::query()->create([
+        ApartmentResident::query()->create([
             'unit_id' => $unitA->id,
             'user_id' => $admin->id,
             'relation_type' => UnitRelationType::Owner->value,
@@ -630,7 +618,7 @@ class PropertyRegistryTest extends TestCase
             'role' => UserRole::CompoundAdmin->value,
             'compound_id' => $compoundB->id,
         ]);
-        UnitMembership::query()->create([
+        ApartmentResident::query()->create([
             'unit_id' => $unitA->id,
             'user_id' => $admin->id,
             'relation_type' => UnitRelationType::Owner->value,
@@ -670,7 +658,7 @@ class PropertyRegistryTest extends TestCase
                 'archived_at' => now(),
             ]);
 
-        UnitMembership::query()->create([
+        ApartmentResident::query()->create([
             'unit_id' => $activeUnit->id,
             'user_id' => $resident->id,
             'relation_type' => UnitRelationType::Owner->value,
@@ -678,7 +666,7 @@ class PropertyRegistryTest extends TestCase
             'is_primary' => true,
             'verification_status' => VerificationStatus::Verified->value,
         ]);
-        UnitMembership::query()->create([
+        ApartmentResident::query()->create([
             'unit_id' => $expiredUnit->id,
             'user_id' => $resident->id,
             'relation_type' => UnitRelationType::Tenant->value,
@@ -686,21 +674,21 @@ class PropertyRegistryTest extends TestCase
             'ends_at' => now()->subDay()->toDateString(),
             'verification_status' => VerificationStatus::Verified->value,
         ]);
-        UnitMembership::query()->create([
+        ApartmentResident::query()->create([
             'unit_id' => $pendingUnit->id,
             'user_id' => $resident->id,
             'relation_type' => UnitRelationType::Resident->value,
             'starts_at' => now()->subDay()->toDateString(),
             'verification_status' => VerificationStatus::Pending->value,
         ]);
-        UnitMembership::query()->create([
+        ApartmentResident::query()->create([
             'unit_id' => $archivedUnit->id,
             'user_id' => $resident->id,
             'relation_type' => UnitRelationType::Owner->value,
             'starts_at' => now()->subDay()->toDateString(),
             'verification_status' => VerificationStatus::Verified->value,
         ]);
-        UnitMembership::query()->create([
+        ApartmentResident::query()->create([
             'unit_id' => $otherUnit->id,
             'user_id' => $otherResident->id,
             'relation_type' => UnitRelationType::Owner->value,
@@ -718,11 +706,13 @@ class PropertyRegistryTest extends TestCase
             ->assertJsonPath('data.0.unit.compoundId', $compound->id)
             ->assertJsonPath('data.0.verificationStatus', VerificationStatus::Verified->value);
 
-        $this->assertDatabaseHas('unit_memberships', [
-            'unit_id' => $expiredUnit->id,
-            'user_id' => $resident->id,
-            'ends_at' => now()->subDay()->toDateString(),
-        ]);
+        $this->assertTrue(
+            ApartmentResident::query()
+                ->where('unit_id', $expiredUnit->id)
+                ->where('user_id', $resident->id)
+                ->whereDate('ends_at', now()->subDay()->toDateString())
+                ->exists(),
+        );
     }
 
     public function test_archived_units_are_hidden_from_lookup_by_default_but_history_is_preserved(): void
@@ -738,7 +728,7 @@ class PropertyRegistryTest extends TestCase
         $building = Building::factory()->for($compound)->create();
         $unit = Unit::factory()->for($compound)->for($building)->create(['unit_number' => '901']);
 
-        UnitMembership::query()->create([
+        ApartmentResident::query()->create([
             'unit_id' => $unit->id,
             'user_id' => $resident->id,
             'relation_type' => UnitRelationType::Owner->value,
@@ -758,9 +748,9 @@ class PropertyRegistryTest extends TestCase
             ->assertOk()
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.id', $unit->id)
-            ->assertJsonPath('data.0.memberships.0.userId', $resident->id);
+            ->assertJsonPath('data.0.apartmentResidents.0.userId', $resident->id);
 
-        $this->assertDatabaseHas('unit_memberships', [
+        $this->assertDatabaseHas('apartment_residents', [
             'unit_id' => $unit->id,
             'user_id' => $resident->id,
             'verification_status' => VerificationStatus::Verified->value,
@@ -934,7 +924,7 @@ class PropertyRegistryTest extends TestCase
             'compound_id' => null,
         ]);
 
-        UnitMembership::query()->create([
+        ApartmentResident::query()->create([
             'unit_id' => $unit->id,
             'user_id' => $admin->id,
             'relation_type' => UnitRelationType::Owner->value,
@@ -978,7 +968,7 @@ class PropertyRegistryTest extends TestCase
             'compound_id' => $compoundB->id,
         ]);
 
-        UnitMembership::query()->create([
+        ApartmentResident::query()->create([
             'unit_id' => $unitA->id,
             'user_id' => $admin->id,
             'relation_type' => UnitRelationType::Owner->value,

@@ -21,39 +21,39 @@ class AccountMergeService
      */
     public function analyze(User $source, User $target): array
     {
-        $memberships = $source->unitMemberships()->with('unit')->get();
-        $documents   = $source->documents()->count();
+        $memberships = $source->apartmentResidents()->with('unit')->get();
+        $documents = $source->documents()->count();
         $invitations = $source->residentInvitations()->count();
         $verifications = $source->verificationRequests()->count();
 
         $membershipSummary = $memberships->map(fn ($m) => [
-            'unit_id'             => $m->unit_id,
-            'unit_name'           => $m->unit?->name,
-            'relation_type'       => $m->relation_type?->value,
+            'unit_id' => $m->unit_id,
+            'unit_name' => $m->unit?->name,
+            'relation_type' => $m->relation_type?->value,
             'verification_status' => $m->verification_status?->value,
-            'starts_at'           => $m->starts_at?->toDateString(),
-            'ends_at'             => $m->ends_at?->toDateString(),
+            'starts_at' => $m->starts_at?->toDateString(),
+            'ends_at' => $m->ends_at?->toDateString(),
         ])->all();
 
         // Check if target already has memberships for the same units (potential conflicts)
-        $targetUnitIds = $target->unitMemberships()->pluck('unit_id')->all();
+        $targetUnitIds = $target->apartmentResidents()->pluck('unit_id')->all();
         $conflictingUnitIds = $memberships
             ->filter(fn ($m) => in_array($m->unit_id, $targetUnitIds))
             ->pluck('unit_id')
             ->all();
 
         return [
-            'source_user'    => ['id' => $source->id, 'name' => $source->name, 'email' => $source->email],
-            'target_user'    => ['id' => $target->id, 'name' => $target->name, 'email' => $target->email],
-            'to_transfer'    => [
-                'memberships'   => count($membershipSummary),
-                'documents'     => $documents,
-                'invitations'   => $invitations,
+            'source_user' => ['id' => $source->id, 'name' => $source->name, 'email' => $source->email],
+            'target_user' => ['id' => $target->id, 'name' => $target->name, 'email' => $target->email],
+            'to_transfer' => [
+                'memberships' => count($membershipSummary),
+                'documents' => $documents,
+                'invitations' => $invitations,
                 'verifications' => $verifications,
             ],
-            'memberships'        => $membershipSummary,
-            'conflicting_units'  => $conflictingUnitIds,
-            'warnings'           => count($conflictingUnitIds) > 0
+            'memberships' => $membershipSummary,
+            'conflicting_units' => $conflictingUnitIds,
+            'warnings' => count($conflictingUnitIds) > 0
                 ? ['Target user already has memberships in '.count($conflictingUnitIds).' of the same units. Those memberships will be skipped.']
                 : [],
         ];
@@ -71,11 +71,11 @@ class AccountMergeService
         $source = $merge->sourceUser;
         $target = $merge->targetUser;
 
-        DB::transaction(function () use ($merge, $source, $target, $actor): void {
-            $targetUnitIds = $target->unitMemberships()->pluck('unit_id')->all();
+        DB::transaction(function () use ($merge, $source, $target): void {
+            $targetUnitIds = $target->apartmentResidents()->pluck('unit_id')->all();
 
             // Transfer unit memberships (skip duplicates for same unit)
-            $source->unitMemberships()
+            $source->apartmentResidents()
                 ->whereNotIn('unit_id', $targetUnitIds)
                 ->update(['user_id' => $target->id]);
 
@@ -100,7 +100,7 @@ class AccountMergeService
 
             // Complete the merge record
             $merge->update([
-                'status'       => AccountMergeStatus::Completed,
+                'status' => AccountMergeStatus::Completed,
                 'completed_at' => now(),
             ]);
         });
@@ -115,7 +115,7 @@ class AccountMergeService
             metadata: [
                 'source_user_id' => $source->id,
                 'target_user_id' => $target->id,
-                'merge_id'       => $merge->id,
+                'merge_id' => $merge->id,
             ],
         );
     }

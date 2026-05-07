@@ -2,27 +2,27 @@
 
 namespace App\Http\Controllers\Api\V1\Polls;
 
+use App\Enums\NotificationCategory;
 use App\Enums\PollStatus;
 use App\Enums\UserRole;
 use App\Enums\VoteEligibility;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Polls\PollResource;
+use App\Models\Apartments\ApartmentResident;
 use App\Models\Polls\Poll;
 use App\Models\Polls\PollNotificationLog;
 use App\Models\Polls\PollOption;
 use App\Models\Polls\PollViewLog;
 use App\Models\Polls\PollVote;
-use App\Models\Property\UnitMembership;
 use App\Models\User;
 use App\Services\CompoundContextService;
 use App\Services\NotificationService;
-use App\Enums\NotificationCategory;
 use App\Support\AuditLogger;
-use Illuminate\Support\Collection;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
@@ -54,7 +54,7 @@ class PollController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $validated = $request->validate([
-            'status'     => ['nullable', 'string', Rule::in(array_column(PollStatus::cases(), 'value'))],
+            'status' => ['nullable', 'string', Rule::in(array_column(PollStatus::cases(), 'value'))],
             'compoundId' => ['nullable', 'string'],
         ]);
 
@@ -66,12 +66,12 @@ class PollController extends Controller
         if (! $isAdmin) {
             // Residents only see active polls in their verified units/buildings/compounds
             $query->where('status', PollStatus::Active->value);
-            
-            $memberships = $user->unitMemberships()
+
+            $memberships = $user->apartmentResidents()
                 ->activeForAccess()
                 ->with('unit')
                 ->get();
-                
+
             $verifiedCompoundIds = $memberships->pluck('unit.compound_id')->unique()->filter()->values()->all();
             $verifiedBuildingIds = $memberships->pluck('unit.building_id')->unique()->filter()->values()->all();
 
@@ -79,14 +79,14 @@ class PollController extends Controller
                 // Polls scoped to compound level
                 $q->where(function ($sq) use ($verifiedCompoundIds) {
                     $sq->where('scope', 'compound')
-                       ->whereIn('compound_id', $verifiedCompoundIds);
+                        ->whereIn('compound_id', $verifiedCompoundIds);
                 });
-                
+
                 // Polls scoped to building level
-                if (!empty($verifiedBuildingIds)) {
+                if (! empty($verifiedBuildingIds)) {
                     $q->orWhere(function ($sq) use ($verifiedBuildingIds) {
                         $sq->where('scope', 'building')
-                           ->whereIn('building_id', $verifiedBuildingIds);
+                            ->whereIn('building_id', $verifiedBuildingIds);
                     });
                 }
             });
@@ -118,18 +118,18 @@ class PollController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'compoundId'      => ['required', 'string', 'exists:compounds,id'],
-            'buildingId'      => ['nullable', 'string', 'exists:buildings,id'],
-            'pollTypeId'      => ['nullable', 'string', 'exists:poll_types,id'],
-            'title'           => ['required', 'string', 'max:255'],
-            'description'     => ['nullable', 'string'],
-            'scope'           => ['nullable', 'string', Rule::in(['compound', 'building'])],
-            'allowMultiple'   => ['nullable', 'boolean'],
-            'maxChoices'      => ['nullable', 'integer', 'min:2'],
-            'eligibility'     => ['nullable', 'string', Rule::in(array_column(VoteEligibility::cases(), 'value'))],
-            'startsAt'        => ['nullable', 'date'],
-            'endsAt'          => ['nullable', 'date', 'after:now'],
-            'options'         => ['required', 'array', 'min:2', 'max:20'],
+            'compoundId' => ['required', 'string', 'exists:compounds,id'],
+            'buildingId' => ['nullable', 'string', 'exists:buildings,id'],
+            'pollTypeId' => ['nullable', 'string', 'exists:poll_types,id'],
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'scope' => ['nullable', 'string', Rule::in(['compound', 'building'])],
+            'allowMultiple' => ['nullable', 'boolean'],
+            'maxChoices' => ['nullable', 'integer', 'min:2'],
+            'eligibility' => ['nullable', 'string', Rule::in(array_column(VoteEligibility::cases(), 'value'))],
+            'startsAt' => ['nullable', 'date'],
+            'endsAt' => ['nullable', 'date', 'after:now'],
+            'options' => ['required', 'array', 'min:2', 'max:20'],
             'options.*.label' => ['required', 'string', 'max:255'],
         ]);
 
@@ -142,24 +142,24 @@ class PollController extends Controller
         }
 
         $poll = Poll::create([
-            'compound_id'    => $validated['compoundId'],
-            'building_id'    => $validated['buildingId'] ?? null,
-            'poll_type_id'   => $validated['pollTypeId'] ?? null,
-            'title'          => $validated['title'],
-            'description'    => $validated['description'] ?? null,
-            'status'         => PollStatus::Draft->value,
-            'scope'          => $validated['scope'] ?? 'compound',
+            'compound_id' => $validated['compoundId'],
+            'building_id' => $validated['buildingId'] ?? null,
+            'poll_type_id' => $validated['pollTypeId'] ?? null,
+            'title' => $validated['title'],
+            'description' => $validated['description'] ?? null,
+            'status' => PollStatus::Draft->value,
+            'scope' => $validated['scope'] ?? 'compound',
             'allow_multiple' => $validated['allowMultiple'] ?? false,
-            'max_choices'    => $validated['maxChoices'] ?? null,
-            'eligibility'    => $validated['eligibility'] ?? VoteEligibility::AllVerified->value,
-            'starts_at'      => $validated['startsAt'] ?? null,
-            'ends_at'        => $validated['endsAt'] ?? null,
-            'created_by'     => $user->id,
+            'max_choices' => $validated['maxChoices'] ?? null,
+            'eligibility' => $validated['eligibility'] ?? VoteEligibility::AllVerified->value,
+            'starts_at' => $validated['startsAt'] ?? null,
+            'ends_at' => $validated['endsAt'] ?? null,
+            'created_by' => $user->id,
         ]);
 
         foreach ($validated['options'] as $index => $optionData) {
             $poll->options()->create([
-                'label'      => $optionData['label'],
+                'label' => $optionData['label'],
                 'sort_order' => $index,
             ]);
         }
@@ -194,7 +194,7 @@ class PollController extends Controller
         if (! $this->isAdmin($user) && Schema::hasTable('poll_view_logs')) {
             $unitContext = $this->resolveScopedUnitContext($poll, $user, $selectedUnitId);
             $log = PollViewLog::firstOrNew(['poll_id' => $poll->id, 'user_id' => $user->id]);
-            if (!$log->exists) {
+            if (! $log->exists) {
                 $log->first_viewed_at = now();
                 $log->view_count = 0;
                 if (Schema::hasColumn('poll_view_logs', 'unit_id')) {
@@ -214,8 +214,8 @@ class PollController extends Controller
             'pollType',
             'votes.user',
             'votes.options',
-            'viewLogs.user.unitMemberships.unit',
-            'notificationLogs.user.unitMemberships.unit',
+            'viewLogs.user.apartmentResidents.unit',
+            'notificationLogs.user.apartmentResidents.unit',
         ];
         if (Schema::hasColumn('poll_votes', 'unit_id')) {
             $eagerLoads[] = 'votes.unit';
@@ -245,24 +245,24 @@ class PollController extends Controller
         }
 
         $validated = $request->validate([
-            'title'           => ['sometimes', 'required', 'string', 'max:255'],
-            'description'     => ['nullable', 'string'],
-            'pollTypeId'      => ['nullable', 'string', 'exists:poll_types,id'],
-            'scope'           => ['sometimes', 'string', Rule::in(['compound', 'building'])],
-            'allowMultiple'   => ['sometimes', 'boolean'],
-            'maxChoices'      => ['nullable', 'integer', 'min:2'],
-            'eligibility'     => ['sometimes', 'string', Rule::in(array_column(VoteEligibility::cases(), 'value'))],
-            'startsAt'        => ['nullable', 'date'],
-            'endsAt'          => ['nullable', 'date', 'after:now'],
-            'options'         => ['sometimes', 'array', 'min:2', 'max:20'],
+            'title' => ['sometimes', 'required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'pollTypeId' => ['nullable', 'string', 'exists:poll_types,id'],
+            'scope' => ['sometimes', 'string', Rule::in(['compound', 'building'])],
+            'allowMultiple' => ['sometimes', 'boolean'],
+            'maxChoices' => ['nullable', 'integer', 'min:2'],
+            'eligibility' => ['sometimes', 'string', Rule::in(array_column(VoteEligibility::cases(), 'value'))],
+            'startsAt' => ['nullable', 'date'],
+            'endsAt' => ['nullable', 'date', 'after:now'],
+            'options' => ['sometimes', 'array', 'min:2', 'max:20'],
             'options.*.label' => ['required_with:options', 'string', 'max:255'],
         ]);
 
         $updates = array_filter([
-            'title'          => $validated['title'] ?? null,
-            'scope'          => $validated['scope'] ?? null,
+            'title' => $validated['title'] ?? null,
+            'scope' => $validated['scope'] ?? null,
             'allow_multiple' => $validated['allowMultiple'] ?? null,
-            'eligibility'    => $validated['eligibility'] ?? null,
+            'eligibility' => $validated['eligibility'] ?? null,
         ], fn ($v) => ! is_null($v));
 
         // These can be set to null explicitly
@@ -288,7 +288,7 @@ class PollController extends Controller
             $poll->options()->delete();
             foreach ($validated['options'] as $index => $optionData) {
                 $poll->options()->create([
-                    'label'      => $optionData['label'],
+                    'label' => $optionData['label'],
                     'sort_order' => $index,
                 ]);
             }
@@ -323,7 +323,7 @@ class PollController extends Controller
         }
 
         $poll->update([
-            'status'       => PollStatus::Active->value,
+            'status' => PollStatus::Active->value,
             'published_at' => now(),
         ]);
 
@@ -357,7 +357,7 @@ class PollController extends Controller
         }
 
         $poll->update([
-            'status'    => PollStatus::Closed->value,
+            'status' => PollStatus::Closed->value,
             'closed_at' => now(),
         ]);
 
@@ -417,7 +417,7 @@ class PollController extends Controller
         return response()->json([
             'data' => [
                 'eligible' => $eligible,
-                'reason'   => $reason,
+                'reason' => $reason,
                 'hasVoted' => $hasVoted,
                 'selectedUnitId' => $selection['selectedUnitId'],
                 'requiresUnitSelection' => $selection['requiresUnitSelection'],
@@ -477,7 +477,7 @@ class PollController extends Controller
 
         $validated = $request->validate([
             'unitId' => ['nullable', 'string'],
-            'optionIds'   => ['required', 'array', 'min:1'],
+            'optionIds' => ['required', 'array', 'min:1'],
             'optionIds.*' => ['integer', 'distinct', Rule::exists('poll_options', 'id')->where('poll_id', $poll->id)],
         ]);
 
@@ -509,8 +509,8 @@ class PollController extends Controller
                 }
 
                 $voteData = [
-                    'poll_id'  => $poll->id,
-                    'user_id'  => $user->id,
+                    'poll_id' => $poll->id,
+                    'user_id' => $user->id,
                     'voted_at' => now(),
                 ];
                 if ($hasUnitColumn) {
@@ -630,12 +630,12 @@ class PollController extends Controller
             ->get();
 
         $votersList = $votes->map(fn (PollVote $vote) => [
-            'userId'     => $vote->user_id,
-            'userName'   => $vote->user?->name,
-            'unitId'     => $vote->unit_id ?? null,
+            'userId' => $vote->user_id,
+            'userName' => $vote->user?->name,
+            'unitId' => $vote->unit_id ?? null,
             'unitNumber' => $vote->unit?->unit_number ?? null,
-            'options'    => $vote->options->pluck('label')->toArray(),
-            'votedAt'    => $vote->voted_at?->toIso8601String(),
+            'options' => $vote->options->pluck('label')->toArray(),
+            'votedAt' => $vote->voted_at?->toIso8601String(),
         ]);
 
         return response()->json(['data' => $votersList->toArray()]);
@@ -655,7 +655,7 @@ class PollController extends Controller
 
         abort_if($poll->status === PollStatus::Draft->value, 403);
 
-        $query = $user->unitMemberships()
+        $query = $user->apartmentResidents()
             ->activeForAccess()
             ->whereHas('unit', function ($q) use ($poll) {
                 $q->where('compound_id', $poll->compound_id);
@@ -676,7 +676,7 @@ class PollController extends Controller
 
     private function dispatchPollNotifications(Poll $poll): void
     {
-        $memberships = UnitMembership::query()
+        $memberships = ApartmentResident::query()
             ->activeForAccess()
             ->with('unit:id,unit_number,compound_id,building_id')
             ->whereHas('unit', function ($q) use ($poll) {
@@ -746,7 +746,7 @@ class PollController extends Controller
         ];
     }
 
-    private function resolveScopedMembership(Poll $poll, User $user, ?string $selectedUnitId = null): ?UnitMembership
+    private function resolveScopedMembership(Poll $poll, User $user, ?string $selectedUnitId = null): ?ApartmentResident
     {
         $memberships = $this->resolveEligibleMemberships($poll, $user);
 
@@ -758,11 +758,11 @@ class PollController extends Controller
     }
 
     /**
-     * @return Collection<int, UnitMembership>
+     * @return Collection<int, ApartmentResident>
      */
     private function resolveEligibleMemberships(Poll $poll, User $user): Collection
     {
-        $memberships = $user->unitMemberships()
+        $memberships = $user->apartmentResidents()
             ->activeForAccess()
             ->with('unit:id,unit_number,compound_id,building_id')
             ->whereHas('unit', function ($q) use ($poll) {
@@ -778,10 +778,10 @@ class PollController extends Controller
 
         return match ($poll->eligibility) {
             VoteEligibility::OwnersOnly->value => $memberships->filter(
-                fn (UnitMembership $membership) => in_array($membership->relation_type->value, ['owner', 'representative'], true)
+                fn (ApartmentResident $membership) => in_array($membership->relation_type->value, ['owner', 'representative'], true)
             )->values(),
             VoteEligibility::OwnersAndResidents->value => $memberships->filter(
-                fn (UnitMembership $membership) => in_array($membership->relation_type->value, ['owner', 'representative', 'resident'], true)
+                fn (ApartmentResident $membership) => in_array($membership->relation_type->value, ['owner', 'representative', 'resident'], true)
             )->values(),
             default => $memberships,
         };
@@ -801,7 +801,7 @@ class PollController extends Controller
             ? collect()
             : $this->resolveEligibleMemberships($poll, $user);
 
-        $eligibleUnits = $memberships->map(fn (UnitMembership $membership) => [
+        $eligibleUnits = $memberships->map(fn (ApartmentResident $membership) => [
             'id' => $membership->unit_id,
             'unitNumber' => $membership->unit?->unit_number,
             'isPrimary' => (bool) $membership->is_primary,
@@ -831,7 +831,7 @@ class PollController extends Controller
     private function checkEligibility(Poll $poll, User $user): array
     {
         if ($poll->scope === 'building' && $poll->building_id !== null) {
-            $inBuilding = $user->unitMemberships()
+            $inBuilding = $user->apartmentResidents()
                 ->activeForAccess()
                 ->with('unit:id,building_id')
                 ->get()
@@ -843,7 +843,7 @@ class PollController extends Controller
             }
         }
 
-        $memberships = $user->unitMemberships()
+        $memberships = $user->apartmentResidents()
             ->activeForAccess()
             ->with('unit:id,compound_id')
             ->get()

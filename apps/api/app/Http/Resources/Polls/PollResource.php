@@ -16,38 +16,38 @@ class PollResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id'            => $this->id,
-            'compoundId'    => $this->compound_id,
-            'buildingId'    => $this->building_id,
-            'pollTypeId'    => $this->poll_type_id,
-            'pollType'      => PollTypeResource::make($this->whenLoaded('pollType')),
-            'title'         => $this->title,
-            'description'   => $this->description,
-            'status'        => $this->status,
-            'scope'         => $this->scope,
+            'id' => $this->id,
+            'compoundId' => $this->compound_id,
+            'buildingId' => $this->building_id,
+            'pollTypeId' => $this->poll_type_id,
+            'pollType' => PollTypeResource::make($this->whenLoaded('pollType')),
+            'title' => $this->title,
+            'description' => $this->description,
+            'status' => $this->status,
+            'scope' => $this->scope,
             'allowMultiple' => $this->allow_multiple,
-            'maxChoices'    => $this->max_choices,
-            'eligibility'   => $this->eligibility,
-            'startsAt'      => $this->starts_at?->toJSON(),
-            'endsAt'        => $this->ends_at?->toJSON(),
-            'publishedAt'   => $this->published_at?->toJSON(),
-            'closedAt'      => $this->closed_at?->toJSON(),
-            'createdAt'     => $this->created_at?->toJSON(),
-            'updatedAt'     => $this->updated_at?->toJSON(),
-            'options'       => PollOptionResource::collection($this->whenLoaded('options')),
-            'votesCount'    => $this->whenLoaded('votes', fn () => $this->votes->count(), 0),
+            'maxChoices' => $this->max_choices,
+            'eligibility' => $this->eligibility,
+            'startsAt' => $this->starts_at?->toJSON(),
+            'endsAt' => $this->ends_at?->toJSON(),
+            'publishedAt' => $this->published_at?->toJSON(),
+            'closedAt' => $this->closed_at?->toJSON(),
+            'createdAt' => $this->created_at?->toJSON(),
+            'updatedAt' => $this->updated_at?->toJSON(),
+            'options' => PollOptionResource::collection($this->whenLoaded('options')),
+            'votesCount' => $this->whenLoaded('votes', fn () => $this->votes->count(), 0),
             'selectedUnitId' => $this->selected_unit_id ?? null,
-            'hasVoted'      => $this->has_voted ?? null,
+            'hasVoted' => $this->has_voted ?? null,
             'userVoteOptionIds' => $this->user_vote_option_ids ?? null,
-            'voters'        => $this->whenLoaded('votes', fn () => $this->votes->map(fn ($vote) => [
-                'userId'     => $vote->user_id,
-                'userName'   => $vote->user?->name,
-                'unitId'     => $vote->unit_id ?? null,
+            'voters' => $this->whenLoaded('votes', fn () => $this->votes->map(fn ($vote) => [
+                'userId' => $vote->user_id,
+                'userName' => $vote->user?->name,
+                'unitId' => $vote->unit_id ?? null,
                 'unitNumber' => $vote->relationLoaded('unit') ? $vote->unit?->unit_number : null,
-                'options'    => $vote->relationLoaded('options') ? $vote->options->pluck('label')->toArray() : [],
-                'votedAt'    => $vote->voted_at?->toIso8601String(),
+                'options' => $vote->relationLoaded('options') ? $vote->options->pluck('label')->toArray() : [],
+                'votedAt' => $vote->voted_at?->toIso8601String(),
             ])->toArray()),
-            'viewLogs' => $this->whenLoaded('viewLogs', fn() => $this->viewLogs->map(fn($log) => [
+            'viewLogs' => $this->whenLoaded('viewLogs', fn () => $this->viewLogs->map(fn ($log) => [
                 'userId' => $log->user_id,
                 'userName' => $log->user?->name,
                 ...$this->resolvePollScopedUnitContext($log->unit_id ?? null, $log->unit_number ?? null, $log->user),
@@ -55,7 +55,7 @@ class PollResource extends JsonResource
                 'lastViewedAt' => $log->last_viewed_at?->toIso8601String(),
                 'viewCount' => $log->view_count,
             ])),
-            'notificationLogs' => $this->whenLoaded('notificationLogs', fn() => $this->notificationLogs->map(fn($log) => [
+            'notificationLogs' => $this->whenLoaded('notificationLogs', fn () => $this->notificationLogs->map(fn ($log) => [
                 'userId' => $log->user_id,
                 'userName' => $log->user?->name,
                 ...$this->resolvePollScopedUnitContext($log->unit_id ?? null, $log->unit_number ?? null, $log->user),
@@ -76,11 +76,11 @@ class PollResource extends JsonResource
             return ['unitId' => $snapshottedUnitId, 'unitNumber' => $snapshottedUnitNumber];
         }
 
-        if (! $user || ! $user->relationLoaded('unitMemberships')) {
+        if (! $user || ! $user->relationLoaded('apartmentResidents')) {
             return ['unitId' => null, 'unitNumber' => null];
         }
 
-        $membership = $user->unitMemberships
+        $membership = $user->apartmentResidents
             ->filter(function ($membership): bool {
                 $unit = $membership->relationLoaded('unit') ? $membership->unit : null;
                 $verificationStatus = $membership->verification_status instanceof VerificationStatus

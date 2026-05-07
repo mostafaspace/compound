@@ -102,6 +102,7 @@ class ImportService
                     fn (string $h): string => strtolower(trim(preg_replace('/^\xEF\xBB\xBF/', '', $h) ?? '')),
                     $line,
                 );
+
                 continue;
             }
 
@@ -143,6 +144,7 @@ class ImportService
                     'field' => 'building_code,unit_number,type',
                     'message' => 'building_code, unit_number, and type are required.',
                 ];
+
                 continue;
             }
 
@@ -152,8 +154,9 @@ class ImportService
                 $result['errors'][] = [
                     'row' => $rowNum,
                     'field' => 'type',
-                    'message' => "Invalid unit type '{$typeValue}'. Allowed: " . implode(', ', array_column(UnitType::cases(), 'value')),
+                    'message' => "Invalid unit type '{$typeValue}'. Allowed: ".implode(', ', array_column(UnitType::cases(), 'value')),
                 ];
+
                 continue;
             }
 
@@ -169,6 +172,7 @@ class ImportService
                     'field' => 'building_code',
                     'message' => "Building with code '{$buildingCode}' not found in this compound.",
                 ];
+
                 continue;
             }
 
@@ -207,6 +211,7 @@ class ImportService
 
             if ($dryRun) {
                 $result['created']++;
+
                 continue;
             }
 
@@ -266,6 +271,7 @@ class ImportService
                     'field' => 'name,email,role',
                     'message' => 'name, email, and role are required.',
                 ];
+
                 continue;
             }
 
@@ -275,6 +281,7 @@ class ImportService
                     'field' => 'email',
                     'message' => "Invalid email address '{$email}'.",
                 ];
+
                 continue;
             }
 
@@ -282,8 +289,9 @@ class ImportService
                 $result['errors'][] = [
                     'row' => $rowNum,
                     'field' => 'role',
-                    'message' => "Invalid role '{$roleValue}'. Allowed: " . implode(', ', $allowedRoleValues),
+                    'message' => "Invalid role '{$roleValue}'. Allowed: ".implode(', ', $allowedRoleValues),
                 ];
+
                 continue;
             }
 
@@ -291,6 +299,7 @@ class ImportService
 
             if ($dryRun) {
                 $result['created']++;
+
                 continue;
             }
 
@@ -330,8 +339,8 @@ class ImportService
                         ->where('unit_number', $unitCode)
                         ->first();
 
-                    if ($unitForMembership && ! $unitForMembership->memberships()->where('user_id', $user->id)->exists()) {
-                        $unitForMembership->memberships()->create([
+                    if ($unitForMembership && ! $unitForMembership->apartmentResidents()->where('user_id', $user->id)->exists()) {
+                        $unitForMembership->apartmentResidents()->create([
                             'user_id' => $user->id,
                             'relation_type' => $relationType,
                             'starts_at' => now(),
@@ -377,6 +386,7 @@ class ImportService
                     'field' => 'unit_code,amount,currency',
                     'message' => 'unit_code, amount, and currency are required.',
                 ];
+
                 continue;
             }
 
@@ -386,6 +396,7 @@ class ImportService
                     'field' => 'amount',
                     'message' => "Amount must be a number, got '{$amountRaw}'.",
                 ];
+
                 continue;
             }
 
@@ -400,15 +411,17 @@ class ImportService
                     'field' => 'unit_code',
                     'message' => "Unit '{$unitCode}' not found in this compound.",
                 ];
+
                 continue;
             }
 
             if ($dryRun) {
                 $result['created']++;
+
                 continue;
             }
 
-            DB::transaction(function () use ($unit, $amountRaw, $currency, $description, $dateRaw, $actor, &$result): void {
+            DB::transaction(function () use ($unit, $amountRaw, $currency, $description, $actor, &$result): void {
                 // Ensure unit account exists (or create it)
                 $account = UnitAccount::query()->where('unit_id', $unit->id)->first()
                     ?? UnitAccount::create([

@@ -2,24 +2,25 @@
 
 namespace Tests\Feature\Api\V1;
 
+use App\Enums\Permission;
 use App\Enums\UserRole;
 use App\Enums\VoteEligibility;
 use App\Enums\VoteScope;
 use App\Enums\VoteStatus;
 use App\Enums\VoteType;
-use App\Enums\Permission;
+use App\Models\Apartments\ApartmentResident;
 use App\Models\Governance\Vote;
 use App\Models\Governance\VoteOption;
 use App\Models\Governance\VoteParticipation;
 use App\Models\Property\Building;
 use App\Models\Property\Compound;
 use App\Models\Property\Unit;
-use App\Models\Property\UnitMembership;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Spatie\Permission\Models\Permission as SpatiePermission;
 use Spatie\Permission\Models\Role as SpatieRole;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class VoteTest extends TestCase
@@ -30,7 +31,7 @@ class VoteTest extends TestCase
     {
         parent::setUp();
 
-        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -44,12 +45,12 @@ class VoteTest extends TestCase
         Sanctum::actingAs($admin);
 
         $response = $this->postJson('/api/v1/governance/votes', [
-            'compoundId'  => $compound->id,
-            'type'        => VoteType::Poll->value,
-            'title'       => 'Preferred park opening time',
+            'compoundId' => $compound->id,
+            'type' => VoteType::Poll->value,
+            'title' => 'Preferred park opening time',
             'description' => 'Vote on best time to open the park.',
             'eligibility' => VoteEligibility::AllVerified->value,
-            'options'     => [
+            'options' => [
                 ['label' => '7am – 8am'],
                 ['label' => '8am – 9am'],
                 ['label' => '9am – 10am'],
@@ -73,11 +74,11 @@ class VoteTest extends TestCase
         Sanctum::actingAs($admin);
 
         $response = $this->postJson('/api/v1/governance/votes', [
-            'compoundId'  => $compound->id,
-            'type'        => VoteType::Election->value,
-            'title'       => 'Board president election',
+            'compoundId' => $compound->id,
+            'type' => VoteType::Election->value,
+            'title' => 'Board president election',
             'eligibility' => VoteEligibility::OwnersOnly->value,
-            'options'     => [
+            'options' => [
                 ['label' => 'Ahmed Kamal'],
                 ['label' => 'Sara Hassan'],
             ],
@@ -94,11 +95,11 @@ class VoteTest extends TestCase
         Sanctum::actingAs($admin);
 
         $this->postJson('/api/v1/governance/votes', [
-            'compoundId'  => $compound->id,
-            'type'        => VoteType::Poll->value,
-            'title'       => 'Single option poll',
+            'compoundId' => $compound->id,
+            'type' => VoteType::Poll->value,
+            'title' => 'Single option poll',
             'eligibility' => VoteEligibility::AllVerified->value,
-            'options'     => [['label' => 'Only option']],
+            'options' => [['label' => 'Only option']],
         ])->assertUnprocessable();
     }
 
@@ -245,7 +246,7 @@ class VoteTest extends TestCase
             'building_id' => $building->id,
             'floor_id' => null,
         ]);
-        UnitMembership::factory()->create([
+        ApartmentResident::factory()->create([
             'unit_id' => $unit->id,
             'user_id' => $tenant->id,
             'verification_status' => 'verified',
@@ -273,7 +274,7 @@ class VoteTest extends TestCase
             'building_id' => $building->id,
             'floor_id' => null,
         ]);
-        UnitMembership::factory()->create([
+        ApartmentResident::factory()->create([
             'unit_id' => $unit->id,
             'user_id' => $tenant->id,
             'verification_status' => 'verified',
@@ -296,7 +297,7 @@ class VoteTest extends TestCase
         $vote = Vote::factory()->create(['compound_id' => $compound->id]);
         VoteOption::factory()->count(2)->create(['vote_id' => $vote->id, 'label' => 'opt']);
         $owner = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
-        UnitMembership::factory()->create([
+        ApartmentResident::factory()->create([
             'unit_id' => $unit->id,
             'user_id' => $owner->id,
             'verification_status' => 'verified',
@@ -345,10 +346,10 @@ class VoteTest extends TestCase
         [$owner, $vote, $option, $unit] = $this->makeActiveVoteWithOwner(VoteEligibility::OwnersOnly);
 
         VoteParticipation::create([
-            'vote_id'              => $vote->id,
-            'user_id'              => $owner->id,
-            'unit_id'              => $unit->id,
-            'option_id'            => $option->id,
+            'vote_id' => $vote->id,
+            'user_id' => $owner->id,
+            'unit_id' => $unit->id,
+            'option_id' => $option->id,
             'eligibility_snapshot' => ['role' => 'resident_owner'],
         ]);
 
@@ -412,17 +413,17 @@ class VoteTest extends TestCase
         foreach (range(1, 3) as $i) {
             $voter = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
             VoteParticipation::create([
-                'vote_id'              => $vote->id,
-                'user_id'              => $voter->id,
-                'option_id'            => $opt1->id,
+                'vote_id' => $vote->id,
+                'user_id' => $voter->id,
+                'option_id' => $opt1->id,
                 'eligibility_snapshot' => ['role' => 'resident_owner'],
             ]);
         }
         $voter4 = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
         VoteParticipation::create([
-            'vote_id'              => $vote->id,
-            'user_id'              => $voter4->id,
-            'option_id'            => $opt2->id,
+            'vote_id' => $vote->id,
+            'user_id' => $voter4->id,
+            'option_id' => $opt2->id,
             'eligibility_snapshot' => ['role' => 'resident_owner'],
         ]);
 
@@ -434,7 +435,7 @@ class VoteTest extends TestCase
 
         $this->assertEquals(4, $data['participationsCount']);
         $yesRow = collect($data['tally'])->firstWhere('optionId', $opt1->id);
-        $noRow  = collect($data['tally'])->firstWhere('optionId', $opt2->id);
+        $noRow = collect($data['tally'])->firstWhere('optionId', $opt2->id);
         $this->assertEquals(3, $yesRow['count']);
         $this->assertEquals(1, $noRow['count']);
     }
@@ -451,9 +452,9 @@ class VoteTest extends TestCase
 
         $this->postJson('/api/v1/governance/votes', [
             'compoundId' => $compound->id,
-            'type'       => VoteType::Poll->value,
-            'title'      => 'Test',
-            'options'    => [['label' => 'A'], ['label' => 'B']],
+            'type' => VoteType::Poll->value,
+            'title' => 'Test',
+            'options' => [['label' => 'A'], ['label' => 'B']],
         ])->assertForbidden();
     }
 
@@ -547,7 +548,7 @@ class VoteTest extends TestCase
 
     public function test_effective_compound_head_is_not_treated_as_owner_for_owner_only_vote_when_legacy_role_is_stale(): void
     {
-        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         $compound = Compound::factory()->create();
         $permission = SpatiePermission::findOrCreate(Permission::ViewGovernance->value, 'sanctum');
@@ -583,7 +584,7 @@ class VoteTest extends TestCase
 
     public function test_effective_compound_head_with_membership_scope_cannot_access_other_compounds_votes_when_compound_id_is_null(): void
     {
-        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         $compoundA = Compound::factory()->create();
         $compoundB = Compound::factory()->create();
@@ -598,7 +599,7 @@ class VoteTest extends TestCase
         ]);
         $admin->assignRole($compoundHeadRole);
         $admin->givePermissionTo($permission);
-        UnitMembership::factory()->create([
+        ApartmentResident::factory()->create([
             'unit_id' => $unitA->id,
             'user_id' => $admin->id,
             'verification_status' => 'verified',
@@ -639,7 +640,7 @@ class VoteTest extends TestCase
         $buildingA = Building::factory()->for($compoundA)->create();
         $unitA = Unit::factory()->for($compoundA)->for($buildingA)->create(['floor_id' => null]);
         $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
-        UnitMembership::factory()->create([
+        ApartmentResident::factory()->create([
             'unit_id' => $unitA->id,
             'user_id' => $resident->id,
             'verification_status' => 'verified',
@@ -672,30 +673,30 @@ class VoteTest extends TestCase
     /**
      * Creates an active vote with one resident owner having a verified membership.
      *
-     * @return array{0: User, 1: Vote, 2: VoteOption, 3: \App\Models\Property\Unit}
+     * @return array{0: User, 1: Vote, 2: VoteOption, 3: Unit}
      */
     private function makeActiveVoteWithOwner(VoteEligibility $eligibility): array
     {
-        $compound  = Compound::factory()->create();
-        $building  = Building::factory()->for($compound)->create();
-        $unit      = Unit::factory()->for($compound)->for($building)->create(['floor_id' => null]);
-        $owner     = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+        $compound = Compound::factory()->create();
+        $building = Building::factory()->for($compound)->create();
+        $unit = Unit::factory()->for($compound)->for($building)->create(['floor_id' => null]);
+        $owner = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
 
-        UnitMembership::factory()->create([
-            'unit_id'             => $unit->id,
-            'user_id'             => $owner->id,
+        ApartmentResident::factory()->create([
+            'unit_id' => $unit->id,
+            'user_id' => $owner->id,
             'verification_status' => 'verified',
-            'starts_at'           => now()->subYear(),
-            'ends_at'             => null,
+            'starts_at' => now()->subYear(),
+            'ends_at' => null,
         ]);
 
         $admin = $this->makeScopedAdmin($compound);
-        $vote  = Vote::factory()->active()->create([
+        $vote = Vote::factory()->active()->create([
             'compound_id' => $compound->id,
             'eligibility' => $eligibility->value,
-            'created_by'  => $admin->id,
+            'created_by' => $admin->id,
         ]);
-        $opt1  = VoteOption::factory()->create(['vote_id' => $vote->id, 'label' => 'Option A']);
+        $opt1 = VoteOption::factory()->create(['vote_id' => $vote->id, 'label' => 'Option A']);
         VoteOption::factory()->create(['vote_id' => $vote->id, 'label' => 'Option B']);
 
         return [$owner, $vote, $opt1, $unit];
@@ -710,12 +711,12 @@ class VoteTest extends TestCase
         [$owner, $vote, $option, $unit] = $this->makeActiveVoteWithOwner(VoteEligibility::OwnersOnly);
 
         $tenant = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
-        UnitMembership::factory()->create([
-            'unit_id'             => $unit->id,
-            'user_id'             => $tenant->id,
+        ApartmentResident::factory()->create([
+            'unit_id' => $unit->id,
+            'user_id' => $tenant->id,
             'verification_status' => 'verified',
-            'starts_at'           => now()->subYear(),
-            'ends_at'             => null,
+            'starts_at' => now()->subYear(),
+            'ends_at' => null,
         ]);
 
         // Owner votes first
@@ -753,10 +754,10 @@ class VoteTest extends TestCase
         $admin = $this->makeScopedAdmin($vote->compound);
 
         VoteParticipation::create([
-            'vote_id'              => $vote->id,
-            'user_id'              => $owner->id,
-            'unit_id'              => $unit->id,
-            'option_id'            => $option->id,
+            'vote_id' => $vote->id,
+            'user_id' => $owner->id,
+            'unit_id' => $unit->id,
+            'option_id' => $option->id,
             'eligibility_snapshot' => ['role' => 'resident_owner'],
         ]);
 
@@ -790,10 +791,10 @@ class VoteTest extends TestCase
         $vote->update(['is_anonymous' => true]);
 
         VoteParticipation::create([
-            'vote_id'              => $vote->id,
-            'user_id'              => $owner->id,
-            'unit_id'              => $unit->id,
-            'option_id'            => $option->id,
+            'vote_id' => $vote->id,
+            'user_id' => $owner->id,
+            'unit_id' => $unit->id,
+            'option_id' => $option->id,
             'eligibility_snapshot' => ['role' => 'resident_owner'],
         ]);
 

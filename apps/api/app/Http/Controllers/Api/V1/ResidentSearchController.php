@@ -33,7 +33,7 @@ class ResidentSearchController extends Controller
                     ->orWhere('phone', 'like', "%{$query}%");
             })
             ->when($compoundId !== null, fn ($q) => $q->where('compound_id', $compoundId))
-            ->orWhereHas('unitMemberships', function ($q) use ($query, $compoundId): void {
+            ->orWhereHas('apartmentResidents', function ($q) use ($query, $compoundId): void {
                 $q->whereHas('unit', function ($uq) use ($query, $compoundId): void {
                     $uq->where('unit_number', 'like', "%{$query}%")
                         ->when($compoundId !== null, fn ($q2) => $q2->where('compound_id', $compoundId));

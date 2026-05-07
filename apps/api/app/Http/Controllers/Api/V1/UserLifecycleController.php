@@ -4,11 +4,10 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\AccountStatus;
 use App\Enums\AuditSeverity;
-use App\Enums\UserRole;
 use App\Enums\VerificationStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
-use App\Models\Property\UnitMembership;
+use App\Models\Apartments\ApartmentResident;
 use App\Models\User;
 use App\Services\CompoundContextService;
 use App\Support\AuditLogger;
@@ -98,19 +97,19 @@ class UserLifecycleController extends Controller
         $this->ensureLifecycleAccess($request, $user);
 
         $validated = $request->validate([
-            'reason'          => ['required', 'string', 'max:500'],
-            'effective_date'  => ['nullable', 'date'],
+            'reason' => ['required', 'string', 'max:500'],
+            'effective_date' => ['nullable', 'date'],
             'archive_account' => ['nullable', 'boolean'],
         ]);
 
         $effectiveDate = $validated['effective_date'] ?? now()->toDateString();
 
         // End all currently-active memberships
-        $endedCount = UnitMembership::query()
+        $endedCount = ApartmentResident::query()
             ->where('user_id', $user->id)
             ->active()
             ->update([
-                'ends_at'             => $effectiveDate,
+                'ends_at' => $effectiveDate,
                 'verification_status' => VerificationStatus::Expired->value,
             ]);
 
@@ -128,17 +127,17 @@ class UserLifecycleController extends Controller
             severity: AuditSeverity::Warning,
             reason: $validated['reason'],
             metadata: [
-                'user_id'         => $user->id,
+                'user_id' => $user->id,
                 'memberships_ended' => $endedCount,
-                'effective_date'  => $effectiveDate,
+                'effective_date' => $effectiveDate,
                 'account_archived' => $validated['archive_account'] ?? false,
             ],
         );
 
         return response()->json([
-            'message'          => 'Move-out processed.',
+            'message' => 'Move-out processed.',
             'memberships_ended' => $endedCount,
-            'user'             => UserResource::make($user->fresh()->loadAuthorizationSnapshot()),
+            'user' => UserResource::make($user->fresh()->loadAuthorizationSnapshot()),
         ]);
     }
 
@@ -151,16 +150,16 @@ class UserLifecycleController extends Controller
 
         $validated = $request->validate([
             'reason' => ['required', 'string', 'max:500'],
-            'name'   => ['nullable', 'string', 'max:255'],
-            'email'  => ['nullable', 'email', 'max:255', 'unique:users,email,'.$user->id],
-            'phone'  => ['nullable', 'string', 'max:30', 'unique:users,phone,'.$user->id],
+            'name' => ['nullable', 'string', 'max:255'],
+            'email' => ['nullable', 'email', 'max:255', 'unique:users,email,'.$user->id],
+            'phone' => ['nullable', 'string', 'max:30', 'unique:users,phone,'.$user->id],
         ]);
 
         $updates = array_filter([
             'status' => AccountStatus::Active,
-            'name'   => $validated['name'] ?? null,
-            'email'  => $validated['email'] ?? null,
-            'phone'  => $validated['phone'] ?? null,
+            'name' => $validated['name'] ?? null,
+            'email' => $validated['email'] ?? null,
+            'phone' => $validated['phone'] ?? null,
         ], fn ($v) => $v !== null);
 
         $user->update($updates);
@@ -175,8 +174,8 @@ class UserLifecycleController extends Controller
             severity: AuditSeverity::Warning,
             reason: $validated['reason'],
             metadata: [
-                'user_id'         => $user->id,
-                'fields_updated'  => array_keys($updates),
+                'user_id' => $user->id,
+                'fields_updated' => array_keys($updates),
             ],
         );
 

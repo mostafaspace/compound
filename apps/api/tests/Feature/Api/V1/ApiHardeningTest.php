@@ -280,7 +280,7 @@ class ApiHardeningTest extends TestCase
         ]);
         $unit = $this->createUnit($unitNumber);
 
-        $unit->memberships()->create([
+        $unit->apartmentResidents()->create([
             'user_id' => $resident->id,
             'relation_type' => UnitRelationType::Owner->value,
             'starts_at' => now()->toDateString(),

@@ -174,7 +174,7 @@ class VisitorRequestsTest extends TestCase
         ]);
         $buildingB = Building::factory()->for($compoundB)->create();
         $unitB = Unit::factory()->for($compoundB)->for($buildingB)->create(['floor_id' => null]);
-        $unitB->memberships()->create([
+        $unitB->apartmentResidents()->create([
             'user_id' => $resident->id,
             'relation_type' => UnitRelationType::Owner->value,
             'starts_at' => now()->toDateString(),
@@ -232,7 +232,7 @@ class VisitorRequestsTest extends TestCase
             'role' => UserRole::ResidentOwner->value,
             'status' => AccountStatus::Active->value,
         ]);
-        $unit->memberships()->create([
+        $unit->apartmentResidents()->create([
             'user_id' => $resident->id,
             'relation_type' => UnitRelationType::Owner->value,
             'starts_at' => now()->toDateString(),
@@ -291,7 +291,7 @@ class VisitorRequestsTest extends TestCase
             'role' => UserRole::ResidentOwner->value,
             'status' => AccountStatus::Active->value,
         ]);
-        $unit->memberships()->create([
+        $unit->apartmentResidents()->create([
             'user_id' => $resident->id,
             'relation_type' => UnitRelationType::Owner->value,
             'starts_at' => now()->toDateString(),
@@ -327,7 +327,7 @@ class VisitorRequestsTest extends TestCase
         ]);
         $unit = $this->makeUnit();
 
-        $unit->memberships()->create([
+        $unit->apartmentResidents()->create([
             'user_id' => $resident->id,
             'relation_type' => UnitRelationType::Owner->value,
             'starts_at' => now()->toDateString(),
@@ -418,7 +418,7 @@ class VisitorRequestsTest extends TestCase
         ]);
         $buildingB = Building::factory()->for($compoundB)->create();
         $unitB = Unit::factory()->for($compoundB)->for($buildingB)->create(['floor_id' => null]);
-        $unitB->memberships()->create([
+        $unitB->apartmentResidents()->create([
             'user_id' => $resident->id,
             'relation_type' => UnitRelationType::Owner->value,
             'starts_at' => now()->toDateString(),
@@ -456,7 +456,7 @@ class VisitorRequestsTest extends TestCase
         ]);
         $buildingB = Building::factory()->for($compoundB)->create();
         $unitB = Unit::factory()->for($compoundB)->for($buildingB)->create(['floor_id' => null]);
-        $unitB->memberships()->create([
+        $unitB->apartmentResidents()->create([
             'user_id' => $resident->id,
             'relation_type' => UnitRelationType::Owner->value,
             'starts_at' => now()->toDateString(),
@@ -489,7 +489,7 @@ class VisitorRequestsTest extends TestCase
             'compound_id' => null,
             'status' => AccountStatus::Active->value,
         ]);
-        $unitA->memberships()->create([
+        $unitA->apartmentResidents()->create([
             'user_id' => $admin->id,
             'relation_type' => UnitRelationType::Owner->value,
             'starts_at' => now()->toDateString(),
@@ -504,13 +504,13 @@ class VisitorRequestsTest extends TestCase
             'role' => UserRole::ResidentOwner->value,
             'status' => AccountStatus::Active->value,
         ]);
-        $unitA->memberships()->create([
+        $unitA->apartmentResidents()->create([
             'user_id' => $residentA->id,
             'relation_type' => UnitRelationType::Owner->value,
             'starts_at' => now()->toDateString(),
             'verification_status' => VerificationStatus::Verified->value,
         ]);
-        $unitB->memberships()->create([
+        $unitB->apartmentResidents()->create([
             'user_id' => $residentB->id,
             'relation_type' => UnitRelationType::Owner->value,
             'starts_at' => now()->toDateString(),
@@ -554,7 +554,7 @@ class VisitorRequestsTest extends TestCase
             'compound_id' => null,
             'status' => AccountStatus::Active->value,
         ]);
-        $unitA->memberships()->create([
+        $unitA->apartmentResidents()->create([
             'user_id' => $admin->id,
             'relation_type' => UnitRelationType::Owner->value,
             'starts_at' => now()->toDateString(),
@@ -592,7 +592,7 @@ class VisitorRequestsTest extends TestCase
             'compound_id' => $compoundB->id,
             'status' => AccountStatus::Active->value,
         ]);
-        $unitA->memberships()->create([
+        $unitA->apartmentResidents()->create([
             'user_id' => $admin->id,
             'relation_type' => UnitRelationType::Owner->value,
             'starts_at' => now()->toDateString(),
@@ -721,7 +721,7 @@ class VisitorRequestsTest extends TestCase
         ]);
         $unit = $this->makeUnit();
 
-        $unit->memberships()->create([
+        $unit->apartmentResidents()->create([
             'user_id' => $resident->id,
             'relation_type' => UnitRelationType::Owner->value,
             'starts_at' => now()->toDateString(),

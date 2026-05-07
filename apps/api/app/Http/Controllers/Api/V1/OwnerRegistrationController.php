@@ -12,12 +12,12 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Onboarding\OwnerRegistrationDecisionRequest;
 use App\Http\Requests\Onboarding\StoreOwnerRegistrationRequest;
 use App\Http\Resources\OwnerRegistrationRequestResource;
+use App\Models\Apartments\ApartmentResident;
 use App\Models\OwnerRegistrationRequest;
 use App\Models\Property\Building;
 use App\Models\Property\Compound;
 use App\Models\Property\Floor;
 use App\Models\Property\Unit;
-use App\Models\Property\UnitMembership;
 use App\Models\User;
 use App\Services\CompoundContextService;
 use App\Support\AuditLogger;
@@ -208,7 +208,7 @@ class OwnerRegistrationController extends Controller
                 ],
             );
 
-            UnitMembership::query()->updateOrCreate([
+            ApartmentResident::query()->updateOrCreate([
                 'unit_id' => $unit->id,
                 'user_id' => $user->id,
                 'relation_type' => UnitRelationType::Owner->value,

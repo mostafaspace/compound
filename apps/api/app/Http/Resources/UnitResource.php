@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Http\Resources\Apartments\ApartmentResidentResource;
 use App\Models\Property\Unit;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -29,7 +30,9 @@ class UnitResource extends JsonResource
             'areaSqm' => $this->area_sqm,
             'bedrooms' => $this->bedrooms,
             'status' => $this->status->value,
-            'memberships' => UnitMembershipResource::collection($this->whenLoaded('memberships')),
+            'hasVehicle' => $this->has_vehicle,
+            'hasParking' => $this->has_parking,
+            'apartmentResidents' => ApartmentResidentResource::collection($this->whenLoaded('apartmentResidents')),
             'archivedAt' => $this->archived_at?->toJSON(),
             'archiveReason' => $this->archive_reason,
             'createdAt' => $this->created_at?->toJSON(),

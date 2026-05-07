@@ -7,11 +7,11 @@ use App\Enums\RepresentativeRole;
 use App\Enums\UnitRelationType;
 use App\Enums\UserRole;
 use App\Enums\VerificationStatus;
+use App\Models\Apartments\ApartmentResident;
 use App\Models\Property\Building;
 use App\Models\Property\Compound;
 use App\Models\Property\Floor;
 use App\Models\Property\Unit;
-use App\Models\Property\UnitMembership;
 use App\Models\RepresentativeAssignment;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -314,7 +314,7 @@ class OrgChartTest extends TestCase
         ]);
         User::factory()->create();
 
-        UnitMembership::query()->create([
+        ApartmentResident::query()->create([
             'unit_id' => $unit->id,
             'user_id' => $resident->id,
             'relation_type' => UnitRelationType::Owner->value,
@@ -374,7 +374,7 @@ class OrgChartTest extends TestCase
         $residentA = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
         $residentB = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
 
-        UnitMembership::query()->create([
+        ApartmentResident::query()->create([
             'unit_id' => $unitA->id,
             'user_id' => $residentA->id,
             'relation_type' => UnitRelationType::Owner->value,
@@ -382,7 +382,7 @@ class OrgChartTest extends TestCase
             'is_primary' => true,
             'verification_status' => VerificationStatus::Verified->value,
         ]);
-        UnitMembership::query()->create([
+        ApartmentResident::query()->create([
             'unit_id' => $unitB->id,
             'user_id' => $residentB->id,
             'relation_type' => UnitRelationType::Owner->value,
@@ -448,12 +448,12 @@ class OrgChartTest extends TestCase
             'email' => 'resident@example.com',
         ]);
 
-        UnitMembership::factory()->create([
+        ApartmentResident::factory()->create([
             'user_id' => $admin->id,
             'unit_id' => $unit->id,
             'verification_status' => VerificationStatus::Verified->value,
         ]);
-        UnitMembership::factory()->create([
+        ApartmentResident::factory()->create([
             'user_id' => $target->id,
             'unit_id' => $unit->id,
             'verification_status' => VerificationStatus::Verified->value,
@@ -483,7 +483,7 @@ class OrgChartTest extends TestCase
             'floor_id' => $floor->id,
         ]);
 
-        UnitMembership::query()->create([
+        ApartmentResident::query()->create([
             'unit_id' => $unit->id,
             'user_id' => $resident->id,
             'relation_type' => UnitRelationType::Owner->value,
@@ -526,7 +526,7 @@ class OrgChartTest extends TestCase
             'floor_id' => null,
         ]);
 
-        UnitMembership::query()->create([
+        ApartmentResident::query()->create([
             'unit_id' => $unit->id,
             'user_id' => $resident->id,
             'relation_type' => UnitRelationType::Owner->value,

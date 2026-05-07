@@ -2,13 +2,14 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\UserRole;
 use App\Enums\VerificationStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Property\StoreUnitMembershipRequest;
 use App\Http\Requests\Property\UpdateUnitMembershipRequest;
-use App\Http\Resources\UnitMembershipResource;
+use App\Http\Resources\Apartments\ApartmentResidentResource;
+use App\Models\Apartments\ApartmentResident;
 use App\Models\Property\Unit;
-use App\Models\Property\UnitMembership;
 use App\Models\User;
 use App\Services\CompoundContextService;
 use App\Support\AuditLogger;
@@ -23,9 +24,9 @@ class UnitMembershipController extends Controller
      * @var list<string>
      */
     private const ASSIGNABLE_RESIDENT_ROLES = [
-        \App\Enums\UserRole::Resident->value,
-        \App\Enums\UserRole::ResidentOwner->value,
-        \App\Enums\UserRole::ResidentTenant->value,
+        UserRole::Resident->value,
+        UserRole::ResidentOwner->value,
+        UserRole::ResidentTenant->value,
     ];
 
     public function __construct(
@@ -37,13 +38,13 @@ class UnitMembershipController extends Controller
     {
         $this->ensureCanAccessUnit($request, $unit);
 
-        $memberships = $unit->memberships()
+        $memberships = $unit->apartmentResidents()
             ->with('user')
             ->orderByRaw('ends_at is null desc')
             ->latest('created_at')
             ->paginate();
 
-        return UnitMembershipResource::collection($memberships);
+        return ApartmentResidentResource::collection($memberships);
     }
 
     public function store(StoreUnitMembershipRequest $request, Unit $unit): JsonResponse
@@ -52,7 +53,7 @@ class UnitMembershipController extends Controller
 
         $validated = $request->validated();
 
-        $duplicate = $unit->memberships()
+        $duplicate = $unit->apartmentResidents()
             ->where('user_id', $validated['userId'])
             ->where('relation_type', $validated['relationType'])
             ->whereNull('ends_at')
@@ -61,10 +62,10 @@ class UnitMembershipController extends Controller
         abort_if($duplicate, Response::HTTP_UNPROCESSABLE_ENTITY, 'An active matching membership already exists.');
 
         if ($validated['isPrimary'] ?? false) {
-            $unit->memberships()->where('user_id', $validated['userId'])->update(['is_primary' => false]);
+            $unit->apartmentResidents()->where('user_id', $validated['userId'])->update(['is_primary' => false]);
         }
 
-        $membership = $unit->memberships()->create([
+        $membership = $unit->apartmentResidents()->create([
             'user_id' => $validated['userId'],
             'relation_type' => $validated['relationType'],
             'starts_at' => $validated['startsAt'] ?? null,
@@ -77,10 +78,6 @@ class UnitMembershipController extends Controller
             'phone_public' => $validated['phonePublic'] ?? false,
             'resident_email' => $validated['residentEmail'] ?? null,
             'email_public' => $validated['emailPublic'] ?? false,
-            'has_vehicle' => $validated['hasVehicle'] ?? false,
-            'vehicle_plate' => $validated['vehiclePlate'] ?? null,
-            'parking_spot_code' => $validated['parkingSpotCode'] ?? null,
-            'garage_sticker_code' => $validated['garageStickerCode'] ?? null,
         ]);
 
         $this->auditLogger->record('property.unit_membership_created', actor: $request->user(), request: $request, metadata: [
@@ -89,19 +86,19 @@ class UnitMembershipController extends Controller
             'user_id' => $membership->user_id,
         ]);
 
-        return UnitMembershipResource::make($membership->load('user'))
+        return ApartmentResidentResource::make($membership->load('user'))
             ->response()
             ->setStatusCode(Response::HTTP_CREATED);
     }
 
-    public function update(UpdateUnitMembershipRequest $request, UnitMembership $unitMembership): UnitMembershipResource
+    public function update(UpdateUnitMembershipRequest $request, ApartmentResident $unitMembership): ApartmentResidentResource
     {
         $this->ensureCanAccessMembership($request, $unitMembership);
 
         $validated = $request->validated();
 
         if (($validated['isPrimary'] ?? false) === true) {
-            UnitMembership::query()
+            ApartmentResident::query()
                 ->where('unit_id', $unitMembership->unit_id)
                 ->where('user_id', $unitMembership->user_id)
                 ->whereKeyNot($unitMembership->id)
@@ -119,17 +116,7 @@ class UnitMembershipController extends Controller
             'phone_public' => array_key_exists('phonePublic', $validated) ? $validated['phonePublic'] : $unitMembership->phone_public,
             'resident_email' => array_key_exists('residentEmail', $validated) ? $validated['residentEmail'] : $unitMembership->resident_email,
             'email_public' => array_key_exists('emailPublic', $validated) ? $validated['emailPublic'] : $unitMembership->email_public,
-            'has_vehicle' => array_key_exists('hasVehicle', $validated) ? $validated['hasVehicle'] : $unitMembership->has_vehicle,
-            'vehicle_plate' => array_key_exists('vehiclePlate', $validated) ? $validated['vehiclePlate'] : $unitMembership->vehicle_plate,
-            'parking_spot_code' => array_key_exists('parkingSpotCode', $validated) ? $validated['parkingSpotCode'] : $unitMembership->parking_spot_code,
-            'garage_sticker_code' => array_key_exists('garageStickerCode', $validated) ? $validated['garageStickerCode'] : $unitMembership->garage_sticker_code,
         ];
-
-        if (($updates['has_vehicle'] ?? false) === false) {
-            $updates['vehicle_plate'] = null;
-            $updates['parking_spot_code'] = null;
-            $updates['garage_sticker_code'] = null;
-        }
 
         $unitMembership->fill($updates)->save();
 
@@ -137,10 +124,10 @@ class UnitMembershipController extends Controller
             'membership_id' => $unitMembership->id,
         ]);
 
-        return UnitMembershipResource::make($unitMembership->refresh()->load('user'));
+        return ApartmentResidentResource::make($unitMembership->refresh()->load('user'));
     }
 
-    public function end(Request $request, UnitMembership $unitMembership): UnitMembershipResource
+    public function end(Request $request, ApartmentResident $unitMembership): ApartmentResidentResource
     {
         $this->ensureCanAccessMembership($request, $unitMembership);
 
@@ -153,7 +140,7 @@ class UnitMembershipController extends Controller
             'membership_id' => $unitMembership->id,
         ]);
 
-        return UnitMembershipResource::make($unitMembership->refresh()->load('user'));
+        return ApartmentResidentResource::make($unitMembership->refresh()->load('user'));
     }
 
     public function unassignedUsers(Request $request): JsonResponse
@@ -163,7 +150,7 @@ class UnitMembershipController extends Controller
         $compoundId = $this->compoundContext->resolveManagedCompoundId($actor);
 
         $users = User::query()
-            ->whereDoesntHave('unitMemberships', fn ($q) => $q->whereNull('ends_at'))
+            ->whereDoesntHave('apartmentResidents', fn ($q) => $q->whereNull('ends_at'))
             ->when($compoundId !== null, fn ($q) => $q->where('compound_id', $compoundId))
             ->where(function ($query): void {
                 $query
@@ -177,7 +164,7 @@ class UnitMembershipController extends Controller
         return response()->json(['data' => $users]);
     }
 
-    private function ensureCanAccessMembership(Request $request, UnitMembership $unitMembership): void
+    private function ensureCanAccessMembership(Request $request, ApartmentResident $unitMembership): void
     {
         $unitMembership->loadMissing('unit');
         $this->ensureCanAccessUnit($request, $unitMembership->unit);

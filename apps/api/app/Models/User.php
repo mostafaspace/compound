@@ -4,10 +4,10 @@ namespace App\Models;
 
 use App\Enums\AccountStatus;
 use App\Enums\UserRole;
+use App\Models\Apartments\ApartmentResident;
 use App\Models\Documents\UserDocument;
 use App\Models\Property\Compound;
 use App\Models\Property\Unit;
-use App\Models\Property\UnitMembership;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -26,7 +27,7 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasApiTokens, HasFactory, Notifiable, HasRoles;
+    use HasApiTokens, HasFactory, HasRoles, Notifiable;
 
     /**
      * @return list<string>
@@ -132,12 +133,12 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
-            'last_login_at'     => 'datetime',
-            'anonymized_at'     => 'datetime',
-            'password'          => 'hashed',
-            'role'              => UserRole::class,
-            'status'            => AccountStatus::class,
-            'legal_hold'        => 'boolean',
+            'last_login_at' => 'datetime',
+            'anonymized_at' => 'datetime',
+            'password' => 'hashed',
+            'role' => UserRole::class,
+            'status' => AccountStatus::class,
+            'legal_hold' => 'boolean',
         ];
     }
 
@@ -152,11 +153,11 @@ class User extends Authenticatable
     }
 
     /**
-     * @return HasMany<UnitMembership, $this>
+     * @return HasMany<ApartmentResident, $this>
      */
-    public function unitMemberships(): HasMany
+    public function apartmentResidents(): HasMany
     {
-        return $this->hasMany(UnitMembership::class);
+        return $this->hasMany(ApartmentResident::class);
     }
 
     /**
@@ -164,7 +165,7 @@ class User extends Authenticatable
      */
     public function units(): BelongsToMany
     {
-        return $this->belongsToMany(Unit::class, 'unit_memberships')
+        return $this->belongsToMany(Unit::class, 'apartment_residents')
             ->withPivot(['relation_type', 'starts_at', 'ends_at', 'is_primary', 'verification_status'])
             ->withTimestamps();
     }
@@ -210,9 +211,9 @@ class User extends Authenticatable
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasOne<NotificationPreference, $this>
+     * @return HasOne<NotificationPreference, $this>
      */
-    public function notificationPreference(): \Illuminate\Database\Eloquent\Relations\HasOne
+    public function notificationPreference(): HasOne
     {
         return $this->hasOne(NotificationPreference::class);
     }

@@ -12,6 +12,7 @@ use App\Enums\VerificationStatus;
 use App\Models\Finance\LedgerEntry;
 use App\Models\Finance\PaymentSubmission;
 use App\Models\Finance\UnitAccount;
+use App\Models\Notification;
 use App\Models\Property\Building;
 use App\Models\Property\Compound;
 use App\Models\Property\Unit;
@@ -108,7 +109,7 @@ class FinanceTest extends TestCase
         $ownAccount = UnitAccount::factory()->for($ownUnit)->create(['balance' => '500.00']);
         $otherAccount = UnitAccount::factory()->for($otherUnit)->create(['balance' => '700.00']);
 
-        $ownUnit->memberships()->create([
+        $ownUnit->apartmentResidents()->create([
             'user_id' => $resident->id,
             'relation_type' => UnitRelationType::Owner->value,
             'verification_status' => VerificationStatus::Verified->value,
@@ -156,7 +157,7 @@ class FinanceTest extends TestCase
         $ownAccount = UnitAccount::factory()->for($ownUnit)->create(['balance' => '500.00']);
         $otherAccount = UnitAccount::factory()->for($otherUnit)->create(['balance' => '700.00']);
 
-        $ownUnit->memberships()->create([
+        $ownUnit->apartmentResidents()->create([
             'user_id' => $resident->id,
             'relation_type' => UnitRelationType::Owner->value,
             'verification_status' => VerificationStatus::Verified->value,
@@ -492,7 +493,7 @@ class FinanceTest extends TestCase
         ]);
 
         $managedUnit = $this->createUnitForCompound($compoundA, 'A-111');
-        $managedUnit->memberships()->create([
+        $managedUnit->apartmentResidents()->create([
             'user_id' => $admin->id,
             'relation_type' => UnitRelationType::Owner->value,
             'verification_status' => VerificationStatus::Verified->value,
@@ -640,7 +641,7 @@ class FinanceTest extends TestCase
         ]);
 
         $managedUnit = $this->createUnitForCompound($compoundA, 'A-301');
-        $managedUnit->memberships()->create([
+        $managedUnit->apartmentResidents()->create([
             'user_id' => $admin->id,
             'relation_type' => UnitRelationType::Owner->value,
             'verification_status' => VerificationStatus::Verified->value,
@@ -720,7 +721,7 @@ class FinanceTest extends TestCase
         $this->patchJson("/api/v1/finance/payment-submissions/{$approvedPayment->id}/approve")->assertOk();
         $this->patchJson("/api/v1/finance/payment-submissions/{$rejectedPayment->id}/reject", ['reason' => 'Unclear receipt'])->assertOk();
 
-        $notifications = \App\Models\Notification::query()
+        $notifications = Notification::query()
             ->where('user_id', $resident->id)
             ->get()
             ->keyBy('title');
@@ -846,7 +847,7 @@ class FinanceTest extends TestCase
         $unit = $this->createUnit('C-301');
         $account = UnitAccount::factory()->for($unit)->create();
 
-        $unit->memberships()->create([
+        $unit->apartmentResidents()->create([
             'user_id' => $resident->id,
             'relation_type' => UnitRelationType::Owner->value,
             'verification_status' => VerificationStatus::Verified->value,
@@ -875,7 +876,7 @@ class FinanceTest extends TestCase
         $unit = $this->createUnit('D-401');
         $account = UnitAccount::factory()->for($unit)->create();
 
-        $unit->memberships()->create([
+        $unit->apartmentResidents()->create([
             'user_id' => $resident->id,
             'relation_type' => UnitRelationType::Owner->value,
             'verification_status' => VerificationStatus::Verified->value,
@@ -911,7 +912,7 @@ class FinanceTest extends TestCase
             'note' => 'Please reupload.',
         ])->assertOk();
 
-        $notification = \App\Models\Notification::query()
+        $notification = Notification::query()
             ->where('user_id', $resident->id)
             ->where('category', NotificationCategory::Finance->value)
             ->latest()

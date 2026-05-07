@@ -12,8 +12,7 @@ use App\Http\Requests\Visitors\StoreVisitorRequestRequest;
 use App\Http\Requests\Visitors\ValidateVisitorPassRequest;
 use App\Http\Requests\Visitors\VisitorDecisionRequest;
 use App\Http\Resources\Visitors\VisitorRequestResource;
-use App\Models\Property\Unit;
-use App\Models\Property\UnitMembership;
+use App\Models\Apartments\ApartmentResident;
 use App\Models\User;
 use App\Models\Visitors\VisitorRequest;
 use App\Services\CompoundContextService;
@@ -280,7 +279,7 @@ class VisitorRequestController extends Controller
             return $this->compoundContext->userCanAccessUnit($user, $unitId);
         }
 
-        return UnitMembership::query()
+        return ApartmentResident::query()
             ->where('user_id', $user->id)
             ->where('unit_id', $unitId)
             ->whereNull('ends_at')

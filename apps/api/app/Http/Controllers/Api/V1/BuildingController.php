@@ -59,7 +59,7 @@ class BuildingController extends Controller
 
         $building->load([
             'floors' => fn ($query) => $query->withCount('units')->orderBy('sort_order')->orderBy('level_number'),
-            'units' => fn ($query) => $query->with(['memberships.user'])->orderBy('unit_number'),
+            'units' => fn ($query) => $query->with(['apartmentResidents.user'])->orderBy('unit_number'),
         ])->loadCount(['floors', 'units']);
 
         return BuildingResource::make($building);

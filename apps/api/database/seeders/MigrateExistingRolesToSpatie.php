@@ -7,26 +7,27 @@ use App\Models\User;
 use App\Models\UserScopeAssignment;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 
 class MigrateExistingRolesToSpatie extends Seeder
 {
     /** Maps UserRole enum value → [spatie_role_name, scope_type] */
     private const ROLE_MAP = [
-        'super_admin'      => ['super_admin',      'global'],
-        'compound_admin'   => ['compound_head',    'compound'],
-        'board_member'     => ['board_member',     'compound'],
+        'super_admin' => ['super_admin',      'global'],
+        'compound_admin' => ['compound_head',    'compound'],
+        'board_member' => ['board_member',     'compound'],
         'finance_reviewer' => ['finance_reviewer', 'compound'],
-        'security_guard'   => ['security_guard',   'compound'],
-        'resident_owner'   => ['resident_owner',   'unit'],
-        'resident_tenant'  => ['resident_tenant',  'unit'],
-        'support_agent'    => ['support_agent',    'global'],
+        'security_guard' => ['security_guard',   'compound'],
+        'resident_owner' => ['resident_owner',   'unit'],
+        'resident_tenant' => ['resident_tenant',  'unit'],
+        'support_agent' => ['support_agent',    'global'],
     ];
 
     public function run(): void
     {
-        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
-        User::with(['unitMemberships'])->chunkById(100, function ($users): void {
+        User::with(['apartmentResidents'])->chunkById(100, function ($users): void {
             foreach ($users as $user) {
                 $legacyRole = $user->role?->value;
 
@@ -45,10 +46,10 @@ class MigrateExistingRolesToSpatie extends Seeder
                 // Determine scope_id (varchar(26) — '' = global/no scope sentinel)
                 $scopeId = match ($scopeType) {
                     'compound' => (string) ($user->compound_id ?? ''),
-                    'unit'     => (string) ($user->unitMemberships()
-                                    ->where('is_primary', true)
-                                    ->value('unit_id') ?? ''),
-                    default    => '', // global — empty string sentinel
+                    'unit' => (string) ($user->apartmentResidents()
+                        ->where('is_primary', true)
+                        ->value('unit_id') ?? ''),
+                    default => '', // global — empty string sentinel
                 };
 
                 // Skip compound-scoped users with no compound assigned
@@ -57,10 +58,10 @@ class MigrateExistingRolesToSpatie extends Seeder
                 }
 
                 UserScopeAssignment::firstOrCreate([
-                    'user_id'    => $user->id,
-                    'role_name'  => $spatieRoleName,
+                    'user_id' => $user->id,
+                    'role_name' => $spatieRoleName,
                     'scope_type' => $scopeType,
-                    'scope_id'   => $scopeId,
+                    'scope_id' => $scopeId,
                 ]);
             }
         });

@@ -93,7 +93,7 @@ class ResidentInvitationController extends Controller
             ]);
 
             if ($unit !== null && ($validated['relationType'] ?? null)) {
-                $unit->memberships()->create([
+                $unit->apartmentResidents()->create([
                     'user_id' => $user->id,
                     'relation_type' => $validated['relationType'],
                     'starts_at' => $validated['startsAt'] ?? null,

@@ -5,11 +5,11 @@ namespace Tests\Feature\Api\V1;
 use App\Enums\AccountMergeStatus;
 use App\Enums\AccountStatus;
 use App\Enums\UserRole;
-use App\Enums\VerificationStatus;
 use App\Models\AccountMerge;
-use App\Models\Documents\UserDocument;
+use App\Models\Apartments\ApartmentResident;
+use App\Models\Property\Building;
 use App\Models\Property\Compound;
-use App\Models\Property\UnitMembership;
+use App\Models\Property\Unit;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -24,7 +24,7 @@ class UserLifecycleTest extends TestCase
     private function makeAdmin(array $attrs = []): User
     {
         return User::factory()->create(array_merge([
-            'role'   => UserRole::SuperAdmin->value,
+            'role' => UserRole::SuperAdmin->value,
             'status' => AccountStatus::Active->value,
         ], $attrs));
     }
@@ -32,7 +32,7 @@ class UserLifecycleTest extends TestCase
     private function makeUser(array $attrs = []): User
     {
         return User::factory()->create(array_merge([
-            'role'   => UserRole::ResidentOwner->value,
+            'role' => UserRole::ResidentOwner->value,
             'status' => AccountStatus::Active->value,
         ], $attrs));
     }
@@ -41,7 +41,7 @@ class UserLifecycleTest extends TestCase
 
     public function test_admin_can_suspend_a_user(): void
     {
-        $admin  = $this->makeAdmin();
+        $admin = $this->makeAdmin();
         $target = $this->makeUser();
 
         Sanctum::actingAs($admin);
@@ -52,17 +52,17 @@ class UserLifecycleTest extends TestCase
 
         $this->assertDatabaseHas('users', ['id' => $target->id, 'status' => 'suspended']);
         $this->assertDatabaseHas('audit_logs', [
-            'action'         => 'users.suspended',
-            'auditable_id'   => (string) $target->id,
-            'severity'       => 'critical',
+            'action' => 'users.suspended',
+            'auditable_id' => (string) $target->id,
+            'severity' => 'critical',
         ]);
     }
 
     public function test_compound_admin_can_suspend_membership_scoped_resident_when_compound_id_is_null(): void
     {
         $compound = Compound::factory()->create();
-        $building = \App\Models\Property\Building::factory()->for($compound)->create();
-        $unit = \App\Models\Property\Unit::factory()->for($compound)->for($building)->create(['floor_id' => null]);
+        $building = Building::factory()->for($compound)->create();
+        $unit = Unit::factory()->for($compound)->for($building)->create(['floor_id' => null]);
 
         $admin = User::factory()->create([
             'role' => UserRole::CompoundAdmin->value,
@@ -71,7 +71,7 @@ class UserLifecycleTest extends TestCase
         ]);
         $target = $this->makeUser(['compound_id' => null]);
 
-        UnitMembership::factory()->create([
+        ApartmentResident::factory()->create([
             'user_id' => $target->id,
             'unit_id' => $unit->id,
         ]);
@@ -85,7 +85,7 @@ class UserLifecycleTest extends TestCase
 
     public function test_cannot_suspend_super_admin(): void
     {
-        $admin  = $this->makeAdmin();
+        $admin = $this->makeAdmin();
         $target = $this->makeAdmin();
 
         Sanctum::actingAs($admin);
@@ -123,7 +123,7 @@ class UserLifecycleTest extends TestCase
 
     public function test_suspension_requires_reason(): void
     {
-        $admin  = $this->makeAdmin();
+        $admin = $this->makeAdmin();
         $target = $this->makeUser();
 
         Sanctum::actingAs($admin);
@@ -134,7 +134,7 @@ class UserLifecycleTest extends TestCase
 
     public function test_support_agent_cannot_suspend(): void
     {
-        $agent  = User::factory()->create(['role' => UserRole::SupportAgent->value, 'status' => AccountStatus::Active->value]);
+        $agent = User::factory()->create(['role' => UserRole::SupportAgent->value, 'status' => AccountStatus::Active->value]);
         $target = $this->makeUser();
 
         Sanctum::actingAs($agent);
@@ -147,7 +147,7 @@ class UserLifecycleTest extends TestCase
 
     public function test_admin_can_reactivate_suspended_user(): void
     {
-        $admin  = $this->makeAdmin();
+        $admin = $this->makeAdmin();
         $target = $this->makeUser(['status' => AccountStatus::Suspended->value]);
 
         Sanctum::actingAs($admin);
@@ -161,7 +161,7 @@ class UserLifecycleTest extends TestCase
 
     public function test_cannot_reactivate_already_active_user(): void
     {
-        $admin  = $this->makeAdmin();
+        $admin = $this->makeAdmin();
         $target = $this->makeUser(['status' => AccountStatus::Active->value]);
 
         Sanctum::actingAs($admin);
@@ -174,12 +174,12 @@ class UserLifecycleTest extends TestCase
 
     public function test_admin_can_move_out_user_and_end_all_memberships(): void
     {
-        $admin    = $this->makeAdmin();
-        $target   = $this->makeUser();
+        $admin = $this->makeAdmin();
+        $target = $this->makeUser();
         $compound = Compound::factory()->create();
 
         // Create 2 active memberships
-        UnitMembership::factory()->count(2)->create(['user_id' => $target->id]);
+        ApartmentResident::factory()->count(2)->create(['user_id' => $target->id]);
 
         Sanctum::actingAs($admin);
 
@@ -190,7 +190,7 @@ class UserLifecycleTest extends TestCase
             ->assertJsonPath('memberships_ended', 2);
 
         // All memberships should now have ends_at set to today (effectively ended)
-        $endedCount = UnitMembership::where('user_id', $target->id)
+        $endedCount = ApartmentResident::where('user_id', $target->id)
             ->whereDate('ends_at', today()->toDateString())
             ->count();
 
@@ -199,15 +199,15 @@ class UserLifecycleTest extends TestCase
 
     public function test_move_out_can_also_archive_account(): void
     {
-        $admin  = $this->makeAdmin();
+        $admin = $this->makeAdmin();
         $target = $this->makeUser();
 
-        UnitMembership::factory()->create(['user_id' => $target->id]);
+        ApartmentResident::factory()->create(['user_id' => $target->id]);
 
         Sanctum::actingAs($admin);
 
         $this->postJson("/api/v1/users/{$target->id}/move-out", [
-            'reason'          => 'Moved out.',
+            'reason' => 'Moved out.',
             'archive_account' => true,
         ])->assertOk();
 
@@ -218,14 +218,14 @@ class UserLifecycleTest extends TestCase
 
     public function test_admin_can_recover_archived_account(): void
     {
-        $admin  = $this->makeAdmin();
+        $admin = $this->makeAdmin();
         $target = $this->makeUser(['status' => AccountStatus::Archived->value]);
 
         Sanctum::actingAs($admin);
 
         $this->postJson("/api/v1/users/{$target->id}/recover", [
             'reason' => 'Returned as tenant.',
-            'name'   => 'Updated Name',
+            'name' => 'Updated Name',
         ])
             ->assertOk()
             ->assertJsonPath('user.status', 'active');
@@ -238,10 +238,10 @@ class UserLifecycleTest extends TestCase
 
     public function test_support_agent_can_view_user_support_detail(): void
     {
-        $agent  = User::factory()->create(['role' => UserRole::SupportAgent->value, 'status' => AccountStatus::Active->value]);
+        $agent = User::factory()->create(['role' => UserRole::SupportAgent->value, 'status' => AccountStatus::Active->value]);
         $target = $this->makeUser();
 
-        UnitMembership::factory()->create(['user_id' => $target->id]);
+        ApartmentResident::factory()->create(['user_id' => $target->id]);
 
         Sanctum::actingAs($agent);
 
@@ -316,12 +316,12 @@ class UserLifecycleTest extends TestCase
         $compoundB = Compound::factory()->create();
 
         $adminA = User::factory()->create([
-            'role'        => UserRole::CompoundAdmin->value,
-            'status'      => AccountStatus::Active->value,
+            'role' => UserRole::CompoundAdmin->value,
+            'status' => AccountStatus::Active->value,
             'compound_id' => $compoundA->id,
         ]);
-        $userA  = $this->makeUser(['compound_id' => $compoundA->id]);
-        $userB  = $this->makeUser(['compound_id' => $compoundB->id]);
+        $userA = $this->makeUser(['compound_id' => $compoundA->id]);
+        $userB = $this->makeUser(['compound_id' => $compoundB->id]);
 
         Sanctum::actingAs($adminA);
 
@@ -336,10 +336,10 @@ class UserLifecycleTest extends TestCase
     {
         $compoundA = Compound::factory()->create();
         $compoundB = Compound::factory()->create();
-        $buildingA = \App\Models\Property\Building::factory()->for($compoundA)->create();
-        $buildingB = \App\Models\Property\Building::factory()->for($compoundB)->create();
-        $unitA = \App\Models\Property\Unit::factory()->for($compoundA)->for($buildingA)->create(['floor_id' => null]);
-        $unitB = \App\Models\Property\Unit::factory()->for($compoundB)->for($buildingB)->create(['floor_id' => null]);
+        $buildingA = Building::factory()->for($compoundA)->create();
+        $buildingB = Building::factory()->for($compoundB)->create();
+        $unitA = Unit::factory()->for($compoundA)->for($buildingA)->create(['floor_id' => null]);
+        $unitB = Unit::factory()->for($compoundB)->for($buildingB)->create(['floor_id' => null]);
 
         $adminA = User::factory()->create([
             'role' => UserRole::CompoundAdmin->value,
@@ -350,11 +350,11 @@ class UserLifecycleTest extends TestCase
         $residentA = $this->makeUser(['compound_id' => null, 'email' => 'resident-a@example.com']);
         $residentB = $this->makeUser(['compound_id' => null, 'email' => 'resident-b@example.com']);
 
-        UnitMembership::factory()->create([
+        ApartmentResident::factory()->create([
             'user_id' => $residentA->id,
             'unit_id' => $unitA->id,
         ]);
-        UnitMembership::factory()->create([
+        ApartmentResident::factory()->create([
             'user_id' => $residentB->id,
             'unit_id' => $unitB->id,
         ]);
@@ -372,10 +372,10 @@ class UserLifecycleTest extends TestCase
     {
         $compound = Compound::factory()->create();
         $otherCompound = Compound::factory()->create();
-        $building = \App\Models\Property\Building::factory()->for($compound)->create();
-        $otherBuilding = \App\Models\Property\Building::factory()->for($otherCompound)->create();
-        $unit = \App\Models\Property\Unit::factory()->for($compound)->for($building)->create(['floor_id' => null]);
-        $otherUnit = \App\Models\Property\Unit::factory()->for($otherCompound)->for($otherBuilding)->create(['floor_id' => null]);
+        $building = Building::factory()->for($compound)->create();
+        $otherBuilding = Building::factory()->for($otherCompound)->create();
+        $unit = Unit::factory()->for($compound)->for($building)->create(['floor_id' => null]);
+        $otherUnit = Unit::factory()->for($otherCompound)->for($otherBuilding)->create(['floor_id' => null]);
 
         $admin = User::factory()->create([
             'role' => UserRole::CompoundAdmin->value,
@@ -384,13 +384,13 @@ class UserLifecycleTest extends TestCase
         ]);
 
         $resident = $this->makeUser(['compound_id' => null]);
-        UnitMembership::factory()->create([
+        ApartmentResident::factory()->create([
             'user_id' => $resident->id,
             'unit_id' => $unit->id,
         ]);
 
         $foreignResident = $this->makeUser(['compound_id' => null, 'email' => 'foreign-resident@example.com']);
-        UnitMembership::factory()->create([
+        ApartmentResident::factory()->create([
             'user_id' => $foreignResident->id,
             'unit_id' => $otherUnit->id,
         ]);
@@ -409,18 +409,18 @@ class UserLifecycleTest extends TestCase
 
     public function test_admin_can_initiate_merge_and_see_analysis(): void
     {
-        $admin  = $this->makeAdmin();
+        $admin = $this->makeAdmin();
         $source = $this->makeUser();
         $target = $this->makeUser();
 
-        UnitMembership::factory()->create(['user_id' => $source->id]);
+        ApartmentResident::factory()->create(['user_id' => $source->id]);
 
         Sanctum::actingAs($admin);
 
         $this->postJson('/api/v1/account-merges', [
             'source_user_id' => $source->id,
             'target_user_id' => $target->id,
-            'notes'          => 'Duplicate detected.',
+            'notes' => 'Duplicate detected.',
         ])
             ->assertCreated()
             ->assertJsonPath('status', 'pending')
@@ -429,15 +429,15 @@ class UserLifecycleTest extends TestCase
         $this->assertDatabaseHas('account_merges', [
             'source_user_id' => $source->id,
             'target_user_id' => $target->id,
-            'status'         => 'pending',
+            'status' => 'pending',
         ]);
     }
 
     public function test_compound_admin_can_initiate_merge_for_membership_scoped_residents_when_source_compound_id_is_null(): void
     {
         $compound = Compound::factory()->create();
-        $building = \App\Models\Property\Building::factory()->for($compound)->create();
-        $unit = \App\Models\Property\Unit::factory()->for($compound)->for($building)->create(['floor_id' => null]);
+        $building = Building::factory()->for($compound)->create();
+        $unit = Unit::factory()->for($compound)->for($building)->create(['floor_id' => null]);
 
         $admin = User::factory()->create([
             'role' => UserRole::CompoundAdmin->value,
@@ -447,11 +447,11 @@ class UserLifecycleTest extends TestCase
         $source = $this->makeUser(['compound_id' => null, 'email' => 'merge-source@example.com']);
         $target = $this->makeUser(['compound_id' => null, 'email' => 'merge-target@example.com']);
 
-        UnitMembership::factory()->create([
+        ApartmentResident::factory()->create([
             'user_id' => $source->id,
             'unit_id' => $unit->id,
         ]);
-        UnitMembership::factory()->create([
+        ApartmentResident::factory()->create([
             'user_id' => $target->id,
             'unit_id' => $unit->id,
         ]);
@@ -469,15 +469,15 @@ class UserLifecycleTest extends TestCase
 
     public function test_cannot_initiate_duplicate_pending_merge(): void
     {
-        $admin  = $this->makeAdmin();
+        $admin = $this->makeAdmin();
         $source = $this->makeUser();
         $target = $this->makeUser();
 
         AccountMerge::create([
             'source_user_id' => $source->id,
             'target_user_id' => $target->id,
-            'initiated_by'   => $admin->id,
-            'status'         => AccountMergeStatus::Pending->value,
+            'initiated_by' => $admin->id,
+            'status' => AccountMergeStatus::Pending->value,
         ]);
 
         Sanctum::actingAs($admin);
@@ -490,17 +490,17 @@ class UserLifecycleTest extends TestCase
 
     public function test_confirm_merge_transfers_memberships_and_archives_source(): void
     {
-        $admin    = $this->makeAdmin();
-        $source   = $this->makeUser();
-        $target   = $this->makeUser();
-        $merge    = AccountMerge::create([
+        $admin = $this->makeAdmin();
+        $source = $this->makeUser();
+        $target = $this->makeUser();
+        $merge = AccountMerge::create([
             'source_user_id' => $source->id,
             'target_user_id' => $target->id,
-            'initiated_by'   => $admin->id,
-            'status'         => AccountMergeStatus::Pending->value,
+            'initiated_by' => $admin->id,
+            'status' => AccountMergeStatus::Pending->value,
         ]);
 
-        UnitMembership::factory()->create(['user_id' => $source->id]);
+        ApartmentResident::factory()->create(['user_id' => $source->id]);
 
         Sanctum::actingAs($admin);
 
@@ -512,7 +512,7 @@ class UserLifecycleTest extends TestCase
         $this->assertDatabaseHas('users', ['id' => $source->id, 'status' => 'archived']);
 
         // Membership transferred to target
-        $this->assertDatabaseHas('unit_memberships', ['user_id' => $target->id]);
+        $this->assertDatabaseHas('apartment_residents', ['user_id' => $target->id]);
 
         // Audit log created
         $this->assertDatabaseHas('audit_logs', ['action' => 'users.account_merge_completed', 'severity' => 'critical']);
@@ -521,8 +521,8 @@ class UserLifecycleTest extends TestCase
     public function test_compound_admin_can_confirm_membership_scoped_merge_when_source_compound_id_is_null(): void
     {
         $compound = Compound::factory()->create();
-        $building = \App\Models\Property\Building::factory()->for($compound)->create();
-        $unit = \App\Models\Property\Unit::factory()->for($compound)->for($building)->create(['floor_id' => null]);
+        $building = Building::factory()->for($compound)->create();
+        $unit = Unit::factory()->for($compound)->for($building)->create(['floor_id' => null]);
 
         $admin = User::factory()->create([
             'role' => UserRole::CompoundAdmin->value,
@@ -532,11 +532,11 @@ class UserLifecycleTest extends TestCase
         $source = $this->makeUser(['compound_id' => null, 'email' => 'confirm-source@example.com']);
         $target = $this->makeUser(['compound_id' => null, 'email' => 'confirm-target@example.com']);
 
-        UnitMembership::factory()->create([
+        ApartmentResident::factory()->create([
             'user_id' => $source->id,
             'unit_id' => $unit->id,
         ]);
-        UnitMembership::factory()->create([
+        ApartmentResident::factory()->create([
             'user_id' => $target->id,
             'unit_id' => $unit->id,
         ]);
@@ -559,10 +559,10 @@ class UserLifecycleTest extends TestCase
     {
         $compound = Compound::factory()->create();
         $otherCompound = Compound::factory()->create();
-        $building = \App\Models\Property\Building::factory()->for($compound)->create();
-        $otherBuilding = \App\Models\Property\Building::factory()->for($otherCompound)->create();
-        $unit = \App\Models\Property\Unit::factory()->for($compound)->for($building)->create(['floor_id' => null]);
-        $otherUnit = \App\Models\Property\Unit::factory()->for($otherCompound)->for($otherBuilding)->create(['floor_id' => null]);
+        $building = Building::factory()->for($compound)->create();
+        $otherBuilding = Building::factory()->for($otherCompound)->create();
+        $unit = Unit::factory()->for($compound)->for($building)->create(['floor_id' => null]);
+        $otherUnit = Unit::factory()->for($otherCompound)->for($otherBuilding)->create(['floor_id' => null]);
 
         $admin = User::factory()->create([
             'role' => UserRole::CompoundAdmin->value,
@@ -574,19 +574,19 @@ class UserLifecycleTest extends TestCase
         $foreignSource = $this->makeUser(['compound_id' => null, 'email' => 'foreign-source@example.com']);
         $foreignTarget = $this->makeUser(['compound_id' => null, 'email' => 'foreign-target@example.com']);
 
-        UnitMembership::factory()->create([
+        ApartmentResident::factory()->create([
             'user_id' => $source->id,
             'unit_id' => $unit->id,
         ]);
-        UnitMembership::factory()->create([
+        ApartmentResident::factory()->create([
             'user_id' => $target->id,
             'unit_id' => $unit->id,
         ]);
-        UnitMembership::factory()->create([
+        ApartmentResident::factory()->create([
             'user_id' => $foreignSource->id,
             'unit_id' => $otherUnit->id,
         ]);
-        UnitMembership::factory()->create([
+        ApartmentResident::factory()->create([
             'user_id' => $foreignTarget->id,
             'unit_id' => $otherUnit->id,
         ]);
@@ -617,8 +617,8 @@ class UserLifecycleTest extends TestCase
     public function test_compound_admin_can_view_membership_scoped_merge_when_source_compound_id_is_null(): void
     {
         $compound = Compound::factory()->create();
-        $building = \App\Models\Property\Building::factory()->for($compound)->create();
-        $unit = \App\Models\Property\Unit::factory()->for($compound)->for($building)->create(['floor_id' => null]);
+        $building = Building::factory()->for($compound)->create();
+        $unit = Unit::factory()->for($compound)->for($building)->create(['floor_id' => null]);
 
         $admin = User::factory()->create([
             'role' => UserRole::CompoundAdmin->value,
@@ -628,11 +628,11 @@ class UserLifecycleTest extends TestCase
         $source = $this->makeUser(['compound_id' => null, 'email' => 'show-source@example.com']);
         $target = $this->makeUser(['compound_id' => null, 'email' => 'show-target@example.com']);
 
-        UnitMembership::factory()->create([
+        ApartmentResident::factory()->create([
             'user_id' => $source->id,
             'unit_id' => $unit->id,
         ]);
-        UnitMembership::factory()->create([
+        ApartmentResident::factory()->create([
             'user_id' => $target->id,
             'unit_id' => $unit->id,
         ]);
@@ -653,14 +653,14 @@ class UserLifecycleTest extends TestCase
 
     public function test_cancel_merge(): void
     {
-        $admin  = $this->makeAdmin();
+        $admin = $this->makeAdmin();
         $source = $this->makeUser();
         $target = $this->makeUser();
-        $merge  = AccountMerge::create([
+        $merge = AccountMerge::create([
             'source_user_id' => $source->id,
             'target_user_id' => $target->id,
-            'initiated_by'   => $admin->id,
-            'status'         => AccountMergeStatus::Pending->value,
+            'initiated_by' => $admin->id,
+            'status' => AccountMergeStatus::Pending->value,
         ]);
 
         Sanctum::actingAs($admin);
@@ -673,8 +673,8 @@ class UserLifecycleTest extends TestCase
     public function test_compound_admin_can_cancel_membership_scoped_merge_when_source_compound_id_is_null(): void
     {
         $compound = Compound::factory()->create();
-        $building = \App\Models\Property\Building::factory()->for($compound)->create();
-        $unit = \App\Models\Property\Unit::factory()->for($compound)->for($building)->create(['floor_id' => null]);
+        $building = Building::factory()->for($compound)->create();
+        $unit = Unit::factory()->for($compound)->for($building)->create(['floor_id' => null]);
 
         $admin = User::factory()->create([
             'role' => UserRole::CompoundAdmin->value,
@@ -684,11 +684,11 @@ class UserLifecycleTest extends TestCase
         $source = $this->makeUser(['compound_id' => null, 'email' => 'cancel-source@example.com']);
         $target = $this->makeUser(['compound_id' => null, 'email' => 'cancel-target@example.com']);
 
-        UnitMembership::factory()->create([
+        ApartmentResident::factory()->create([
             'user_id' => $source->id,
             'unit_id' => $unit->id,
         ]);
-        UnitMembership::factory()->create([
+        ApartmentResident::factory()->create([
             'user_id' => $target->id,
             'unit_id' => $unit->id,
         ]);
@@ -709,14 +709,14 @@ class UserLifecycleTest extends TestCase
 
     public function test_cannot_confirm_cancelled_merge(): void
     {
-        $admin  = $this->makeAdmin();
+        $admin = $this->makeAdmin();
         $source = $this->makeUser();
         $target = $this->makeUser();
-        $merge  = AccountMerge::create([
+        $merge = AccountMerge::create([
             'source_user_id' => $source->id,
             'target_user_id' => $target->id,
-            'initiated_by'   => $admin->id,
-            'status'         => AccountMergeStatus::Cancelled->value,
+            'initiated_by' => $admin->id,
+            'status' => AccountMergeStatus::Cancelled->value,
         ]);
 
         Sanctum::actingAs($admin);

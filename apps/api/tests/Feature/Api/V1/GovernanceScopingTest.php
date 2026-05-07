@@ -4,11 +4,11 @@ namespace Tests\Feature\Api\V1;
 
 use App\Enums\PollStatus;
 use App\Enums\UserRole;
+use App\Models\Apartments\ApartmentResident;
 use App\Models\Polls\Poll;
 use App\Models\Property\Building;
 use App\Models\Property\Compound;
 use App\Models\Property\Unit;
-use App\Models\Property\UnitMembership;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -28,7 +28,7 @@ class GovernanceScopingTest extends TestCase
 
         // Resident in Building A
         $residentA = User::factory()->create(['role' => UserRole::ResidentOwner]);
-        UnitMembership::factory()->create([
+        ApartmentResident::factory()->create([
             'user_id' => $residentA->id,
             'unit_id' => $unitA->id,
             'verification_status' => 'verified',
@@ -48,7 +48,7 @@ class GovernanceScopingTest extends TestCase
         $this->actingAs($residentA);
 
         // 1. Verify index doesn't include Building B poll
-        $response = $this->getJson("/api/v1/polls");
+        $response = $this->getJson('/api/v1/polls');
         $response->assertOk();
         $response->assertJsonMissing(['id' => $pollB->id]);
 

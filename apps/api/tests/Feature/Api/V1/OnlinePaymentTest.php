@@ -11,6 +11,7 @@ use App\Enums\UserRole;
 use App\Enums\VerificationStatus;
 use App\Models\Finance\GatewayTransaction;
 use App\Models\Finance\PaymentSession;
+use App\Models\Finance\PaymentSubmission;
 use App\Models\Finance\UnitAccount;
 use App\Models\Property\Building;
 use App\Models\Property\Compound;
@@ -30,18 +31,18 @@ class OnlinePaymentTest extends TestCase
     private function makeAdmin(Compound $compound): User
     {
         return User::factory()->create([
-            'role'        => UserRole::CompoundAdmin->value,
+            'role' => UserRole::CompoundAdmin->value,
             'compound_id' => $compound->id,
-            'status'      => AccountStatus::Active->value,
+            'status' => AccountStatus::Active->value,
         ]);
     }
 
     private function makeMembershipScopedAdmin(Compound $compound): User
     {
         $admin = User::factory()->create([
-            'role'        => UserRole::CompoundAdmin->value,
+            'role' => UserRole::CompoundAdmin->value,
             'compound_id' => null,
-            'status'      => AccountStatus::Active->value,
+            'status' => AccountStatus::Active->value,
         ]);
 
         [$unit] = $this->createUnitWithAccount($compound, $admin);
@@ -52,24 +53,24 @@ class OnlinePaymentTest extends TestCase
     private function makeResident(Compound $compound): User
     {
         return User::factory()->create([
-            'role'        => UserRole::ResidentOwner->value,
+            'role' => UserRole::ResidentOwner->value,
             'compound_id' => $compound->id,
-            'status'      => AccountStatus::Active->value,
+            'status' => AccountStatus::Active->value,
         ]);
     }
 
     private function createUnitWithAccount(Compound $compound, User $resident, float $balance = 1000.0): array
     {
         $building = Building::factory()->for($compound)->create();
-        $unit     = Unit::factory()->for($compound)->for($building)->create(['floor_id' => null, 'unit_number' => 'T-' . random_int(100, 999)]);
+        $unit = Unit::factory()->for($compound)->for($building)->create(['floor_id' => null, 'unit_number' => 'T-'.random_int(100, 999)]);
 
-        $unit->memberships()->create([
-            'user_id'             => $resident->id,
-            'relation_type'       => UnitRelationType::Owner->value,
-            'starts_at'           => now()->toDateString(),
-            'is_primary'          => true,
+        $unit->apartmentResidents()->create([
+            'user_id' => $resident->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'starts_at' => now()->toDateString(),
+            'is_primary' => true,
             'verification_status' => VerificationStatus::Verified->value,
-            'created_by'          => $resident->id,
+            'created_by' => $resident->id,
         ]);
 
         $account = UnitAccount::factory()->for($unit)->create(['balance' => $balance, 'currency' => 'EGP']);
@@ -89,7 +90,7 @@ class OnlinePaymentTest extends TestCase
 
         $response = $this->postJson('/api/v1/finance/payment-sessions', [
             'unit_account_id' => $account->id,
-            'amount'          => 500,
+            'amount' => 500,
         ]);
 
         $response->assertCreated();
@@ -98,14 +99,14 @@ class OnlinePaymentTest extends TestCase
 
         $this->assertDatabaseHas('payment_sessions', [
             'unit_account_id' => $account->id,
-            'status'          => 'pending',
-            'amount'          => '500.00',
+            'status' => 'pending',
+            'amount' => '500.00',
         ]);
     }
 
     public function test_resident_cannot_create_session_for_another_residents_account(): void
     {
-        $compound  = Compound::factory()->create();
+        $compound = Compound::factory()->create();
         $resident1 = $this->makeResident($compound);
         $resident2 = $this->makeResident($compound);
         [, $account] = $this->createUnitWithAccount($compound, $resident1);
@@ -114,7 +115,7 @@ class OnlinePaymentTest extends TestCase
 
         $this->postJson('/api/v1/finance/payment-sessions', [
             'unit_account_id' => $account->id,
-            'amount'          => 500,
+            'amount' => 500,
         ])->assertForbidden();
     }
 
@@ -128,24 +129,24 @@ class OnlinePaymentTest extends TestCase
 
         // Create a pending session
         $session = PaymentSession::factory()->create([
-            'unit_account_id'     => $account->id,
-            'initiated_by'        => $resident->id,
-            'provider'            => 'mock',
+            'unit_account_id' => $account->id,
+            'initiated_by' => $resident->id,
+            'provider' => 'mock',
             'provider_session_id' => 'mock_sess_test_01',
-            'amount'              => 300.00,
-            'currency'            => 'EGP',
-            'status'              => PaymentSessionStatus::Pending,
+            'amount' => 300.00,
+            'currency' => 'EGP',
+            'status' => PaymentSessionStatus::Pending,
         ]);
 
-        $txId = 'mock_tx_' . Str::ulid();
+        $txId = 'mock_tx_'.Str::ulid();
 
         $response = $this->postJson('/api/v1/webhooks/payments/mock', [
-            'event_type'     => 'payment.succeeded',
+            'event_type' => 'payment.succeeded',
             'transaction_id' => $txId,
-            'session_id'     => 'mock_sess_test_01',
-            'status'         => 'confirmed',
-            'amount'         => 300.00,
-            'currency'       => 'EGP',
+            'session_id' => 'mock_sess_test_01',
+            'status' => 'confirmed',
+            'amount' => 300.00,
+            'currency' => 'EGP',
         ]);
 
         $response->assertSuccessful();
@@ -153,15 +154,15 @@ class OnlinePaymentTest extends TestCase
 
         // Session should be confirmed
         $this->assertDatabaseHas('payment_sessions', [
-            'id'     => $session->id,
+            'id' => $session->id,
             'status' => 'confirmed',
         ]);
 
         // A PaymentSubmission should be auto-created and approved
         $this->assertDatabaseHas('payment_submissions', [
             'unit_account_id' => $account->id,
-            'amount'          => '300.00',
-            'status'          => PaymentStatus::Approved->value,
+            'amount' => '300.00',
+            'status' => PaymentStatus::Approved->value,
         ]);
 
         // Balance should decrease from 1000 to 700
@@ -176,22 +177,22 @@ class OnlinePaymentTest extends TestCase
         [, $account] = $this->createUnitWithAccount($compound, $resident, balance: 1000.0);
 
         $session = PaymentSession::factory()->create([
-            'unit_account_id'     => $account->id,
-            'initiated_by'        => $resident->id,
-            'provider'            => 'mock',
+            'unit_account_id' => $account->id,
+            'initiated_by' => $resident->id,
+            'provider' => 'mock',
             'provider_session_id' => 'mock_sess_dup_01',
-            'amount'              => 200.00,
-            'status'              => PaymentSessionStatus::Pending,
+            'amount' => 200.00,
+            'status' => PaymentSessionStatus::Pending,
         ]);
 
-        $txId    = 'mock_tx_dup_' . Str::ulid();
+        $txId = 'mock_tx_dup_'.Str::ulid();
         $payload = [
-            'event_type'     => 'payment.succeeded',
+            'event_type' => 'payment.succeeded',
             'transaction_id' => $txId,
-            'session_id'     => 'mock_sess_dup_01',
-            'status'         => 'confirmed',
-            'amount'         => 200.00,
-            'currency'       => 'EGP',
+            'session_id' => 'mock_sess_dup_01',
+            'status' => 'confirmed',
+            'amount' => 200.00,
+            'currency' => 'EGP',
         ];
 
         // First webhook
@@ -201,7 +202,7 @@ class OnlinePaymentTest extends TestCase
         $this->postJson('/api/v1/webhooks/payments/mock', $payload)->assertSuccessful();
 
         // Only one PaymentSubmission created
-        $this->assertEquals(1, \App\Models\Finance\PaymentSubmission::query()
+        $this->assertEquals(1, PaymentSubmission::query()
             ->where('unit_account_id', $account->id)
             ->where('amount', 200.00)
             ->count());
@@ -212,13 +213,13 @@ class OnlinePaymentTest extends TestCase
     public function test_admin_can_list_payment_sessions(): void
     {
         $compound = Compound::factory()->create();
-        $admin    = $this->makeAdmin($compound);
+        $admin = $this->makeAdmin($compound);
         $resident = $this->makeResident($compound);
         [, $account] = $this->createUnitWithAccount($compound, $resident);
 
         PaymentSession::factory()->count(3)->create([
             'unit_account_id' => $account->id,
-            'initiated_by'    => $resident->id,
+            'initiated_by' => $resident->id,
         ]);
 
         Sanctum::actingAs($admin);
@@ -263,23 +264,23 @@ class OnlinePaymentTest extends TestCase
     public function test_admin_can_refund_confirmed_transaction(): void
     {
         $compound = Compound::factory()->create();
-        $admin    = $this->makeAdmin($compound);
+        $admin = $this->makeAdmin($compound);
         $resident = $this->makeResident($compound);
         [, $account] = $this->createUnitWithAccount($compound, $resident, balance: 500.0);
 
         $session = PaymentSession::factory()->confirmed()->create([
             'unit_account_id' => $account->id,
-            'initiated_by'    => $resident->id,
-            'amount'          => 500.00,
+            'initiated_by' => $resident->id,
+            'amount' => 500.00,
         ]);
 
         $tx = GatewayTransaction::factory()->create([
-            'payment_session_id'      => $session->id,
-            'provider'                => 'mock',
-            'provider_transaction_id' => 'mock_tx_refund_' . Str::ulid(),
-            'status'                  => GatewayTransactionStatus::Confirmed,
-            'amount'                  => 500.00,
-            'currency'                => 'EGP',
+            'payment_session_id' => $session->id,
+            'provider' => 'mock',
+            'provider_transaction_id' => 'mock_tx_refund_'.Str::ulid(),
+            'status' => GatewayTransactionStatus::Confirmed,
+            'amount' => 500.00,
+            'currency' => 'EGP',
         ]);
 
         Sanctum::actingAs($admin);
@@ -291,27 +292,27 @@ class OnlinePaymentTest extends TestCase
         // Original tx still confirmed; refund tx is refunded
         $this->assertDatabaseHas('gateway_transactions', [
             'payment_session_id' => $session->id,
-            'status'             => GatewayTransactionStatus::Refunded->value,
+            'status' => GatewayTransactionStatus::Refunded->value,
         ]);
     }
 
     public function test_cannot_refund_more_than_transaction_amount(): void
     {
         $compound = Compound::factory()->create();
-        $admin    = $this->makeAdmin($compound);
+        $admin = $this->makeAdmin($compound);
         $resident = $this->makeResident($compound);
         [, $account] = $this->createUnitWithAccount($compound, $resident);
 
         $session = PaymentSession::factory()->confirmed()->create([
             'unit_account_id' => $account->id,
-            'initiated_by'    => $resident->id,
-            'amount'          => 100.00,
+            'initiated_by' => $resident->id,
+            'amount' => 100.00,
         ]);
 
         $tx = GatewayTransaction::factory()->create([
             'payment_session_id' => $session->id,
-            'status'             => GatewayTransactionStatus::Confirmed,
-            'amount'             => 100.00,
+            'status' => GatewayTransactionStatus::Confirmed,
+            'amount' => 100.00,
         ]);
 
         Sanctum::actingAs($admin);
@@ -328,19 +329,19 @@ class OnlinePaymentTest extends TestCase
         $compoundA = Compound::factory()->create();
         $compoundB = Compound::factory()->create();
 
-        $adminA    = $this->makeAdmin($compoundA);
+        $adminA = $this->makeAdmin($compoundA);
         $residentB = $this->makeResident($compoundB);
         [, $accountB] = $this->createUnitWithAccount($compoundB, $residentB);
 
         $session = PaymentSession::factory()->confirmed()->create([
             'unit_account_id' => $accountB->id,
-            'initiated_by'    => $residentB->id,
+            'initiated_by' => $residentB->id,
         ]);
 
         $tx = GatewayTransaction::factory()->create([
             'payment_session_id' => $session->id,
-            'status'             => GatewayTransactionStatus::Confirmed,
-            'amount'             => 100.00,
+            'status' => GatewayTransactionStatus::Confirmed,
+            'amount' => 100.00,
         ]);
 
         Sanctum::actingAs($adminA);

@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api\V1\Finance;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Finance\GatewayTransactionResource;
 use App\Http\Resources\Finance\PaymentSessionResource;
-use App\Enums\UserRole;
 use App\Models\CompoundSetting;
 use App\Models\Finance\GatewayTransaction;
 use App\Models\Finance\PaymentSession;
@@ -77,9 +76,9 @@ class PaymentSessionController extends Controller
     {
         $validated = $request->validate([
             'unit_account_id' => ['required', 'string', 'exists:unit_accounts,id'],
-            'amount'          => ['required', 'numeric', 'min:1'],
-            'currency'        => ['sometimes', 'string', 'size:3'],
-            'return_url'      => ['sometimes', 'nullable', 'url'],
+            'amount' => ['required', 'numeric', 'min:1'],
+            'currency' => ['sometimes', 'string', 'size:3'],
+            'return_url' => ['sometimes', 'nullable', 'url'],
         ]);
 
         $account = UnitAccount::query()->findOrFail($validated['unit_account_id']);
@@ -104,9 +103,9 @@ class PaymentSessionController extends Controller
 
         $this->auditLogger->record('finance.payment_session_created', actor: $request->user(), request: $request, metadata: [
             'payment_session_id' => $session->id,
-            'unit_account_id'    => $account->id,
-            'amount'             => $session->amount,
-            'provider'           => $session->provider,
+            'unit_account_id' => $account->id,
+            'amount' => $session->amount,
+            'provider' => $session->provider,
         ]);
 
         return PaymentSessionResource::make($session->load('unitAccount.unit'));
@@ -134,13 +133,14 @@ class PaymentSessionController extends Controller
 
         $this->auditLogger->record('finance.payment_refunded', actor: $request->user(), request: $request, metadata: [
             'original_transaction_id' => $gatewayTransaction->id,
-            'refund_transaction_id'   => $refundTx->id,
-            'amount'                  => $amount,
+            'refund_transaction_id' => $refundTx->id,
+            'amount' => $amount,
         ]);
 
         /** @var JsonResponse $resp */
         $resp = GatewayTransactionResource::make($refundTx)->response();
         $resp->setStatusCode(201);
+
         return $resp;
     }
 
@@ -159,7 +159,7 @@ class PaymentSessionController extends Controller
             return;
         }
         // Resident: must be an active (not ended) member of the unit
-        $isMember = $account->unit?->memberships()
+        $isMember = $account->unit?->apartmentResidents()
             ->where('user_id', $user->id)
             ->where(function ($q): void {
                 $q->whereNull('ends_at')->orWhereDate('ends_at', '>=', now()->toDateString());
@@ -200,5 +200,4 @@ class PaymentSessionController extends Controller
             abort(422, 'Online payments are not enabled for this compound.');
         }
     }
-
 }

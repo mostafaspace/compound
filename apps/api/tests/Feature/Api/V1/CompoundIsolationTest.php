@@ -7,12 +7,13 @@ use App\Enums\CompoundStatus;
 use App\Enums\UnitRelationType;
 use App\Enums\UserRole;
 use App\Enums\VerificationStatus;
-use App\Models\Governance\Vote;
+use App\Models\Finance\UnitAccount;
 use App\Models\Issues\Issue;
 use App\Models\Property\Building;
 use App\Models\Property\Compound;
 use App\Models\Property\Unit;
 use App\Models\User;
+use App\Models\Visitors\VisitorRequest;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -39,7 +40,7 @@ class CompoundIsolationTest extends TestCase
         // Issue in compound A
         $issueA = Issue::factory()->create([
             'compound_id' => $compoundA->id,
-            'unit_id'     => $unitA->id,
+            'unit_id' => $unitA->id,
             'building_id' => $unitA->building_id,
             'reported_by' => $adminA->id,
         ]);
@@ -47,7 +48,7 @@ class CompoundIsolationTest extends TestCase
         // Issue in compound B
         Issue::factory()->create([
             'compound_id' => $compoundB->id,
-            'unit_id'     => $unitB->id,
+            'unit_id' => $unitB->id,
             'building_id' => $unitB->building_id,
             'reported_by' => $adminB->id,
         ]);
@@ -67,12 +68,12 @@ class CompoundIsolationTest extends TestCase
 
         Issue::factory()->create([
             'compound_id' => $compoundA->id,
-            'unit_id'     => $unitA->id,
+            'unit_id' => $unitA->id,
             'building_id' => $unitA->building_id,
         ]);
         Issue::factory()->create([
             'compound_id' => $compoundB->id,
-            'unit_id'     => $unitB->id,
+            'unit_id' => $unitB->id,
             'building_id' => $unitB->building_id,
         ]);
 
@@ -90,12 +91,12 @@ class CompoundIsolationTest extends TestCase
 
         Issue::factory()->create([
             'compound_id' => $compoundA->id,
-            'unit_id'     => $unitA->id,
+            'unit_id' => $unitA->id,
             'building_id' => $unitA->building_id,
         ]);
         Issue::factory()->create([
             'compound_id' => $compoundB->id,
-            'unit_id'     => $unitB->id,
+            'unit_id' => $unitB->id,
             'building_id' => $unitB->building_id,
         ]);
 
@@ -140,8 +141,8 @@ class CompoundIsolationTest extends TestCase
         [$compoundB, ,              $unitB] = $this->compoundWithAdmin();
 
         // Create accounts in both compounds
-        \App\Models\Finance\UnitAccount::factory()->for($unitA, 'unit')->create(['balance' => 500]);
-        \App\Models\Finance\UnitAccount::factory()->for($unitB, 'unit')->create(['balance' => 1000]);
+        UnitAccount::factory()->for($unitA, 'unit')->create(['balance' => 500]);
+        UnitAccount::factory()->for($unitB, 'unit')->create(['balance' => 1000]);
 
         Sanctum::actingAs($financeAdminA);
         $data = $this->getJson('/api/v1/finance/reports/summary')->assertOk()->json('data');
@@ -182,7 +183,7 @@ class CompoundIsolationTest extends TestCase
     public function test_compound_admin_cannot_view_other_compound_onboarding_checklist(): void
     {
         [$compoundA, $adminA] = $this->compoundWithAdmin();
-        [$compoundB]          = $this->compoundWithAdmin();
+        [$compoundB] = $this->compoundWithAdmin();
 
         Sanctum::actingAs($adminA);
 
@@ -203,12 +204,12 @@ class CompoundIsolationTest extends TestCase
     {
         $compound = Compound::factory()->create(['status' => CompoundStatus::Active->value]);
         $building = Building::factory()->for($compound)->create();
-        $unit     = Unit::factory()->for($compound)->for($building)->create(['floor_id' => null]);
+        $unit = Unit::factory()->for($compound)->for($building)->create(['floor_id' => null]);
 
         $staff = User::factory()->create([
-            'role'        => $role->value,
+            'role' => $role->value,
             'compound_id' => $compound->id,
-            'status'      => AccountStatus::Active->value,
+            'status' => AccountStatus::Active->value,
         ]);
 
         return [$compound, $staff, $unit];
@@ -217,32 +218,32 @@ class CompoundIsolationTest extends TestCase
     private function makeSuperAdmin(): User
     {
         return User::factory()->create([
-            'role'   => UserRole::SuperAdmin->value,
+            'role' => UserRole::SuperAdmin->value,
             'status' => AccountStatus::Active->value,
         ]);
     }
 
-    private function makeVisitorRequest(Unit $unit): \App\Models\Visitors\VisitorRequest
+    private function makeVisitorRequest(Unit $unit): VisitorRequest
     {
         $resident = User::factory()->create([
-            'role'   => UserRole::ResidentOwner->value,
+            'role' => UserRole::ResidentOwner->value,
             'status' => AccountStatus::Active->value,
         ]);
 
-        $unit->memberships()->create([
-            'user_id'             => $resident->id,
-            'relation_type'       => UnitRelationType::Owner->value,
-            'starts_at'           => now()->toDateString(),
-            'is_primary'          => true,
+        $unit->apartmentResidents()->create([
+            'user_id' => $resident->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'starts_at' => now()->toDateString(),
+            'is_primary' => true,
             'verification_status' => VerificationStatus::Verified->value,
-            'created_by'          => $resident->id,
+            'created_by' => $resident->id,
         ]);
 
-        return \App\Models\Visitors\VisitorRequest::factory()->create([
-            'host_user_id'   => $resident->id,
-            'unit_id'        => $unit->id,
+        return VisitorRequest::factory()->create([
+            'host_user_id' => $resident->id,
+            'unit_id' => $unit->id,
             'visit_starts_at' => now()->addDay(),
-            'visit_ends_at'   => now()->addDays(2),
+            'visit_ends_at' => now()->addDays(2),
         ]);
     }
 }

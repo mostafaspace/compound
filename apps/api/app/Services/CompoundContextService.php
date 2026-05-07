@@ -7,7 +7,9 @@ use App\Models\Property\Building;
 use App\Models\Property\Floor;
 use App\Models\Property\Unit;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -37,7 +39,7 @@ class CompoundContextService
      * Returns null when the user is a super-admin without an explicit compound header/param,
      * meaning no compound filtering should be applied.
      *
-     * @return string|null  ULID of the active compound, or null for "all compounds"
+     * @return string|null ULID of the active compound, or null for "all compounds"
      */
     public function resolve(Request $request): ?string
     {
@@ -86,7 +88,7 @@ class CompoundContextService
             return true;
         }
 
-        return $user->unitMemberships()
+        return $user->apartmentResidents()
             ->whereHas('unit', fn ($unitQuery) => $unitQuery->where('compound_id', $compoundId))
             ->exists();
     }
@@ -119,7 +121,7 @@ class CompoundContextService
         $query->where(function ($scoped) use ($compoundId): void {
             $scoped
                 ->where('compound_id', $compoundId)
-                ->orWhereHas('unitMemberships.unit', fn ($unitQuery) => $unitQuery->where('compound_id', $compoundId));
+                ->orWhereHas('apartmentResidents.unit', fn ($unitQuery) => $unitQuery->where('compound_id', $compoundId));
         });
     }
 
@@ -131,11 +133,11 @@ class CompoundContextService
         $query->where(function ($scoped) use ($compoundIds): void {
             $scoped
                 ->whereIn('compound_id', $compoundIds)
-                ->orWhereHas('unitMemberships.unit', fn ($unitQuery) => $unitQuery->whereIn('compound_id', $compoundIds));
+                ->orWhereHas('apartmentResidents.unit', fn ($unitQuery) => $unitQuery->whereIn('compound_id', $compoundIds));
         });
     }
 
-    public function scopePropertyQuery(\Illuminate\Database\Eloquent\Builder $query, User $user): void
+    public function scopePropertyQuery(Builder $query, User $user): void
     {
         if ($this->isEffectiveSuperAdmin($user)) {
             return;
@@ -145,6 +147,7 @@ class CompoundContextService
 
         if ($assignments->isNotEmpty()) {
             $this->scopeResolver->scopePropertyQuery($query, $user);
+
             return;
         }
 
@@ -153,7 +156,7 @@ class CompoundContextService
         if ($managedCompoundId !== null) {
             $model = $query->getModel();
             $table = $model->getTable();
-            $columns = \Illuminate\Support\Facades\Schema::getColumnListing($table);
+            $columns = Schema::getColumnListing($table);
 
             if (in_array('compound_id', $columns, true)) {
                 $query->where($table.'.compound_id', $managedCompoundId);
@@ -190,19 +193,19 @@ class CompoundContextService
 
     private function resolveMembershipCompoundId(User $user): ?string
     {
-        $membership = $user->unitMemberships()
+        $membership = $user->apartmentResidents()
             ->with('unit:id,compound_id')
             ->activeForAccess()
             ->orderByDesc('is_primary')
             ->latest('id')
             ->first()
-            ?? $user->unitMemberships()
+            ?? $user->apartmentResidents()
                 ->with('unit:id,compound_id')
                 ->active()
                 ->orderByDesc('is_primary')
                 ->latest('id')
                 ->first()
-            ?? $user->unitMemberships()
+            ?? $user->apartmentResidents()
                 ->with('unit:id,compound_id')
                 ->orderByDesc('is_primary')
                 ->latest('id')

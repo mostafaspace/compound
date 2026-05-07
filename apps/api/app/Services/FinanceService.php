@@ -16,7 +16,9 @@ use App\Models\Finance\RecurringCharge;
 use App\Models\Finance\UnitAccount;
 use App\Models\Property\Unit;
 use App\Models\User;
+use App\Support\AuditLogger;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -121,7 +123,7 @@ class FinanceService
         return DB::transaction(function () use ($payment, $reviewer, $description): PaymentSubmission {
             /** @var PaymentSubmission $lockedPayment */
             $lockedPayment = PaymentSubmission::query()
-                ->with('unitAccount.unit.memberships')
+                ->with('unitAccount.unit.apartmentResidents')
                 ->lockForUpdate()
                 ->findOrFail($payment->id);
 
@@ -220,7 +222,7 @@ class FinanceService
     public function userCanAccessAccount(User $user, UnitAccount $account): bool
     {
         return $account->unit()
-            ->whereHas('memberships', function ($query) use ($user): void {
+            ->whereHas('apartmentResidents', function ($query) use ($user): void {
                 $query->where('user_id', $user->id)
                     ->where('verification_status', VerificationStatus::Verified->value)
                     ->where(function ($query): void {
@@ -238,7 +240,7 @@ class FinanceService
     {
         $chargeType = ChargeType::query()->create($data);
 
-        app(\App\Support\AuditLogger::class)->record(
+        app(AuditLogger::class)->record(
             'dues.charge_type_created',
             actor: $actor,
             metadata: ['charge_type_id' => $chargeType->id, 'code' => $chargeType->code],
@@ -251,7 +253,7 @@ class FinanceService
     {
         $chargeType->fill($data)->save();
 
-        app(\App\Support\AuditLogger::class)->record(
+        app(AuditLogger::class)->record(
             'dues.charge_type_updated',
             actor: $actor,
             metadata: ['charge_type_id' => $chargeType->id, 'code' => $chargeType->code],
@@ -270,7 +272,7 @@ class FinanceService
 
         $charge = RecurringCharge::query()->create($data);
 
-        app(\App\Support\AuditLogger::class)->record(
+        app(AuditLogger::class)->record(
             'dues.recurring_charge_created',
             actor: $actor,
             metadata: ['recurring_charge_id' => $charge->id, 'compound_id' => $charge->compound_id],
@@ -283,7 +285,7 @@ class FinanceService
     {
         $charge->forceFill(['is_active' => false])->save();
 
-        app(\App\Support\AuditLogger::class)->record(
+        app(AuditLogger::class)->record(
             'dues.recurring_charge_deactivated',
             actor: $actor,
             metadata: ['recurring_charge_id' => $charge->id, 'compound_id' => $charge->compound_id],
@@ -361,9 +363,9 @@ class FinanceService
     /**
      * Resolve the unit accounts that should be charged for a given recurring charge.
      *
-     * @return \Illuminate\Database\Eloquent\Collection<int, UnitAccount>
+     * @return Collection<int, UnitAccount>
      */
-    private function resolveTargetAccounts(RecurringCharge $charge): \Illuminate\Database\Eloquent\Collection
+    private function resolveTargetAccounts(RecurringCharge $charge): Collection
     {
         return match ($charge->target_type) {
             'all' => UnitAccount::query()
@@ -389,7 +391,7 @@ class FinanceService
 
         $campaign = CollectionCampaign::query()->create($data);
 
-        app(\App\Support\AuditLogger::class)->record(
+        app(AuditLogger::class)->record(
             'dues.campaign_created',
             actor: $actor,
             metadata: ['campaign_id' => $campaign->id, 'compound_id' => $campaign->compound_id],
@@ -409,7 +411,7 @@ class FinanceService
             'started_at' => now(),
         ])->save();
 
-        app(\App\Support\AuditLogger::class)->record(
+        app(AuditLogger::class)->record(
             'dues.campaign_published',
             actor: $actor,
             metadata: ['campaign_id' => $campaign->id],
@@ -422,7 +424,7 @@ class FinanceService
     {
         $campaign->forceFill(['status' => CampaignStatus::Archived->value])->save();
 
-        app(\App\Support\AuditLogger::class)->record(
+        app(AuditLogger::class)->record(
             'dues.campaign_archived',
             actor: $actor,
             metadata: ['campaign_id' => $campaign->id],
@@ -471,7 +473,7 @@ class FinanceService
             }
         });
 
-        app(\App\Support\AuditLogger::class)->record(
+        app(AuditLogger::class)->record(
             'dues.campaign_charges_applied',
             actor: $actor,
             metadata: [

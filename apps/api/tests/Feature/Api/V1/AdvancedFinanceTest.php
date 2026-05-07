@@ -29,7 +29,7 @@ class AdvancedFinanceTest extends TestCase
     private function makeAdmin(Compound $compound): User
     {
         return User::factory()->create([
-            'role'        => UserRole::CompoundAdmin->value,
+            'role' => UserRole::CompoundAdmin->value,
             'compound_id' => $compound->id,
         ]);
     }
@@ -37,7 +37,7 @@ class AdvancedFinanceTest extends TestCase
     private function makeFinanceReviewer(Compound $compound): User
     {
         return User::factory()->create([
-            'role'        => UserRole::FinanceReviewer->value,
+            'role' => UserRole::FinanceReviewer->value,
             'compound_id' => $compound->id,
         ]);
     }
@@ -50,13 +50,13 @@ class AdvancedFinanceTest extends TestCase
     private function makeMembershipScopedAdmin(Compound $compound): User
     {
         $admin = User::factory()->create([
-            'role'        => UserRole::CompoundAdmin->value,
+            'role' => UserRole::CompoundAdmin->value,
             'compound_id' => null,
         ]);
 
         $building = Building::factory()->for($compound)->create();
         $unit = Unit::factory()->for($compound)->for($building)->create(['floor_id' => null]);
-        $unit->memberships()->create([
+        $unit->apartmentResidents()->create([
             'user_id' => $admin->id,
             'relation_type' => UnitRelationType::Owner->value,
             'verification_status' => VerificationStatus::Verified->value,
@@ -69,7 +69,7 @@ class AdvancedFinanceTest extends TestCase
     private function makeResident(Compound $compound): User
     {
         return User::factory()->create([
-            'role'        => UserRole::ResidentOwner->value,
+            'role' => UserRole::ResidentOwner->value,
             'compound_id' => $compound->id,
         ]);
     }
@@ -79,13 +79,13 @@ class AdvancedFinanceTest extends TestCase
     public function test_admin_can_create_reserve_fund(): void
     {
         $compound = Compound::factory()->create();
-        $admin    = $this->makeAdmin($compound);
+        $admin = $this->makeAdmin($compound);
         Sanctum::actingAs($admin);
 
         $res = $this->postJson('/api/v1/finance/reserve-funds', [
             'compound_id' => $compound->id,
-            'name'        => 'Emergency Fund',
-            'currency'    => 'EGP',
+            'name' => 'Emergency Fund',
+            'currency' => 'EGP',
         ]);
 
         $res->assertCreated()
@@ -98,13 +98,13 @@ class AdvancedFinanceTest extends TestCase
     public function test_admin_can_deposit_to_reserve_fund(): void
     {
         $compound = Compound::factory()->create();
-        $admin    = $this->makeAdmin($compound);
-        $fund     = ReserveFund::factory()->create(['compound_id' => $compound->id, 'balance' => '0.00']);
+        $admin = $this->makeAdmin($compound);
+        $fund = ReserveFund::factory()->create(['compound_id' => $compound->id, 'balance' => '0.00']);
         Sanctum::actingAs($admin);
 
         $res = $this->postJson("/api/v1/finance/reserve-funds/{$fund->id}/movements", [
-            'type'        => 'deposit',
-            'amount'      => 5000,
+            'type' => 'deposit',
+            'amount' => 5000,
             'description' => 'Annual allocation',
         ]);
 
@@ -117,12 +117,12 @@ class AdvancedFinanceTest extends TestCase
     public function test_withdrawal_reduces_reserve_fund_balance(): void
     {
         $compound = Compound::factory()->create();
-        $admin    = $this->makeAdmin($compound);
-        $fund     = ReserveFund::factory()->create(['compound_id' => $compound->id, 'balance' => 10000]);
+        $admin = $this->makeAdmin($compound);
+        $fund = ReserveFund::factory()->create(['compound_id' => $compound->id, 'balance' => 10000]);
         Sanctum::actingAs($admin);
 
         $this->postJson("/api/v1/finance/reserve-funds/{$fund->id}/movements", [
-            'type'   => 'withdrawal',
+            'type' => 'withdrawal',
             'amount' => 3000,
         ]);
 
@@ -134,8 +134,8 @@ class AdvancedFinanceTest extends TestCase
     {
         $compoundA = Compound::factory()->create();
         $compoundB = Compound::factory()->create();
-        $adminA    = $this->makeAdmin($compoundA);
-        $fundB     = ReserveFund::factory()->create(['compound_id' => $compoundB->id]);
+        $adminA = $this->makeAdmin($compoundA);
+        $fundB = ReserveFund::factory()->create(['compound_id' => $compoundB->id]);
         Sanctum::actingAs($adminA);
 
         $this->getJson("/api/v1/finance/reserve-funds/{$fundB->id}")->assertForbidden();
@@ -163,16 +163,16 @@ class AdvancedFinanceTest extends TestCase
     public function test_admin_can_create_vendor(): void
     {
         $compound = Compound::factory()->create();
-        $admin    = $this->makeAdmin($compound);
+        $admin = $this->makeAdmin($compound);
         Sanctum::actingAs($admin);
 
         $res = $this->postJson('/api/v1/finance/vendors', [
-            'compound_id'  => $compound->id,
-            'name'         => 'CleanCo',
-            'type'         => 'service_provider',
+            'compound_id' => $compound->id,
+            'name' => 'CleanCo',
+            'type' => 'service_provider',
             'contact_name' => 'Ahmed Hassan',
-            'phone'        => '+201001234567',
-            'email'        => 'ahmed@cleanco.com',
+            'phone' => '+201001234567',
+            'email' => 'ahmed@cleanco.com',
         ]);
 
         $res->assertCreated()
@@ -186,8 +186,8 @@ class AdvancedFinanceTest extends TestCase
     {
         $compoundA = Compound::factory()->create();
         $compoundB = Compound::factory()->create();
-        $adminA    = $this->makeAdmin($compoundA);
-        $vendorB   = Vendor::factory()->create(['compound_id' => $compoundB->id]);
+        $adminA = $this->makeAdmin($compoundA);
+        $vendorB = Vendor::factory()->create(['compound_id' => $compoundB->id]);
         Sanctum::actingAs($adminA);
 
         $this->getJson("/api/v1/finance/vendors/{$vendorB->id}")->assertForbidden();
@@ -215,12 +215,12 @@ class AdvancedFinanceTest extends TestCase
     public function test_admin_can_create_and_activate_budget(): void
     {
         $compound = Compound::factory()->create();
-        $admin    = $this->makeAdmin($compound);
+        $admin = $this->makeAdmin($compound);
         Sanctum::actingAs($admin);
 
         $res = $this->postJson('/api/v1/finance/budgets', [
             'compound_id' => $compound->id,
-            'name'        => 'Budget 2026',
+            'name' => 'Budget 2026',
             'period_type' => 'annual',
             'period_year' => 2026,
         ]);
@@ -231,7 +231,7 @@ class AdvancedFinanceTest extends TestCase
 
         // Add a category
         $catRes = $this->postJson("/api/v1/finance/budgets/{$budgetId}/categories", [
-            'name'           => 'Maintenance',
+            'name' => 'Maintenance',
             'planned_amount' => 20000,
         ]);
         $catRes->assertCreated()->assertJsonPath('data.plannedAmount', '20000.00');
@@ -244,11 +244,11 @@ class AdvancedFinanceTest extends TestCase
     public function test_cannot_activate_already_active_budget(): void
     {
         $compound = Compound::factory()->create();
-        $admin    = $this->makeAdmin($compound);
-        $budget   = Budget::factory()->create([
+        $admin = $this->makeAdmin($compound);
+        $budget = Budget::factory()->create([
             'compound_id' => $compound->id,
-            'status'      => BudgetStatus::Active,
-            'created_by'  => $admin->id,
+            'status' => BudgetStatus::Active,
+            'created_by' => $admin->id,
         ]);
         Sanctum::actingAs($admin);
 
@@ -259,11 +259,11 @@ class AdvancedFinanceTest extends TestCase
     public function test_closed_budget_cannot_be_edited(): void
     {
         $compound = Compound::factory()->create();
-        $admin    = $this->makeAdmin($compound);
-        $budget   = Budget::factory()->create([
+        $admin = $this->makeAdmin($compound);
+        $budget = Budget::factory()->create([
             'compound_id' => $compound->id,
-            'status'      => BudgetStatus::Closed,
-            'created_by'  => $admin->id,
+            'status' => BudgetStatus::Closed,
+            'created_by' => $admin->id,
         ]);
         Sanctum::actingAs($admin);
 
@@ -275,10 +275,10 @@ class AdvancedFinanceTest extends TestCase
     {
         $compoundA = Compound::factory()->create();
         $compoundB = Compound::factory()->create();
-        $adminA    = $this->makeAdmin($compoundA);
-        $budgetB   = Budget::factory()->create([
+        $adminA = $this->makeAdmin($compoundA);
+        $budgetB = Budget::factory()->create([
             'compound_id' => $compoundB->id,
-            'created_by'  => User::factory()->create()->id,
+            'created_by' => User::factory()->create()->id,
         ]);
         Sanctum::actingAs($adminA);
 
@@ -317,9 +317,9 @@ class AdvancedFinanceTest extends TestCase
         Sanctum::actingAs($reviewer);
 
         $res = $this->postJson('/api/v1/finance/expenses', [
-            'compound_id'  => $compound->id,
-            'title'        => 'Elevator Repair',
-            'amount'       => 8500,
+            'compound_id' => $compound->id,
+            'title' => 'Elevator Repair',
+            'amount' => 8500,
             'expense_date' => '2026-04-20',
         ]);
 
@@ -331,25 +331,25 @@ class AdvancedFinanceTest extends TestCase
     public function test_admin_can_approve_expense_and_updates_budget_category(): void
     {
         $compound = Compound::factory()->create();
-        $admin    = $this->makeAdmin($compound);
+        $admin = $this->makeAdmin($compound);
         $reviewer = $this->makeFinanceReviewer($compound);
 
-        $budget   = Budget::factory()->create([
+        $budget = Budget::factory()->create([
             'compound_id' => $compound->id,
-            'status'      => BudgetStatus::Active,
-            'created_by'  => $admin->id,
+            'status' => BudgetStatus::Active,
+            'created_by' => $admin->id,
         ]);
         $category = BudgetCategory::factory()->create([
-            'budget_id'      => $budget->id,
+            'budget_id' => $budget->id,
             'planned_amount' => 20000,
-            'actual_amount'  => 0,
+            'actual_amount' => 0,
         ]);
         $expense = Expense::factory()->create([
-            'compound_id'        => $compound->id,
+            'compound_id' => $compound->id,
             'budget_category_id' => $category->id,
-            'amount'             => 5000,
-            'status'             => ExpenseStatus::PendingApproval,
-            'submitted_by'       => $reviewer->id,
+            'amount' => 5000,
+            'status' => ExpenseStatus::PendingApproval,
+            'submitted_by' => $reviewer->id,
         ]);
 
         Sanctum::actingAs($admin);
@@ -364,18 +364,18 @@ class AdvancedFinanceTest extends TestCase
         $this->assertEquals('5000.00', $category->actual_amount);
         $this->assertDatabaseHas('expense_approvals', [
             'expense_id' => $expense->id,
-            'action'     => 'approve',
+            'action' => 'approve',
         ]);
     }
 
     public function test_admin_can_reject_expense_with_reason(): void
     {
         $compound = Compound::factory()->create();
-        $admin    = $this->makeAdmin($compound);
+        $admin = $this->makeAdmin($compound);
         $reviewer = $this->makeFinanceReviewer($compound);
-        $expense  = Expense::factory()->create([
-            'compound_id'  => $compound->id,
-            'status'       => ExpenseStatus::PendingApproval,
+        $expense = Expense::factory()->create([
+            'compound_id' => $compound->id,
+            'status' => ExpenseStatus::PendingApproval,
             'submitted_by' => $reviewer->id,
         ]);
         Sanctum::actingAs($admin);
@@ -391,10 +391,10 @@ class AdvancedFinanceTest extends TestCase
     public function test_cannot_approve_already_approved_expense(): void
     {
         $compound = Compound::factory()->create();
-        $admin    = $this->makeAdmin($compound);
-        $expense  = Expense::factory()->create([
-            'compound_id'  => $compound->id,
-            'status'       => ExpenseStatus::Approved,
+        $admin = $this->makeAdmin($compound);
+        $expense = Expense::factory()->create([
+            'compound_id' => $compound->id,
+            'status' => ExpenseStatus::Approved,
             'submitted_by' => $admin->id,
         ]);
         Sanctum::actingAs($admin);
@@ -407,16 +407,16 @@ class AdvancedFinanceTest extends TestCase
     {
         $compound = Compound::factory()->create();
         $resident = $this->makeResident($compound);
-        $admin    = $this->makeAdmin($compound);
+        $admin = $this->makeAdmin($compound);
 
         Expense::factory()->create([
-            'compound_id'  => $compound->id,
-            'status'       => ExpenseStatus::Approved,
+            'compound_id' => $compound->id,
+            'status' => ExpenseStatus::Approved,
             'submitted_by' => $admin->id,
         ]);
         Expense::factory()->create([
-            'compound_id'  => $compound->id,
-            'status'       => ExpenseStatus::PendingApproval,
+            'compound_id' => $compound->id,
+            'status' => ExpenseStatus::PendingApproval,
             'submitted_by' => $admin->id,
         ]);
 
@@ -436,11 +436,11 @@ class AdvancedFinanceTest extends TestCase
     {
         $compoundA = Compound::factory()->create();
         $compoundB = Compound::factory()->create();
-        $adminA    = $this->makeAdmin($compoundA);
-        $adminB    = $this->makeAdmin($compoundB);
-        $expense   = Expense::factory()->create([
-            'compound_id'  => $compoundB->id,
-            'status'       => ExpenseStatus::PendingApproval,
+        $adminA = $this->makeAdmin($compoundA);
+        $adminB = $this->makeAdmin($compoundB);
+        $expense = Expense::factory()->create([
+            'compound_id' => $compoundB->id,
+            'status' => ExpenseStatus::PendingApproval,
             'submitted_by' => $adminB->id,
         ]);
         Sanctum::actingAs($adminA);

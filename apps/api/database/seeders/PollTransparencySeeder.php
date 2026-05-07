@@ -9,6 +9,7 @@ use App\Models\Polls\PollType;
 use App\Models\Polls\PollViewLog;
 use App\Models\Polls\PollVote;
 use App\Models\Property\Compound;
+use App\Models\Property\Unit;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
@@ -19,19 +20,21 @@ class PollTransparencySeeder extends Seeder
     {
         $compound = Compound::query()->where('name', 'UAT Demo Compound')->first();
 
-        if (!$compound) {
+        if (! $compound) {
             $this->command->warn('UAT compound not found — run UatSeeder first.');
+
             return;
         }
 
         $admin = User::query()->where('email', 'compound-admin@uat.compound.local')->first();
         $residents = User::query()
             ->whereIn('role', ['resident_owner', 'resident_tenant'])
-            ->whereHas('unitMemberships.unit', fn ($query) => $query->where('compound_id', $compound->id))
+            ->whereHas('apartmentResidents.unit', fn ($query) => $query->where('compound_id', $compound->id))
             ->get();
 
         if ($residents->isEmpty()) {
             $this->command->warn('No residents found — run UatSeeder first.');
+
             return;
         }
 
@@ -39,10 +42,10 @@ class PollTransparencySeeder extends Seeder
             ['compound_id' => $compound->id, 'name' => 'Community Decision'],
             [
                 'description' => 'Polls requiring community-wide input',
-                'color'       => '#2563EB',
-                'is_active'   => true,
-                'sort_order'  => 1,
-                'created_by'  => $admin?->id,
+                'color' => '#2563EB',
+                'is_active' => true,
+                'sort_order' => 1,
+                'created_by' => $admin?->id,
             ],
         );
 
@@ -50,10 +53,10 @@ class PollTransparencySeeder extends Seeder
             ['compound_id' => $compound->id, 'name' => 'Budget Approval'],
             [
                 'description' => 'Annual and special budget votes',
-                'color'       => '#059669',
-                'is_active'   => true,
-                'sort_order'  => 2,
-                'created_by'  => $admin?->id,
+                'color' => '#059669',
+                'is_active' => true,
+                'sort_order' => 2,
+                'created_by' => $admin?->id,
             ],
         );
 
@@ -67,16 +70,16 @@ class PollTransparencySeeder extends Seeder
         $poll = Poll::query()->firstOrCreate(
             ['compound_id' => $compound->id, 'title' => 'Pool Operating Hours – Summer 2026'],
             [
-                'poll_type_id'  => $type->id,
-                'description'   => 'Vote on the preferred pool schedule for summer 2026. The winning option will take effect June 1.',
-                'status'        => 'active',
-                'scope'         => 'compound',
-                'eligibility'   => 'all_verified',
+                'poll_type_id' => $type->id,
+                'description' => 'Vote on the preferred pool schedule for summer 2026. The winning option will take effect June 1.',
+                'status' => 'active',
+                'scope' => 'compound',
+                'eligibility' => 'all_verified',
                 'allow_multiple' => false,
-                'starts_at'     => Carbon::now()->subDays(3),
-                'ends_at'       => Carbon::now()->addDays(11),
-                'published_at'  => Carbon::now()->subDays(3),
-                'created_by'    => $admin?->id,
+                'starts_at' => Carbon::now()->subDays(3),
+                'ends_at' => Carbon::now()->addDays(11),
+                'published_at' => Carbon::now()->subDays(3),
+                'created_by' => $admin?->id,
             ],
         );
 
@@ -94,7 +97,7 @@ class PollTransparencySeeder extends Seeder
         );
 
         $options = [$opt1, $opt2, $opt3];
-        $units = \App\Models\Property\Unit::query()
+        $units = Unit::query()
             ->where('compound_id', $compound->id)
             ->pluck('id', 'unit_number');
 
@@ -104,7 +107,7 @@ class PollTransparencySeeder extends Seeder
             $vote = PollVote::query()->firstOrCreate(
                 ['poll_id' => $poll->id, 'user_id' => $resident->id],
                 [
-                    'unit_id'  => $units->values()->get($i % $units->count()),
+                    'unit_id' => $units->values()->get($i % $units->count()),
                     'voted_at' => Carbon::now()->subDays(2)->addHours($i),
                 ],
             );
@@ -116,9 +119,9 @@ class PollTransparencySeeder extends Seeder
             PollNotificationLog::query()->firstOrCreate(
                 ['poll_id' => $poll->id, 'user_id' => $resident->id],
                 [
-                    'notified_at'  => Carbon::now()->subDays(3)->addMinutes($i * 5),
-                    'channel'      => 'push',
-                    'delivered'    => true,
+                    'notified_at' => Carbon::now()->subDays(3)->addMinutes($i * 5),
+                    'channel' => 'push',
+                    'delivered' => true,
                     'delivered_at' => Carbon::now()->subDays(3)->addMinutes($i * 5 + 1),
                 ],
             );
@@ -127,8 +130,8 @@ class PollTransparencySeeder extends Seeder
                 ['poll_id' => $poll->id, 'user_id' => $resident->id],
                 [
                     'first_viewed_at' => Carbon::now()->subDays(2)->addHours($i),
-                    'last_viewed_at'  => Carbon::now()->subDays(1)->addHours($i),
-                    'view_count'      => rand(1, 4),
+                    'last_viewed_at' => Carbon::now()->subDays(1)->addHours($i),
+                    'view_count' => rand(1, 4),
                 ],
             );
         }
@@ -141,17 +144,17 @@ class PollTransparencySeeder extends Seeder
         $poll = Poll::query()->firstOrCreate(
             ['compound_id' => $compound->id, 'title' => '2026 Annual Maintenance Budget Approval'],
             [
-                'poll_type_id'  => $type->id,
-                'description'   => 'Approve or reject the proposed EGP 1.2M annual maintenance budget for 2026.',
-                'status'        => 'closed',
-                'scope'         => 'compound',
-                'eligibility'   => 'owners_only',
+                'poll_type_id' => $type->id,
+                'description' => 'Approve or reject the proposed EGP 1.2M annual maintenance budget for 2026.',
+                'status' => 'closed',
+                'scope' => 'compound',
+                'eligibility' => 'owners_only',
                 'allow_multiple' => false,
-                'starts_at'     => Carbon::now()->subDays(30),
-                'ends_at'       => Carbon::now()->subDays(16),
-                'published_at'  => Carbon::now()->subDays(30),
-                'closed_at'     => Carbon::now()->subDays(16),
-                'created_by'    => $admin?->id,
+                'starts_at' => Carbon::now()->subDays(30),
+                'ends_at' => Carbon::now()->subDays(16),
+                'published_at' => Carbon::now()->subDays(30),
+                'closed_at' => Carbon::now()->subDays(16),
+                'created_by' => $admin?->id,
             ],
         );
 
@@ -164,7 +167,7 @@ class PollTransparencySeeder extends Seeder
             ['sort_order' => 2, 'votes_count' => 0],
         );
 
-        $units = \App\Models\Property\Unit::query()
+        $units = Unit::query()
             ->where('compound_id', $compound->id)
             ->pluck('id', 'unit_number');
 
@@ -174,7 +177,7 @@ class PollTransparencySeeder extends Seeder
             $vote = PollVote::query()->firstOrCreate(
                 ['poll_id' => $poll->id, 'user_id' => $resident->id],
                 [
-                    'unit_id'  => $units->values()->get($i % $units->count()),
+                    'unit_id' => $units->values()->get($i % $units->count()),
                     'voted_at' => Carbon::now()->subDays(25)->addHours($i * 3),
                 ],
             );
@@ -186,9 +189,9 @@ class PollTransparencySeeder extends Seeder
             PollNotificationLog::query()->firstOrCreate(
                 ['poll_id' => $poll->id, 'user_id' => $resident->id],
                 [
-                    'notified_at'  => Carbon::now()->subDays(30)->addMinutes($i * 3),
-                    'channel'      => 'push',
-                    'delivered'    => true,
+                    'notified_at' => Carbon::now()->subDays(30)->addMinutes($i * 3),
+                    'channel' => 'push',
+                    'delivered' => true,
                     'delivered_at' => Carbon::now()->subDays(30)->addMinutes($i * 3 + 1),
                 ],
             );
@@ -197,8 +200,8 @@ class PollTransparencySeeder extends Seeder
                 ['poll_id' => $poll->id, 'user_id' => $resident->id],
                 [
                     'first_viewed_at' => Carbon::now()->subDays(28)->addHours($i),
-                    'last_viewed_at'  => Carbon::now()->subDays(17)->addHours($i),
-                    'view_count'      => rand(2, 6),
+                    'last_viewed_at' => Carbon::now()->subDays(17)->addHours($i),
+                    'view_count' => rand(2, 6),
                 ],
             );
         }
@@ -211,15 +214,15 @@ class PollTransparencySeeder extends Seeder
         $poll = Poll::query()->firstOrCreate(
             ['compound_id' => $compound->id, 'title' => 'Parking Policy Change Proposal'],
             [
-                'poll_type_id'  => $type->id,
-                'description'   => 'Should the compound switch to assigned parking with stickers, or keep open-lot parking?',
-                'status'        => 'draft',
-                'scope'         => 'compound',
-                'eligibility'   => 'all_verified',
+                'poll_type_id' => $type->id,
+                'description' => 'Should the compound switch to assigned parking with stickers, or keep open-lot parking?',
+                'status' => 'draft',
+                'scope' => 'compound',
+                'eligibility' => 'all_verified',
                 'allow_multiple' => false,
-                'starts_at'     => Carbon::now()->addDays(7),
-                'ends_at'       => Carbon::now()->addDays(21),
-                'created_by'    => $admin?->id,
+                'starts_at' => Carbon::now()->addDays(7),
+                'ends_at' => Carbon::now()->addDays(21),
+                'created_by' => $admin?->id,
             ],
         );
 

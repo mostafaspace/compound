@@ -2,14 +2,13 @@
 
 namespace Database\Seeders;
 
-use App\Enums\AccountStatus;
 use App\Enums\UserRole;
 use App\Enums\VerificationStatus;
 use App\Enums\VisitorRequestStatus;
+use App\Models\Apartments\ApartmentResident;
 use App\Models\Property\Building;
 use App\Models\Property\Compound;
 use App\Models\Property\Unit;
-use App\Models\Property\UnitMembership;
 use App\Models\User;
 use App\Models\Visitors\VisitorRequest;
 use Illuminate\Database\Seeder;
@@ -60,7 +59,7 @@ class DemoVisitorDataSeeder extends Seeder
 
         foreach ($residents as $resident) {
             // 5. Link Resident to Unit
-            UnitMembership::firstOrCreate(
+            ApartmentResident::firstOrCreate(
                 ['user_id' => $resident->id, 'unit_id' => $unit->id],
                 [
                     'relation_type' => 'owner',
@@ -102,9 +101,9 @@ class DemoVisitorDataSeeder extends Seeder
         foreach ($visitors as $v) {
             VisitorRequest::updateOrCreate(
                 [
-                    'host_user_id' => $host->id, 
-                    'visitor_name' => $v['visitor_name'], 
-                    'unit_id' => $unit->id
+                    'host_user_id' => $host->id,
+                    'visitor_name' => $v['visitor_name'],
+                    'unit_id' => $unit->id,
                 ],
                 array_merge($v, [
                     'visit_starts_at' => $v['visit_starts_at'],
