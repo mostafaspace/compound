@@ -2,7 +2,6 @@
 
 namespace App\Http\Resources\Apartments;
 
-use App\Http\Resources\UserResource;
 use App\Models\Apartments\ApartmentNote;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -21,7 +20,10 @@ class ApartmentNoteResource extends JsonResource
             'id' => $this->id,
             'unitId' => $this->unit_id,
             'authorId' => $this->author_id,
-            'author' => UserResource::make($this->whenLoaded('author')),
+            'author' => $this->whenLoaded('author', fn () => [
+                'id' => $this->author->id,
+                'name' => $this->author->name,
+            ]),
             'body' => $this->body,
             'createdAt' => $this->created_at?->toJSON(),
             'updatedAt' => $this->updated_at?->toJSON(),
