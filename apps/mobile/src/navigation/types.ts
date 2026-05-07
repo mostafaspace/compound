@@ -2,6 +2,7 @@ import { Issue } from "@compound/contracts";
 
 export type RootStackParamList = {
   Auth: undefined;
+  OwnerRegistration: undefined;
   Main: undefined;
   Guard: undefined;
   Admin: undefined;

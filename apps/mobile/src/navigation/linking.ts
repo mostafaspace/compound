@@ -5,6 +5,7 @@ export const linking: LinkingOptions<RootStackParamList> = {
   prefixes: ['compound://'],
   config: {
     screens: {
+      OwnerRegistration: 'owner-registration',
       Main: {
         screens: {
           Dashboard: 'dashboard',

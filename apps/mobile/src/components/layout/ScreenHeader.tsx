@@ -8,9 +8,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { useSelector } from 'react-redux';
 import { Typography } from '../ui/Typography';
 import { colors, componentSize, radii, shadows, spacing } from '../../theme';
 import { Icon } from '../ui/Icon';
+import { selectLanguagePreference } from '../../store/systemSlice';
+import { isRtlLanguage, rowDirectionStyle, textDirectionStyle } from '../../i18n/direction';
 
 interface ScreenHeaderProps {
   title: string;
@@ -25,6 +28,8 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
 }) => {
   const navigation = useNavigation();
   const isDark = useColorScheme() === 'dark';
+  const language = useSelector(selectLanguagePreference);
+  const isRtl = isRtlLanguage(language);
 
   return (
     <View style={[
@@ -35,7 +40,7 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
       }
     ]}>
       <SafeAreaView edges={['top']}>
-        <View style={styles.content}>
+        <View style={[styles.content, rowDirectionStyle(isRtl)]}>
           <View style={styles.leftContainer}>
             {showBack && navigation.canGoBack() && (
               <Pressable 
@@ -45,13 +50,13 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
                 accessibilityRole="button"
                 accessibilityLabel="Go back"
               >
-                <Icon name="arrow-left" color={isDark ? colors.text.primary.dark : colors.text.primary.light} size={22} />
+                <Icon name={isRtl ? "arrow-right" : "arrow-left"} color={isDark ? colors.text.primary.dark : colors.text.primary.light} size={22} />
               </Pressable>
             )}
           </View>
 
           <View style={styles.titleContainer}>
-            <Typography numberOfLines={1} style={styles.title}>
+            <Typography numberOfLines={1} style={[styles.title, textDirectionStyle(isRtl)]}>
               {title}
             </Typography>
           </View>

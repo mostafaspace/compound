@@ -102,6 +102,10 @@ import type {
   CreatePollTypeInput,
   PollStatus,
   VoteVoter,
+  OwnerRegistrationRequest,
+  OwnerRegistrationStatus,
+  ReviewOwnerRegistrationInput,
+  DenyOwnerRegistrationInput,
 } from "@compound/contracts";
 
 import { config } from "./config";
@@ -1302,6 +1306,67 @@ export async function getVerificationRequests(input: { status?: VerificationRequ
   } catch {
     return [];
   }
+}
+
+export async function getOwnerRegistrationRequests(input: { status?: OwnerRegistrationStatus | "all"; q?: string } = {}): Promise<OwnerRegistrationRequest[]> {
+  try {
+    const params = new URLSearchParams();
+
+    if (input.status && input.status !== "all") {
+      params.set("status", input.status);
+    }
+
+    if (input.q?.trim()) {
+      params.set("q", input.q.trim());
+    }
+
+    const query = params.toString();
+    const response = await fetch(`${config.apiBaseUrl}/owner-registration-requests${query ? `?${query}` : ""}`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const payload = (await response.json()) as PaginatedEnvelope<OwnerRegistrationRequest>;
+
+    return payload.data;
+  } catch {
+    return [];
+  }
+}
+
+async function updateOwnerRegistrationRequest(
+  requestId: string,
+  action: "approve" | "deny",
+  input: ReviewOwnerRegistrationInput | DenyOwnerRegistrationInput,
+): Promise<OwnerRegistrationRequest> {
+  const response = await fetch(`${config.apiBaseUrl}/owner-registration-requests/${requestId}/${action}`, {
+    body: JSON.stringify(input),
+    headers: {
+      ...(await apiHeaders(true)),
+      "Content-Type": "application/json",
+    },
+    method: "PATCH",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to update owner registration request: ${response.status}`);
+  }
+
+  const payload = (await response.json()) as ApiEnvelope<OwnerRegistrationRequest>;
+
+  return payload.data;
+}
+
+export async function approveOwnerRegistrationRequest(requestId: string, input: ReviewOwnerRegistrationInput = {}): Promise<OwnerRegistrationRequest> {
+  return updateOwnerRegistrationRequest(requestId, "approve", input);
+}
+
+export async function denyOwnerRegistrationRequest(requestId: string, input: DenyOwnerRegistrationInput): Promise<OwnerRegistrationRequest> {
+  return updateOwnerRegistrationRequest(requestId, "deny", input);
 }
 
 async function updateVerificationRequest(

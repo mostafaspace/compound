@@ -35,6 +35,7 @@ use App\Http\Controllers\Api\V1\NotificationPreferenceController;
 use App\Http\Controllers\Api\V1\NotificationTemplateController;
 use App\Http\Controllers\Api\V1\OperationalStatusController;
 use App\Http\Controllers\Api\V1\OrgChartController;
+use App\Http\Controllers\Api\V1\OwnerRegistrationController;
 use App\Http\Controllers\Api\V1\RepresentativeAssignmentController;
 use App\Http\Controllers\Api\V1\ResidentSearchController;
 use App\Http\Controllers\Api\V1\ResidentInvitationController;
@@ -73,12 +74,27 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
     Route::get('/status', SystemStatusController::class)->name('status');
 
     Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:login')->name('auth.login');
+    Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword'])
+        ->middleware('throttle:login')
+        ->name('auth.forgot-password');
+    Route::post('/auth/reset-password', [AuthController::class, 'resetPassword'])
+        ->middleware('throttle:login')
+        ->name('auth.reset-password');
     Route::get('/resident-invitations/{token}', [ResidentInvitationController::class, 'show'])
         ->middleware('throttle:invitation-show')
         ->name('resident-invitations.show-public');
     Route::post('/resident-invitations/{token}/accept', [ResidentInvitationController::class, 'accept'])
         ->middleware('throttle:invitation-accept')
         ->name('resident-invitations.accept');
+    Route::get('/public/owner-registration/buildings', [OwnerRegistrationController::class, 'buildings'])
+        ->middleware('throttle:invitation-show')
+        ->name('owner-registration.buildings');
+    Route::post('/public/owner-registration-requests', [OwnerRegistrationController::class, 'store'])
+        ->middleware('throttle:document-upload')
+        ->name('owner-registration.store');
+    Route::get('/public/owner-registration-requests/status', [OwnerRegistrationController::class, 'status'])
+        ->middleware('throttle:invitation-show')
+        ->name('owner-registration.status');
 
     Route::middleware('auth:sanctum')->group(function (): void {
         Route::get('/auth/me', [AuthController::class, 'me'])->name('auth.me');
@@ -237,6 +253,14 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
                 ->name('resident-invitations.resend');
             Route::get('/verification-requests', [VerificationRequestController::class, 'index'])
                 ->name('verification-requests.index');
+            Route::get('/owner-registration-requests', [OwnerRegistrationController::class, 'index'])
+                ->name('owner-registration.index');
+            Route::patch('/owner-registration-requests/{ownerRegistrationRequest}/approve', [OwnerRegistrationController::class, 'approve'])
+                ->middleware('role:manage_users')
+                ->name('owner-registration.approve');
+            Route::patch('/owner-registration-requests/{ownerRegistrationRequest}/deny', [OwnerRegistrationController::class, 'deny'])
+                ->middleware('role:manage_users')
+                ->name('owner-registration.deny');
             Route::patch('/verification-requests/{verificationRequest}/approve', [VerificationRequestController::class, 'approve'])
                 ->name('verification-requests.approve');
             Route::patch('/verification-requests/{verificationRequest}/reject', [VerificationRequestController::class, 'reject'])

@@ -221,6 +221,7 @@ export const api = createApi({
     "UserDocument",
     "PolicyConsent",
     "Admin",
+    "OwnerRegistration",
   ],
   endpoints: () => ({}),
 });

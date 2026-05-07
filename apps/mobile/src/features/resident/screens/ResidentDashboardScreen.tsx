@@ -14,7 +14,7 @@ export const ResidentDashboardScreen = () => {
   const { t } = useTranslation();
 
   return (
-    <ScreenContainer style={styles.container} edges={['left', 'right']}>
+    <ScreenContainer style={styles.container}>
       <View style={styles.header}>
         <Typography variant="h1">
           {t('Dashboard.title', { defaultValue: 'Dashboard' })}

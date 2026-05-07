@@ -5,6 +5,7 @@ export type AppIconName =
   | 'alert'
   | 'announcements'
   | 'arrow-left'
+  | 'arrow-right'
   | 'building'
   | 'camera'
   | 'check'
@@ -73,6 +74,12 @@ export function Icon({
         <>
           <Path {...strokeProps} d="M19 12H5" />
           <Path {...strokeProps} d="m12 19-7-7 7-7" />
+        </>
+      ) : null}
+      {name === 'arrow-right' ? (
+        <>
+          <Path {...strokeProps} d="M5 12h14" />
+          <Path {...strokeProps} d="m12 5 7 7-7 7" />
         </>
       ) : null}
       {name === 'building' ? (

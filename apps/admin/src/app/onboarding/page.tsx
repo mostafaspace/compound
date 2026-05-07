@@ -1,13 +1,15 @@
-import type { InvitationStatus, ResidentInvitation, VerificationRequest, VerificationRequestStatus } from "@compound/contracts";
+import type { InvitationStatus, OwnerRegistrationRequest, ResidentInvitation, VerificationRequest, VerificationRequestStatus } from "@compound/contracts";
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 
 import { LogoutButton } from "@/components/logout-button";
-import { getCurrentUser, getResidentInvitations, getSystemStatus, getVerificationRequests } from "@/lib/api";
+import { getCurrentUser, getOwnerRegistrationRequests, getResidentInvitations, getSystemStatus, getVerificationRequests } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
 
 import {
   approveVerificationRequestAction,
+  approveOwnerRegistrationRequestAction,
+  denyOwnerRegistrationRequestAction,
   rejectVerificationRequestAction,
   requestMoreInfoAction,
   resendInvitationAction,
@@ -20,6 +22,8 @@ interface OnboardingPageProps {
     approved?: string;
     moreInfo?: string;
     rejected?: string;
+    ownerApproved?: string;
+    ownerDenied?: string;
     reviewStatus?: string;
     revoked?: string;
     resent?: string;
@@ -75,6 +79,18 @@ function reviewStatusTone(status: VerificationRequestStatus): string {
   return "bg-[#f3ead7] text-accent";
 }
 
+function ownerStatusTone(status: OwnerRegistrationRequest["status"]): string {
+  if (status === "approved") {
+    return "bg-[#e6f3ef] text-brand";
+  }
+
+  if (status === "denied") {
+    return "bg-[#fff3f2] text-danger";
+  }
+
+  return "bg-[#f3ead7] text-accent";
+}
+
 function formatDate(value: string | null, locale: string, emptyLabel: string): string {
   if (!value) {
     return emptyLabel;
@@ -98,15 +114,20 @@ function canReview(request: VerificationRequest): boolean {
   return request.status === "pending_review" || request.status === "more_info_requested";
 }
 
+function canReviewOwnerRequest(request: OwnerRegistrationRequest): boolean {
+  return request.status === "under_review";
+}
+
 export default async function OnboardingPage({ searchParams }: OnboardingPageProps) {
   await requireAdminUser(getCurrentUser);
   const params = searchParams ? await searchParams : {};
   const activeStatus = parseStatus(params.status);
   const activeReviewStatus = parseReviewStatus(params.reviewStatus);
   const query = params.q ?? "";
-  const [invitations, verificationRequests, systemStatus, t, locale] = await Promise.all([
+  const [invitations, verificationRequests, ownerRegistrationRequests, systemStatus, t, locale] = await Promise.all([
     getResidentInvitations({ q: query, status: activeStatus }),
     getVerificationRequests({ q: query, status: activeReviewStatus }),
+    getOwnerRegistrationRequests({ q: query, status: "all" }),
     getSystemStatus(),
     getTranslations("Onboarding"),
     getLocale(),
@@ -124,8 +145,12 @@ export default async function OnboardingPage({ searchParams }: OnboardingPagePro
           : params.error === "reject_failed"
             ? t("messages.rejectFailed")
             : params.error === "more_info_failed"
-              ? t("messages.moreInfoFailed")
-              : null;
+            ? t("messages.moreInfoFailed")
+            : params.error === "owner_approve_failed"
+              ? "Owner request approval failed."
+              : params.error === "owner_deny_failed"
+                ? "Owner request denial failed."
+                : null;
 
   const invitationStatuses: Array<{ label: string; value: InvitationStatus | "all" }> = [
     { label: t("filters.all"), value: "all" },
@@ -246,11 +271,134 @@ export default async function OnboardingPage({ searchParams }: OnboardingPagePro
             {t("messages.moreInfo")}
           </p>
         ) : null}
+        {params.ownerApproved ? (
+          <p className="mb-4 rounded-lg bg-[#e6f3ef] px-4 py-3 text-sm font-medium text-brand">
+            Owner registration approved. Resident access and unit assignment are ready.
+          </p>
+        ) : null}
+        {params.ownerDenied ? (
+          <p className="mb-4 rounded-lg bg-[#fff3f2] px-4 py-3 text-sm font-medium text-danger">
+            Owner registration denied and the reason is visible on the applicant login screen.
+          </p>
+        ) : null}
         {errorMessage ? (
           <p className="mb-4 rounded-lg bg-[#fff3f2] px-4 py-3 text-sm font-medium text-danger">
             {errorMessage}
           </p>
         ) : null}
+
+        <div className="mb-8">
+          <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+            <div>
+              <h2 className="text-xl font-semibold">Owner registration requests</h2>
+              <p className="mt-1 max-w-2xl text-sm text-muted">
+                Review public Contact Admin applications, verify uploaded ownership PDFs, then approve into a resident account and apartment membership.
+              </p>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto rounded-lg border border-line bg-panel">
+            <table className="w-full min-w-[1180px] border-collapse text-left text-sm">
+              <thead className="bg-background text-muted">
+                <tr>
+                  <th className="px-4 py-3 font-semibold">Owner</th>
+                  <th className="px-4 py-3 font-semibold">Apartment</th>
+                  <th className="px-4 py-3 font-semibold">Documents</th>
+                  <th className="px-4 py-3 font-semibold">Status</th>
+                  <th className="px-4 py-3 font-semibold">Decision</th>
+                  <th className="px-4 py-3 font-semibold">Admin actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {ownerRegistrationRequests.length === 0 ? (
+                  <tr>
+                    <td className="px-4 py-6 text-muted" colSpan={6}>
+                      No owner registration requests yet.
+                    </td>
+                  </tr>
+                ) : (
+                  ownerRegistrationRequests.map((request) => (
+                    <tr key={request.id}>
+                      <td className="px-4 py-4 align-top">
+                        <div className="font-semibold">{request.fullNameArabic}</div>
+                        <div className="text-muted">{request.email}</div>
+                        <div className="text-muted">{request.phone}</div>
+                      </td>
+                      <td className="px-4 py-4 align-top">
+                        <div className="font-semibold">{request.apartmentCode}</div>
+                        <div className="text-muted">{request.building?.label ?? request.building?.code ?? "Building unavailable"}</div>
+                      </td>
+                      <td className="px-4 py-4 align-top">
+                        <div className="grid gap-1">
+                          {request.documents.map((document) => (
+                            <span key={document.id} className="rounded-md bg-background px-2 py-1 text-xs font-semibold text-muted">
+                              {document.type.replace("_", " ")}: {document.originalName}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 align-top">
+                        <span className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${ownerStatusTone(request.status)}`}>
+                          {request.status.replace("_", " ")}
+                        </span>
+                        <div className="mt-2 text-xs text-muted">
+                          Submitted {formatDate(request.createdAt, locale, "not set")}
+                        </div>
+                      </td>
+                      <td className="max-w-72 px-4 py-4 align-top">
+                        {request.decisionReason ? request.decisionReason : <span className="text-muted">No decision note yet.</span>}
+                        {request.login?.email ? (
+                          <div className="mt-2 rounded-md bg-[#e6f3ef] px-2 py-1 text-xs font-semibold text-brand">
+                            Login email: {request.login.email}
+                          </div>
+                        ) : null}
+                      </td>
+                      <td className="px-4 py-4 align-top">
+                        {canReviewOwnerRequest(request) ? (
+                          <div className="grid min-w-96 gap-2">
+                            <form action={approveOwnerRegistrationRequestAction.bind(null, request.id)} className="grid gap-2 rounded-lg border border-line p-3">
+                              <label className="flex items-center gap-2 text-xs font-semibold text-muted">
+                                <input defaultChecked name="createUnitIfMissing" type="checkbox" />
+                                Create apartment if missing
+                              </label>
+                              <input
+                                className="h-10 min-w-0 rounded-lg border border-line px-2"
+                                name="note"
+                                placeholder="Optional approval note"
+                              />
+                              <button
+                                className="inline-flex h-10 items-center justify-center rounded-lg bg-brand px-3 text-sm font-semibold text-white hover:bg-brand-strong"
+                                type="submit"
+                              >
+                                Approve owner
+                              </button>
+                            </form>
+                            <form action={denyOwnerRegistrationRequestAction.bind(null, request.id)} className="flex gap-2">
+                              <input
+                                className="h-10 min-w-0 flex-1 rounded-lg border border-line px-2"
+                                name="reason"
+                                placeholder="Denial reason shown to applicant"
+                                required
+                              />
+                              <button
+                                className="inline-flex h-10 items-center justify-center rounded-lg border border-danger px-3 text-sm font-semibold text-danger"
+                                type="submit"
+                              >
+                                Deny
+                              </button>
+                            </form>
+                          </div>
+                        ) : (
+                          <span className="text-muted">Closed</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
 
         <div className="mb-8">
           <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">

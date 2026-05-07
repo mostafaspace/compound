@@ -39,7 +39,7 @@ export const CreateAnnouncementScreen = () => {
   };
 
   return (
-    <ScreenContainer withKeyboard={true}>
+    <ScreenContainer withKeyboard={true} edges={['left', 'right', 'bottom']}>
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.form}>
           <Typography variant="h2" style={styles.header}>

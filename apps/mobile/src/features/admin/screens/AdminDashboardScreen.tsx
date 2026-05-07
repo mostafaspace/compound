@@ -94,7 +94,7 @@ export const AdminDashboardScreen = () => {
   );
 
   return (
-    <ScreenContainer edges={['left', 'right', 'bottom']} style={{ backgroundColor: isDark ? colors.background.dark : colors.background.light }}>
+    <ScreenContainer style={{ backgroundColor: isDark ? colors.background.dark : colors.background.light }}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}

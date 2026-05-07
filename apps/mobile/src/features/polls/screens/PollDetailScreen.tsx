@@ -199,7 +199,7 @@ export const PollDetailScreen = ({ route, navigation }: Props) => {
 
   if (isLoading || !poll) {
     return (
-      <ScreenContainer withKeyboard={false}>
+      <ScreenContainer withKeyboard={false} edges={['left', 'right', 'bottom']}>
         <View style={styles.center}>
           {isLoading ? (
             <Typography variant="caption">Loading…</Typography>
@@ -221,7 +221,7 @@ export const PollDetailScreen = ({ route, navigation }: Props) => {
   const mutedText = isDark ? colors.text.secondary.dark : colors.text.secondary.light;
 
   return (
-    <ScreenContainer withKeyboard={false} style={styles.container}>
+    <ScreenContainer withKeyboard={false} style={styles.container} edges={['left', 'right', 'bottom']}>
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}

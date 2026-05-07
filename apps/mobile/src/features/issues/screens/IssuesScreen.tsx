@@ -83,7 +83,7 @@ export const IssuesScreen = () => {
   };
 
   return (
-    <ScreenContainer withKeyboard={false} style={styles.container} edges={['left', 'right']}>
+    <ScreenContainer withKeyboard={false} style={styles.container}>
       <FlatList
         data={issues}
         keyExtractor={(item) => String(item.id)}

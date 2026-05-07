@@ -7,7 +7,8 @@ import { useRestoreSession } from './src/hooks/useRestoreSession';
 import { SplashScreen } from './src/components/layout/SplashScreen';
 import { SystemStatusFallback } from './src/components/layout/SystemStatusFallback';
 import { useSelector } from 'react-redux';
-import { selectIsOffline } from './src/store/systemSlice';
+import { selectIsOffline, selectLanguagePreference } from './src/store/systemSlice';
+import { appDirectionStyle, applyNativeDirection, isRtlLanguage } from './src/i18n/direction';
 
 const hideBootSplash = async () => {
   try {
@@ -21,6 +22,7 @@ const AppContent = () => {
   const [isReady, setIsReady] = React.useState(false);
   const { isRestoring } = useRestoreSession();
   const isOffline = useSelector(selectIsOffline);
+  const language = useSelector(selectLanguagePreference);
 
   React.useEffect(() => {
     // Hide native bootsplash overlay immediately
@@ -35,8 +37,12 @@ const AppContent = () => {
     return () => clearTimeout(timer);
   }, [isRestoring]);
 
+  React.useEffect(() => {
+    applyNativeDirection(language);
+  }, [language]);
+
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, appDirectionStyle(isRtlLanguage(language))]}>
       <StatusBar barStyle="light-content" backgroundColor="#010409" />
       {!isReady ? <SplashScreen /> : <RootNavigator />}
       {isOffline && <SystemStatusFallback />}

@@ -26,6 +26,7 @@
     "subtitle": "الوحدات والتحقق والزوار والمالية والشكاوى والإعلانات الرسمية."
   },
   "Common": {
+    "back": "رجوع",
     "done": "تم",
     "optional": "اختياري",
     "refresh": "تحديث",
@@ -446,6 +447,35 @@
     "assignRep": "تعيين ممثل",
     "profile": "ملف العضو",
     "leadership": "قيادة الاتحاد"
+  },
+  "OwnerRegistration": {
+    "title": "تسجيل مالك",
+    "subtitle": "طلب تسجيل مالك في نكست بوينت. Owner registration for Next Point.",
+    "ownerDetails": "بيانات المالك",
+    "fullNameArabic": "الاسم الرباعي / Full Name In Arabic",
+    "phone": "رقم موبايل للتواصل / Phone number",
+    "email": "البريد الإلكتروني / Email Address",
+    "ownerAcknowledgement": "أقر أنني مالك الوحدة وأن المستندات المرفوعة صحيحة وتخصني. I confirm I am the apartment owner and the uploaded documents are mine.",
+    "apartmentData": "بيانات الوحدة",
+    "apartmentCode": "كود الوحدة / Apartment Code (مثال HR-F01-F02)",
+    "buildingCharacter": "حرف المبنى / Building Character",
+    "selectedBuilding": "المحدد: {{building}}",
+    "requiredPdfs": "ملفات PDF المطلوبة",
+    "pdfHint": "برجاء الرفع PDF (Scan)\nيمكن استخدام برنامج CamScanner\nأو هذه الخدمة لدمج الصور في ملف واحد https://jpg2pdf.com/\nPlease upload scanned PDF files. You can use CamScanner or merge images into one PDF using https://jpg2pdf.com/",
+    "idCardPdf": "بطاقة الرقم القومي (الوجهين) PDF / ID card PDF",
+    "idCardHint": "الوجه والظهر في ملف PDF واحد",
+    "contractPdf": "العقد الكامل PDF / The full contract PDF",
+    "contractHint": "ارفع نسخة ممسوحة ضوئيا من العقد الكامل",
+    "handoverPdf": "محضر الاستلام PDF / Handover minutes PDF",
+    "handoverHint": "ارفع محضر الاستلام كملف PDF",
+    "submit": "إرسال للمراجعة",
+    "missingTitle": "بيانات ناقصة",
+    "missingMessage": "يرجى إكمال جميع بيانات طلب المالك ورفع ملفات PDF المطلوبة.",
+    "submittedTitle": "تم إرسال الطلب",
+    "submittedMessage": "طلب تسجيل المالك قيد المراجعة الآن. يمكنك متابعة القرار من شاشة تسجيل الدخول.",
+    "backToLogin": "العودة لتسجيل الدخول",
+    "failedTitle": "فشل الإرسال",
+    "failedMessage": "تعذر إرسال الطلب. يرجى مراجعة ملفات PDF والمحاولة مرة أخرى."
   },
   "Privacy": {
     "label": "الخصوصية والموافقات",

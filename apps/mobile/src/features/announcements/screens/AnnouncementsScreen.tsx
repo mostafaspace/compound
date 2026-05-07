@@ -57,7 +57,7 @@ export const AnnouncementsScreen = () => {
   );
 
   return (
-    <ScreenContainer withKeyboard={false} style={styles.container} edges={['left', 'right', 'bottom']}>
+    <ScreenContainer withKeyboard={false} style={styles.container}>
       <FlatList
         data={announcements}
         keyExtractor={(item) => item.id}

@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -8,20 +8,33 @@ import {
   StatusBar,
   Pressable,
   ScrollView,
-  TouchableOpacity
+  TouchableOpacity,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
+import { useNavigation } from '@react-navigation/native';
+import type { StackNavigationProp } from '@react-navigation/stack';
+import { skipToken } from '@reduxjs/toolkit/query';
 import * as Keychain from "react-native-keychain";
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
-import { useLoginMutation } from '../../../services/auth';
+import { useForgotPasswordMutation, useLoginMutation, useResetPasswordMutation } from '../../../services/auth';
 import { setCredentials } from '../../../store/authSlice';
+import {
+  selectColorSchemePreference,
+  selectLanguagePreference,
+  setColorSchemePreference,
+  setLanguagePreference,
+} from '../../../store/systemSlice';
 import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
 import { Typography } from '../../../components/ui/Typography';
 import { colors, spacing, shadows, radii } from '../../../theme';
 import { Icon } from '../../../components/ui/Icon';
 import { uatPersonaEmails, uatPersonaPassword } from '../login-personas';
+import { useGetOwnerRegistrationStatusQuery } from '../../../services/ownerRegistration';
+import type { RootStackParamList } from '../../../navigation/types';
+import { appDirectionStyle, applyNativeDirection, centerTextDirectionStyle, isRtlLanguage, textDirectionStyle } from '../../../i18n/direction';
+import { mobilePreferencesService, persistMobilePreferences } from '../../../i18n/preferences';
 
 const PersonaChip = ({
   label,
@@ -57,18 +70,95 @@ const PersonaChip = ({
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const authTokenService = "compound.mobile.authToken";
+const ownerDeviceService = "compound.mobile.ownerRegistrationDevice";
+const ownerRequestService = "compound.mobile.ownerRegistrationRequest";
 
 export const LoginScreen = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const dispatch = useDispatch();
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
+  const language = useSelector(selectLanguagePreference);
+  const colorScheme = useSelector(selectColorSchemePreference);
+  const isLight = colorScheme === "light";
+  const isArabic = isRtlLanguage(language);
   
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorMap, setErrorMap] = useState<Record<string, string>>({});
   const [systemError, setSystemError] = useState<string | null>(null);
+  const [ownerStatusLookup, setOwnerStatusLookup] = useState<{ deviceId?: string; requestToken?: string } | null>(null);
+  const [passwordResetToken, setPasswordResetToken] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState("");
   const submitInFlightRef = useRef(false);
   
   const [login, { isLoading: isSigningIn }] = useLoginMutation();
+  const [forgotPassword, { isLoading: isRequestingReset }] = useForgotPasswordMutation();
+  const [resetPassword, { isLoading: isResettingPassword }] = useResetPasswordMutation();
+  const { data: ownerStatus, refetch: refetchOwnerStatus } = useGetOwnerRegistrationStatusQuery(
+    ownerStatusLookup?.deviceId || ownerStatusLookup?.requestToken ? ownerStatusLookup : skipToken,
+  );
+
+  useEffect(() => {
+    const hydrateOwnerStatus = async () => {
+      const [device, request] = await Promise.all([
+        Keychain.getGenericPassword({ service: ownerDeviceService }),
+        Keychain.getGenericPassword({ service: ownerRequestService }),
+      ]);
+
+      if (device || request) {
+        setOwnerStatusLookup({
+          deviceId: device ? device.password : undefined,
+          requestToken: request ? request.password : undefined,
+        });
+      }
+    };
+
+    void hydrateOwnerStatus();
+  }, []);
+
+  useEffect(() => {
+    const hydratePreferences = async () => {
+      const stored = await Keychain.getGenericPassword({ service: mobilePreferencesService });
+      if (!stored) {
+        return;
+      }
+
+      try {
+        const parsed = JSON.parse(stored.password) as { language?: "en" | "ar"; colorScheme?: "light" | "dark" };
+        if (parsed.language === "en" || parsed.language === "ar") {
+          applyNativeDirection(parsed.language);
+          dispatch(setLanguagePreference(parsed.language));
+          void i18n.changeLanguage(parsed.language);
+        }
+
+        if (parsed.colorScheme === "light" || parsed.colorScheme === "dark") {
+          dispatch(setColorSchemePreference(parsed.colorScheme));
+        }
+      } catch {
+        await Keychain.resetGenericPassword({ service: mobilePreferencesService });
+      }
+    };
+
+    void hydratePreferences();
+  }, [dispatch, i18n]);
+
+  const persistPreferences = useCallback(async (nextLanguage: "en" | "ar", nextColorScheme: "light" | "dark") => {
+    await persistMobilePreferences(nextLanguage, nextColorScheme);
+  }, []);
+
+  const handleToggleLanguage = useCallback(() => {
+    const nextLanguage = language === "en" ? "ar" : "en";
+    applyNativeDirection(nextLanguage);
+    dispatch(setLanguagePreference(nextLanguage));
+    void i18n.changeLanguage(nextLanguage);
+    void persistPreferences(nextLanguage, colorScheme);
+  }, [colorScheme, dispatch, i18n, language, persistPreferences]);
+
+  const handleToggleTheme = useCallback(() => {
+    const nextColorScheme = colorScheme === "dark" ? "light" : "dark";
+    dispatch(setColorSchemePreference(nextColorScheme));
+    void persistPreferences(language, nextColorScheme);
+  }, [colorScheme, dispatch, language, persistPreferences]);
 
   const submitLogin = useCallback(async (nextEmail: string, nextPassword: string) => {
     if (submitInFlightRef.current) {
@@ -142,12 +232,73 @@ export const LoginScreen = () => {
     setSystemError(null);
   }, []);
 
+  const handleContactAdmin = useCallback(() => {
+    navigation.navigate("OwnerRegistration");
+  }, [navigation]);
+
+  const handleRefreshOwnerStatus = useCallback(() => {
+    if (ownerStatus?.status === "approved" && ownerStatus.login?.email) {
+      setEmail(ownerStatus.login.email);
+      if (ownerStatus.login.passwordSetupToken) {
+        setPasswordResetToken(ownerStatus.login.passwordSetupToken);
+        setSystemError("Owner request approved. Enter a new password below to activate your login.");
+      }
+    }
+
+    if (ownerStatusLookup) {
+      void refetchOwnerStatus();
+    } else {
+      navigation.navigate("OwnerRegistration");
+    }
+  }, [navigation, ownerStatus, ownerStatusLookup, refetchOwnerStatus]);
+
+  const handleForgotPassword = useCallback(async () => {
+    if (!email.trim()) {
+      setSystemError("Enter your email first, then tap Forgot Password.");
+      return;
+    }
+
+    try {
+      const result = await forgotPassword({ email: email.trim().toLowerCase() }).unwrap();
+      if (result.resetToken) {
+        setPasswordResetToken(result.resetToken);
+        setSystemError("Reset token ready. Enter a new password below.");
+      } else {
+        setSystemError(result.message || "If this email exists, reset instructions are available.");
+      }
+    } catch {
+      setSystemError("Could not start password reset. Please try again.");
+    }
+  }, [email, forgotPassword]);
+
+  const handleResetPassword = useCallback(async () => {
+    if (!email.trim() || !passwordResetToken || newPassword.length < 8) {
+      setSystemError("Enter your email and a new password with at least 8 characters.");
+      return;
+    }
+
+    try {
+      await resetPassword({
+        email: email.trim().toLowerCase(),
+        token: passwordResetToken,
+        password: newPassword,
+        password_confirmation: newPassword,
+      }).unwrap();
+      setPassword(newPassword);
+      setNewPassword("");
+      setPasswordResetToken(null);
+      setSystemError("Password reset. You can sign in now.");
+    } catch {
+      setSystemError("Password reset failed or expired. Request a new reset token.");
+    }
+  }, [email, newPassword, passwordResetToken, resetPassword]);
+
   return (
     <KeyboardAvoidingView 
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={styles.container}
+      style={[styles.container, { backgroundColor: isLight ? '#F8FAFC' : '#020617' }]}
     >
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle={isLight ? "dark-content" : "light-content"} />
       
       {/* Abstract Background Decoration */}
       <View style={[styles.backgroundContainer, { zIndex: -1 }]}>
@@ -158,8 +309,8 @@ export const LoginScreen = () => {
               <Stop offset="100%" stopColor="#020617" stopOpacity="1" />
             </RadialGradient>
           </Defs>
-          <Circle cx={SCREEN_WIDTH * 0.8} cy={SCREEN_HEIGHT * 0.1} r="200" fill="#312E81" fillOpacity="0.3" />
-          <Circle cx={SCREEN_WIDTH * 0.1} cy={SCREEN_HEIGHT * 0.9} r="300" fill="#1E1B4B" fillOpacity="0.4" />
+          <Circle cx={SCREEN_WIDTH * 0.8} cy={SCREEN_HEIGHT * 0.1} r="200" fill={isLight ? "#DBEAFE" : "#312E81"} fillOpacity="0.3" />
+          <Circle cx={SCREEN_WIDTH * 0.1} cy={SCREEN_HEIGHT * 0.9} r="300" fill={isLight ? "#CCFBF1" : "#1E1B4B"} fillOpacity="0.4" />
         </Svg>
       </View>
 
@@ -171,24 +322,49 @@ export const LoginScreen = () => {
           showsVerticalScrollIndicator={false}
           bounces={false}
         >
-          <View style={styles.inner}>
+          <View style={[styles.inner, appDirectionStyle(isArabic)]}>
+              <View style={[styles.loginToggles, isArabic && styles.loginTogglesRtl]}>
+                <Pressable
+                  onPress={handleToggleLanguage}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel={language === "en" ? "Switch to Arabic layout" : "Switch to English layout"}
+                  accessibilityHint="Changes text language and screen direction"
+                  style={[styles.preferenceChip, { backgroundColor: isLight ? '#FFFFFF' : 'rgba(255,255,255,0.06)', borderColor: isLight ? '#DDE6E2' : 'rgba(255,255,255,0.12)' }]}
+                >
+                  <Typography style={[styles.preferenceText, { color: isLight ? colors.palette.ink[800] : colors.palette.ink[100] }]}>
+                    {language === "en" ? "AR" : "EN"}
+                  </Typography>
+                </Pressable>
+                <Pressable
+                  onPress={handleToggleTheme}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel={isLight ? "Switch to dark mode" : "Switch to light mode"}
+                  style={[styles.preferenceChip, { backgroundColor: isLight ? '#FFFFFF' : 'rgba(255,255,255,0.06)', borderColor: isLight ? '#DDE6E2' : 'rgba(255,255,255,0.12)' }]}
+                >
+                  <Typography style={[styles.preferenceText, { color: isLight ? colors.palette.ink[800] : colors.palette.ink[100] }]}>
+                    {isLight ? "Dark" : "Light"}
+                  </Typography>
+                </Pressable>
+              </View>
               <View style={styles.header}>
                 <View style={styles.logoCircle}>
-                  <Icon name="building" color={colors.palette.ink[50]} size={38} />
+                  <Icon name="building" color={isLight ? colors.palette.ink[800] : colors.palette.ink[50]} size={38} />
                 </View>
-                <Typography variant="h1" style={[styles.brandTitle, { color: '#FFFFFF' }]}>
+                <Typography variant="h1" style={[styles.brandTitle, { color: isLight ? colors.palette.ink[950] : '#FFFFFF' }, centerTextDirectionStyle(isArabic)]}>
                   {t("App.brand", { defaultValue: "Compound" })}
                 </Typography>
-                <Typography variant="caption" style={[styles.brandSubtitle, { color: '#94A3B8' }]}>
+                <Typography variant="caption" style={[styles.brandSubtitle, { color: isLight ? colors.palette.ink[600] : '#94A3B8' }, centerTextDirectionStyle(isArabic)]}>
                   {t("App.subtitle", { defaultValue: "Smart Living Management" })}
                 </Typography>
               </View>
 
-              <View style={styles.card}>
-                <Typography variant="h2" style={[styles.signInTitle, { color: '#FFFFFF' }]}>
+              <View style={[styles.card, { backgroundColor: isLight ? '#FFFFFF' : 'rgba(30, 41, 59, 0.7)', borderColor: isLight ? '#DDE6E2' : 'rgba(255,255,255,0.1)' }]}>
+                <Typography variant="h2" style={[styles.signInTitle, { color: isLight ? colors.palette.ink[950] : '#FFFFFF' }, textDirectionStyle(isArabic)]}>
                   {t("Auth.signIn", { defaultValue: "Welcome Back" })}
                 </Typography>
-                <Typography variant="caption" style={styles.instructions}>
+                <Typography variant="caption" style={[styles.instructions, { color: isLight ? colors.palette.ink[600] : colors.palette.ink[500] }, textDirectionStyle(isArabic)]}>
                   {t("Auth.instructions", { defaultValue: "Please enter your credentials to continue" })}
                 </Typography>
 
@@ -235,7 +411,7 @@ export const LoginScreen = () => {
                     }}
                     placeholder={t("Auth.emailPlaceholder", { defaultValue: "name@example.com" })}
                     placeholderTextColor={colors.palette.ink[500]}
-                    style={styles.loginInput}
+                    style={[styles.loginInput, isLight && styles.loginInputLight, isArabic && styles.loginInputRtl]}
                     value={email}
                     error={errorMap.email}
                   />
@@ -255,7 +431,7 @@ export const LoginScreen = () => {
                     }}
                     placeholder={t("Auth.passwordPlaceholder", { defaultValue: "••••••••" })}
                     placeholderTextColor={colors.palette.ink[500]}
-                    style={styles.loginInput}
+                    style={[styles.loginInput, isLight && styles.loginInputLight, isArabic && styles.loginInputRtl]}
                     secureTextEntry
                     value={password}
                     error={errorMap.password}
@@ -271,24 +447,80 @@ export const LoginScreen = () => {
                     style={styles.loginButton}
                   />
 
-                  <Pressable style={styles.forgotBtn}>
+                  {passwordResetToken ? (
+                    <View style={styles.resetPanel}>
+                      <Input
+                        label="New password"
+                        value={newPassword}
+                        onChangeText={setNewPassword}
+                        secureTextEntry
+                        placeholder="At least 8 characters"
+                        style={[styles.loginInput, isLight && styles.loginInputLight, isArabic && styles.loginInputRtl]}
+                      />
+                      <Button
+                        title="Set new password"
+                        onPress={handleResetPassword}
+                        loading={isResettingPassword}
+                        disabled={newPassword.length < 8 || isResettingPassword}
+                        variant="secondary"
+                      />
+                    </View>
+                  ) : null}
+
+                  <Pressable style={styles.forgotBtn} onPress={handleForgotPassword} disabled={isRequestingReset}>
                     <Typography style={styles.forgotText}>
-                      {t("Auth.forgotPassword", { defaultValue: "Forgot Password?" })}
+                      {isRequestingReset ? "Preparing reset..." : t("Auth.forgotPassword", { defaultValue: "Forgot Password?" })}
                     </Typography>
                   </Pressable>
                 </View>
               </View>
 
-              <View style={styles.footer}>
+              <View style={[styles.footer, isArabic && styles.rowReverse]}>
                 <Typography variant="caption" style={styles.footerText}>
                   {t("Auth.noAccount", { defaultValue: "Don't have an account?" })}
                 </Typography>
-                <Pressable>
+                <Pressable onPress={handleContactAdmin} accessibilityRole="button">
                   <Typography style={styles.footerLink}>
                     {t("Auth.contactAdmin", { defaultValue: "Contact Admin" })}
                   </Typography>
                 </Pressable>
               </View>
+
+              {ownerStatus ? (
+                <Pressable
+                  onPress={handleRefreshOwnerStatus}
+                  accessibilityRole="button"
+                  style={[
+                    styles.ownerStatusCard,
+                    isArabic && styles.rowReverse,
+                    ownerStatus.status === "approved" ? styles.ownerStatusApproved : ownerStatus.status === "denied" ? styles.ownerStatusDenied : styles.ownerStatusPending,
+                  ]}
+                >
+                  <View style={styles.ownerStatusIcon}>
+                    <Icon
+                      name={ownerStatus.status === "approved" ? "check" : ownerStatus.status === "denied" ? "x" : "documents"}
+                      color={ownerStatus.status === "denied" ? '#FCA5A5' : '#FFFFFF'}
+                      size={18}
+                    />
+                  </View>
+                  <View style={styles.ownerStatusCopy}>
+                    <Typography style={[styles.ownerStatusTitle, textDirectionStyle(isArabic)]}>
+                      {ownerStatus.status === "approved"
+                        ? "Owner request approved"
+                        : ownerStatus.status === "denied"
+                          ? "Owner request denied"
+                          : "Owner request under review"}
+                    </Typography>
+                    <Typography style={[styles.ownerStatusText, textDirectionStyle(isArabic)]}>
+                      {ownerStatus.status === "approved"
+                        ? `Login email: ${ownerStatus.login?.email ?? ownerStatus.email}. Tap this card to fill it, then use Forgot Password to set your first password.`
+                        : ownerStatus.status === "denied"
+                          ? ownerStatus.decisionReason ?? "Open request status to see the admin reason."
+                          : "Admin is reviewing your documents. Tap to refresh status."}
+                    </Typography>
+                  </View>
+                </Pressable>
+              ) : null}
           </View>
         </ScrollView>
       </View>
@@ -317,6 +549,35 @@ const styles = StyleSheet.create({
     minHeight: SCREEN_HEIGHT,
     justifyContent: 'center',
     zIndex: 1,
+  },
+  loginToggles: {
+    flexDirection: 'row',
+    alignSelf: 'flex-end',
+    justifyContent: 'flex-end',
+    gap: spacing.xs,
+    padding: 4,
+    borderRadius: radii.pill,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    marginBottom: spacing.lg,
+  },
+  loginTogglesRtl: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row-reverse',
+  },
+  preferenceChip: {
+    minHeight: 44,
+    minWidth: 74,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  preferenceText: {
+    fontSize: 12,
+    fontWeight: '800',
   },
   header: {
     alignItems: 'center',
@@ -393,6 +654,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: radii.lg,
   },
+  loginInputLight: {
+    color: colors.palette.ink[950],
+    backgroundColor: '#F8FAFC',
+    borderColor: colors.palette.blue[500],
+  },
+  loginInputRtl: {
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
   forgotBtn: {
     marginTop: 20,
     alignItems: 'center',
@@ -402,11 +672,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  resetPanel: {
+    marginTop: 16,
+    padding: spacing.md,
+    borderRadius: radii.xl,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
     marginTop: 40,
     gap: 8,
+  },
+  rowReverse: {
+    flexDirection: 'row-reverse',
   },
   footerText: {
     color: colors.palette.ink[500],
@@ -414,6 +695,48 @@ const styles = StyleSheet.create({
   footerLink: {
     color: '#818CF8',
     fontWeight: '700',
+  },
+  ownerStatusCard: {
+    marginTop: 18,
+    borderRadius: radii.xl,
+    padding: spacing.md,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    borderWidth: 1,
+  },
+  ownerStatusPending: {
+    backgroundColor: 'rgba(37, 99, 235, 0.12)',
+    borderColor: 'rgba(96, 165, 250, 0.3)',
+  },
+  ownerStatusApproved: {
+    backgroundColor: 'rgba(34, 197, 94, 0.12)',
+    borderColor: 'rgba(74, 222, 128, 0.3)',
+  },
+  ownerStatusDenied: {
+    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+    borderColor: 'rgba(248, 113, 113, 0.3)',
+  },
+  ownerStatusIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ownerStatusCopy: {
+    flex: 1,
+    gap: 4,
+  },
+  ownerStatusTitle: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+    fontSize: 14,
+  },
+  ownerStatusText: {
+    color: colors.palette.ink[300],
+    fontSize: 12,
+    lineHeight: 18,
   },
   devPersonas: {
     marginTop: 24,

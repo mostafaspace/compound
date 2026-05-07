@@ -121,7 +121,7 @@ export const AdminFinanceScreen = () => {
   );
 
   return (
-    <ScreenContainer withKeyboard={false} style={styles.container} edges={['left', 'right', 'bottom']}>
+    <ScreenContainer withKeyboard={false} style={styles.container}>
       <View style={styles.header}>
         <Typography variant="h1">{t("Finance.label", "Finance")}</Typography>
         <Typography variant="caption">{t("Admin.financeDescription", "Review and approve payment submissions")}</Typography>

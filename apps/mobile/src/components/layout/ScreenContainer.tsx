@@ -20,12 +20,14 @@ interface ScreenContainerProps {
   edges?: readonly ('top' | 'right' | 'bottom' | 'left')[];
 }
 
+const DEFAULT_EDGES: readonly ('top' | 'right' | 'bottom' | 'left')[] = ['left', 'right'];
+
 export const ScreenContainer: React.FC<ScreenContainerProps> = ({
   children,
   style,
   scrollable = false,
   withKeyboard = true,
-  edges,
+  edges = DEFAULT_EDGES,
 }) => {
   const isDark = useColorScheme() === 'dark';
   

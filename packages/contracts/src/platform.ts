@@ -149,6 +149,69 @@ export interface ReviewVerificationRequestInput {
   note?: string;
 }
 
+export const ownerRegistrationStatusValues = ["under_review", "approved", "denied"] as const;
+
+export type OwnerRegistrationStatus = (typeof ownerRegistrationStatusValues)[number];
+
+export interface OwnerRegistrationBuilding {
+  id: string;
+  code: string;
+  label: string;
+  type?: string | null;
+}
+
+export interface OwnerRegistrationDocument {
+  id: number;
+  type: "id_card" | "contract" | "handover";
+  originalName: string;
+  mimeType: string | null;
+  sizeBytes: number | null;
+}
+
+export interface OwnerRegistrationRequest {
+  id: string;
+  requestToken?: string;
+  status: OwnerRegistrationStatus;
+  fullNameArabic: string;
+  phone: string;
+  email: string;
+  apartmentCode: string;
+  ownerAcknowledged: boolean;
+  building: OwnerRegistrationBuilding | null;
+  documents: OwnerRegistrationDocument[];
+  decisionReason: string | null;
+  reviewedAt: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+  login?: {
+    email: string;
+    username: string;
+    requiresPasswordReset: boolean;
+    passwordSetupToken: string | null;
+    passwordSetupExpiresAt: string | null;
+  };
+}
+
+export interface OwnerRegistrationBuildingsResponse {
+  data: OwnerRegistrationBuilding[];
+  meta: {
+    compound: {
+      id: string;
+      name: string;
+      code: string;
+    };
+  };
+}
+
+export interface ReviewOwnerRegistrationInput {
+  createUnitIfMissing?: boolean;
+  note?: string;
+}
+
+export interface DenyOwnerRegistrationInput {
+  reason: string;
+}
+
 export interface LoginInput {
   email: string;
   password: string;

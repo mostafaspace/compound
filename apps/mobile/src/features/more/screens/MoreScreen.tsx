@@ -119,7 +119,6 @@ export const MoreScreen = ({ navigation }: { navigation: MoreScreenNavigationPro
   return (
     <ScreenContainer 
       scrollable 
-      edges={['bottom', 'left', 'right']} 
       style={styles.container}
     >
       {sections.map((section, idx) => {

@@ -85,7 +85,7 @@ export const UploadDocumentScreen = () => {
   const activeDocumentTypes = documentTypes.filter((documentType: DocumentType) => documentType.isActive);
 
   return (
-    <ScreenContainer withKeyboard>
+    <ScreenContainer withKeyboard edges={['left', 'right', 'bottom']}>
       <ScrollView contentContainerStyle={styles.scroll}>
         <Typography variant="label" style={[styles.label, { color: text }]}>
           {t("Documents.typeLabel", { defaultValue: "Document type" })}

@@ -41,7 +41,7 @@ export const ShareVisitorPassScreen = () => {
 
   if (isLoading) {
     return (
-      <ScreenContainer style={styles.center}>
+      <ScreenContainer style={styles.center} edges={['left', 'right', 'bottom']}>
         <Typography>Loading pass details...</Typography>
       </ScreenContainer>
     );
@@ -49,7 +49,7 @@ export const ShareVisitorPassScreen = () => {
 
   if (error || !visitor) {
     return (
-      <ScreenContainer style={styles.center}>
+      <ScreenContainer style={styles.center} edges={['left', 'right', 'bottom']}>
         <Typography variant="h3" style={{ marginBottom: spacing.md }}>Could not load pass</Typography>
         <Typography style={{ marginBottom: spacing.sm }}>There was an error retrieving the visitor pass details.</Typography>
         <Typography variant="caption" style={{ color: colors.error, marginBottom: layout.sectionGap, textAlign: 'center' }}>
@@ -62,7 +62,7 @@ export const ShareVisitorPassScreen = () => {
 
   if (!qrToken) {
     return (
-      <ScreenContainer style={styles.center}>
+      <ScreenContainer style={styles.center} edges={['left', 'right', 'bottom']}>
         <Typography variant="h3" style={{ marginBottom: spacing.md }}>
           {t("Visitors.passUnavailable", { defaultValue: "Pass unavailable" })}
         </Typography>
@@ -119,7 +119,7 @@ export const ShareVisitorPassScreen = () => {
   const labelStyle = { color: '#718096' };
 
   return (
-    <ScreenContainer>
+    <ScreenContainer edges={['left', 'right', 'bottom']}>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         <ViewShot
           ref={viewShotRef}

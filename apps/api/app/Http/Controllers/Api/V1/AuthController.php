@@ -15,6 +15,8 @@ use Database\Seeders\UatSeeder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -106,6 +108,79 @@ class AuthController extends Controller
         return response()->json([
             'data' => [
                 'status' => 'ok',
+            ],
+        ]);
+    }
+
+    public function forgotPassword(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'email' => ['required', 'email:rfc', 'max:255'],
+        ]);
+
+        $email = Str::lower($validated['email']);
+        $resetToken = null;
+
+        /** @var User|null $user */
+        $user = User::query()->where('email', $email)->first();
+
+        if ($user) {
+            $resetToken = Str::random(64);
+
+            DB::table('password_reset_tokens')->updateOrInsert(
+                ['email' => $email],
+                [
+                    'token' => Hash::make($resetToken),
+                    'created_at' => now(),
+                ],
+            );
+
+            $this->auditLogger->record('auth.password_reset_requested', actor: $user, request: $request, statusCode: 200);
+        } else {
+            $this->auditLogger->record('auth.password_reset_requested_unknown_email', request: $request, statusCode: 200, metadata: [
+                'email' => $email,
+            ]);
+        }
+
+        return response()->json([
+            'data' => [
+                'status' => $user ? 'reset_available' : 'reset_requested',
+                'message' => 'If this email exists, password reset instructions are available.',
+            ],
+            'meta' => app()->environment('production') || ! $resetToken ? (object) [] : [
+                'resetToken' => $resetToken,
+            ],
+        ]);
+    }
+
+    public function resetPassword(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'email' => ['required', 'email:rfc', 'max:255'],
+            'token' => ['required', 'string', 'max:255'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        $email = Str::lower($validated['email']);
+        $record = DB::table('password_reset_tokens')->where('email', $email)->first();
+
+        abort_unless($record && Hash::check($validated['token'], $record->token), 422, 'The password reset token is invalid.');
+        abort_if($record->created_at && \Illuminate\Support\Carbon::parse($record->created_at)->lt(now()->subHours(2)), 422, 'The password reset token has expired.');
+
+        /** @var User $user */
+        $user = User::query()->where('email', $email)->firstOrFail();
+        $user->forceFill([
+            'password' => Hash::make($validated['password']),
+            'status' => AccountStatus::Active->value,
+        ])->save();
+
+        DB::table('password_reset_tokens')->where('email', $email)->delete();
+
+        $this->auditLogger->record('auth.password_reset_completed', actor: $user, request: $request, statusCode: 200);
+
+        return response()->json([
+            'data' => [
+                'status' => 'password_reset',
             ],
         ]);
     }

@@ -251,7 +251,7 @@ export const AdminUnitsScreen = () => {
   );
 
   return (
-    <ScreenContainer withKeyboard={false} scrollable style={styles.container} edges={['left', 'right', 'bottom']}>
+    <ScreenContainer withKeyboard={false} scrollable style={styles.container}>
       <View style={styles.header}>
         <Typography variant="h1">{t("Admin.units", "Units")}</Typography>
         <Typography variant="caption">{t("Admin.propertyDescription", "Manage property units and buildings")}</Typography>

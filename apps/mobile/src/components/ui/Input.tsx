@@ -9,9 +9,11 @@ import {
   ViewStyle,
   Pressable
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { colors, spacing, radii, componentSize } from '../../theme';
 import { Icon } from './Icon';
 import { Typography } from './Typography';
+import { isRtlLanguage, textDirectionStyle } from '../../i18n/direction';
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -27,8 +29,10 @@ export const Input: React.FC<InputProps> = ({
   ...props
 }) => {
   const isDark = useColorScheme() === 'dark';
+  const { i18n } = useTranslation();
   const [hidden, setHidden] = useState(true);
   const isPassword = secureTextEntry !== undefined;
+  const isRtl = isRtlLanguage(i18n.language);
   const surfaceColor = isDark ? colors.surface.dark : colors.surface.light;
   const mutedSurface = isDark ? colors.surfaceMuted.dark : colors.surfaceMuted.light;
   const textColor = isDark ? colors.text.primary.dark : colors.text.primary.light;
@@ -37,19 +41,20 @@ export const Input: React.FC<InputProps> = ({
 
   return (
     <View style={[styles.container, containerStyle]}>
-      {label && <Typography variant="label" style={styles.label}>{label}</Typography>}
+      {label && <Typography variant="label" style={[styles.label, textDirectionStyle(isRtl)]}>{label}</Typography>}
       <View style={styles.inputWrapper}>
         <TextInput
           placeholderTextColor={mutedColor}
           secureTextEntry={isPassword ? hidden : undefined}
           style={[
             styles.input,
-            isPassword && styles.inputWithToggle,
+            isPassword && (isRtl ? styles.inputWithToggleRtl : styles.inputWithToggle),
             {
               backgroundColor: props.editable === false ? mutedSurface : surfaceColor,
               color: textColor,
               borderColor,
             },
+            textDirectionStyle(isRtl),
             props.style
           ]}
           {...props}
@@ -57,7 +62,7 @@ export const Input: React.FC<InputProps> = ({
         {isPassword && (
           <Pressable
             onPress={() => setHidden((v) => !v)}
-            style={styles.eyeButton}
+            style={[styles.eyeButton, isRtl ? styles.eyeButtonRtl : styles.eyeButtonLtr]}
             accessibilityLabel={hidden ? "Show password" : "Hide password"}
             accessibilityRole="button"
             hitSlop={8}
@@ -66,7 +71,7 @@ export const Input: React.FC<InputProps> = ({
           </Pressable>
         )}
       </View>
-      {error && <Typography variant="error" style={styles.error}>{error}</Typography>}
+      {error && <Typography variant="error" style={[styles.error, textDirectionStyle(isRtl)]}>{error}</Typography>}
     </View>
   );
 };
@@ -77,7 +82,7 @@ const styles = StyleSheet.create({
   },
   label: {
     marginBottom: spacing.xs,
-    marginLeft: 4,
+    marginStart: 4,
   },
   inputWrapper: {
     position: 'relative',
@@ -94,16 +99,24 @@ const styles = StyleSheet.create({
   inputWithToggle: {
     paddingRight: 48,
   },
+  inputWithToggleRtl: {
+    paddingLeft: 48,
+  },
   eyeButton: {
     position: 'absolute',
-    right: spacing.sm,
     minHeight: componentSize.touch,
     justifyContent: 'center',
     alignItems: 'center',
     width: componentSize.touch,
   },
+  eyeButtonLtr: {
+    right: spacing.sm,
+  },
+  eyeButtonRtl: {
+    left: spacing.sm,
+  },
   error: {
     marginTop: spacing.xs,
-    marginLeft: 4,
+    marginStart: 4,
   },
 });

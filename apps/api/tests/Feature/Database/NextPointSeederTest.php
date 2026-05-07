@@ -35,9 +35,13 @@ class NextPointSeederTest extends TestCase
         $this->assertSame(11000, $nextPoint->metadata['resident_capacity']);
 
         $this->assertSame(
-            range('A', 'L'),
+            ['A', 'B', 'C', 'D', 'C/D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'],
             $nextPoint->buildings()->orderBy('sort_order')->pluck('code')->all(),
         );
+        $this->assertDatabaseHas('units', [
+            'compound_id' => $nextPoint->id,
+            'unit_number' => 'CDR-F2-F2',
+        ]);
         $this->assertSame(
             'https://nexthome-egy.com/media/1706/h04-1.jpg',
             $nextPoint->buildings()->where('code', 'H')->firstOrFail()->metadata['image_url'],

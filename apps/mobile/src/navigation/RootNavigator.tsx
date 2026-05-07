@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { selectCurrentToken, selectCurrentUser, selectIsRestoring } from '../store/authSlice';
 import { RootStackParamList } from './types';
 import { LoginScreen } from '../features/auth/screens/LoginScreen';
+import { OwnerRegistrationScreen } from '../features/auth/screens/OwnerRegistrationScreen';
 import { ResidentTabNavigator } from './ResidentTabNavigator';
 import { AdminTabNavigator } from './AdminTabNavigator';
 import { GuardNavigator } from './GuardNavigator';
@@ -54,7 +55,10 @@ export const RootNavigator = () => {
     <NavigationContainer linking={linking}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!authToken ? (
-          <Stack.Screen name="Auth" component={LoginScreen} />
+          <Stack.Group>
+            <Stack.Screen name="Auth" component={LoginScreen} />
+            <Stack.Screen name="OwnerRegistration" component={OwnerRegistrationScreen} />
+          </Stack.Group>
         ) : (
           <Stack.Group>
             {roleType === 'security' ? (

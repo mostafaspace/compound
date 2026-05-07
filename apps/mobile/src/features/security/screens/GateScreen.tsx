@@ -133,7 +133,7 @@ export const GateScreen = () => {
   };
 
   return (
-    <ScreenContainer withKeyboard style={styles.container} edges={['left', 'right', 'bottom']}>
+    <ScreenContainer withKeyboard style={styles.container}>
       <View style={[styles.validationSection, { backgroundColor: isDark ? colors.surface.dark : colors.surface.light }]}>
         <Typography variant="h3" style={styles.sectionTitle}>{t("Security.verifyPass", "Verify Pass")}</Typography>
         <View style={styles.inputRow}>

@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 
 import {
   approveVerificationRequest,
+  approveOwnerRegistrationRequest,
+  denyOwnerRegistrationRequest,
   rejectVerificationRequest,
   requestMoreInfoForVerificationRequest,
   resendResidentInvitation,
@@ -43,6 +45,33 @@ export async function approveVerificationRequestAction(verificationRequestId: nu
     redirect("/onboarding?approved=1");
   } catch {
     redirect("/onboarding?error=approve_failed");
+  }
+}
+
+export async function approveOwnerRegistrationRequestAction(requestId: string, formData: FormData) {
+  try {
+    await approveOwnerRegistrationRequest(requestId, {
+      createUnitIfMissing: formData.get("createUnitIfMissing") === "on",
+      note: String(formData.get("note") ?? "").trim() || undefined,
+    });
+
+    revalidatePath("/onboarding");
+    redirect("/onboarding?ownerApproved=1");
+  } catch {
+    redirect("/onboarding?error=owner_approve_failed");
+  }
+}
+
+export async function denyOwnerRegistrationRequestAction(requestId: string, formData: FormData) {
+  try {
+    await denyOwnerRegistrationRequest(requestId, {
+      reason: String(formData.get("reason") ?? "").trim(),
+    });
+
+    revalidatePath("/onboarding");
+    redirect("/onboarding?ownerDenied=1");
+  } catch {
+    redirect("/onboarding?error=owner_deny_failed");
   }
 }
 

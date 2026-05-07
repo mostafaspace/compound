@@ -1,18 +1,28 @@
 import React from 'react';
 import { View, StyleSheet, useColorScheme, Appearance, Pressable, ColorSchemeName } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { useDispatch, useSelector } from 'react-redux';
 import { ScreenContainer } from '../../../components/layout/ScreenContainer';
 import { Typography } from '../../../components/ui/Typography';
 import { colors, layout, radii, shadows, spacing } from '../../../theme';
 import { Icon } from '../../../components/ui/Icon';
+import { selectColorSchemePreference, setLanguagePreference } from '../../../store/systemSlice';
+import { applyNativeDirection, isRtlLanguage, textDirectionStyle } from '../../../i18n/direction';
+import { persistMobilePreferences } from '../../../i18n/preferences';
 
 export const SettingsScreen = () => {
   const { t, i18n } = useTranslation();
+  const dispatch = useDispatch();
   const isDark = useColorScheme() === 'dark';
+  const colorScheme = useSelector(selectColorSchemePreference);
+  const isArabic = isRtlLanguage(i18n.language);
 
   const toggleLanguage = () => {
     const newLang = i18n.language === 'en' ? 'ar' : 'en';
-    i18n.changeLanguage(newLang);
+    applyNativeDirection(newLang);
+    dispatch(setLanguagePreference(newLang));
+    void i18n.changeLanguage(newLang);
+    void persistMobilePreferences(newLang, colorScheme);
   };
 
   const setScheme = (scheme: ColorSchemeName) => {
@@ -48,7 +58,7 @@ export const SettingsScreen = () => {
   return (
     <ScreenContainer>
       <View style={styles.section}>
-        <Typography variant="label" style={styles.sectionTitle}>
+        <Typography variant="label" style={[styles.sectionTitle, textDirectionStyle(isArabic)]}>
           {t('Settings.preferences', { defaultValue: 'PREFERENCES' })}
         </Typography>
         
@@ -60,7 +70,7 @@ export const SettingsScreen = () => {
       </View>
 
       <View style={styles.section}>
-        <Typography variant="label" style={styles.sectionTitle}>
+        <Typography variant="label" style={[styles.sectionTitle, textDirectionStyle(isArabic)]}>
           {t('Settings.appearance', { defaultValue: 'APPEARANCE' })}
         </Typography>
         

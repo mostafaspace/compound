@@ -91,7 +91,7 @@ export const IssueDetailScreen = () => {
   const priorityPalette = issuePriorityPalette(currentIssue.priority);
 
   return (
-    <ScreenContainer withKeyboard={false} style={styles.container}>
+    <ScreenContainer withKeyboard={false} style={styles.container} edges={['left', 'right', 'bottom']}>
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={[styles.card, { backgroundColor: surface, borderColor: border }]}>
           <View style={styles.headerRow}>

@@ -93,7 +93,7 @@ export const VisitorsScreen = () => {
   );
 
   return (
-    <ScreenContainer withKeyboard={false} style={styles.container} edges={['left', 'right']}>
+    <ScreenContainer withKeyboard={false} style={styles.container}>
       <FlatList
         data={visitors}
         keyExtractor={(item) => item.id}

@@ -76,7 +76,7 @@ export const DocumentsScreen = () => {
   );
 
   return (
-    <ScreenContainer withKeyboard={false} style={styles.container} edges={["left", "right"]}>
+    <ScreenContainer withKeyboard={false} style={styles.container}>
       <FlatList
         data={documents}
         keyExtractor={(item) => String(item.id)}

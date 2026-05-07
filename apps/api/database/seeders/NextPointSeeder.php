@@ -47,12 +47,13 @@ class NextPointSeeder extends Seeder
         $resident = User::where('email', 'resident@compound.local')->first();
 
         // ── Building definitions ─────────────────────────────────────────────
-        // A-J = residential, K = commercial, L = residential
+        // A-L = residential/commercial blocks; C/D is a distinct shared building label in Next Point.
         $buildingDefs = [
             'A' => ['label' => 'Building A', 'type' => 'residential', 'image' => 'https://nexthome-egy.com/media/1699/a.jpg'],
             'B' => ['label' => 'Building B', 'type' => 'residential', 'image' => 'https://nexthome-egy.com/media/1700/b.jpg'],
             'C' => ['label' => 'Building C', 'type' => 'residential', 'image' => 'https://nexthome-egy.com/media/1701/c.jpg'],
             'D' => ['label' => 'Building D', 'type' => 'residential', 'image' => 'https://nexthome-egy.com/media/1702/d.jpg'],
+            'C/D' => ['label' => 'Building C/D', 'type' => 'residential', 'image' => 'https://nexthome-egy.com/media/1702/d.jpg'],
             'E' => ['label' => 'Building E', 'type' => 'residential', 'image' => 'https://nexthome-egy.com/media/1703/e.jpg'],
             'F' => ['label' => 'Building F', 'type' => 'residential', 'image' => 'https://nexthome-egy.com/media/1704/f.jpg'],
             'G' => ['label' => 'Building G', 'type' => 'residential', 'image' => 'https://nexthome-egy.com/media/1705/g.jpg'],
@@ -274,11 +275,12 @@ class NextPointSeeder extends Seeder
             ]);
 
             $levelCode = $level === 0 ? 'F0' : "F{$level}";
+            $unitPrefix = str_replace('/', '', $code);
 
             foreach ($unitMix as $flat => [$type, $area, $beds]) {
                 $flatNum = $flat + 1;
                 $typeCode = $type === UnitType::Studio ? 'R' : 'R';
-                $unitNumber = "{$code}{$typeCode}-{$levelCode}-F{$flatNum}";
+                $unitNumber = "{$unitPrefix}{$typeCode}-{$levelCode}-F{$flatNum}";
 
                 Unit::query()->updateOrCreate([
                     'compound_id' => $compound->id,

@@ -1,14 +1,19 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { RootState } from "../store";
+import { getInitialLanguage, type AppLanguage } from "../i18n/direction";
 
 interface SystemState {
   isOffline: boolean;
   lastError: string | null;
+  language: AppLanguage;
+  colorScheme: "light" | "dark";
 }
 
 const initialState: SystemState = {
   isOffline: false,
   lastError: null,
+  language: getInitialLanguage(),
+  colorScheme: "dark",
 };
 
 const systemSlice = createSlice({
@@ -26,12 +31,20 @@ const systemSlice = createSlice({
     clearError: (state) => {
       state.lastError = null;
     },
+    setLanguagePreference: (state, action: PayloadAction<AppLanguage>) => {
+      state.language = action.payload;
+    },
+    setColorSchemePreference: (state, action: PayloadAction<"light" | "dark">) => {
+      state.colorScheme = action.payload;
+    },
   },
 });
 
-export const { setOfflineState, clearError } = systemSlice.actions;
+export const { setOfflineState, clearError, setLanguagePreference, setColorSchemePreference } = systemSlice.actions;
 
 export default systemSlice.reducer;
 
 export const selectIsOffline = (state: RootState) => state.system.isOffline;
 export const selectLastError = (state: RootState) => state.system.lastError;
+export const selectLanguagePreference = (state: RootState) => state.system.language;
+export const selectColorSchemePreference = (state: RootState) => state.system.colorScheme;
