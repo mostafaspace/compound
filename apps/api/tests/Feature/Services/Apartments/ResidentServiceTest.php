@@ -78,6 +78,33 @@ class ResidentServiceTest extends TestCase
         $this->assertSame('New Name', $updated->resident_name);
     }
 
+    public function test_update_ignores_immutable_and_raw_storage_fields(): void
+    {
+        $resident = ApartmentResident::factory()->create([
+            'photo_path' => 'apartments/residents/current.jpg',
+        ]);
+        $actor = User::factory()->create();
+        $otherUnit = Unit::factory()->create();
+        $otherUser = User::factory()->create();
+        $originalUnitId = $resident->unit_id;
+        $originalUserId = $resident->user_id;
+        $originalCreatedBy = $resident->created_by;
+
+        $updated = app(ResidentService::class)->update($resident, $actor, [
+            'unit_id' => $otherUnit->id,
+            'user_id' => $otherUser->id,
+            'created_by' => $actor->id,
+            'photo_path' => 'apartments/residents/injected.jpg',
+            'resident_name' => 'Safe Name',
+        ]);
+
+        $this->assertSame($originalUnitId, $updated->unit_id);
+        $this->assertSame($originalUserId, $updated->user_id);
+        $this->assertSame($originalCreatedBy, $updated->created_by);
+        $this->assertSame('apartments/residents/current.jpg', $updated->photo_path);
+        $this->assertSame('Safe Name', $updated->resident_name);
+    }
+
     public function test_delete_soft_deletes(): void
     {
         $resident = ApartmentResident::factory()->create();

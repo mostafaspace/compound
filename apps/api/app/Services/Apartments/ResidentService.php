@@ -6,9 +6,23 @@ use App\Models\Apartments\ApartmentResident;
 use App\Models\Property\Unit;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Arr;
 
 class ResidentService
 {
+    private const UPDATE_FIELDS = [
+        'relation_type',
+        'starts_at',
+        'ends_at',
+        'is_primary',
+        'verification_status',
+        'resident_name',
+        'resident_phone',
+        'phone_public',
+        'resident_email',
+        'email_public',
+    ];
+
     /**
      * @param  array<string, mixed>  $data
      */
@@ -39,13 +53,13 @@ class ResidentService
      */
     public function update(ApartmentResident $resident, User $actor, array $data): ApartmentResident
     {
+        $updates = Arr::only($data, self::UPDATE_FIELDS);
+
         if (isset($data['photo']) && $data['photo'] instanceof UploadedFile) {
-            $data['photo_path'] = $this->uploadPhotoIfPresent($data);
+            $updates['photo_path'] = $this->uploadPhotoIfPresent($data);
         }
 
-        unset($data['photo']);
-
-        $resident->update($data);
+        $resident->update($updates);
 
         return $resident->refresh();
     }
