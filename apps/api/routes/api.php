@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\Apartments\ApartmentNoteController;
 use App\Http\Controllers\Api\V1\Apartments\ApartmentParkingSpotController;
 use App\Http\Controllers\Api\V1\Apartments\ApartmentResidentController;
 use App\Http\Controllers\Api\V1\Apartments\ApartmentVehicleController;
+use App\Http\Controllers\Api\V1\Apartments\ApartmentViolationController;
 use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BuildingController;
@@ -129,6 +130,8 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             ->names('apartments.parking-spots');
         Route::get('/apartments/{unit}/notes', [ApartmentNoteController::class, 'index'])->name('apartments.notes.index');
         Route::post('/apartments/{unit}/notes', [ApartmentNoteController::class, 'store'])->name('apartments.notes.store');
+        Route::get('/apartments/{unit}/violations', [ApartmentViolationController::class, 'index'])
+            ->name('apartments.violations.index');
 
         // ─── Localization (CM-85) ─────────────────────────────────────────
         // Returns effective locale settings for the current compound.
