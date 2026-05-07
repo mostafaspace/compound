@@ -1,15 +1,15 @@
 <?php
 
-use App\Http\Controllers\Api\V1\AnnouncementController;
-use App\Http\Controllers\Api\V1\DashboardController;
-use App\Http\Controllers\Api\V1\ImportBatchController;
 use App\Http\Controllers\Api\V1\AccountMergeController;
+use App\Http\Controllers\Api\V1\AnnouncementController;
+use App\Http\Controllers\Api\V1\Apartments\ApartmentController;
 use App\Http\Controllers\Api\V1\AuditLogController;
-use App\Http\Controllers\Api\V1\OperationalAnalyticsController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BuildingController;
 use App\Http\Controllers\Api\V1\CompoundController;
 use App\Http\Controllers\Api\V1\CompoundOnboardingController;
+use App\Http\Controllers\Api\V1\DashboardController;
+use App\Http\Controllers\Api\V1\DeviceTokenController;
 use App\Http\Controllers\Api\V1\DocumentTypeController;
 use App\Http\Controllers\Api\V1\Finance\BudgetController;
 use App\Http\Controllers\Api\V1\Finance\ChargeTypeController;
@@ -25,49 +25,55 @@ use App\Http\Controllers\Api\V1\Finance\UnitAccountController;
 use App\Http\Controllers\Api\V1\Finance\VendorController;
 use App\Http\Controllers\Api\V1\FloorController;
 use App\Http\Controllers\Api\V1\Governance\VoteController;
+use App\Http\Controllers\Api\V1\ImportBatchController;
 use App\Http\Controllers\Api\V1\IssueAttachmentController;
 use App\Http\Controllers\Api\V1\IssueCommentController;
 use App\Http\Controllers\Api\V1\IssueController;
-use App\Http\Controllers\Api\V1\DeviceTokenController;
+use App\Http\Controllers\Api\V1\LaunchReadinessController;
+use App\Http\Controllers\Api\V1\LocaleController;
+use App\Http\Controllers\Api\V1\Maintenance\WorkOrderController;
+use App\Http\Controllers\Api\V1\Maintenance\WorkOrderEstimateController;
+use App\Http\Controllers\Api\V1\Maintenance\WorkOrderStatusController;
+use App\Http\Controllers\Api\V1\ManualVisitorEntryController;
+use App\Http\Controllers\Api\V1\Meetings\MeetingActionItemController;
+use App\Http\Controllers\Api\V1\Meetings\MeetingAgendaController;
+use App\Http\Controllers\Api\V1\Meetings\MeetingController;
+use App\Http\Controllers\Api\V1\Meetings\MeetingDecisionController;
+use App\Http\Controllers\Api\V1\Meetings\MeetingMinutesController;
+use App\Http\Controllers\Api\V1\Meetings\MeetingParticipantController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\NotificationDeliveryLogController;
 use App\Http\Controllers\Api\V1\NotificationPreferenceController;
 use App\Http\Controllers\Api\V1\NotificationTemplateController;
+use App\Http\Controllers\Api\V1\OperationalAnalyticsController;
 use App\Http\Controllers\Api\V1\OperationalStatusController;
 use App\Http\Controllers\Api\V1\OrgChartController;
 use App\Http\Controllers\Api\V1\OwnerRegistrationController;
+use App\Http\Controllers\Api\V1\PermissionController;
+use App\Http\Controllers\Api\V1\Polls\PollController;
+use App\Http\Controllers\Api\V1\Polls\PollTypeController;
+use App\Http\Controllers\Api\V1\Privacy\AnonymizationController;
+use App\Http\Controllers\Api\V1\Privacy\DataExportController;
+use App\Http\Controllers\Api\V1\Privacy\PolicyConsentController;
 use App\Http\Controllers\Api\V1\RepresentativeAssignmentController;
-use App\Http\Controllers\Api\V1\ResidentSearchController;
 use App\Http\Controllers\Api\V1\ResidentInvitationController;
+use App\Http\Controllers\Api\V1\ResidentSearchController;
+use App\Http\Controllers\Api\V1\RoleController;
+use App\Http\Controllers\Api\V1\SecurityDeviceController;
+use App\Http\Controllers\Api\V1\SecurityGateController;
+use App\Http\Controllers\Api\V1\SecurityIncidentController;
+use App\Http\Controllers\Api\V1\SecurityShiftController;
 use App\Http\Controllers\Api\V1\SettingsController;
 use App\Http\Controllers\Api\V1\SystemStatusController;
 use App\Http\Controllers\Api\V1\UnitController;
 use App\Http\Controllers\Api\V1\UnitMembershipController;
 use App\Http\Controllers\Api\V1\UserDocumentController;
 use App\Http\Controllers\Api\V1\UserLifecycleController;
+use App\Http\Controllers\Api\V1\UserPhotoController;
+use App\Http\Controllers\Api\V1\UserRoleAssignmentController;
 use App\Http\Controllers\Api\V1\UserSupportViewController;
 use App\Http\Controllers\Api\V1\VerificationRequestController;
 use App\Http\Controllers\Api\V1\VisitorRequestController;
-use App\Http\Controllers\Api\V1\SecurityGateController;
-use App\Http\Controllers\Api\V1\SecurityShiftController;
-use App\Http\Controllers\Api\V1\SecurityDeviceController;
-use App\Http\Controllers\Api\V1\SecurityIncidentController;
-use App\Http\Controllers\Api\V1\ManualVisitorEntryController;
-use App\Http\Controllers\Api\V1\Meetings\MeetingController;
-use App\Http\Controllers\Api\V1\Meetings\MeetingAgendaController;
-use App\Http\Controllers\Api\V1\Meetings\MeetingParticipantController;
-use App\Http\Controllers\Api\V1\Meetings\MeetingMinutesController;
-use App\Http\Controllers\Api\V1\Meetings\MeetingDecisionController;
-use App\Http\Controllers\Api\V1\Meetings\MeetingActionItemController;
-use App\Http\Controllers\Api\V1\Maintenance\WorkOrderController;
-use App\Http\Controllers\Api\V1\Maintenance\WorkOrderStatusController;
-use App\Http\Controllers\Api\V1\Maintenance\WorkOrderEstimateController;
-use App\Http\Controllers\Api\V1\Privacy\PolicyConsentController;
-use App\Http\Controllers\Api\V1\Privacy\DataExportController;
-use App\Http\Controllers\Api\V1\Privacy\AnonymizationController;
-use App\Http\Controllers\Api\V1\LocaleController;
-use App\Http\Controllers\Api\V1\LaunchReadinessController;
-use App\Http\Controllers\Api\V1\UserPhotoController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->name('api.v1.')->group(function (): void {
@@ -103,6 +109,9 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         // Dashboard — role-aware attention items, shortcuts, and stats
         Route::get('/dashboard', DashboardController::class)->name('dashboard');
 
+        Route::get('/apartments', [ApartmentController::class, 'index'])->name('apartments.index');
+        Route::get('/apartments/{unit}', [ApartmentController::class, 'show'])->name('apartments.show');
+
         // ─── Localization (CM-85) ─────────────────────────────────────────
         // Returns effective locale settings for the current compound.
         // Accessible to all authenticated roles (needed for client-side formatting).
@@ -129,14 +138,14 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             ->name('notification-preferences.update');
 
         Route::group([], function (): void {
-                Route::get('/document-types', [DocumentTypeController::class, 'index'])->name('document-types.index');
-                Route::get('/documents', [UserDocumentController::class, 'index'])->name('documents.index');
-                Route::post('/documents', [UserDocumentController::class, 'store'])
-                    ->middleware('throttle:document-upload')
-                    ->name('documents.store');
-                Route::get('/documents/{userDocument}/download', [UserDocumentController::class, 'download'])
-                    ->name('documents.download');
-            });
+            Route::get('/document-types', [DocumentTypeController::class, 'index'])->name('document-types.index');
+            Route::get('/documents', [UserDocumentController::class, 'index'])->name('documents.index');
+            Route::post('/documents', [UserDocumentController::class, 'store'])
+                ->middleware('throttle:document-upload')
+                ->name('documents.store');
+            Route::get('/documents/{userDocument}/download', [UserDocumentController::class, 'download'])
+                ->name('documents.download');
+        });
 
         Route::middleware('role:view_visitors')
             ->get('/my/verification-requests', [VerificationRequestController::class, 'mine'])
@@ -451,25 +460,25 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         ->name('polls.')
         ->group(function (): void {
             // Poll Types
-            Route::get('/types', [\App\Http\Controllers\Api\V1\Polls\PollTypeController::class, 'index'])->name('types.index');
-            Route::post('/types', [\App\Http\Controllers\Api\V1\Polls\PollTypeController::class, 'store'])->name('types.store');
-            Route::patch('/types/{pollType}', [\App\Http\Controllers\Api\V1\Polls\PollTypeController::class, 'update'])->name('types.update');
-            Route::delete('/types/{pollType}', [\App\Http\Controllers\Api\V1\Polls\PollTypeController::class, 'destroy'])->name('types.destroy');
+            Route::get('/types', [PollTypeController::class, 'index'])->name('types.index');
+            Route::post('/types', [PollTypeController::class, 'store'])->name('types.store');
+            Route::patch('/types/{pollType}', [PollTypeController::class, 'update'])->name('types.update');
+            Route::delete('/types/{pollType}', [PollTypeController::class, 'destroy'])->name('types.destroy');
 
             // Polls CRUD + lifecycle
-            Route::get('/', [\App\Http\Controllers\Api\V1\Polls\PollController::class, 'index'])->name('index');
-            Route::post('/', [\App\Http\Controllers\Api\V1\Polls\PollController::class, 'store'])->name('store');
-            Route::get('/{poll}', [\App\Http\Controllers\Api\V1\Polls\PollController::class, 'show'])->name('show');
-            Route::patch('/{poll}', [\App\Http\Controllers\Api\V1\Polls\PollController::class, 'update'])->name('update');
-            Route::post('/{poll}/publish', [\App\Http\Controllers\Api\V1\Polls\PollController::class, 'publish'])->name('publish');
-            Route::post('/{poll}/close', [\App\Http\Controllers\Api\V1\Polls\PollController::class, 'close'])->name('close');
-            Route::post('/{poll}/archive', [\App\Http\Controllers\Api\V1\Polls\PollController::class, 'archive'])->name('archive');
+            Route::get('/', [PollController::class, 'index'])->name('index');
+            Route::post('/', [PollController::class, 'store'])->name('store');
+            Route::get('/{poll}', [PollController::class, 'show'])->name('show');
+            Route::patch('/{poll}', [PollController::class, 'update'])->name('update');
+            Route::post('/{poll}/publish', [PollController::class, 'publish'])->name('publish');
+            Route::post('/{poll}/close', [PollController::class, 'close'])->name('close');
+            Route::post('/{poll}/archive', [PollController::class, 'archive'])->name('archive');
 
             // Resident participation
-            Route::get('/{poll}/eligibility', [\App\Http\Controllers\Api\V1\Polls\PollController::class, 'eligibility'])->name('eligibility');
-            Route::post('/{poll}/vote', [\App\Http\Controllers\Api\V1\Polls\PollController::class, 'vote'])->name('vote');
-            Route::delete('/{poll}/vote', [\App\Http\Controllers\Api\V1\Polls\PollController::class, 'unvote'])->name('unvote');
-            Route::get('/{poll}/voters', [\App\Http\Controllers\Api\V1\Polls\PollController::class, 'voters'])->name('voters');
+            Route::get('/{poll}/eligibility', [PollController::class, 'eligibility'])->name('eligibility');
+            Route::post('/{poll}/vote', [PollController::class, 'vote'])->name('vote');
+            Route::delete('/{poll}/vote', [PollController::class, 'unvote'])->name('unvote');
+            Route::get('/{poll}/voters', [PollController::class, 'voters'])->name('voters');
         });
 
     // Notification channels — admin: templates + delivery logs
@@ -693,19 +702,19 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
 
     // RBAC management
     Route::middleware(['auth:sanctum', 'role:manage_roles'])->group(function (): void {
-        Route::get('/roles', [\App\Http\Controllers\Api\V1\RoleController::class, 'index'])->name('roles.index');
-        Route::post('/roles', [\App\Http\Controllers\Api\V1\RoleController::class, 'store'])->name('roles.store');
-        Route::put('/roles/{role}', [\App\Http\Controllers\Api\V1\RoleController::class, 'update'])->name('roles.update');
-        Route::delete('/roles/{role}', [\App\Http\Controllers\Api\V1\RoleController::class, 'destroy'])->name('roles.destroy');
+        Route::get('/roles', [RoleController::class, 'index'])->name('roles.index');
+        Route::post('/roles', [RoleController::class, 'store'])->name('roles.store');
+        Route::put('/roles/{role}', [RoleController::class, 'update'])->name('roles.update');
+        Route::delete('/roles/{role}', [RoleController::class, 'destroy'])->name('roles.destroy');
 
-        Route::get('/permissions', [\App\Http\Controllers\Api\V1\PermissionController::class, 'index'])->name('permissions.index');
-        Route::post('/permissions', [\App\Http\Controllers\Api\V1\PermissionController::class, 'store'])->name('permissions.store');
-        Route::delete('/permissions/{permission}', [\App\Http\Controllers\Api\V1\PermissionController::class, 'destroy'])->name('permissions.destroy');
+        Route::get('/permissions', [PermissionController::class, 'index'])->name('permissions.index');
+        Route::post('/permissions', [PermissionController::class, 'store'])->name('permissions.store');
+        Route::delete('/permissions/{permission}', [PermissionController::class, 'destroy'])->name('permissions.destroy');
     });
 
     Route::middleware(['auth:sanctum', 'role:manage_users'])->group(function (): void {
-        Route::get('/users/{user}/role-assignments', [\App\Http\Controllers\Api\V1\UserRoleAssignmentController::class, 'index'])->name('users.role-assignments.index');
-        Route::post('/users/{user}/role-assignments', [\App\Http\Controllers\Api\V1\UserRoleAssignmentController::class, 'store'])->name('users.role-assignments.store');
-        Route::delete('/users/{user}/role-assignments/{assignment}', [\App\Http\Controllers\Api\V1\UserRoleAssignmentController::class, 'destroy'])->name('users.role-assignments.destroy');
+        Route::get('/users/{user}/role-assignments', [UserRoleAssignmentController::class, 'index'])->name('users.role-assignments.index');
+        Route::post('/users/{user}/role-assignments', [UserRoleAssignmentController::class, 'store'])->name('users.role-assignments.store');
+        Route::delete('/users/{user}/role-assignments/{assignment}', [UserRoleAssignmentController::class, 'destroy'])->name('users.role-assignments.destroy');
     });
 });

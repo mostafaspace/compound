@@ -4,7 +4,13 @@ namespace App\Models\Property;
 
 use App\Enums\UnitStatus;
 use App\Enums\UnitType;
+use App\Models\Apartments\ApartmentDocument;
+use App\Models\Apartments\ApartmentNote;
+use App\Models\Apartments\ApartmentParkingSpot;
 use App\Models\Apartments\ApartmentResident;
+use App\Models\Apartments\ApartmentVehicle;
+use App\Models\Apartments\ApartmentViolation;
+use App\Models\Finance\UnitAccount;
 use App\Models\User;
 use Database\Factories\Property\UnitFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
@@ -13,6 +19,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Unit extends Model
 {
@@ -80,6 +87,54 @@ class Unit extends Model
     public function apartmentResidents(): HasMany
     {
         return $this->hasMany(ApartmentResident::class);
+    }
+
+    /**
+     * @return HasMany<ApartmentVehicle, $this>
+     */
+    public function apartmentVehicles(): HasMany
+    {
+        return $this->hasMany(ApartmentVehicle::class);
+    }
+
+    /**
+     * @return HasMany<ApartmentParkingSpot, $this>
+     */
+    public function apartmentParkingSpots(): HasMany
+    {
+        return $this->hasMany(ApartmentParkingSpot::class);
+    }
+
+    /**
+     * @return HasMany<ApartmentNote, $this>
+     */
+    public function apartmentNotes(): HasMany
+    {
+        return $this->hasMany(ApartmentNote::class);
+    }
+
+    /**
+     * @return HasMany<ApartmentViolation, $this>
+     */
+    public function apartmentViolations(): HasMany
+    {
+        return $this->hasMany(ApartmentViolation::class);
+    }
+
+    /**
+     * @return HasMany<ApartmentDocument, $this>
+     */
+    public function apartmentDocuments(): HasMany
+    {
+        return $this->hasMany(ApartmentDocument::class);
+    }
+
+    /**
+     * @return HasOne<UnitAccount, $this>
+     */
+    public function unitAccount(): HasOne
+    {
+        return $this->hasOne(UnitAccount::class);
     }
 
     /**
