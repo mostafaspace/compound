@@ -1,3 +1,5 @@
+import type { LedgerEntry, UnitAccount } from "@compound/contracts";
+
 export type ApiEnvelope<T> = {
   data: T;
 };
@@ -140,8 +142,8 @@ export type ApartmentDocument = {
 };
 
 export type ApartmentFinanceSummary = {
-  account: unknown | null;
-  outstandingEntries: unknown[];
+  account: UnitAccount | null;
+  outstandingEntries: LedgerEntry[];
 };
 
 export type ApartmentDetail = Required<ApartmentSummary>;

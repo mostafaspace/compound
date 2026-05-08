@@ -6,6 +6,7 @@ import { colors, radii, spacing, typography } from "../../../theme";
 import { useGetApartmentQuery } from "../../../services/apartments/apartmentsApi";
 import type { ApartmentDetail } from "../../../services/apartments/types";
 import { DocumentsTab } from "./tabs/DocumentsTab";
+import { FinanceTab } from "./tabs/FinanceTab";
 import { NotesTab } from "./tabs/NotesTab";
 import { ParkingTab } from "./tabs/ParkingTab";
 import { ResidentsTab } from "./tabs/ResidentsTab";
@@ -85,7 +86,7 @@ export function ApartmentDetailScreen({ route }: ApartmentDetailScreenProps) {
           <Tab.Screen name="Violations">{() => <ViolationsTab apartment={data} />}</Tab.Screen>
           <Tab.Screen name="Notes">{() => <NotesTab apartment={data} />}</Tab.Screen>
           <Tab.Screen name="Documents">{() => <DocumentsTab apartment={data} />}</Tab.Screen>
-          <Tab.Screen name="Finance">{() => <ApartmentPlaceholderTab apartment={data} label="Finance" />}</Tab.Screen>
+          <Tab.Screen name="Finance">{() => <FinanceTab apartment={data} />}</Tab.Screen>
         </Tab.Navigator>
       </View>
     </ScreenContainer>
