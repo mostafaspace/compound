@@ -5,6 +5,9 @@ import { ScreenContainer } from "../../../components/layout/ScreenContainer";
 import { colors, radii, spacing, typography } from "../../../theme";
 import { useGetApartmentQuery } from "../../../services/apartments/apartmentsApi";
 import type { ApartmentDetail } from "../../../services/apartments/types";
+import { ParkingTab } from "./tabs/ParkingTab";
+import { ResidentsTab } from "./tabs/ResidentsTab";
+import { VehiclesTab } from "./tabs/VehiclesTab";
 
 type ApartmentDetailScreenProps = {
   route: {
@@ -69,12 +72,12 @@ export function ApartmentDetailScreen({ route }: ApartmentDetailScreenProps) {
             tabBarInactiveTintColor: colors.text.secondary[isDark ? "dark" : "light"],
           }}
         >
-          <Tab.Screen name="Residents">{() => <ApartmentPlaceholderTab apartment={data} label="Residents" />}</Tab.Screen>
+          <Tab.Screen name="Residents">{() => <ResidentsTab apartment={data} />}</Tab.Screen>
           {data.unit.hasVehicle ? (
-            <Tab.Screen name="Vehicles">{() => <ApartmentPlaceholderTab apartment={data} label="Vehicles" />}</Tab.Screen>
+            <Tab.Screen name="Vehicles">{() => <VehiclesTab apartment={data} />}</Tab.Screen>
           ) : null}
           {data.unit.hasParking ? (
-            <Tab.Screen name="Parking">{() => <ApartmentPlaceholderTab apartment={data} label="Parking" />}</Tab.Screen>
+            <Tab.Screen name="Parking">{() => <ParkingTab apartment={data} />}</Tab.Screen>
           ) : null}
           <Tab.Screen name="Violations">{() => <ApartmentPlaceholderTab apartment={data} label="Violations" />}</Tab.Screen>
           <Tab.Screen name="Notes">{() => <ApartmentPlaceholderTab apartment={data} label="Notes" />}</Tab.Screen>
