@@ -9,8 +9,13 @@ export const linking: LinkingOptions<RootStackParamList> = {
       Main: {
         screens: {
           Dashboard: 'dashboard',
+          Apartments: {
+            screens: {
+              ApartmentsList: 'apartments',
+              ApartmentDetail: 'apartments/:unitId',
+            },
+          },
           Visitors: 'visitors',
-          Finance: 'finance',
           Polls: 'polls',
           More: {
             path: 'more',
@@ -18,11 +23,9 @@ export const linking: LinkingOptions<RootStackParamList> = {
               MoreHome: '',
               Notifications: 'notifications',
               Announcements: 'announcements',
-              Property: 'property',
               OrgChart: 'org-chart',
               Settings: 'settings',
               Issues: 'issues',
-              Documents: 'documents',
               VerificationStatus: 'verification-status',
               PrivacySettings: 'privacy',
               Polls: 'polls/more',

@@ -35,13 +35,6 @@ export const MoreScreen = ({ navigation }: { navigation: MoreScreenNavigationPro
       title: t("More.sections.property", "Property & Community"),
       items: [
         {
-          id: "property",
-          label: t("Property.label", "Property Registry"),
-          icon: "building",
-          screen: "Property",
-          show: true,
-        },
-        {
           id: "announcements",
           label: t("Announcements.label", "Announcements"),
           icon: "announcements",
@@ -79,13 +72,6 @@ export const MoreScreen = ({ navigation }: { navigation: MoreScreenNavigationPro
     {
       title: t("More.sections.account", "Account & Settings"),
       items: [
-        {
-          id: "documents",
-          label: t("Documents.label", "Documents"),
-          icon: "documents",
-          screen: "Documents",
-          show: true,
-        },
         {
           id: "verification",
           label: t("Verification.label", "Verification Status"),

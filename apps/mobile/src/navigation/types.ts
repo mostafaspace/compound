@@ -1,3 +1,4 @@
+import type { NavigatorScreenParams } from "@react-navigation/native";
 import { Issue } from "@compound/contracts";
 
 export type RootStackParamList = {
@@ -26,11 +27,15 @@ export type AuthStackParamList = {
 
 export type MainTabParamList = {
   Dashboard: undefined;
-  Property: undefined;
+  Apartments: NavigatorScreenParams<ApartmentsStackParamList> | undefined;
   Visitors: undefined;
-  Finance: undefined;
   Polls: undefined;
   More: undefined;
+};
+
+export type ApartmentsStackParamList = {
+  ApartmentsList: undefined;
+  ApartmentDetail: { unitId: string };
 };
 
 export type AdminTabParamList = {
@@ -45,11 +50,9 @@ export type MoreStackParamList = {
   MoreHome: undefined;
   Notifications: undefined;
   Announcements: undefined;
-  Property: undefined;
   OrgChart: undefined;
   Settings: undefined;
   Issues: undefined;
-  Documents: undefined;
   VerificationStatus: undefined;
   PrivacySettings: undefined;
   Polls: undefined;

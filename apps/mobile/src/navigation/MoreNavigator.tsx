@@ -1,27 +1,22 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 import { useTranslation } from 'react-i18next';
-import { useColorScheme } from 'react-native';
 import { MoreScreen } from '../features/more/screens/MoreScreen';
 import { NotificationsScreen } from '../features/notifications/screens/NotificationsScreen';
 import { AnnouncementsScreen } from '../features/announcements/screens/AnnouncementsScreen';
-import { PropertyScreen } from '../features/property/screens/PropertyScreen';
 import { OrgChartScreen } from '../features/orgchart/screens/OrgChartScreenV2';
 import { SettingsScreen } from '../features/settings/screens/SettingsScreen';
 import { IssuesScreen } from '../features/issues/screens/IssuesScreen';
-import { DocumentsScreen } from '../features/documents/screens/DocumentsScreen';
 import { VerificationStatusScreen } from '../features/verification/screens/VerificationStatusScreen';
 import { PrivacySettingsScreen } from '../features/privacy/screens/PrivacySettingsScreen';
 import { PollsScreen } from '../features/polls/screens/PollsScreen';
 import { MoreStackParamList } from './types';
 import { ScreenHeader } from '../components/layout/ScreenHeader';
-import { colors } from '../theme';
 
 const Stack = createStackNavigator<MoreStackParamList>();
 
 export const MoreNavigator = () => {
   const { t } = useTranslation();
-  const isDark = useColorScheme() === 'dark';
 
   return (
     <Stack.Navigator
@@ -58,11 +53,6 @@ export const MoreNavigator = () => {
         options={{ title: t("Announcements.label") }}
       />
       <Stack.Screen
-        name="Property"
-        component={PropertyScreen}
-        options={{ title: t("Property.label") }}
-      />
-      <Stack.Screen
         name="OrgChart"
         component={OrgChartScreen}
         options={{ title: t("OrgChart.label", { defaultValue: "Org Chart" }) }}
@@ -76,11 +66,6 @@ export const MoreNavigator = () => {
         name="Issues"
         component={IssuesScreen}
         options={{ title: t("Issues.label", { defaultValue: "Issues & Complaints" }) }}
-      />
-      <Stack.Screen
-        name="Documents"
-        component={DocumentsScreen}
-        options={{ title: t("Documents.label", { defaultValue: "Documents" }) }}
       />
       <Stack.Screen
         name="VerificationStatus"

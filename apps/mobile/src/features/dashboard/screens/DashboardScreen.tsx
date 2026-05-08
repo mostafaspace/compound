@@ -20,6 +20,10 @@ const shortcutRouteMap: Record<string, { screen: string; params?: object }> = {
   '/polls': { screen: 'Main', params: { screen: 'Polls' } },
   '/org-chart': { screen: 'Main', params: { screen: 'More', params: { screen: 'OrgChart', initial: false } } },
   '/visitors': { screen: 'Main', params: { screen: 'Visitors' } },
+  '/apartments': { screen: 'Main', params: { screen: 'Apartments', params: { screen: 'ApartmentsList' } } },
+  '/property': { screen: 'Main', params: { screen: 'Apartments', params: { screen: 'ApartmentsList' } } },
+  '/finance': { screen: 'Main', params: { screen: 'Apartments', params: { screen: 'ApartmentsList' } } },
+  '/documents': { screen: 'Main', params: { screen: 'Apartments', params: { screen: 'ApartmentsList' } } },
   '/issues': { screen: 'Main', params: { screen: 'More', params: { screen: 'Issues', initial: false } } },
   '/security/scanner': { screen: 'Guard', params: { screen: 'Scanner' } },
   '/security/entries': { screen: 'Guard', params: { screen: 'Gate' } },
@@ -49,7 +53,7 @@ export const DashboardScreen = () => {
   const shortcuts = dashboard?.shortcuts ?? [];
   const shortcutIcon = (route: string): AppIconName => {
     if (route.includes('visitor')) return 'visitors';
-    if (route.includes('finance')) return 'finance';
+    if (route.includes('apartment') || route.includes('property') || route.includes('finance') || route.includes('document')) return 'building';
     if (route.includes('poll')) return 'polls';
     if (route.includes('issue')) return 'issues';
     if (route.includes('security')) return 'qr';

@@ -1,34 +1,54 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createStackNavigator } from '@react-navigation/stack';
 import { useTranslation } from 'react-i18next';
 import { View, useColorScheme } from 'react-native';
-import { MainTabParamList } from './types';
+import { ApartmentsStackParamList, MainTabParamList } from './types';
 import { DashboardScreen } from '../features/dashboard/screens/DashboardScreen';
 import { VisitorsScreen } from '../features/visitors/screens/VisitorsScreen';
-import { AccountsScreen } from '../features/finance/screens/AccountsScreen';
 import { PollsScreen } from '../features/polls/screens/PollsScreen';
+import { ApartmentsListScreen } from '../features/apartments/screens/ApartmentsListScreen';
+import { ApartmentDetailScreen } from '../features/apartments/screens/ApartmentDetailScreen';
 import { MoreNavigator } from './MoreNavigator';
 import { colors, componentSize, radii, spacing } from '../theme';
 import { usePermission } from '../hooks/usePermission';
 import { Icon, type AppIconName } from '../components/ui/Icon';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
+const ApartmentsStack = createStackNavigator<ApartmentsStackParamList>();
 
 const tabIcons: Record<keyof MainTabParamList, AppIconName> = {
   Dashboard: 'dashboard',
-  Property: 'building',
+  Apartments: 'building',
   Visitors: 'visitors',
-  Finance: 'finance',
   Polls: 'polls',
   More: 'more',
 };
+
+function ApartmentsStackNavigator() {
+  const { t } = useTranslation();
+
+  return (
+    <ApartmentsStack.Navigator>
+      <ApartmentsStack.Screen
+        name="ApartmentsList"
+        component={ApartmentsListScreen}
+        options={{ title: t('Apartments.label', { defaultValue: 'My Apartment(s)' }) }}
+      />
+      <ApartmentsStack.Screen
+        name="ApartmentDetail"
+        component={ApartmentDetailScreen}
+        options={{ title: t('Apartments.detail', { defaultValue: 'Apartment Detail' }) }}
+      />
+    </ApartmentsStack.Navigator>
+  );
+}
 
 export const MainTabNavigator = () => {
   const { t } = useTranslation();
   const isDark = useColorScheme() === 'dark';
 
   const canViewVisitors = usePermission('view_visitors');
-  const canViewFinance = usePermission('view_finance');
   const canViewPolls = usePermission('view_governance');
 
   return (
@@ -73,18 +93,16 @@ export const MainTabNavigator = () => {
         component={DashboardScreen}
         options={{ title: t("Dashboard.title", { defaultValue: "Dashboard" }) }}
       />
+      <Tab.Screen
+        name="Apartments"
+        component={ApartmentsStackNavigator}
+        options={{ title: t("Apartments.label", { defaultValue: "My Apartment(s)" }), headerShown: false }}
+      />
       {canViewVisitors && (
         <Tab.Screen
           name="Visitors"
           component={VisitorsScreen}
           options={{ title: t("Visitors.label") }}
-        />
-      )}
-      {canViewFinance && (
-        <Tab.Screen
-          name="Finance"
-          component={AccountsScreen}
-          options={{ title: t("Finance.label") }}
         />
       )}
       {canViewPolls && (

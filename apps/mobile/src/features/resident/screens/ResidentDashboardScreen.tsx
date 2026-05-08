@@ -1,16 +1,20 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { ScreenContainer } from '../../../components/layout/ScreenContainer';
 import { Typography } from '../../../components/ui/Typography';
 import { layout, spacing } from '../../../theme';
 import { ActionTile } from '../../../components/ui/ActionTile';
+import type { MainTabParamList } from '../../../navigation/types';
 
 /**
  * Resident dashboard - shows unit info, upcoming visitors, payments, etc.
  * This is the main screen for resident_owner and resident_tenant roles.
  */
-export const ResidentDashboardScreen = () => {
+type ResidentDashboardNavigationProp = BottomTabNavigationProp<MainTabParamList, "Dashboard">;
+
+export const ResidentDashboardScreen = ({ navigation }: { navigation: ResidentDashboardNavigationProp }) => {
   const { t } = useTranslation();
 
   return (
@@ -30,8 +34,13 @@ export const ResidentDashboardScreen = () => {
           {t('Resident.quickActions', 'Quick Actions')}
         </Typography>
         <View style={styles.quickActionsGrid}>
+          <ActionTile
+            title={t('Apartments.label', { defaultValue: 'My Apartment(s)' })}
+            icon="building"
+            subtitle={t('Apartments.quickAction', { defaultValue: 'Residents, vehicles, documents, and finance' })}
+            onPress={() => navigation.navigate('Apartments', { screen: 'ApartmentsList' })}
+          />
           <ActionTile title={t('Visitors.label', 'Visitors')} icon="visitors" />
-          <ActionTile title={t('Finance.label', 'Finance')} icon="finance" tone="info" />
           <ActionTile title={t('Resident.maintenance', 'Maintenance')} icon="issues" tone="warning" />
           <ActionTile title={t('Resident.announcements', 'Announcements')} icon="polls" tone="success" />
         </View>
