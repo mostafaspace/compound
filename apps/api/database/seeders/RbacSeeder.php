@@ -22,24 +22,28 @@ class RbacSeeder extends Seeder
 
         $p = fn (Permission ...$cases) => array_map(fn ($c) => $c->value, $cases);
 
+        $compoundAdminPermissions = $p(
+            Permission::ViewCompounds, Permission::ManageCompounds,
+            Permission::ViewUsers, Permission::ManageUsers,
+            Permission::ViewFinance, Permission::ManageFinance,
+            Permission::ViewAnnouncements, Permission::ManageAnnouncements,
+            Permission::ViewIssues, Permission::ManageIssues,
+            Permission::ViewGovernance, Permission::ManageGovernance,
+            Permission::ViewSecurity, Permission::ManageSecurity,
+            Permission::ViewVisitors, Permission::ManageVisitors,
+            Permission::ViewOrgChart, Permission::ViewAnalytics,
+            Permission::ViewAuditLogs, Permission::ViewMeetings,
+            Permission::ManageMeetings, Permission::ViewMaintenance,
+            Permission::ManageMaintenance, Permission::ApartmentsAdmin,
+            Permission::ApplyApartmentViolation, Permission::ManageSettings,
+        );
+
         $rolePermissions = [
             UserRole::SuperAdmin->value => [], // bypassed via Gate::before
 
-            UserRole::CompoundAdmin->value => $p(
-                Permission::ViewCompounds, Permission::ManageCompounds,
-                Permission::ViewUsers, Permission::ManageUsers,
-                Permission::ViewFinance, Permission::ManageFinance,
-                Permission::ViewAnnouncements, Permission::ManageAnnouncements,
-                Permission::ViewIssues, Permission::ManageIssues,
-                Permission::ViewGovernance, Permission::ManageGovernance,
-                Permission::ViewSecurity, Permission::ManageSecurity,
-                Permission::ViewVisitors, Permission::ManageVisitors,
-                Permission::ViewOrgChart, Permission::ViewAnalytics,
-                Permission::ViewAuditLogs, Permission::ViewMeetings,
-                Permission::ManageMeetings, Permission::ViewMaintenance,
-                Permission::ManageMaintenance, Permission::ApartmentsAdmin,
-                Permission::ManageSettings,
-            ),
+            UserRole::CompoundAdmin->value => $compoundAdminPermissions,
+
+            'compound_head' => $compoundAdminPermissions,
 
             'building_supervisor' => $p(
                 Permission::ViewUsers,

@@ -26,6 +26,17 @@ class PermissionsTest extends TestCase
         $compoundAdmin = Role::findByName(UserRole::CompoundAdmin->value, 'sanctum');
 
         $this->assertTrue($compoundAdmin->hasPermissionTo('apartments_admin', 'sanctum'));
+        $this->assertTrue($compoundAdmin->hasPermissionTo('apply_apartment_violation', 'sanctum'));
+    }
+
+    public function test_rbac_seeder_grants_apartments_admin_to_migrated_compound_head(): void
+    {
+        $this->seed(RbacSeeder::class);
+
+        $compoundHead = Role::findByName('compound_head', 'sanctum');
+
+        $this->assertTrue($compoundHead->hasPermissionTo('apartments_admin', 'sanctum'));
+        $this->assertTrue($compoundHead->hasPermissionTo('apply_apartment_violation', 'sanctum'));
     }
 
     public function test_rbac_seeder_grants_apartments_permissions_to_finance_reviewer(): void
