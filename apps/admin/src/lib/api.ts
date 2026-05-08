@@ -3542,3 +3542,70 @@ export async function getApartmentDetail(unitId: string): Promise<ApartmentDetai
     return null;
   }
 }
+
+export type ApartmentDocumentReview = {
+  id: number;
+  apartmentDocumentId: number;
+  document?: {
+    id: number;
+    unitId: string;
+    documentType: string;
+    filePath: string;
+    mimeType: string | null;
+    sizeBytes: number | null;
+    status: string;
+    version: number;
+  };
+  uploadedBy: number;
+  uploader?: {
+    id: number;
+    name: string;
+  };
+  filePath: string;
+  mimeType: string | null;
+  sizeBytes: number | null;
+  status: "pending_review" | "approved" | "rejected";
+  reviewedBy: number | null;
+  reviewedAt: string | null;
+  reviewNotes: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+};
+
+export async function listDocumentReviews(): Promise<ApartmentDocumentReview[]> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/admin/document-reviews`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const payload = (await response.json()) as PaginatedEnvelope<ApartmentDocumentReview>;
+
+    return payload.data;
+  } catch {
+    return [];
+  }
+}
+
+export async function reviewDocumentVersion(
+  versionId: number,
+  decision: "approved" | "rejected",
+  notes?: string,
+): Promise<void> {
+  const response = await fetch(`${config.apiBaseUrl}/admin/document-reviews/${versionId}`, {
+    body: JSON.stringify({ decision, notes }),
+    headers: {
+      ...(await apiHeaders(true)),
+      "Content-Type": "application/json",
+    },
+    method: "PATCH",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to review document version: ${response.status}`);
+  }
+}
