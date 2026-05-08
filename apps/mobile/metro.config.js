@@ -14,7 +14,7 @@ const config = {
     disableHierarchicalLookup: true,
     unstable_enableSymlinks: true,
     extraNodeModules: {
-      react: path.resolve(workspaceRoot, "node_modules/react"),
+      react: path.resolve(projectRoot, "node_modules/react"),
       "react-native": path.resolve(workspaceRoot, "node_modules/react-native"),
       scheduler: path.resolve(workspaceRoot, "node_modules/scheduler"),
       "react-is": path.resolve(workspaceRoot, "node_modules/react-is"),
