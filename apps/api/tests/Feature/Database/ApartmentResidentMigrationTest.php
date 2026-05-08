@@ -8,6 +8,7 @@ use App\Models\Apartments\ApartmentResident;
 use App\Models\Property\Unit;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
@@ -24,6 +25,8 @@ class ApartmentResidentMigrationTest extends TestCase
 
     public function test_migration_copies_memberships_and_splits_vehicle_and_parking_data(): void
     {
+        $this->createLegacyUnitMembershipsTable();
+
         $unit = Unit::factory()->create(['has_vehicle' => false]);
         $unitWithoutVehicle = Unit::factory()->create(['has_vehicle' => true]);
         $user = User::factory()->create();
@@ -112,6 +115,8 @@ class ApartmentResidentMigrationTest extends TestCase
 
     public function test_rollback_removes_only_rows_derived_from_unit_memberships(): void
     {
+        $this->createLegacyUnitMembershipsTable();
+
         $unit = Unit::factory()->create();
         $unrelatedResident = ApartmentResident::factory()->create();
         $now = now()->subDay();
@@ -194,5 +199,34 @@ class ApartmentResidentMigrationTest extends TestCase
         $migration->up();
 
         return $migration;
+    }
+
+    private function createLegacyUnitMembershipsTable(): void
+    {
+        if (Schema::hasTable('unit_memberships')) {
+            return;
+        }
+
+        Schema::create('unit_memberships', function (Blueprint $table): void {
+            $table->unsignedBigInteger('id')->primary();
+            $table->ulid('unit_id');
+            $table->unsignedBigInteger('user_id')->nullable();
+            $table->string('relation_type');
+            $table->date('starts_at')->nullable();
+            $table->date('ends_at')->nullable();
+            $table->boolean('is_primary')->default(false);
+            $table->string('verification_status');
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->string('resident_name')->nullable();
+            $table->string('resident_phone')->nullable();
+            $table->boolean('phone_public')->default(false);
+            $table->string('resident_email')->nullable();
+            $table->boolean('email_public')->default(false);
+            $table->boolean('has_vehicle')->default(false);
+            $table->string('vehicle_plate')->nullable();
+            $table->string('parking_spot_code')->nullable();
+            $table->string('garage_sticker_code')->nullable();
+            $table->timestamps();
+        });
     }
 }
