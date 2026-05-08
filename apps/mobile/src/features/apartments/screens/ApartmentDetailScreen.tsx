@@ -5,9 +5,12 @@ import { ScreenContainer } from "../../../components/layout/ScreenContainer";
 import { colors, radii, spacing, typography } from "../../../theme";
 import { useGetApartmentQuery } from "../../../services/apartments/apartmentsApi";
 import type { ApartmentDetail } from "../../../services/apartments/types";
+import { DocumentsTab } from "./tabs/DocumentsTab";
+import { NotesTab } from "./tabs/NotesTab";
 import { ParkingTab } from "./tabs/ParkingTab";
 import { ResidentsTab } from "./tabs/ResidentsTab";
 import { VehiclesTab } from "./tabs/VehiclesTab";
+import { ViolationsTab } from "./tabs/ViolationsTab";
 
 type ApartmentDetailScreenProps = {
   route: {
@@ -79,9 +82,9 @@ export function ApartmentDetailScreen({ route }: ApartmentDetailScreenProps) {
           {data.unit.hasParking ? (
             <Tab.Screen name="Parking">{() => <ParkingTab apartment={data} />}</Tab.Screen>
           ) : null}
-          <Tab.Screen name="Violations">{() => <ApartmentPlaceholderTab apartment={data} label="Violations" />}</Tab.Screen>
-          <Tab.Screen name="Notes">{() => <ApartmentPlaceholderTab apartment={data} label="Notes" />}</Tab.Screen>
-          <Tab.Screen name="Documents">{() => <ApartmentPlaceholderTab apartment={data} label="Documents" />}</Tab.Screen>
+          <Tab.Screen name="Violations">{() => <ViolationsTab apartment={data} />}</Tab.Screen>
+          <Tab.Screen name="Notes">{() => <NotesTab apartment={data} />}</Tab.Screen>
+          <Tab.Screen name="Documents">{() => <DocumentsTab apartment={data} />}</Tab.Screen>
           <Tab.Screen name="Finance">{() => <ApartmentPlaceholderTab apartment={data} label="Finance" />}</Tab.Screen>
         </Tab.Navigator>
       </View>
