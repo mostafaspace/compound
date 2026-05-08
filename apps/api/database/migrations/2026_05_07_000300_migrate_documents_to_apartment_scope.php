@@ -7,24 +7,20 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    private const MIGRATED_COLUMN = 'migrated_to_apartment_document_id';
+
+    private const USER_DOCUMENTS_FK = 'user_docs_apartment_doc_fk';
+
+    private const OWNER_REGISTRATION_DOCUMENTS_FK = 'owner_reg_docs_apartment_doc_fk';
+
     public function up(): void
     {
-        if (Schema::hasTable('user_documents') && ! Schema::hasColumn('user_documents', 'migrated_to_apartment_document_id')) {
-            Schema::table('user_documents', function (Blueprint $table): void {
-                $table->foreignId('migrated_to_apartment_document_id')
-                    ->nullable()
-                    ->constrained('apartment_documents')
-                    ->nullOnDelete();
-            });
+        if (Schema::hasTable('user_documents')) {
+            $this->ensureMigratedReferenceColumn('user_documents', self::USER_DOCUMENTS_FK);
         }
 
-        if (Schema::hasTable('owner_registration_documents') && ! Schema::hasColumn('owner_registration_documents', 'migrated_to_apartment_document_id')) {
-            Schema::table('owner_registration_documents', function (Blueprint $table): void {
-                $table->foreignId('migrated_to_apartment_document_id')
-                    ->nullable()
-                    ->constrained('apartment_documents')
-                    ->nullOnDelete();
-            });
+        if (Schema::hasTable('owner_registration_documents')) {
+            $this->ensureMigratedReferenceColumn('owner_registration_documents', self::OWNER_REGISTRATION_DOCUMENTS_FK);
         }
 
         $this->migrateOwnerRegistrationDocuments();
@@ -35,19 +31,19 @@ return new class extends Migration
     {
         $migratedIds = collect();
 
-        if (Schema::hasColumn('user_documents', 'migrated_to_apartment_document_id')) {
+        if (Schema::hasColumn('user_documents', self::MIGRATED_COLUMN)) {
             $migratedIds = $migratedIds->merge(
                 DB::table('user_documents')
-                    ->whereNotNull('migrated_to_apartment_document_id')
-                    ->pluck('migrated_to_apartment_document_id')
+                    ->whereNotNull(self::MIGRATED_COLUMN)
+                    ->pluck(self::MIGRATED_COLUMN)
             );
         }
 
-        if (Schema::hasColumn('owner_registration_documents', 'migrated_to_apartment_document_id')) {
+        if (Schema::hasColumn('owner_registration_documents', self::MIGRATED_COLUMN)) {
             $migratedIds = $migratedIds->merge(
                 DB::table('owner_registration_documents')
-                    ->whereNotNull('migrated_to_apartment_document_id')
-                    ->pluck('migrated_to_apartment_document_id')
+                    ->whereNotNull(self::MIGRATED_COLUMN)
+                    ->pluck(self::MIGRATED_COLUMN)
             );
         }
 
@@ -55,17 +51,63 @@ return new class extends Migration
             ->whereIn('id', $migratedIds->filter()->unique()->values()->all())
             ->delete();
 
-        if (Schema::hasColumn('user_documents', 'migrated_to_apartment_document_id')) {
-            Schema::table('user_documents', function (Blueprint $table): void {
-                $table->dropConstrainedForeignId('migrated_to_apartment_document_id');
+        $this->dropMigratedReferenceColumn('user_documents');
+        $this->dropMigratedReferenceColumn('owner_registration_documents');
+    }
+
+    private function ensureMigratedReferenceColumn(string $tableName, string $foreignKeyName): void
+    {
+        if (! Schema::hasColumn($tableName, self::MIGRATED_COLUMN)) {
+            Schema::table($tableName, function (Blueprint $table): void {
+                $table->foreignId(self::MIGRATED_COLUMN)->nullable();
             });
         }
 
-        if (Schema::hasColumn('owner_registration_documents', 'migrated_to_apartment_document_id')) {
-            Schema::table('owner_registration_documents', function (Blueprint $table): void {
-                $table->dropConstrainedForeignId('migrated_to_apartment_document_id');
+        if ($this->hasForeignKeyForColumn($tableName, self::MIGRATED_COLUMN)) {
+            return;
+        }
+
+        Schema::table($tableName, function (Blueprint $table) use ($foreignKeyName): void {
+            $table->foreign(self::MIGRATED_COLUMN, $foreignKeyName)
+                ->references('id')
+                ->on('apartment_documents')
+                ->nullOnDelete();
+        });
+    }
+
+    private function dropMigratedReferenceColumn(string $tableName): void
+    {
+        if (! Schema::hasTable($tableName) || ! Schema::hasColumn($tableName, self::MIGRATED_COLUMN)) {
+            return;
+        }
+
+        foreach ($this->foreignKeyNamesForColumn($tableName, self::MIGRATED_COLUMN) as $foreignKeyName) {
+            Schema::table($tableName, function (Blueprint $table) use ($foreignKeyName): void {
+                $table->dropForeign($foreignKeyName);
             });
         }
+
+        Schema::table($tableName, function (Blueprint $table): void {
+            $table->dropColumn(self::MIGRATED_COLUMN);
+        });
+    }
+
+    private function hasForeignKeyForColumn(string $tableName, string $columnName): bool
+    {
+        return $this->foreignKeyNamesForColumn($tableName, $columnName) !== [];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function foreignKeyNamesForColumn(string $tableName, string $columnName): array
+    {
+        return collect(Schema::getForeignKeys($tableName))
+            ->filter(fn (array $foreignKey): bool => in_array($columnName, $foreignKey['columns'] ?? [], true))
+            ->pluck('name')
+            ->filter()
+            ->values()
+            ->all();
     }
 
     private function migrateOwnerRegistrationDocuments(): void
@@ -77,7 +119,7 @@ return new class extends Migration
         DB::table('owner_registration_documents as ord')
             ->join('owner_registration_requests as orr', 'orr.id', '=', 'ord.owner_registration_request_id')
             ->whereNotNull('orr.unit_id')
-            ->whereNull('ord.migrated_to_apartment_document_id')
+            ->whereNull('ord.'.self::MIGRATED_COLUMN)
             ->orderBy('ord.id')
             ->select('ord.*', 'orr.unit_id as resolved_unit_id', 'orr.user_id as resolved_user_id')
             ->chunkById(200, function ($rows): void {
@@ -97,7 +139,7 @@ return new class extends Migration
 
                     DB::table('owner_registration_documents')
                         ->where('id', $row->id)
-                        ->update(['migrated_to_apartment_document_id' => $apartmentDocumentId]);
+                        ->update([self::MIGRATED_COLUMN => $apartmentDocumentId]);
                 }
             }, 'ord.id', 'id');
     }
@@ -111,7 +153,7 @@ return new class extends Migration
         DB::table('user_documents as ud')
             ->leftJoin('document_types as dt', 'dt.id', '=', 'ud.document_type_id')
             ->whereNotNull('ud.unit_id')
-            ->whereNull('ud.migrated_to_apartment_document_id')
+            ->whereNull('ud.'.self::MIGRATED_COLUMN)
             ->orderBy('ud.id')
             ->select('ud.*', 'dt.key as document_type_key')
             ->chunkById(200, function ($rows): void {
@@ -131,7 +173,7 @@ return new class extends Migration
 
                     DB::table('user_documents')
                         ->where('id', $row->id)
-                        ->update(['migrated_to_apartment_document_id' => $apartmentDocumentId]);
+                        ->update([self::MIGRATED_COLUMN => $apartmentDocumentId]);
                 }
             }, 'ud.id', 'id');
     }
