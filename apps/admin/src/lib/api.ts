@@ -3289,3 +3289,96 @@ export async function closePoll(id: string): Promise<Poll> {
   const json: ApiEnvelope<Poll> = await response.json();
   return json.data;
 }
+
+export type ViolationRule = {
+  id: number;
+  compoundId: string;
+  name: string;
+  nameAr: string | null;
+  description: string | null;
+  defaultFee: string;
+  isActive: boolean;
+  createdBy: number | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+};
+
+export type ViolationRuleInput = {
+  name?: string;
+  name_ar?: string | null;
+  description?: string | null;
+  default_fee?: number | null;
+  is_active?: boolean;
+};
+
+export async function listViolationRules(compoundId: string): Promise<ViolationRule[]> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/admin/compounds/${compoundId}/violation-rules`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const payload = (await response.json()) as PaginatedEnvelope<ViolationRule>;
+
+    return payload.data;
+  } catch {
+    return [];
+  }
+}
+
+export async function createViolationRule(compoundId: string, body: ViolationRuleInput): Promise<ViolationRule> {
+  const response = await fetch(`${config.apiBaseUrl}/admin/compounds/${compoundId}/violation-rules`, {
+    body: JSON.stringify(body),
+    headers: {
+      ...(await apiHeaders(true)),
+      "Content-Type": "application/json",
+    },
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to create violation rule: ${response.status}`);
+  }
+
+  const payload = (await response.json()) as ApiEnvelope<ViolationRule>;
+
+  return payload.data;
+}
+
+export async function updateViolationRule(
+  compoundId: string,
+  ruleId: number,
+  body: ViolationRuleInput,
+): Promise<ViolationRule> {
+  const response = await fetch(`${config.apiBaseUrl}/admin/compounds/${compoundId}/violation-rules/${ruleId}`, {
+    body: JSON.stringify(body),
+    headers: {
+      ...(await apiHeaders(true)),
+      "Content-Type": "application/json",
+    },
+    method: "PATCH",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to update violation rule: ${response.status}`);
+  }
+
+  const payload = (await response.json()) as ApiEnvelope<ViolationRule>;
+
+  return payload.data;
+}
+
+export async function archiveViolationRule(compoundId: string, ruleId: number): Promise<void> {
+  const response = await fetch(`${config.apiBaseUrl}/admin/compounds/${compoundId}/violation-rules/${ruleId}`, {
+    headers: await apiHeaders(true),
+    method: "DELETE",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to archive violation rule: ${response.status}`);
+  }
+}
