@@ -49,6 +49,16 @@ class ViolationApplicationControllerTest extends TestCase
             ->assertJsonPath('data.status', ApartmentViolationStatus::Pending->value);
     }
 
+    public function test_admin_can_list_unit_violations(): void
+    {
+        $violation = ApartmentViolation::factory()->create();
+        Sanctum::actingAs($this->violationAdmin());
+
+        $this->getJson("/api/v1/admin/apartments/{$violation->unit_id}/violations")
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $violation->id);
+    }
+
     public function test_rule_must_belong_to_unit_compound(): void
     {
         $unit = Unit::factory()->create();

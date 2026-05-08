@@ -3462,7 +3462,7 @@ export type ApplyViolationInput = {
 
 export async function listUnitViolations(unitId: string): Promise<ApartmentViolation[]> {
   try {
-    const response = await fetch(`${config.apiBaseUrl}/apartments/${unitId}/violations`, {
+    const response = await fetch(`${config.apiBaseUrl}/admin/apartments/${unitId}/violations`, {
       cache: "no-store",
       headers: await apiHeaders(true),
     });
@@ -3526,7 +3526,7 @@ export async function markViolationWaived(violationId: number, reason: string): 
 
 export async function getApartmentDetail(unitId: string): Promise<ApartmentDetail | null> {
   try {
-    const response = await fetch(`${config.apiBaseUrl}/apartments/${unitId}`, {
+    const response = await fetch(`${config.apiBaseUrl}/admin/apartments/${unitId}`, {
       cache: "no-store",
       headers: await apiHeaders(true),
     });

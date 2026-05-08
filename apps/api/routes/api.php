@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AccountMergeController;
+use App\Http\Controllers\Api\V1\Admin\Apartments\ApartmentController as AdminApartmentController;
 use App\Http\Controllers\Api\V1\Admin\Apartments\ApartmentDocumentReviewController as AdminApartmentDocumentReviewController;
 use App\Http\Controllers\Api\V1\Admin\Apartments\ViolationApplicationController as AdminViolationApplicationController;
 use App\Http\Controllers\Api\V1\Admin\Apartments\ViolationRuleController as AdminViolationRuleController;
@@ -151,6 +152,10 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             ->parameters(['violation-rules' => 'rule'])
             ->only(['index', 'store', 'update', 'destroy'])
             ->names('admin.compounds.violation-rules');
+        Route::get('/admin/apartments/{unit}', [AdminApartmentController::class, 'show'])
+            ->name('admin.apartments.show');
+        Route::get('/admin/apartments/{unit}/violations', [AdminViolationApplicationController::class, 'index'])
+            ->name('admin.apartments.violations.index');
         Route::post('/admin/apartments/{unit}/violations', [AdminViolationApplicationController::class, 'store'])
             ->name('admin.apartments.violations.store');
         Route::patch('/admin/apartment-violations/{violation}/paid', [AdminViolationApplicationController::class, 'markPaid'])

@@ -16,6 +16,15 @@ class ViolationApplicationController extends Controller
 {
     public function __construct(private readonly ViolationApplicationService $service) {}
 
+    public function index(Unit $unit)
+    {
+        Gate::authorize('apply', ViolationRule::class);
+
+        return ApartmentViolationResource::collection(
+            $unit->apartmentViolations()->with('rule')->latest()->paginate(50)
+        );
+    }
+
     public function store(ApplyViolationRequest $request, Unit $unit)
     {
         Gate::authorize('apply', ViolationRule::class);
