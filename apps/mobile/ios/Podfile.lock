@@ -1513,6 +1513,29 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
+  - react-native-pager-view (8.0.1):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - SwiftUIIntrospect (~> 1.0)
+    - Yoga
   - react-native-safe-area-context (5.7.0):
     - hermes-engine
     - RCTRequired
@@ -2262,6 +2285,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
+  - SwiftUIIntrospect (1.3.0)
   - VisionCamera (5.0.7):
     - hermes-engine
     - NitroImage
@@ -2333,6 +2357,7 @@ DEPENDENCIES:
   - React-microtasksnativemodule (from `../../../node_modules/react-native/ReactCommon/react/nativemodule/microtasks`)
   - "react-native-document-picker (from `../../../node_modules/@react-native-documents/picker`)"
   - react-native-image-picker (from `../../../node_modules/react-native-image-picker`)
+  - react-native-pager-view (from `../../../node_modules/react-native-pager-view`)
   - react-native-safe-area-context (from `../../../node_modules/react-native-safe-area-context`)
   - react-native-view-shot (from `../../../node_modules/react-native-view-shot`)
   - react-native-worklets-core (from `../../../node_modules/react-native-worklets-core`)
@@ -2394,6 +2419,7 @@ SPEC REPOS:
     - GoogleUtilities
     - nanopb
     - PromisesObjC
+    - SwiftUIIntrospect
 
 EXTERNAL SOURCES:
   FBLazyVector:
@@ -2481,6 +2507,8 @@ EXTERNAL SOURCES:
     :path: "../../../node_modules/@react-native-documents/picker"
   react-native-image-picker:
     :path: "../../../node_modules/react-native-image-picker"
+  react-native-pager-view:
+    :path: "../../../node_modules/react-native-pager-view"
   react-native-safe-area-context:
     :path: "../../../node_modules/react-native-safe-area-context"
   react-native-view-shot:
@@ -2631,6 +2659,7 @@ SPEC CHECKSUMS:
   React-microtasksnativemodule: cbd9be010701fa23a8786dfff87ad058411a1174
   react-native-document-picker: d74eb20980217096d3794a63ee5105b5f70772e3
   react-native-image-picker: 09cea417bef3ee25008ad21d4426f9a1fc54ad84
+  react-native-pager-view: 4eb2faa444dc7caec9ed5749af4da2e0142e7ca7
   react-native-safe-area-context: ba7283e541a5f57c6b27a7e33f2c40b8977888c0
   react-native-view-shot: 11e720a9a6989a9b9c4b2fb69d972aa8e1a8104c
   react-native-worklets-core: c39f6043ebcc3885ad718b744c25886ae75c10e4
@@ -2677,6 +2706,7 @@ SPEC CHECKSUMS:
   RNScreens: c58f17578c73435d8c00998cac0d89ad8105263c
   RNShare: 23dab8bc2b8120f4fbeaf9bc77569e385325e420
   RNSVG: 2d3af77f13e69994bb8957f69d46d8bcba1a6be8
+  SwiftUIIntrospect: fee9aa07293ee280373a591e1824e8ddc869ba5d
   VisionCamera: e53296f462f2259fb9e667e9548581e077583fff
   Yoga: 7bc3d5ffbb9f3b12001659657d7a56483fcb1e3a
 
