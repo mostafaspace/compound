@@ -11,25 +11,21 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import * as d3 from "d3";
 import { OrgChart } from "d3-org-chart";
 
 import type {
   OrgChartResponse,
   OrgChartRepresentative,
-  OrgChartAssignableUser,
 } from "@/lib/orgchart";
 import {
   mergeRepresentativeWithPersonDetail,
   parseAssignmentUserId,
-  buildOrgChartTree,
 } from "@/lib/orgchart";
 import {
   getPersonDetail,
   assignCompoundHead,
   assignBuildingHead,
   assignFloorRepresentative,
-  searchOrgChartAssignableUsers,
 } from "@/lib/orgchart-actions";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -51,6 +47,31 @@ interface OrgChartViewProps {
   data: OrgChartResponse;
   compoundId: string;
   canManage?: boolean;
+}
+
+interface OrgChartDatum {
+  data: FlatNode;
+}
+
+interface OrgChartInstance {
+  clearHighlighting(): OrgChartInstance;
+  compactMarginBetween(callback: () => number): OrgChartInstance;
+  compactMarginPair(callback: () => number): OrgChartInstance;
+  container(element: HTMLDivElement): OrgChartInstance;
+  data(data: FlatNode[]): OrgChartInstance;
+  childrenMargin(callback: () => number): OrgChartInstance;
+  exportImg(): void;
+  fit(): void;
+  neighbourMargin(callback: () => number): OrgChartInstance;
+  nodeContent(callback: (datum: OrgChartDatum) => string): OrgChartInstance;
+  nodeHeight(callback: () => number): OrgChartInstance;
+  nodeWidth(callback: () => number): OrgChartInstance;
+  onNodeClick(callback: (datum: OrgChartDatum) => void): OrgChartInstance;
+  render(): OrgChartInstance;
+  setUpToTheRootHighlighted(id: string): OrgChartInstance;
+  siblingsMargin(callback: () => number): OrgChartInstance;
+  zoomIn(): void;
+  zoomOut(): void;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -77,11 +98,11 @@ function avatarColor(id: number) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export function OrgChartView({ data, compoundId, canManage = false }: OrgChartViewProps) {
+export function OrgChartView({ data, canManage = false }: OrgChartViewProps) {
   const router = useRouter();
   const t = useTranslations("OrgChart");
   const chartContainerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<any>(null);
+  const chartRef = useRef<OrgChartInstance | null>(null);
 
   // UI State
   const [selectedRep, setSelectedRep] = useState<OrgChartRepresentative | null>(null);
@@ -93,9 +114,6 @@ export function OrgChartView({ data, compoundId, canManage = false }: OrgChartVi
   // Assignment State
   const [assigningState, setAssigningState] = useState<{ id: string; type: string; label: string } | null>(null);
   const [assignmentUserIdInput, setAssignmentUserIdInput] = useState("");
-  const [assignmentSearch, setAssignmentSearch] = useState("");
-  const [assignmentCandidates, setAssignmentCandidates] = useState<OrgChartAssignableUser[]>([]);
-  const [assignmentSearchLoading, setAssignmentSearchLoading] = useState(false);
   const [assignmentError, setAssignmentError] = useState<string | null>(null);
   const [assignmentSubmitting, setAssignmentSubmitting] = useState(false);
 
@@ -155,12 +173,30 @@ export function OrgChartView({ data, compoundId, canManage = false }: OrgChartVi
     return list;
   }, [data, buildingFilter]);
 
+  const handleSelectRepresentative = useCallback(async (rep: OrgChartRepresentative) => {
+    setSelectedRep(rep);
+    setSelectedRepError(null);
+    setSelectedRepLoading(true);
+
+    try {
+      const detail = await getPersonDetail(rep.user.id);
+      setSelectedRep((current) => {
+        if (!current || current.id !== rep.id) return current;
+        return mergeRepresentativeWithPersonDetail(current, detail);
+      });
+    } catch {
+      setSelectedRepError("Could not load profile details.");
+    } finally {
+      setSelectedRepLoading(false);
+    }
+  }, []);
+
   // 2. Initialize / Update Chart
   useLayoutEffect(() => {
     if (!chartContainerRef.current) return;
 
     if (!chartRef.current) {
-      chartRef.current = new OrgChart();
+      chartRef.current = new OrgChart() as unknown as OrgChartInstance;
     }
 
     const chart = chartRef.current;
@@ -175,7 +211,7 @@ export function OrgChartView({ data, compoundId, canManage = false }: OrgChartVi
       .compactMarginPair(() => 100)
       .neighbourMargin(() => 40)
       .siblingsMargin(() => 40)
-      .onNodeClick((d: any) => {
+      .onNodeClick((d) => {
         if (d.data.isVacant) {
           if (canManage) {
             setAssigningState({ id: d.data.id, type: d.data.type, label: d.data.label });
@@ -184,7 +220,7 @@ export function OrgChartView({ data, compoundId, canManage = false }: OrgChartVi
           handleSelectRepresentative(d.data.rep);
         }
       })
-      .nodeContent((d: any) => {
+      .nodeContent((d) => {
         const color = ROLE_BADGE[d.data.role] || { bg: "#F3F4F6", color: "#374151", border: "#E5E7EB" };
         const initials = getInitials(d.data.name);
         const avatarBg = d.data.isVacant ? "#f1f5f9" : avatarColor(d.data.rep?.user.id ?? 0);
@@ -226,7 +262,7 @@ export function OrgChartView({ data, compoundId, canManage = false }: OrgChartVi
     return () => {
       // Cleanup if needed
     };
-  }, [flatData, t, canManage]);
+  }, [flatData, t, canManage, handleSelectRepresentative]);
 
   // 3. Sync Search
   useEffect(() => {
@@ -243,26 +279,6 @@ export function OrgChartView({ data, compoundId, canManage = false }: OrgChartVi
       chartRef.current.clearHighlighting().render();
     }
   }, [searchQuery, flatData]);
-
-  // ─── Event Handlers ─────────────────────────────────────────────────────────
-
-  const handleSelectRepresentative = useCallback(async (rep: OrgChartRepresentative) => {
-    setSelectedRep(rep);
-    setSelectedRepError(null);
-    setSelectedRepLoading(true);
-
-    try {
-      const detail = await getPersonDetail(rep.user.id);
-      setSelectedRep((current) => {
-        if (!current || current.id !== rep.id) return current;
-        return mergeRepresentativeWithPersonDetail(current, detail);
-      });
-    } catch {
-      setSelectedRepError("Could not load profile details.");
-    } finally {
-      setSelectedRepLoading(false);
-    }
-  }, []);
 
   const submitAssignment = useCallback(async () => {
     if (!assigningState) return;
@@ -367,7 +383,7 @@ export function OrgChartView({ data, compoundId, canManage = false }: OrgChartVi
            <div className="flex-1 overflow-y-auto p-10 flex flex-col items-center">
               <div className="w-32 h-32 rounded-full border-4 border-white shadow-xl overflow-hidden mb-6">
                 {selectedRep.user.photoUrl ? (
-                  <img src={selectedRep.user.photoUrl} className="w-full h-full object-cover" />
+                  <img src={selectedRep.user.photoUrl} alt="" className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-4xl font-black text-white" style={{ backgroundColor: avatarColor(selectedRep.user.id) }}>
                     {getInitials(selectedRep.user.name)}
@@ -378,6 +394,12 @@ export function OrgChartView({ data, compoundId, canManage = false }: OrgChartVi
               <div className="px-4 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-black uppercase tracking-widest mb-10">
                 {t(`roles.${selectedRep.role}`)}
               </div>
+              {selectedRepLoading ? (
+                <p className="mb-4 text-xs font-bold text-slate-500">Loading profile details...</p>
+              ) : null}
+              {selectedRepError ? (
+                <p className="mb-4 text-xs font-bold text-red-500">{selectedRepError}</p>
+              ) : null}
 
               <div className="w-full space-y-6">
                  <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100">

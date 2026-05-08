@@ -1,7 +1,7 @@
-// @ts-nocheck
 import assert from "node:assert/strict";
 import test from "node:test";
 
+// @ts-expect-error TS5097: The Node test runner executes this file directly and needs the .ts extension.
 import * as transparency from "./poll-transparency.ts";
 
 test("summarizePollEngagement keeps delivered-not-opened person-level and opened-but-not-voted apartment-level", () => {

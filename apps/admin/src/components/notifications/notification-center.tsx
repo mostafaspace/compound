@@ -137,7 +137,6 @@ export function NotificationCenter({
 
   useEffect(() => {
     if (isPublicPage) {
-      setConnectionState("polling");
       return;
     }
 

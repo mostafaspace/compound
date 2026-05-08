@@ -1,5 +1,5 @@
 import type { AuthenticatedUser, UserRole } from "@compound/contracts";
-// @ts-ignore TS5097: The admin auth helper is executed directly by the Node test runner,
+// @ts-expect-error TS5097: The admin auth helper is executed directly by the Node test runner,
 // which requires an explicit file extension for this local workspace import.
 import { formatRoleLabel, getEffectiveRoleNames, getPrimaryEffectiveRole, hasEffectiveRole } from "../../../../packages/contracts/src/auth-access.ts";
 

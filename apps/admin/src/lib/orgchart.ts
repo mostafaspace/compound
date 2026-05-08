@@ -71,7 +71,7 @@ export interface OrgChartRepresentative {
 
 export type OrgChartRepresentativeSnapshot = OrgChartRepresentativeLike;
 export type { OrgChartPersonDetail };
-export interface OrgChartAssignableUser extends AssignableUserLike {}
+export type OrgChartAssignableUser = AssignableUserLike;
 
 export interface OrgChartResident {
   id: number;
