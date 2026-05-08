@@ -3382,3 +3382,163 @@ export async function archiveViolationRule(compoundId: string, ruleId: number): 
     throw new Error(`Failed to archive violation rule: ${response.status}`);
   }
 }
+
+export type ApartmentViolation = {
+  id: number;
+  unitId: string;
+  violationRuleId: number;
+  rule?: ViolationRule;
+  appliedBy: number;
+  fee: string;
+  notes: string | null;
+  status: "pending" | "paid" | "waived";
+  paidAt: string | null;
+  waivedReason: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+};
+
+export type ApartmentResident = {
+  id: number;
+  userId: number | null;
+  relationType: string;
+  startsAt: string | null;
+  endsAt: string | null;
+  isPrimary: boolean;
+  verificationStatus: string;
+  residentName: string | null;
+  residentPhone: string | null;
+  residentEmail: string | null;
+};
+
+export type ApartmentVehicle = {
+  id: number;
+  plate: string;
+  make: string | null;
+  model: string | null;
+  color: string | null;
+  stickerCode: string | null;
+  notes: string | null;
+};
+
+export type ApartmentParkingSpot = {
+  id: number;
+  code: string;
+  notes: string | null;
+};
+
+export type ApartmentNote = {
+  id: number;
+  author?: { id: number; name: string };
+  body: string;
+  createdAt: string | null;
+};
+
+export type ApartmentLedgerEntry = {
+  id: number;
+  type: string;
+  amount: string;
+  description: string | null;
+  createdAt: string | null;
+};
+
+export type ApartmentDetail = {
+  id: string;
+  residents: ApartmentResident[];
+  vehicles: ApartmentVehicle[];
+  parkingSpots: ApartmentParkingSpot[];
+  recentNotes: ApartmentNote[];
+  finance: {
+    account: UnitAccount | null;
+    outstandingEntries: ApartmentLedgerEntry[];
+  };
+};
+
+export type ApplyViolationInput = {
+  violation_rule_id: number;
+  fee?: number;
+  notes?: string;
+};
+
+export async function listUnitViolations(unitId: string): Promise<ApartmentViolation[]> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/apartments/${unitId}/violations`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const payload = (await response.json()) as PaginatedEnvelope<ApartmentViolation>;
+
+    return payload.data;
+  } catch {
+    return [];
+  }
+}
+
+export async function applyViolation(unitId: string, body: ApplyViolationInput): Promise<ApartmentViolation> {
+  const response = await fetch(`${config.apiBaseUrl}/admin/apartments/${unitId}/violations`, {
+    body: JSON.stringify(body),
+    headers: {
+      ...(await apiHeaders(true)),
+      "Content-Type": "application/json",
+    },
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to apply violation: ${response.status}`);
+  }
+
+  const payload = (await response.json()) as ApiEnvelope<ApartmentViolation>;
+
+  return payload.data;
+}
+
+export async function markViolationPaid(violationId: number): Promise<void> {
+  const response = await fetch(`${config.apiBaseUrl}/admin/apartment-violations/${violationId}/paid`, {
+    headers: await apiHeaders(true),
+    method: "PATCH",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to mark violation paid: ${response.status}`);
+  }
+}
+
+export async function markViolationWaived(violationId: number, reason: string): Promise<void> {
+  const response = await fetch(`${config.apiBaseUrl}/admin/apartment-violations/${violationId}/waive`, {
+    body: JSON.stringify({ reason }),
+    headers: {
+      ...(await apiHeaders(true)),
+      "Content-Type": "application/json",
+    },
+    method: "PATCH",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to waive violation: ${response.status}`);
+  }
+}
+
+export async function getApartmentDetail(unitId: string): Promise<ApartmentDetail | null> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/apartments/${unitId}`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const payload = (await response.json()) as ApiEnvelope<ApartmentDetail>;
+
+    return payload.data;
+  } catch {
+    return null;
+  }
+}

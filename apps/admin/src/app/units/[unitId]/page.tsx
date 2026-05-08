@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { Fragment } from "react";
+import { Fragment, type ReactNode } from "react";
 
 import { SiteNav } from "@/components/site-nav";
-import { getCurrentUser, getUnit } from "@/lib/api";
+import { getApartmentDetail, getCurrentUser, getUnit } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
 
 import { endMembershipAction, inviteResidentToUnitAction, updateMembershipProfileAction } from "../actions";
@@ -18,7 +18,11 @@ export default async function UnitDetailPage({ params, searchParams }: UnitDetai
   await requireAdminUser(getCurrentUser);
   const { unitId } = await params;
   const { invited, updated } = await searchParams;
-  const [unit, t] = await Promise.all([getUnit(unitId), getTranslations("Registry")]);
+  const [unit, t, apartment] = await Promise.all([
+    getUnit(unitId),
+    getTranslations("Registry"),
+    getApartmentDetail(unitId),
+  ]);
 
   if (!unit) notFound();
 
@@ -49,6 +53,9 @@ export default async function UnitDetailPage({ params, searchParams }: UnitDetai
           <div className="flex flex-wrap gap-3">
             <Link className="inline-flex h-11 items-center justify-center rounded-lg border border-line bg-panel px-4 text-sm font-semibold hover:border-brand" href={`/buildings/${unit.buildingId}/units/${unit.id}/edit`}>
               {t("editUnit")}
+            </Link>
+            <Link className="inline-flex h-11 items-center justify-center rounded-lg border border-line bg-panel px-4 text-sm font-semibold hover:border-brand" href={`/units/${unit.id}/violations`}>
+              Violations
             </Link>
             <Link className="inline-flex h-11 items-center justify-center rounded-lg bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong" href="/documents">
               {t("documents")}
@@ -85,6 +92,100 @@ export default async function UnitDetailPage({ params, searchParams }: UnitDetai
           </article>
         </div>
       </section>
+
+      {apartment ? (
+        <section className="mx-auto max-w-7xl space-y-5 px-5 py-6 lg:px-8">
+          <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+            <div>
+              <h2 className="text-xl font-semibold">Apartment overview</h2>
+              <p className="mt-1 text-sm text-muted">
+                View-only apartment tabs for residents, vehicles, parking, notes, and finance.
+              </p>
+            </div>
+            <Link className="text-sm font-semibold text-brand hover:text-brand-strong" href={`/units/${unit.id}/violations`}>
+              Manage violations
+            </Link>
+          </div>
+
+          <div className="grid gap-5 xl:grid-cols-2">
+            <ViewOnlyPanel title={`Residents (${apartment.residents.length})`}>
+              {apartment.residents.length > 0 ? (
+                apartment.residents.map((resident) => (
+                  <InfoRow
+                    key={resident.id}
+                    title={resident.residentName ?? `Resident #${resident.id}`}
+                    meta={`${resident.relationType} · ${resident.verificationStatus}`}
+                    detail={[resident.residentPhone, resident.residentEmail].filter(Boolean).join(" · ") || "No public contact"}
+                  />
+                ))
+              ) : (
+                <EmptyText>No apartment residents recorded.</EmptyText>
+              )}
+            </ViewOnlyPanel>
+
+            <ViewOnlyPanel title={`Vehicles (${apartment.vehicles.length})`}>
+              {apartment.vehicles.length > 0 ? (
+                apartment.vehicles.map((vehicle) => (
+                  <InfoRow
+                    key={vehicle.id}
+                    title={vehicle.plate}
+                    meta={[vehicle.color, vehicle.make, vehicle.model].filter(Boolean).join(" ") || "Vehicle"}
+                    detail={vehicle.stickerCode ? `Sticker ${vehicle.stickerCode}` : vehicle.notes ?? "No sticker on file"}
+                  />
+                ))
+              ) : (
+                <EmptyText>No vehicles recorded.</EmptyText>
+              )}
+            </ViewOnlyPanel>
+
+            <ViewOnlyPanel title={`Parking (${apartment.parkingSpots.length})`}>
+              {apartment.parkingSpots.length > 0 ? (
+                apartment.parkingSpots.map((spot) => (
+                  <InfoRow key={spot.id} title={spot.code} meta="Assigned spot" detail={spot.notes ?? "No notes"} />
+                ))
+              ) : (
+                <EmptyText>No parking spots recorded.</EmptyText>
+              )}
+            </ViewOnlyPanel>
+
+            <ViewOnlyPanel title={`Notes (${apartment.recentNotes.length})`}>
+              {apartment.recentNotes.length > 0 ? (
+                apartment.recentNotes.map((note) => (
+                  <InfoRow
+                    key={note.id}
+                    title={note.body}
+                    meta={`${note.author?.name ?? "Resident"} · ${formatDate(note.createdAt)}`}
+                  />
+                ))
+              ) : (
+                <EmptyText>No apartment notes yet.</EmptyText>
+              )}
+            </ViewOnlyPanel>
+
+            <ViewOnlyPanel title="Finance summary">
+              {apartment.finance.account ? (
+                <>
+                  <InfoRow
+                    title={formatMoney(apartment.finance.account.balance, apartment.finance.account.currency)}
+                    meta="Current account balance"
+                    detail={`${apartment.finance.outstandingEntries.length} outstanding entries`}
+                  />
+                  {apartment.finance.outstandingEntries.slice(0, 4).map((entry) => (
+                    <InfoRow
+                      key={entry.id}
+                      title={entry.description ?? entry.type.replace(/_/g, " ")}
+                      meta={formatMoney(entry.amount, apartment.finance.account?.currency ?? "EGP")}
+                      detail={formatDate(entry.createdAt)}
+                    />
+                  ))}
+                </>
+              ) : (
+                <EmptyText>No finance account exists for this unit.</EmptyText>
+              )}
+            </ViewOnlyPanel>
+          </div>
+        </section>
+      ) : null}
 
       <section className="mx-auto grid max-w-7xl gap-5 px-5 py-6 lg:grid-cols-[1.1fr_0.9fr] lg:px-8">
         <div className="overflow-hidden rounded-lg border border-line bg-panel">
@@ -373,4 +474,39 @@ export default async function UnitDetailPage({ params, searchParams }: UnitDetai
       </section>
     </main>
   );
+}
+
+function ViewOnlyPanel({ children, title }: { children: ReactNode; title: string }) {
+  return (
+    <section className="rounded-lg border border-line bg-panel">
+      <div className="border-b border-line px-4 py-3">
+        <h3 className="text-base font-semibold">{title}</h3>
+      </div>
+      <div className="divide-y divide-line">{children}</div>
+    </section>
+  );
+}
+
+function InfoRow({ detail, meta, title }: { detail?: string; meta: string; title: string }) {
+  return (
+    <article className="px-4 py-3">
+      <p className="font-medium text-foreground">{title}</p>
+      <p className="mt-1 text-sm text-muted">{meta}</p>
+      {detail ? <p className="mt-1 text-xs text-muted">{detail}</p> : null}
+    </article>
+  );
+}
+
+function EmptyText({ children }: { children: ReactNode }) {
+  return <p className="px-4 py-5 text-sm text-muted">{children}</p>;
+}
+
+function formatDate(value: string | null): string {
+  if (!value) return "-";
+
+  return new Intl.DateTimeFormat("en", { dateStyle: "medium" }).format(new Date(value));
+}
+
+function formatMoney(amount: string, currency: string): string {
+  return new Intl.NumberFormat("en", { currency, style: "currency" }).format(Number(amount));
 }
