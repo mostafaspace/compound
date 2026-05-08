@@ -17,13 +17,13 @@ class WorkOrderFactory extends Factory
     public function definition(): array
     {
         return [
-            'compound_id'  => Compound::factory(),
-            'title'        => $this->faker->sentence(4),
-            'description'  => $this->faker->paragraph(),
-            'category'     => $this->faker->randomElement(['plumbing', 'electrical', 'hvac', 'painting', 'cleaning', 'general']),
-            'priority'     => $this->faker->randomElement(['low', 'medium', 'high']),
-            'status'       => 'draft',
-            'created_by'   => User::factory(),
+            'compound_id' => Compound::factory(),
+            'title' => $this->faker->sentence(4),
+            'description' => $this->faker->paragraph(),
+            'category' => $this->faker->randomElement(['plumbing', 'electrical', 'hvac', 'painting', 'cleaning', 'general']),
+            'priority' => $this->faker->randomElement(['low', 'medium', 'high']),
+            'status' => 'draft',
+            'created_by' => User::factory(),
         ];
     }
 
@@ -35,7 +35,7 @@ class WorkOrderFactory extends Factory
     public function quoted(): static
     {
         return $this->state([
-            'status'         => 'quoted',
+            'status' => 'quoted',
             'estimated_cost' => $this->faker->randomFloat(2, 100, 5000),
         ]);
     }
@@ -44,12 +44,13 @@ class WorkOrderFactory extends Factory
     {
         return $this->state(function () {
             $cost = $this->faker->randomFloat(2, 100, 5000);
+
             return [
-                'status'         => 'approved',
+                'status' => 'approved',
                 'estimated_cost' => $cost,
-                'approved_cost'  => $cost,
-                'approved_by'    => User::factory(),
-                'approved_at'    => now(),
+                'approved_cost' => $cost,
+                'approved_by' => User::factory(),
+                'approved_at' => now(),
             ];
         });
     }
@@ -58,13 +59,14 @@ class WorkOrderFactory extends Factory
     {
         return $this->state(function () {
             $cost = $this->faker->randomFloat(2, 100, 5000);
+
             return [
-                'status'         => 'in_progress',
+                'status' => 'in_progress',
                 'estimated_cost' => $cost,
-                'approved_cost'  => $cost,
-                'approved_by'    => User::factory(),
-                'approved_at'    => now()->subDays(2),
-                'started_at'     => now()->subDay(),
+                'approved_cost' => $cost,
+                'approved_by' => User::factory(),
+                'approved_at' => now()->subDays(2),
+                'started_at' => now()->subDay(),
             ];
         });
     }
@@ -73,15 +75,16 @@ class WorkOrderFactory extends Factory
     {
         return $this->state(function () {
             $cost = $this->faker->randomFloat(2, 100, 5000);
+
             return [
-                'status'           => 'completed',
-                'estimated_cost'   => $cost,
-                'approved_cost'    => $cost,
-                'actual_cost'      => $cost * $this->faker->randomFloat(2, 0.9, 1.1),
-                'approved_by'      => User::factory(),
-                'approved_at'      => now()->subDays(5),
-                'started_at'       => now()->subDays(3),
-                'completed_at'     => now(),
+                'status' => 'completed',
+                'estimated_cost' => $cost,
+                'approved_cost' => $cost,
+                'actual_cost' => $cost * $this->faker->randomFloat(2, 0.9, 1.1),
+                'approved_by' => User::factory(),
+                'approved_at' => now()->subDays(5),
+                'started_at' => now()->subDays(3),
+                'completed_at' => now(),
                 'completion_notes' => 'Work completed successfully.',
             ];
         });
@@ -90,7 +93,7 @@ class WorkOrderFactory extends Factory
     public function cancelled(): static
     {
         return $this->state([
-            'status'       => 'cancelled',
+            'status' => 'cancelled',
             'cancelled_by' => User::factory(),
             'cancelled_at' => now(),
         ]);

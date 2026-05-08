@@ -14,10 +14,10 @@ class DeviceTokenFactory extends Factory
     public function definition(): array
     {
         return [
-            'user_id'      => User::factory(),
-            'token'        => 'token_'.fake()->uuid(),
-            'platform'     => fake()->randomElement(DevicePlatform::cases())->value,
-            'device_name'  => fake()->optional()->word(),
+            'user_id' => User::factory(),
+            'token' => 'token_'.fake()->uuid(),
+            'platform' => fake()->randomElement(DevicePlatform::cases())->value,
+            'device_name' => fake()->optional()->word(),
             'last_seen_at' => now(),
         ];
     }

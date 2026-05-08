@@ -48,7 +48,7 @@ class AccountMergeController extends Controller
         $validated = $request->validate([
             'source_user_id' => ['required', 'integer', 'exists:users,id'],
             'target_user_id' => ['required', 'integer', 'exists:users,id', 'different:source_user_id'],
-            'notes'          => ['nullable', 'string', 'max:1000'],
+            'notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
         $source = User::findOrFail($validated['source_user_id']);
@@ -64,7 +64,7 @@ class AccountMergeController extends Controller
             ->where('status', AccountMergeStatus::Pending->value)
             ->where(function ($q) use ($source, $target): void {
                 $q->whereIn('source_user_id', [$source->id, $target->id])
-                  ->orWhereIn('target_user_id', [$source->id, $target->id]);
+                    ->orWhereIn('target_user_id', [$source->id, $target->id]);
             })
             ->exists();
 
@@ -77,9 +77,9 @@ class AccountMergeController extends Controller
         $merge = AccountMerge::create([
             'source_user_id' => $source->id,
             'target_user_id' => $target->id,
-            'initiated_by'   => Auth::id(),
-            'status'         => AccountMergeStatus::Pending,
-            'notes'          => $validated['notes'] ?? null,
+            'initiated_by' => Auth::id(),
+            'status' => AccountMergeStatus::Pending,
+            'notes' => $validated['notes'] ?? null,
             'merge_analysis' => $analysis,
         ]);
 
@@ -134,7 +134,7 @@ class AccountMergeController extends Controller
         }
 
         $accountMerge->update([
-            'status'       => AccountMergeStatus::Cancelled,
+            'status' => AccountMergeStatus::Cancelled,
             'cancelled_at' => now(),
         ]);
 
@@ -147,29 +147,29 @@ class AccountMergeController extends Controller
     private function formatMerge(AccountMerge $merge): array
     {
         return [
-            'id'            => $merge->id,
-            'sourceUser'    => $merge->sourceUser ? [
-                'id'    => $merge->sourceUser->id,
-                'name'  => $merge->sourceUser->name,
+            'id' => $merge->id,
+            'sourceUser' => $merge->sourceUser ? [
+                'id' => $merge->sourceUser->id,
+                'name' => $merge->sourceUser->name,
                 'email' => $merge->sourceUser->email,
                 'status' => $merge->sourceUser->status?->value,
             ] : null,
-            'targetUser'    => $merge->targetUser ? [
-                'id'    => $merge->targetUser->id,
-                'name'  => $merge->targetUser->name,
+            'targetUser' => $merge->targetUser ? [
+                'id' => $merge->targetUser->id,
+                'name' => $merge->targetUser->name,
                 'email' => $merge->targetUser->email,
                 'status' => $merge->targetUser->status?->value,
             ] : null,
-            'initiator'     => $merge->initiator ? [
-                'id'    => $merge->initiator->id,
-                'name'  => $merge->initiator->name,
+            'initiator' => $merge->initiator ? [
+                'id' => $merge->initiator->id,
+                'name' => $merge->initiator->name,
             ] : null,
-            'status'        => $merge->status?->value,
-            'notes'         => $merge->notes,
+            'status' => $merge->status?->value,
+            'notes' => $merge->notes,
             'mergeAnalysis' => $merge->merge_analysis,
-            'completedAt'   => $merge->completed_at?->toIso8601String(),
-            'cancelledAt'   => $merge->cancelled_at?->toIso8601String(),
-            'createdAt'     => $merge->created_at?->toIso8601String(),
+            'completedAt' => $merge->completed_at?->toIso8601String(),
+            'cancelledAt' => $merge->cancelled_at?->toIso8601String(),
+            'createdAt' => $merge->created_at?->toIso8601String(),
         ];
     }
 }

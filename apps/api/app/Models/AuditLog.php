@@ -26,9 +26,9 @@ class AuditLog extends Model
     protected function casts(): array
     {
         return [
-            'metadata'    => 'array',
+            'metadata' => 'array',
             'status_code' => 'integer',
-            'severity'    => AuditSeverity::class,
+            'severity' => AuditSeverity::class,
         ];
     }
 

@@ -29,7 +29,7 @@ class AuthPrecedenceTest extends TestCase
         // Verify they have super admin access via legacy fallback
         $this->actingAs($user);
         $this->assertTrue($user->isEffectiveSuperAdmin(), 'Legacy SuperAdmin should be recognized as effective super admin');
-        
+
         // Use a route that requires a specific permission (e.g., view_audit_logs)
         // From EnsureUserHasRole.php: SuperAdmin legacy fallback has Permission::values()
         $response = $this->getJson('/api/v1/audit-logs');
@@ -45,7 +45,7 @@ class AuthPrecedenceTest extends TestCase
 
         // 3. Verify they LOST Super Admin status because they now have an explicit role
         $this->assertFalse($user->isEffectiveSuperAdmin(), 'User with Spatie role should NOT fall back to legacy SuperAdmin');
-        
+
         // Verify they lose access to audit logs
         $response = $this->getJson('/api/v1/audit-logs');
         $response->assertForbidden();
@@ -77,7 +77,7 @@ class AuthPrecedenceTest extends TestCase
 
         // Verify they ARE now a super admin
         $this->assertTrue($user->isEffectiveSuperAdmin(), 'User should be elevated to SuperAdmin via Spatie role');
-        
+
         // Verify they can now access audit logs
         $response = $this->getJson('/api/v1/audit-logs');
         $response->assertOk();

@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api\V1\Finance;
 
 use App\Enums\BudgetStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Resources\Finance\BudgetCategoryResource;
 use App\Http\Resources\Finance\BudgetResource;
 use App\Models\Finance\Budget;
+use App\Models\Finance\BudgetCategory;
 use App\Models\User;
 use App\Services\CompoundContextService;
 use App\Support\AuditLogger;
@@ -46,12 +48,12 @@ class BudgetController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'compound_id'  => ['required', 'string', 'exists:compounds,id'],
-            'name'         => ['required', 'string', 'max:255'],
-            'period_type'  => ['required', Rule::in(['annual', 'monthly'])],
-            'period_year'  => ['required', 'integer', 'min:2000', 'max:2100'],
+            'compound_id' => ['required', 'string', 'exists:compounds,id'],
+            'name' => ['required', 'string', 'max:255'],
+            'period_type' => ['required', Rule::in(['annual', 'monthly'])],
+            'period_year' => ['required', 'integer', 'min:2000', 'max:2100'],
             'period_month' => ['required_if:period_type,monthly', 'nullable', 'integer', 'min:1', 'max:12'],
-            'notes'        => ['nullable', 'string'],
+            'notes' => ['nullable', 'string'],
         ]);
 
         $this->compoundContextService->ensureUserCanAccessCompound($request->user(), $data['compound_id']);
@@ -81,7 +83,7 @@ class BudgetController extends Controller
         abort_if($budget->status === BudgetStatus::Closed, Response::HTTP_UNPROCESSABLE_ENTITY, 'Cannot edit a closed budget.');
 
         $data = $request->validate([
-            'name'  => ['sometimes', 'string', 'max:255'],
+            'name' => ['sometimes', 'string', 'max:255'],
             'notes' => ['nullable', 'string'],
         ]);
 
@@ -112,7 +114,7 @@ class BudgetController extends Controller
         abort_if($budget->status === BudgetStatus::Closed, Response::HTTP_UNPROCESSABLE_ENTITY, 'Budget is already closed.');
 
         $budget->update([
-            'status'    => BudgetStatus::Closed,
+            'status' => BudgetStatus::Closed,
             'closed_at' => now(),
         ]);
 
@@ -130,19 +132,19 @@ class BudgetController extends Controller
         abort_if($budget->status === BudgetStatus::Closed, Response::HTTP_UNPROCESSABLE_ENTITY, 'Cannot add categories to a closed budget.');
 
         $data = $request->validate([
-            'name'           => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:255'],
             'planned_amount' => ['required', 'numeric', 'min:0'],
-            'notes'          => ['nullable', 'string'],
+            'notes' => ['nullable', 'string'],
         ]);
 
         $category = $budget->categories()->create($data);
 
-        return (new \App\Http\Resources\Finance\BudgetCategoryResource($category))
+        return (new BudgetCategoryResource($category))
             ->response()
             ->setStatusCode(Response::HTTP_CREATED);
     }
 
-    public function updateCategory(Request $request, Budget $budget, \App\Models\Finance\BudgetCategory $category): \App\Http\Resources\Finance\BudgetCategoryResource
+    public function updateCategory(Request $request, Budget $budget, BudgetCategory $category): BudgetCategoryResource
     {
         $this->compoundContextService->ensureUserCanAccessCompound($request->user(), $budget->compound_id);
 
@@ -150,13 +152,13 @@ class BudgetController extends Controller
         abort_if($category->budget_id !== $budget->id, Response::HTTP_NOT_FOUND);
 
         $data = $request->validate([
-            'name'           => ['sometimes', 'string', 'max:255'],
+            'name' => ['sometimes', 'string', 'max:255'],
             'planned_amount' => ['sometimes', 'numeric', 'min:0'],
-            'notes'          => ['nullable', 'string'],
+            'notes' => ['nullable', 'string'],
         ]);
 
         $category->update($data);
 
-        return new \App\Http\Resources\Finance\BudgetCategoryResource($category);
+        return new BudgetCategoryResource($category);
     }
 }

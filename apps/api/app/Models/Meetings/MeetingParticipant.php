@@ -20,9 +20,9 @@ class MeetingParticipant extends Model
     protected function casts(): array
     {
         return [
-            'invited_at'               => 'datetime',
-            'attendance_confirmed_at'  => 'datetime',
-            'attended'                 => 'boolean',
+            'invited_at' => 'datetime',
+            'attendance_confirmed_at' => 'datetime',
+            'attended' => 'boolean',
         ];
     }
 

@@ -5,13 +5,13 @@ namespace Tests\Feature\Api\V1;
 use App\Enums\ImportBatchStatus;
 use App\Enums\ImportBatchType;
 use App\Enums\UserRole;
-use App\Models\Finance\LedgerEntry;
 use App\Models\Finance\UnitAccount;
 use App\Models\Import\ImportBatch;
 use App\Models\Property\Building;
 use App\Models\Property\Compound;
 use App\Models\Property\Unit;
 use App\Models\User;
+use Database\Seeders\BaselineSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Laravel\Sanctum\Sanctum;
@@ -396,7 +396,7 @@ class ImportTest extends TestCase
 
     public function test_baseline_seeder_creates_charge_types(): void
     {
-        $this->seed(\Database\Seeders\BaselineSeeder::class);
+        $this->seed(BaselineSeeder::class);
 
         $this->assertDatabaseHas('charge_types', ['code' => 'monthly_service']);
         $this->assertDatabaseHas('charge_types', ['code' => 'late_payment_penalty']);

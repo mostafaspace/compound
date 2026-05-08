@@ -26,7 +26,7 @@ class ReserveFundMovement extends Model
     {
         return [
             'amount' => 'decimal:2',
-            'type'   => ReserveFundMovementType::class,
+            'type' => ReserveFundMovementType::class,
         ];
     }
 

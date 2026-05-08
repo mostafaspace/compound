@@ -10,17 +10,17 @@ class NotificationTemplateResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id'            => $this->id,
-            'compoundId'    => $this->compound_id,
-            'category'      => $this->category->value,
-            'channel'       => $this->channel->value,
-            'locale'        => $this->locale,
-            'subject'       => $this->subject,
+            'id' => $this->id,
+            'compoundId' => $this->compound_id,
+            'category' => $this->category->value,
+            'channel' => $this->channel->value,
+            'locale' => $this->locale,
+            'subject' => $this->subject,
             'titleTemplate' => $this->title_template,
-            'bodyTemplate'  => $this->body_template,
-            'isActive'      => $this->is_active,
-            'createdAt'     => $this->created_at->toIso8601String(),
-            'updatedAt'     => $this->updated_at->toIso8601String(),
+            'bodyTemplate' => $this->body_template,
+            'isActive' => $this->is_active,
+            'createdAt' => $this->created_at->toIso8601String(),
+            'updatedAt' => $this->updated_at->toIso8601String(),
         ];
     }
 }

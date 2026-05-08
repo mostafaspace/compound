@@ -18,53 +18,53 @@ class SettingsService
     protected static array $defaults = [
         // Documents
         'documents.require_upload_for_onboarding' => true,
-        'documents.allowed_extensions'            => ['pdf', 'jpg', 'jpeg', 'png'],
-        'documents.max_file_size_mb'              => 10,
+        'documents.allowed_extensions' => ['pdf', 'jpg', 'jpeg', 'png'],
+        'documents.max_file_size_mb' => 10,
 
         // Verification
-        'verification.auto_approve_residents'     => false,
-        'verification.checklist_items'            => ['national_id', 'lease_or_title_deed'],
+        'verification.auto_approve_residents' => false,
+        'verification.checklist_items' => ['national_id', 'lease_or_title_deed'],
 
         // Visitors
-        'visitors.max_visitors_per_unit_per_day'  => 10,
-        'visitors.require_pre_approval'           => false,
-        'visitors.pass_validity_hours'            => 24,
-        'visitors.gate_notification_enabled'      => true,
+        'visitors.max_visitors_per_unit_per_day' => 10,
+        'visitors.require_pre_approval' => false,
+        'visitors.pass_validity_hours' => 24,
+        'visitors.gate_notification_enabled' => true,
 
         // Issues
-        'issues.default_categories'               => ['maintenance', 'noise', 'security', 'cleanliness', 'other'],
-        'issues.auto_escalate_after_hours'        => 72,
-        'issues.notify_board_on_escalation'       => true,
+        'issues.default_categories' => ['maintenance', 'noise', 'security', 'cleanliness', 'other'],
+        'issues.auto_escalate_after_hours' => 72,
+        'issues.notify_board_on_escalation' => true,
 
         // Announcements
-        'announcements.default_categories'        => ['general', 'maintenance', 'finance', 'events', 'urgent'],
-        'announcements.require_approval'          => false,
+        'announcements.default_categories' => ['general', 'maintenance', 'finance', 'events', 'urgent'],
+        'announcements.require_approval' => false,
 
         // Finance
-        'finance.accepted_payment_methods'        => ['bank_transfer', 'cash', 'check'],
-        'finance.late_fee_enabled'                => false,
-        'finance.late_fee_percentage'             => 2.0,
-        'finance.grace_period_days'               => 7,
-        'finance.currency'                        => 'EGP',
+        'finance.accepted_payment_methods' => ['bank_transfer', 'cash', 'check'],
+        'finance.late_fee_enabled' => false,
+        'finance.late_fee_percentage' => 2.0,
+        'finance.grace_period_days' => 7,
+        'finance.currency' => 'EGP',
 
         // Voting / Governance
-        'governance.default_eligibility'          => 'owners_only',
-        'governance.require_doc_compliance'       => false,
-        'governance.min_vote_duration_hours'      => 24,
+        'governance.default_eligibility' => 'owners_only',
+        'governance.require_doc_compliance' => false,
+        'governance.min_vote_duration_hours' => 24,
 
         // Notifications
-        'notifications.email_enabled'             => true,
-        'notifications.sms_enabled'               => false,
-        'notifications.push_enabled'              => true,
-        'notifications.digest_frequency'          => 'realtime',
+        'notifications.email_enabled' => true,
+        'notifications.sms_enabled' => false,
+        'notifications.push_enabled' => true,
+        'notifications.digest_frequency' => 'realtime',
 
         // Localization
-        'localization.locale'                     => 'ar',
-        'localization.timezone'                   => 'Africa/Cairo',
-        'localization.currency'                   => 'EGP',
-        'localization.currency_symbol'            => 'ج.م',
-        'localization.date_format'                => 'DD/MM/YYYY',
-        'localization.phone_country_code'         => '+20',
+        'localization.locale' => 'ar',
+        'localization.timezone' => 'Africa/Cairo',
+        'localization.currency' => 'EGP',
+        'localization.currency_symbol' => 'ج.م',
+        'localization.date_format' => 'DD/MM/YYYY',
+        'localization.phone_country_code' => '+20',
     ];
 
     /**
@@ -158,8 +158,8 @@ class SettingsService
         $setting = CompoundSetting::query()->updateOrCreate(
             [
                 'compound_id' => $compoundId,
-                'namespace'   => $namespace,
-                'key'         => $key,
+                'namespace' => $namespace,
+                'key' => $key,
             ],
             ['value' => $value],
         );
@@ -172,11 +172,11 @@ class SettingsService
             auditableType: CompoundSetting::class,
             auditableId: (string) $setting->id,
             metadata: array_merge($metadata, [
-                'namespace'   => $namespace,
-                'key'         => $key,
+                'namespace' => $namespace,
+                'key' => $key,
                 'compound_id' => $compoundId,
-                'before'      => $before,
-                'after'       => $value,
+                'before' => $before,
+                'after' => $value,
             ]),
         );
 

@@ -6,7 +6,6 @@ use App\Enums\UnitStatus;
 use App\Enums\UnitType;
 use App\Models\Property\Building;
 use App\Models\Property\Compound;
-use App\Models\Property\Floor;
 use App\Models\Property\Unit;
 use Illuminate\Database\Eloquent\Factories\Factory;
 

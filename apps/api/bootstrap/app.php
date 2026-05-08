@@ -2,13 +2,15 @@
 
 use App\Http\Middleware\AuditMutatingApiRequests;
 use App\Http\Middleware\EnsureUserHasRole;
+use App\Providers\AuthServiceProvider;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Spatie\Permission\Middleware\PermissionMiddleware;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withProviders([
-        App\Providers\AuthServiceProvider::class,
+        AuthServiceProvider::class,
     ])
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
@@ -25,8 +27,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->append(AuditMutatingApiRequests::class);
 
         $middleware->alias([
-            'role'       => EnsureUserHasRole::class,
-            'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
+            'role' => EnsureUserHasRole::class,
+            'permission' => PermissionMiddleware::class,
         ]);
     })
     ->withExceptions(function ($exceptions): void {

@@ -39,9 +39,9 @@ class SettingsController extends Controller
 
         return response()->json([
             'data' => [
-                'namespace'  => $namespace,
+                'namespace' => $namespace,
                 'compoundId' => $compoundId,
-                'settings'   => $data,
+                'settings' => $data,
             ],
         ]);
     }
@@ -55,16 +55,16 @@ class SettingsController extends Controller
         $this->validateNamespace($namespace);
 
         $validated = $request->validate([
-            'settings'   => ['required', 'array'],
+            'settings' => ['required', 'array'],
             'compoundId' => ['nullable', 'string', 'exists:compounds,id'],
-            'reason'     => ['nullable', 'string', 'max:255'],
+            'reason' => ['nullable', 'string', 'max:255'],
         ]);
 
         $compoundId = $this->compoundContext->resolveManagedCompound(
             $request,
             $validated['compoundId'] ?? null,
         );
-        $reason     = $validated['reason'] ?? null;
+        $reason = $validated['reason'] ?? null;
 
         $actor = $request->user();
 
@@ -81,9 +81,9 @@ class SettingsController extends Controller
 
         return response()->json([
             'data' => [
-                'namespace'  => $namespace,
+                'namespace' => $namespace,
                 'compoundId' => $compoundId,
-                'settings'   => $updated,
+                'settings' => $updated,
             ],
         ]);
     }

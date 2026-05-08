@@ -32,7 +32,7 @@ class OperationalAnalyticsTest extends TestCase
     private function makeAdmin(array $attrs = []): User
     {
         return User::factory()->create(array_merge([
-            'role'   => UserRole::SuperAdmin->value,
+            'role' => UserRole::SuperAdmin->value,
             'status' => AccountStatus::Active->value,
         ], $attrs));
     }
@@ -40,7 +40,7 @@ class OperationalAnalyticsTest extends TestCase
     private function makeUser(array $attrs = []): User
     {
         return User::factory()->create(array_merge([
-            'role'   => UserRole::ResidentOwner->value,
+            'role' => UserRole::ResidentOwner->value,
             'status' => AccountStatus::Active->value,
         ], $attrs));
     }
@@ -74,7 +74,7 @@ class OperationalAnalyticsTest extends TestCase
     {
         $compound = Compound::factory()->create();
         Sanctum::actingAs($this->makeAdmin([
-            'role'        => UserRole::CompoundAdmin->value,
+            'role' => UserRole::CompoundAdmin->value,
             'compound_id' => $compound->id,
         ]));
         $this->getJson(self::ENDPOINT)->assertOk();
@@ -84,7 +84,7 @@ class OperationalAnalyticsTest extends TestCase
     {
         $compound = Compound::factory()->create();
         Sanctum::actingAs($this->makeAdmin([
-            'role'        => UserRole::SupportAgent->value,
+            'role' => UserRole::SupportAgent->value,
             'compound_id' => $compound->id,
         ]));
         $this->getJson(self::ENDPOINT)->assertOk();
@@ -100,14 +100,14 @@ class OperationalAnalyticsTest extends TestCase
             ->assertOk()
             ->assertJsonStructure([
                 'data' => [
-                    'users'         => ['total', 'active', 'invited', 'pendingReview', 'suspended', 'archived'],
-                    'invitations'   => ['total', 'pending', 'accepted', 'revoked', 'expired'],
+                    'users' => ['total', 'active', 'invited', 'pendingReview', 'suspended', 'archived'],
+                    'invitations' => ['total', 'pending', 'accepted', 'revoked', 'expired'],
                     'verifications' => ['total', 'pendingReview', 'moreInfoRequested', 'approved', 'rejected'],
-                    'documents'     => ['total', 'submitted', 'approved', 'rejected'],
-                    'visitors'      => ['total', 'pending', 'allowed', 'denied', 'completed', 'cancelled'],
-                    'issues'        => ['total', 'new', 'inProgress', 'escalated', 'resolved', 'closed'],
+                    'documents' => ['total', 'submitted', 'approved', 'rejected'],
+                    'visitors' => ['total', 'pending', 'allowed', 'denied', 'completed', 'cancelled'],
+                    'issues' => ['total', 'new', 'inProgress', 'escalated', 'resolved', 'closed'],
                     'announcements' => ['total', 'draft', 'published', 'archived', 'requiresAckCount', 'ackCount'],
-                    'votes'         => ['total', 'draft', 'active', 'closed', 'cancelled', 'participations'],
+                    'votes' => ['total', 'draft', 'active', 'closed', 'cancelled', 'participations'],
                     'generatedAt',
                 ],
             ]);
@@ -122,17 +122,17 @@ class OperationalAnalyticsTest extends TestCase
         // 2 active + 1 suspended in target compound
         User::factory()->count(2)->create([
             'compound_id' => $compound->id,
-            'status'      => AccountStatus::Active->value,
+            'status' => AccountStatus::Active->value,
         ]);
         User::factory()->create([
             'compound_id' => $compound->id,
-            'status'      => AccountStatus::Suspended->value,
+            'status' => AccountStatus::Suspended->value,
         ]);
 
         // 1 active in a different compound — must NOT appear
         User::factory()->create([
             'compound_id' => Compound::factory()->create()->id,
-            'status'      => AccountStatus::Active->value,
+            'status' => AccountStatus::Active->value,
         ]);
 
         // Use super_admin (no compound_id) + X-Compound-Id header so the caller
@@ -155,25 +155,25 @@ class OperationalAnalyticsTest extends TestCase
         Issue::factory()->count(2)->create([
             'compound_id' => $compound->id,
             'building_id' => $building->id,
-            'status'      => 'new',
+            'status' => 'new',
         ]);
         Issue::factory()->create([
             'compound_id' => $compound->id,
             'building_id' => $building->id,
-            'status'      => 'escalated',
+            'status' => 'escalated',
         ]);
 
         // Issue in a different compound — must NOT appear
-        $other      = Compound::factory()->create();
+        $other = Compound::factory()->create();
         $otherBuild = Building::factory()->create(['compound_id' => $other->id]);
         Issue::factory()->create([
             'compound_id' => $other->id,
             'building_id' => $otherBuild->id,
-            'status'      => 'new',
+            'status' => 'new',
         ]);
 
         $admin = $this->makeAdmin([
-            'role'        => UserRole::CompoundAdmin->value,
+            'role' => UserRole::CompoundAdmin->value,
             'compound_id' => $compound->id,
         ]);
         Sanctum::actingAs($admin);
@@ -189,7 +189,7 @@ class OperationalAnalyticsTest extends TestCase
 
     public function test_building_filter_scopes_visitors_and_issues(): void
     {
-        $compound  = Compound::factory()->create();
+        $compound = Compound::factory()->create();
         $buildingA = Building::factory()->create(['compound_id' => $compound->id]);
         $buildingB = Building::factory()->create(['compound_id' => $compound->id]);
 
@@ -227,22 +227,22 @@ class OperationalAnalyticsTest extends TestCase
         Issue::factory()->create([
             'compound_id' => $compound->id,
             'building_id' => $building->id,
-            'created_at'  => now(),
-            'updated_at'  => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
 
         // Old issue — 30 days ago
         Issue::factory()->create([
             'compound_id' => $compound->id,
             'building_id' => $building->id,
-            'created_at'  => now()->subDays(30),
-            'updated_at'  => now()->subDays(30),
+            'created_at' => now()->subDays(30),
+            'updated_at' => now()->subDays(30),
         ]);
 
         Sanctum::actingAs($this->makeAdmin());
 
         $from = now()->subDays(5)->toDateString();
-        $to   = now()->toDateString();
+        $to = now()->toDateString();
 
         $this->getJson(self::ENDPOINT."?from={$from}&to={$to}")
             ->assertOk()
@@ -255,8 +255,8 @@ class OperationalAnalyticsTest extends TestCase
     {
         $compoundA = Compound::factory()->create();
         $compoundB = Compound::factory()->create();
-        $bldgA     = Building::factory()->create(['compound_id' => $compoundA->id]);
-        $bldgB     = Building::factory()->create(['compound_id' => $compoundB->id]);
+        $bldgA = Building::factory()->create(['compound_id' => $compoundA->id]);
+        $bldgB = Building::factory()->create(['compound_id' => $compoundB->id]);
 
         Issue::factory()->count(2)->create(['compound_id' => $compoundA->id, 'building_id' => $bldgA->id]);
         Issue::factory()->create(['compound_id' => $compoundB->id, 'building_id' => $bldgB->id]);
@@ -287,17 +287,17 @@ class OperationalAnalyticsTest extends TestCase
 
         $annoId = Str::ulid();
         DB::table('announcements')->insert([
-            'id'                      => $annoId,
-            'compound_id'             => $compound->id,
-            'category'                => 'general',
-            'status'                  => 'published',
+            'id' => $annoId,
+            'compound_id' => $compound->id,
+            'category' => 'general',
+            'status' => 'published',
             'requires_acknowledgement' => true,
-            'title_en'                => 'Notice',
-            'title_ar'                => 'إشعار',
-            'body_en'                 => 'Body',
-            'body_ar'                 => 'النص',
-            'created_at'              => now(),
-            'updated_at'              => now(),
+            'title_en' => 'Notice',
+            'title_ar' => 'إشعار',
+            'body_en' => 'Body',
+            'body_ar' => 'النص',
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
 
         $u1 = User::factory()->create();
@@ -308,7 +308,7 @@ class OperationalAnalyticsTest extends TestCase
         ]);
 
         $admin = $this->makeAdmin([
-            'role'        => UserRole::CompoundAdmin->value,
+            'role' => UserRole::CompoundAdmin->value,
             'compound_id' => $compound->id,
         ]);
         Sanctum::actingAs($admin);
@@ -324,26 +324,26 @@ class OperationalAnalyticsTest extends TestCase
     public function test_vote_participation_count_is_accurate(): void
     {
         $compound = Compound::factory()->create();
-        $creator  = $this->makeAdmin();
+        $creator = $this->makeAdmin();
 
-        $vote   = Vote::factory()->create([
+        $vote = Vote::factory()->create([
             'compound_id' => $compound->id,
-            'created_by'  => $creator->id,
-            'status'      => 'active',
+            'created_by' => $creator->id,
+            'status' => 'active',
         ]);
         $option = VoteOption::factory()->create(['vote_id' => $vote->id]);
 
         foreach (User::factory()->count(3)->create() as $u) {
             VoteParticipation::create([
-                'vote_id'              => $vote->id,
-                'user_id'              => $u->id,
-                'option_id'            => $option->id,
+                'vote_id' => $vote->id,
+                'user_id' => $u->id,
+                'option_id' => $option->id,
                 'eligibility_snapshot' => [],
             ]);
         }
 
         $admin = $this->makeAdmin([
-            'role'        => UserRole::CompoundAdmin->value,
+            'role' => UserRole::CompoundAdmin->value,
             'compound_id' => $compound->id,
         ]);
         Sanctum::actingAs($admin);

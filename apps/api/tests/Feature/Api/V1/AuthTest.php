@@ -5,13 +5,13 @@ namespace Tests\Feature\Api\V1;
 use App\Enums\AccountStatus;
 use App\Enums\Permission;
 use App\Enums\UserRole;
-use App\Models\AuditLog;
 use App\Models\User;
 use App\Models\UserScopeAssignment;
 use Database\Seeders\RbacSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Laravel\Sanctum\PersonalAccessToken;
 use Laravel\Sanctum\Sanctum;
 use Spatie\Permission\Models\Permission as SpatiePermission;
 use Spatie\Permission\Models\Role as SpatieRole;
@@ -282,7 +282,7 @@ class AuthTest extends TestCase
             ->json('data.token');
 
         [$tokenId] = explode('|', $token);
-        $storedToken = \Laravel\Sanctum\PersonalAccessToken::query()->findOrFail($tokenId);
+        $storedToken = PersonalAccessToken::query()->findOrFail($tokenId);
 
         $this->assertSame(
             ['admin:*', 'property:*', 'resident:*', 'finance:read'],
@@ -309,7 +309,7 @@ class AuthTest extends TestCase
             ->json('data.token');
 
         [$tokenId] = explode('|', $token);
-        $storedToken = \Laravel\Sanctum\PersonalAccessToken::query()->findOrFail($tokenId);
+        $storedToken = PersonalAccessToken::query()->findOrFail($tokenId);
 
         $this->assertSame(
             ['property:read', 'governance:*', 'finance:read', 'resident:read', 'issues:*'],

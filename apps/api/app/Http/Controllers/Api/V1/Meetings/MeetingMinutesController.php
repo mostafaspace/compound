@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Meetings;
 use App\Http\Controllers\Controller;
 use App\Models\Meetings\Meeting;
 use App\Models\Meetings\MeetingMinutes;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -28,12 +29,12 @@ class MeetingMinutesController extends Controller
             'body' => ['required', 'string'],
         ]);
 
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = $request->user();
 
         $minutes = MeetingMinutes::create([
             'meeting_id' => $meeting->id,
-            'body'       => $validated['body'],
+            'body' => $validated['body'],
             'created_by' => $user->id,
         ]);
 
@@ -48,11 +49,11 @@ class MeetingMinutesController extends Controller
             'body' => ['required', 'string'],
         ]);
 
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = $request->user();
 
         $minutes->update([
-            'body'       => $validated['body'],
+            'body' => $validated['body'],
             'updated_by' => $user->id,
         ]);
 

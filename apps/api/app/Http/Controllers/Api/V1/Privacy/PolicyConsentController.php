@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Privacy;
 
 use App\Http\Controllers\Controller;
 use App\Models\Privacy\UserPolicyConsent;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -13,7 +14,7 @@ class PolicyConsentController extends Controller
     /** List the authenticated user's consents */
     public function index(Request $request): JsonResponse
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = $request->user();
 
         $consents = UserPolicyConsent::where('user_id', $user->id)
@@ -27,11 +28,11 @@ class PolicyConsentController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'policyType'    => ['required', 'string', 'in:privacy_policy,terms_of_service,data_processing'],
+            'policyType' => ['required', 'string', 'in:privacy_policy,terms_of_service,data_processing'],
             'policyVersion' => ['required', 'string', 'max:20'],
         ]);
 
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = $request->user();
 
         // Revoke any previous active consent for this policy type
@@ -41,11 +42,11 @@ class PolicyConsentController extends Controller
             ->update(['revoked_at' => now()]);
 
         $consent = UserPolicyConsent::create([
-            'user_id'        => $user->id,
-            'policy_type'    => $validated['policyType'],
+            'user_id' => $user->id,
+            'policy_type' => $validated['policyType'],
             'policy_version' => $validated['policyVersion'],
-            'accepted_at'    => now(),
-            'ip_address'     => $request->ip(),
+            'accepted_at' => now(),
+            'ip_address' => $request->ip(),
         ]);
 
         return response()->json(['data' => $consent], 201);

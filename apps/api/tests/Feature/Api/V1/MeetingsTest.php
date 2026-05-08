@@ -26,7 +26,7 @@ class MeetingsTest extends TestCase
     private function makeAdmin(array $attrs = []): User
     {
         return User::factory()->create(array_merge([
-            'role'   => UserRole::SuperAdmin->value,
+            'role' => UserRole::SuperAdmin->value,
             'status' => AccountStatus::Active->value,
         ], $attrs));
     }
@@ -34,8 +34,8 @@ class MeetingsTest extends TestCase
     private function makeBoard(Compound $compound): User
     {
         return User::factory()->create([
-            'role'        => UserRole::BoardMember->value,
-            'status'      => AccountStatus::Active->value,
+            'role' => UserRole::BoardMember->value,
+            'status' => AccountStatus::Active->value,
             'compound_id' => $compound->id,
         ]);
     }
@@ -43,7 +43,7 @@ class MeetingsTest extends TestCase
     private function makeResident(array $attrs = []): User
     {
         return User::factory()->create(array_merge([
-            'role'   => UserRole::ResidentOwner->value,
+            'role' => UserRole::ResidentOwner->value,
             'status' => AccountStatus::Active->value,
         ], $attrs));
     }
@@ -62,8 +62,8 @@ class MeetingsTest extends TestCase
 
         $this->postJson(self::BASE, [
             'compoundId' => $compound->id,
-            'title'      => 'AGM',
-            'scope'      => 'association',
+            'title' => 'AGM',
+            'scope' => 'association',
         ])->assertForbidden();
     }
 
@@ -88,11 +88,11 @@ class MeetingsTest extends TestCase
         Sanctum::actingAs($this->makeAdmin());
 
         $this->postJson(self::BASE, [
-            'compoundId'  => $compound->id,
-            'title'       => 'Annual General Meeting',
-            'scope'       => 'association',
+            'compoundId' => $compound->id,
+            'title' => 'Annual General Meeting',
+            'scope' => 'association',
             'scheduledAt' => now()->addDays(7)->toDateTimeString(),
-            'location'    => 'Community Hall',
+            'location' => 'Community Hall',
         ])
             ->assertCreated()
             ->assertJsonPath('data.title', 'Annual General Meeting')
@@ -103,16 +103,16 @@ class MeetingsTest extends TestCase
     public function test_admin_can_update_meeting(): void
     {
         $compound = Compound::factory()->create();
-        $admin    = $this->makeAdmin();
-        $meeting  = Meeting::factory()->create([
+        $admin = $this->makeAdmin();
+        $meeting = Meeting::factory()->create([
             'compound_id' => $compound->id,
-            'created_by'  => $admin->id,
+            'created_by' => $admin->id,
         ]);
 
         Sanctum::actingAs($admin);
 
         $this->patchJson(self::BASE."/{$meeting->id}", [
-            'status'   => 'scheduled',
+            'status' => 'scheduled',
             'location' => 'Board Room',
         ])
             ->assertOk()
@@ -123,10 +123,10 @@ class MeetingsTest extends TestCase
     public function test_admin_can_cancel_meeting(): void
     {
         $compound = Compound::factory()->create();
-        $admin    = $this->makeAdmin();
-        $meeting  = Meeting::factory()->scheduled()->create([
+        $admin = $this->makeAdmin();
+        $meeting = Meeting::factory()->scheduled()->create([
             'compound_id' => $compound->id,
-            'created_by'  => $admin->id,
+            'created_by' => $admin->id,
         ]);
 
         Sanctum::actingAs($admin);
@@ -138,10 +138,10 @@ class MeetingsTest extends TestCase
 
     public function test_cannot_update_cancelled_meeting(): void
     {
-        $admin   = $this->makeAdmin();
+        $admin = $this->makeAdmin();
         $meeting = Meeting::factory()->cancelled()->create([
             'compound_id' => Compound::factory()->create()->id,
-            'created_by'  => $admin->id,
+            'created_by' => $admin->id,
         ]);
 
         Sanctum::actingAs($admin);
@@ -154,7 +154,7 @@ class MeetingsTest extends TestCase
     {
         $compoundA = Compound::factory()->create();
         $compoundB = Compound::factory()->create();
-        $admin     = $this->makeAdmin();
+        $admin = $this->makeAdmin();
 
         Meeting::factory()->count(3)->create(['compound_id' => $compoundA->id, 'created_by' => $admin->id]);
         Meeting::factory()->create(['compound_id' => $compoundB->id, 'created_by' => $admin->id]);
@@ -170,16 +170,16 @@ class MeetingsTest extends TestCase
 
     public function test_admin_can_add_agenda_item(): void
     {
-        $admin   = $this->makeAdmin();
+        $admin = $this->makeAdmin();
         $meeting = Meeting::factory()->create([
             'compound_id' => Compound::factory()->create()->id,
-            'created_by'  => $admin->id,
+            'created_by' => $admin->id,
         ]);
 
         Sanctum::actingAs($admin);
 
         $this->postJson(self::BASE."/{$meeting->id}/agenda", [
-            'title'           => 'Budget review',
+            'title' => 'Budget review',
             'durationMinutes' => 20,
         ])
             ->assertCreated()
@@ -189,10 +189,10 @@ class MeetingsTest extends TestCase
 
     public function test_agenda_item_auto_assigns_position(): void
     {
-        $admin   = $this->makeAdmin();
+        $admin = $this->makeAdmin();
         $meeting = Meeting::factory()->create([
             'compound_id' => Compound::factory()->create()->id,
-            'created_by'  => $admin->id,
+            'created_by' => $admin->id,
         ]);
 
         Sanctum::actingAs($admin);
@@ -207,10 +207,10 @@ class MeetingsTest extends TestCase
 
     public function test_admin_can_delete_agenda_item(): void
     {
-        $admin   = $this->makeAdmin();
+        $admin = $this->makeAdmin();
         $meeting = Meeting::factory()->create([
             'compound_id' => Compound::factory()->create()->id,
-            'created_by'  => $admin->id,
+            'created_by' => $admin->id,
         ]);
 
         Sanctum::actingAs($admin);
@@ -227,13 +227,13 @@ class MeetingsTest extends TestCase
 
     public function test_admin_can_invite_participants(): void
     {
-        $admin   = $this->makeAdmin();
+        $admin = $this->makeAdmin();
         $meeting = Meeting::factory()->create([
             'compound_id' => Compound::factory()->create()->id,
-            'created_by'  => $admin->id,
+            'created_by' => $admin->id,
         ]);
-        $user1   = User::factory()->create();
-        $user2   = User::factory()->create();
+        $user1 = User::factory()->create();
+        $user2 = User::factory()->create();
 
         Sanctum::actingAs($admin);
 
@@ -247,10 +247,10 @@ class MeetingsTest extends TestCase
 
     public function test_inviting_same_user_twice_is_idempotent(): void
     {
-        $admin   = $this->makeAdmin();
+        $admin = $this->makeAdmin();
         $meeting = Meeting::factory()->create([
             'compound_id' => Compound::factory()->create()->id,
-            'created_by'  => $admin->id,
+            'created_by' => $admin->id,
         ]);
         $user = User::factory()->create();
 
@@ -264,17 +264,17 @@ class MeetingsTest extends TestCase
 
     public function test_admin_can_confirm_attendance(): void
     {
-        $admin       = $this->makeAdmin();
-        $meeting     = Meeting::factory()->create([
+        $admin = $this->makeAdmin();
+        $meeting = Meeting::factory()->create([
             'compound_id' => Compound::factory()->create()->id,
-            'created_by'  => $admin->id,
+            'created_by' => $admin->id,
         ]);
         $participant = MeetingParticipant::create([
-            'meeting_id'   => $meeting->id,
-            'user_id'      => User::factory()->create()->id,
-            'rsvp_status'  => 'accepted',
-            'invited_at'   => now(),
-            'attended'     => false,
+            'meeting_id' => $meeting->id,
+            'user_id' => User::factory()->create()->id,
+            'rsvp_status' => 'accepted',
+            'invited_at' => now(),
+            'attended' => false,
         ]);
 
         Sanctum::actingAs($admin);
@@ -290,10 +290,10 @@ class MeetingsTest extends TestCase
 
     public function test_admin_can_write_and_publish_minutes(): void
     {
-        $admin   = $this->makeAdmin();
+        $admin = $this->makeAdmin();
         $meeting = Meeting::factory()->completed()->create([
             'compound_id' => Compound::factory()->create()->id,
-            'created_by'  => $admin->id,
+            'created_by' => $admin->id,
         ]);
 
         Sanctum::actingAs($admin);
@@ -313,10 +313,10 @@ class MeetingsTest extends TestCase
 
     public function test_cannot_write_minutes_twice(): void
     {
-        $admin   = $this->makeAdmin();
+        $admin = $this->makeAdmin();
         $meeting = Meeting::factory()->completed()->create([
             'compound_id' => Compound::factory()->create()->id,
-            'created_by'  => $admin->id,
+            'created_by' => $admin->id,
         ]);
 
         Sanctum::actingAs($admin);
@@ -328,15 +328,15 @@ class MeetingsTest extends TestCase
 
     public function test_admin_can_update_minutes(): void
     {
-        $admin   = $this->makeAdmin();
+        $admin = $this->makeAdmin();
         $meeting = Meeting::factory()->completed()->create([
             'compound_id' => Compound::factory()->create()->id,
-            'created_by'  => $admin->id,
+            'created_by' => $admin->id,
         ]);
 
         MeetingMinutes::create([
             'meeting_id' => $meeting->id,
-            'body'       => 'Initial draft.',
+            'body' => 'Initial draft.',
             'created_by' => $admin->id,
         ]);
 
@@ -353,19 +353,19 @@ class MeetingsTest extends TestCase
 
     public function test_admin_can_create_action_item(): void
     {
-        $admin   = $this->makeAdmin();
+        $admin = $this->makeAdmin();
         $meeting = Meeting::factory()->completed()->create([
             'compound_id' => Compound::factory()->create()->id,
-            'created_by'  => $admin->id,
+            'created_by' => $admin->id,
         ]);
         $assignee = User::factory()->create();
 
         Sanctum::actingAs($admin);
 
         $this->postJson(self::BASE."/{$meeting->id}/action-items", [
-            'title'      => 'Update maintenance budget',
+            'title' => 'Update maintenance budget',
             'assignedTo' => $assignee->id,
-            'dueDate'    => now()->addDays(14)->toDateString(),
+            'dueDate' => now()->addDays(14)->toDateString(),
         ])
             ->assertCreated()
             ->assertJsonPath('data.title', 'Update maintenance budget')
@@ -374,10 +374,10 @@ class MeetingsTest extends TestCase
 
     public function test_admin_can_mark_action_item_done(): void
     {
-        $admin   = $this->makeAdmin();
+        $admin = $this->makeAdmin();
         $meeting = Meeting::factory()->completed()->create([
             'compound_id' => Compound::factory()->create()->id,
-            'created_by'  => $admin->id,
+            'created_by' => $admin->id,
         ]);
         $item = MeetingActionItem::factory()->create([
             'meeting_id' => $meeting->id,
@@ -396,10 +396,10 @@ class MeetingsTest extends TestCase
 
     public function test_action_items_status_validation(): void
     {
-        $admin   = $this->makeAdmin();
+        $admin = $this->makeAdmin();
         $meeting = Meeting::factory()->create([
             'compound_id' => Compound::factory()->create()->id,
-            'created_by'  => $admin->id,
+            'created_by' => $admin->id,
         ]);
         $item = MeetingActionItem::factory()->create([
             'meeting_id' => $meeting->id,
@@ -419,16 +419,16 @@ class MeetingsTest extends TestCase
     {
         $compound = Compound::factory()->create();
         $resident = $this->makeResident(['compound_id' => $compound->id]);
-        $admin    = $this->makeAdmin();
-        $meeting  = Meeting::factory()->scheduled()->create([
+        $admin = $this->makeAdmin();
+        $meeting = Meeting::factory()->scheduled()->create([
             'compound_id' => $compound->id,
-            'created_by'  => $admin->id,
+            'created_by' => $admin->id,
         ]);
         MeetingParticipant::create([
-            'meeting_id'  => $meeting->id,
-            'user_id'     => $resident->id,
+            'meeting_id' => $meeting->id,
+            'user_id' => $resident->id,
             'rsvp_status' => 'pending',
-            'invited_at'  => now(),
+            'invited_at' => now(),
         ]);
 
         Sanctum::actingAs($resident);
@@ -442,16 +442,16 @@ class MeetingsTest extends TestCase
 
     public function test_admin_can_record_decision(): void
     {
-        $admin   = $this->makeAdmin();
+        $admin = $this->makeAdmin();
         $meeting = Meeting::factory()->completed()->create([
             'compound_id' => Compound::factory()->create()->id,
-            'created_by'  => $admin->id,
+            'created_by' => $admin->id,
         ]);
 
         Sanctum::actingAs($admin);
 
         $this->postJson(self::BASE."/{$meeting->id}/decisions", [
-            'title'       => 'Approve 2026 maintenance budget',
+            'title' => 'Approve 2026 maintenance budget',
             'description' => 'Voted 7-2 in favour.',
         ])
             ->assertCreated()
@@ -476,8 +476,8 @@ class MeetingsTest extends TestCase
 
         $this->postJson(self::BASE, [
             'compoundId' => $compound->id,
-            'title'      => 'Test',
-            'scope'      => 'invalid_scope',
+            'title' => 'Test',
+            'scope' => 'invalid_scope',
         ])->assertUnprocessable();
     }
 }

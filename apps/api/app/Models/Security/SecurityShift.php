@@ -15,6 +15,7 @@ class SecurityShift extends Model
 {
     /** @use HasFactory<SecurityShiftFactory> */
     use HasFactory;
+
     use HasUlids;
 
     protected static function newFactory(): SecurityShiftFactory
@@ -37,7 +38,7 @@ class SecurityShift extends Model
     {
         return [
             'started_at' => 'datetime',
-            'ended_at'   => 'datetime',
+            'ended_at' => 'datetime',
         ];
     }
 

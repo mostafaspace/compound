@@ -54,12 +54,12 @@ class FinanceReportController extends Controller
             ->sum('amount'));
 
         $totalOutstanding = (float) $accountScope->clone()->where('balance', '>', 0)->sum('balance');
-        $totalCreditRaw   = (float) $accountScope->clone()->where('balance', '<', 0)->sum('balance');
+        $totalCreditRaw = (float) $accountScope->clone()->where('balance', '<', 0)->sum('balance');
 
         $unpaidCount = $accountScope->clone()->where('balance', '>', 0)->count();
         $creditCount = $accountScope->clone()->where('balance', '<', 0)->count();
-        $zeroCount   = $accountScope->clone()->where('balance', '=', 0)->count();
-        $totalCount  = $accountScope->count();
+        $zeroCount = $accountScope->clone()->where('balance', '=', 0)->count();
+        $totalCount = $accountScope->count();
 
         $collectionRate = $totalBilled > 0
             ? round($totalCollected / $totalBilled * 100, 1)
@@ -73,17 +73,17 @@ class FinanceReportController extends Controller
 
         return response()->json([
             'data' => [
-                'totalBilled'             => number_format($totalBilled, 2, '.', ''),
-                'totalCollected'          => number_format($totalCollected, 2, '.', ''),
-                'totalOutstanding'        => number_format($totalOutstanding, 2, '.', ''),
-                'totalCredit'             => number_format(abs($totalCreditRaw), 2, '.', ''),
-                'collectionRate'          => $collectionRate,
-                'unpaidUnitsCount'        => $unpaidCount,
-                'creditUnitsCount'        => $creditCount,
-                'zeroBalanceUnitsCount'   => $zeroCount,
-                'totalAccountsCount'      => $totalCount,
-                'pendingPaymentsCount'    => (int) ($pendingRow->cnt ?? 0),
-                'pendingPaymentsAmount'   => number_format((float) ($pendingRow->total ?? 0), 2, '.', ''),
+                'totalBilled' => number_format($totalBilled, 2, '.', ''),
+                'totalCollected' => number_format($totalCollected, 2, '.', ''),
+                'totalOutstanding' => number_format($totalOutstanding, 2, '.', ''),
+                'totalCredit' => number_format(abs($totalCreditRaw), 2, '.', ''),
+                'collectionRate' => $collectionRate,
+                'unpaidUnitsCount' => $unpaidCount,
+                'creditUnitsCount' => $creditCount,
+                'zeroBalanceUnitsCount' => $zeroCount,
+                'totalAccountsCount' => $totalCount,
+                'pendingPaymentsCount' => (int) ($pendingRow->cnt ?? 0),
+                'pendingPaymentsAmount' => number_format((float) ($pendingRow->total ?? 0), 2, '.', ''),
             ],
         ]);
     }
@@ -95,8 +95,8 @@ class FinanceReportController extends Controller
     {
         $validated = $request->validate([
             'balanceStatus' => ['nullable', 'string', 'in:all,positive,zero,credit'],
-            'buildingId'    => ['nullable', 'string'],
-            'currency'      => ['nullable', 'string', 'max:3'],
+            'buildingId' => ['nullable', 'string'],
+            'currency' => ['nullable', 'string', 'max:3'],
         ]);
 
         $status = $validated['balanceStatus'] ?? 'all';
@@ -111,8 +111,8 @@ class FinanceReportController extends Controller
                 'unit', fn ($uq) => $uq->whereIn('compound_id', $compoundIds)
             ))
             ->when($status === 'positive', fn ($q) => $q->where('balance', '>', 0))
-            ->when($status === 'zero',     fn ($q) => $q->where('balance', '=', 0))
-            ->when($status === 'credit',   fn ($q) => $q->where('balance', '<', 0))
+            ->when($status === 'zero', fn ($q) => $q->where('balance', '=', 0))
+            ->when($status === 'credit', fn ($q) => $q->where('balance', '<', 0))
             ->when(
                 $validated['buildingId'] ?? null,
                 fn ($q, $id) => $q->whereHas('unit.building', fn ($bq) => $bq->where('buildings.id', $id))
@@ -151,8 +151,8 @@ class FinanceReportController extends Controller
             ->get()
             ->map(fn ($row) => [
                 'method' => $row->method,
-                'count'  => (int) $row->count,
-                'total'  => number_format((float) $row->total, 2, '.', ''),
+                'count' => (int) $row->count,
+                'total' => number_format((float) $row->total, 2, '.', ''),
             ]);
 
         return response()->json(['data' => $rows]);

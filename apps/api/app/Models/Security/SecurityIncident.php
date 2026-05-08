@@ -14,6 +14,7 @@ class SecurityIncident extends Model
 {
     /** @use HasFactory<SecurityIncidentFactory> */
     use HasFactory;
+
     use HasUlids;
 
     protected static function newFactory(): SecurityIncidentFactory
@@ -38,7 +39,7 @@ class SecurityIncident extends Model
     protected function casts(): array
     {
         return [
-            'metadata'    => 'array',
+            'metadata' => 'array',
             'occurred_at' => 'datetime',
             'resolved_at' => 'datetime',
         ];

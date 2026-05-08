@@ -4,10 +4,10 @@ namespace App\Http\Controllers\Api\V1\Maintenance;
 
 use App\Http\Controllers\Controller;
 use App\Models\Maintenance\WorkOrder;
+use App\Models\User;
+use App\Services\CompoundContextService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-
-use App\Services\CompoundContextService;
 
 // CM-83 / CM-118: Work order lifecycle transitions
 class WorkOrderStatusController extends Controller
@@ -17,7 +17,7 @@ class WorkOrderStatusController extends Controller
     /** Draft → Requested */
     public function submit(Request $request, WorkOrder $workOrder): JsonResponse
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = $request->user();
         $this->context->ensureUserCanAccessCompound($user, $workOrder->compound_id);
 
@@ -31,7 +31,7 @@ class WorkOrderStatusController extends Controller
     /** Requested/Quoted → Approved */
     public function approve(Request $request, WorkOrder $workOrder): JsonResponse
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = $request->user();
         $this->context->ensureUserCanAccessCompound($user, $workOrder->compound_id);
 
@@ -42,9 +42,9 @@ class WorkOrderStatusController extends Controller
         ]);
 
         $workOrder->update([
-            'status'       => 'approved',
-            'approved_by'  => $user->id,
-            'approved_at'  => now(),
+            'status' => 'approved',
+            'approved_by' => $user->id,
+            'approved_at' => now(),
             'approved_cost' => $validated['approvedCost'] ?? $workOrder->estimated_cost,
         ]);
 
@@ -54,7 +54,7 @@ class WorkOrderStatusController extends Controller
     /** Requested/Quoted → Rejected */
     public function reject(Request $request, WorkOrder $workOrder): JsonResponse
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = $request->user();
         $this->context->ensureUserCanAccessCompound($user, $workOrder->compound_id);
 
@@ -65,7 +65,7 @@ class WorkOrderStatusController extends Controller
         ]);
 
         $workOrder->update([
-            'status'           => 'rejected',
+            'status' => 'rejected',
             'rejection_reason' => $validated['rejectionReason'],
         ]);
 
@@ -75,14 +75,14 @@ class WorkOrderStatusController extends Controller
     /** Approved → In Progress */
     public function start(Request $request, WorkOrder $workOrder): JsonResponse
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = $request->user();
         $this->context->ensureUserCanAccessCompound($user, $workOrder->compound_id);
 
         abort_if($workOrder->status !== 'approved', 422, 'Work order must be approved before starting.');
 
         $workOrder->update([
-            'status'     => 'in_progress',
+            'status' => 'in_progress',
             'started_at' => now(),
         ]);
 
@@ -92,7 +92,7 @@ class WorkOrderStatusController extends Controller
     /** In Progress → Completed */
     public function complete(Request $request, WorkOrder $workOrder): JsonResponse
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = $request->user();
         $this->context->ensureUserCanAccessCompound($user, $workOrder->compound_id);
 
@@ -100,14 +100,14 @@ class WorkOrderStatusController extends Controller
 
         $validated = $request->validate([
             'completionNotes' => ['nullable', 'string', 'max:3000'],
-            'actualCost'      => ['nullable', 'numeric', 'min:0'],
+            'actualCost' => ['nullable', 'numeric', 'min:0'],
         ]);
 
         $workOrder->update([
-            'status'           => 'completed',
-            'completed_at'     => now(),
+            'status' => 'completed',
+            'completed_at' => now(),
             'completion_notes' => $validated['completionNotes'] ?? null,
-            'actual_cost'      => $validated['actualCost'] ?? null,
+            'actual_cost' => $validated['actualCost'] ?? null,
         ]);
 
         return response()->json(['data' => $workOrder->fresh()->load(['vendor', 'creator', 'approver'])]);
@@ -116,14 +116,14 @@ class WorkOrderStatusController extends Controller
     /** Any non-terminal → Cancelled */
     public function cancel(Request $request, WorkOrder $workOrder): JsonResponse
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = $request->user();
         $this->context->ensureUserCanAccessCompound($user, $workOrder->compound_id);
 
         abort_if(in_array($workOrder->status, ['completed', 'cancelled', 'rejected'], true), 422, 'Work order is already closed.');
 
         $workOrder->update([
-            'status'       => 'cancelled',
+            'status' => 'cancelled',
             'cancelled_by' => $user->id,
             'cancelled_at' => now(),
         ]);

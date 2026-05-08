@@ -16,6 +16,7 @@ class Vote extends Model
 {
     /** @use HasFactory<VoteFactory> */
     use HasFactory;
+
     use HasUlids;
 
     protected static function newFactory(): VoteFactory
@@ -44,10 +45,10 @@ class Vote extends Model
     {
         return [
             'requires_doc_compliance' => 'boolean',
-            'is_anonymous'            => 'boolean',
-            'starts_at'               => 'datetime',
-            'ends_at'                 => 'datetime',
-            'result_applied_at'       => 'datetime',
+            'is_anonymous' => 'boolean',
+            'starts_at' => 'datetime',
+            'ends_at' => 'datetime',
+            'result_applied_at' => 'datetime',
         ];
     }
 

@@ -2,9 +2,13 @@
 
 namespace App\Services;
 
+use App\Models\Property\Building;
+use App\Models\Property\Floor;
+use App\Models\Property\Unit;
 use App\Models\User;
 use App\Models\UserScopeAssignment;
-use Illuminate\Support\Collection;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Schema;
 
 class ScopeResolver
 {
@@ -31,7 +35,7 @@ class ScopeResolver
         // Building assignments → get their compound_id in one query
         $buildingIds = $assignments->where('scope_type', 'building')->pluck('scope_id');
         if ($buildingIds->isNotEmpty()) {
-            $cids = \App\Models\Property\Building::whereIn('id', $buildingIds->all())
+            $cids = Building::whereIn('id', $buildingIds->all())
                 ->pluck('compound_id');
             $ids->push(...$cids->all());
         }
@@ -39,7 +43,7 @@ class ScopeResolver
         // Floor assignments → get building→compound_id in one query
         $floorIds = $assignments->where('scope_type', 'floor')->pluck('scope_id');
         if ($floorIds->isNotEmpty()) {
-            $cids = \App\Models\Property\Floor::whereIn('floors.id', $floorIds->all())
+            $cids = Floor::whereIn('floors.id', $floorIds->all())
                 ->join('buildings', 'floors.building_id', '=', 'buildings.id')
                 ->pluck('buildings.compound_id');
             $ids->push(...$cids->all());
@@ -48,7 +52,7 @@ class ScopeResolver
         // Unit assignments → get compound_id in one query
         $unitIds = $assignments->where('scope_type', 'unit')->pluck('scope_id');
         if ($unitIds->isNotEmpty()) {
-            $cids = \App\Models\Property\Unit::whereIn('id', $unitIds->all())
+            $cids = Unit::whereIn('id', $unitIds->all())
                 ->pluck('compound_id');
             $ids->push(...$cids->all());
         }
@@ -74,15 +78,15 @@ class ScopeResolver
         foreach ($assignments as $assignment) {
             match ($assignment->scope_type) {
                 'compound' => $ids->push(
-                    ...\App\Models\Property\Building::where('compound_id', $assignment->scope_id)
+                    ...Building::where('compound_id', $assignment->scope_id)
                         ->pluck('id')->all()
                 ),
                 'building' => $ids->push($assignment->scope_id),
                 'floor' => $ids->push(
-                    \App\Models\Property\Floor::find($assignment->scope_id)?->building_id
+                    Floor::find($assignment->scope_id)?->building_id
                 ),
                 'unit' => $ids->push(
-                    \App\Models\Property\Unit::find($assignment->scope_id)?->building_id
+                    Unit::find($assignment->scope_id)?->building_id
                 ),
                 default => null,
             };
@@ -91,7 +95,7 @@ class ScopeResolver
         $ids = $ids->filter()->unique();
 
         if ($compoundId !== null) {
-            $validIds = \App\Models\Property\Building::whereIn('buildings.id', $ids->all())
+            $validIds = Building::whereIn('buildings.id', $ids->all())
                 ->where('buildings.compound_id', $compoundId)
                 ->pluck('id');
             $ids = collect($validIds);
@@ -118,17 +122,16 @@ class ScopeResolver
         foreach ($assignments as $assignment) {
             match ($assignment->scope_type) {
                 'compound' => $ids->push(
-                    ...\App\Models\Property\Floor::whereHas('building', fn ($q) =>
-                        $q->where('compound_id', $assignment->scope_id)
+                    ...Floor::whereHas('building', fn ($q) => $q->where('compound_id', $assignment->scope_id)
                     )->pluck('id')->all()
                 ),
                 'building' => $ids->push(
-                    ...\App\Models\Property\Floor::where('building_id', $assignment->scope_id)
+                    ...Floor::where('building_id', $assignment->scope_id)
                         ->pluck('id')->all()
                 ),
                 'floor' => $ids->push($assignment->scope_id),
                 'unit' => $ids->push(
-                    \App\Models\Property\Unit::find($assignment->scope_id)?->floor_id
+                    Unit::find($assignment->scope_id)?->floor_id
                 ),
                 default => null,
             };
@@ -137,7 +140,7 @@ class ScopeResolver
         $ids = $ids->filter()->unique();
 
         if ($buildingId !== null) {
-            $validIds = \App\Models\Property\Floor::whereIn('floors.id', $ids->all())
+            $validIds = Floor::whereIn('floors.id', $ids->all())
                 ->where('floors.building_id', $buildingId)
                 ->pluck('id');
             $ids = collect($validIds);
@@ -171,7 +174,7 @@ class ScopeResolver
      * This method is "Property-Aware": it detects if the model has direct
      * columns (building_id, floor_id) or must scope via a 'unit' relationship.
      */
-    public function scopePropertyQuery(\Illuminate\Database\Eloquent\Builder $query, User $user): void
+    public function scopePropertyQuery(Builder $query, User $user): void
     {
         $assignments = $user->scopeAssignments()->get();
 
@@ -190,12 +193,12 @@ class ScopeResolver
         $table = $model->getTable();
 
         // Detect available columns once for this query
-        $columns = \Illuminate\Support\Facades\Schema::getColumnListing($table);
+        $columns = Schema::getColumnListing($table);
         $hasCompound = in_array('compound_id', $columns, true);
         $hasBuilding = in_array('building_id', $columns, true);
-        $hasFloor    = in_array('floor_id', $columns, true);
-        $hasUnit     = in_array('unit_id', $columns, true);
-        $isUnit      = in_array('id', $columns, true) && $table === 'units';
+        $hasFloor = in_array('floor_id', $columns, true);
+        $hasUnit = in_array('unit_id', $columns, true);
+        $isUnit = in_array('id', $columns, true) && $table === 'units';
 
         $query->where(function ($q) use ($assignments, $table, $hasCompound, $hasBuilding, $hasFloor, $hasUnit, $isUnit): void {
             foreach ($assignments as $assignment) {
@@ -225,23 +228,23 @@ class ScopeResolver
     }
 
     private function assignmentCoversResource(
-        \App\Models\UserScopeAssignment $assignment,
+        UserScopeAssignment $assignment,
         string $targetType,
         string $targetId
     ): bool {
         return match ($assignment->scope_type) {
             'compound' => match ($targetType) {
                 'compound' => $assignment->scope_id === $targetId,
-                'building' => \App\Models\Property\Building::where('id', $targetId)
+                'building' => Building::where('id', $targetId)
                     ->where('compound_id', $assignment->scope_id)->exists(),
-                'floor' => \App\Models\Property\Floor::where('id', $targetId)
+                'floor' => Floor::where('id', $targetId)
                     ->whereHas('building', fn ($q) => $q->where('compound_id', $assignment->scope_id))
                     ->exists(),
                 default => false,
             },
             'building' => match ($targetType) {
                 'building' => $assignment->scope_id === $targetId,
-                'floor' => \App\Models\Property\Floor::where('id', $targetId)
+                'floor' => Floor::where('id', $targetId)
                     ->where('building_id', $assignment->scope_id)->exists(),
                 default => false,
             },

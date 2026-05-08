@@ -16,22 +16,22 @@ class NotificationDeliveryLogFactory extends Factory
     {
         return [
             'notification_id' => Notification::factory(),
-            'channel'         => fake()->randomElement(NotificationChannel::cases())->value,
-            'status'          => DeliveryStatus::Sent->value,
-            'recipient'       => 'exa***',
-            'provider'        => 'mock',
+            'channel' => fake()->randomElement(NotificationChannel::cases())->value,
+            'status' => DeliveryStatus::Sent->value,
+            'recipient' => 'exa***',
+            'provider' => 'mock',
             'provider_response' => ['message_id' => 'mock_'.fake()->md5()],
-            'error_message'   => null,
-            'attempt_number'  => 1,
+            'error_message' => null,
+            'attempt_number' => 1,
         ];
     }
 
     public function failed(): static
     {
         return $this->state([
-            'status'          => DeliveryStatus::Failed->value,
+            'status' => DeliveryStatus::Failed->value,
             'provider_response' => null,
-            'error_message'   => 'No device tokens registered for user',
+            'error_message' => 'No device tokens registered for user',
         ]);
     }
 }

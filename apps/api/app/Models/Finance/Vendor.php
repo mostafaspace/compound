@@ -28,7 +28,7 @@ class Vendor extends Model
     protected function casts(): array
     {
         return [
-            'type'      => VendorType::class,
+            'type' => VendorType::class,
             'is_active' => 'boolean',
         ];
     }

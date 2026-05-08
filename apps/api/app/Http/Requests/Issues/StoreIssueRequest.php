@@ -43,7 +43,7 @@ class StoreIssueRequest extends FormRequest
     public function withValidator($validator)
     {
         $validator->after(function ($validator) {
-            if (!$this->unitId && !$this->buildingId) {
+            if (! $this->unitId && ! $this->buildingId) {
                 $validator->errors()->add('location', 'An issue must be linked to a building or a unit.');
             }
 

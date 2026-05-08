@@ -26,21 +26,21 @@ class AuditLogger
     ): void {
         try {
             AuditLog::query()->create([
-                'actor_id'       => $actor?->id,
-                'action'         => $action,
+                'actor_id' => $actor?->id,
+                'action' => $action,
                 'auditable_type' => $auditableType,
-                'auditable_id'   => $auditableId,
-                'ip_address'     => $request?->ip(),
-                'user_agent'     => $request?->userAgent(),
-                'method'         => $request?->method(),
-                'path'           => $request?->path(),
-                'status_code'    => $statusCode,
-                'severity'       => $severity,
-                'reason'         => $reason,
-                'metadata'       => $metadata,
+                'auditable_id' => $auditableId,
+                'ip_address' => $request?->ip(),
+                'user_agent' => $request?->userAgent(),
+                'method' => $request?->method(),
+                'path' => $request?->path(),
+                'status_code' => $statusCode,
+                'severity' => $severity,
+                'reason' => $reason,
+                'metadata' => $metadata,
             ]);
         } catch (Throwable $e) {
-            report_if(app()->isLocal(), 'Audit log write failed: ' . $e->getMessage());
+            report_if(app()->isLocal(), 'Audit log write failed: '.$e->getMessage());
         }
     }
 }

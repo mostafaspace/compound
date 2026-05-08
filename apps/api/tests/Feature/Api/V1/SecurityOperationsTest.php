@@ -7,12 +7,14 @@ use App\Enums\UserRole;
 use App\Models\Property\Building;
 use App\Models\Property\Compound;
 use App\Models\Security\ManualVisitorEntry;
+use App\Models\Security\SecurityDevice;
 use App\Models\Security\SecurityGate;
 use App\Models\Security\SecurityIncident;
 use App\Models\Security\SecurityShift;
 use App\Models\Security\SecurityShiftAssignment;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -26,7 +28,7 @@ class SecurityOperationsTest extends TestCase
     private function makeAdmin(array $attrs = []): User
     {
         return User::factory()->create(array_merge([
-            'role'   => UserRole::SuperAdmin->value,
+            'role' => UserRole::SuperAdmin->value,
             'status' => AccountStatus::Active->value,
         ], $attrs));
     }
@@ -34,8 +36,8 @@ class SecurityOperationsTest extends TestCase
     private function makeGuard(Compound $compound): User
     {
         return User::factory()->create([
-            'role'        => UserRole::SecurityGuard->value,
-            'status'      => AccountStatus::Active->value,
+            'role' => UserRole::SecurityGuard->value,
+            'status' => AccountStatus::Active->value,
             'compound_id' => $compound->id,
         ]);
     }
@@ -43,7 +45,7 @@ class SecurityOperationsTest extends TestCase
     private function makeResident(array $attrs = []): User
     {
         return User::factory()->create(array_merge([
-            'role'   => UserRole::ResidentOwner->value,
+            'role' => UserRole::ResidentOwner->value,
             'status' => AccountStatus::Active->value,
         ], $attrs));
     }
@@ -71,7 +73,7 @@ class SecurityOperationsTest extends TestCase
     {
         $compound = Compound::factory()->create();
         Sanctum::actingAs($this->makeAdmin([
-            'role'        => UserRole::CompoundAdmin->value,
+            'role' => UserRole::CompoundAdmin->value,
             'compound_id' => $compound->id,
         ]));
         $this->getJson('/api/v1/security/gates')->assertOk();
@@ -92,8 +94,8 @@ class SecurityOperationsTest extends TestCase
 
         $this->postJson('/api/v1/security/gates', [
             'compoundId' => $compound->id,
-            'name'       => 'Main Gate',
-            'zone'       => 'Zone A',
+            'name' => 'Main Gate',
+            'zone' => 'Zone A',
         ])
             ->assertCreated()
             ->assertJsonPath('data.name', 'Main Gate')
@@ -113,13 +115,13 @@ class SecurityOperationsTest extends TestCase
     public function test_admin_can_update_gate(): void
     {
         $compound = Compound::factory()->create();
-        $gate     = SecurityGate::factory()->create(['compound_id' => $compound->id]);
+        $gate = SecurityGate::factory()->create(['compound_id' => $compound->id]);
 
         Sanctum::actingAs($this->makeAdmin());
 
         $this->patchJson("/api/v1/security/gates/{$gate->id}", [
             'isActive' => false,
-            'zone'     => 'Zone B',
+            'zone' => 'Zone B',
         ])
             ->assertOk()
             ->assertJsonPath('data.is_active', false)
@@ -150,7 +152,7 @@ class SecurityOperationsTest extends TestCase
 
         $this->postJson('/api/v1/security/shifts', [
             'compoundId' => $compound->id,
-            'name'       => 'Morning Shift',
+            'name' => 'Morning Shift',
         ])
             ->assertCreated()
             ->assertJsonPath('data.name', 'Morning Shift')
@@ -160,10 +162,10 @@ class SecurityOperationsTest extends TestCase
     public function test_admin_can_activate_shift(): void
     {
         $compound = Compound::factory()->create();
-        $admin    = $this->makeAdmin();
-        $shift    = SecurityShift::factory()->create([
+        $admin = $this->makeAdmin();
+        $shift = SecurityShift::factory()->create([
             'compound_id' => $compound->id,
-            'created_by'  => $admin->id,
+            'created_by' => $admin->id,
         ]);
 
         Sanctum::actingAs($admin);
@@ -178,7 +180,7 @@ class SecurityOperationsTest extends TestCase
         $admin = $this->makeAdmin();
         $shift = SecurityShift::factory()->active()->create([
             'compound_id' => Compound::factory()->create()->id,
-            'created_by'  => $admin->id,
+            'created_by' => $admin->id,
         ]);
 
         Sanctum::actingAs($admin);
@@ -190,10 +192,10 @@ class SecurityOperationsTest extends TestCase
     public function test_admin_can_close_shift_with_handover_notes(): void
     {
         $compound = Compound::factory()->create();
-        $admin    = $this->makeAdmin();
-        $shift    = SecurityShift::factory()->active()->create([
+        $admin = $this->makeAdmin();
+        $shift = SecurityShift::factory()->active()->create([
             'compound_id' => $compound->id,
-            'created_by'  => $admin->id,
+            'created_by' => $admin->id,
         ]);
 
         Sanctum::actingAs($admin);
@@ -209,19 +211,19 @@ class SecurityOperationsTest extends TestCase
     public function test_admin_can_assign_guard_to_shift(): void
     {
         $compound = Compound::factory()->create();
-        $admin    = $this->makeAdmin();
-        $guard    = $this->makeGuard($compound);
-        $gate     = SecurityGate::factory()->create(['compound_id' => $compound->id]);
-        $shift    = SecurityShift::factory()->active()->create([
+        $admin = $this->makeAdmin();
+        $guard = $this->makeGuard($compound);
+        $gate = SecurityGate::factory()->create(['compound_id' => $compound->id]);
+        $shift = SecurityShift::factory()->active()->create([
             'compound_id' => $compound->id,
-            'created_by'  => $admin->id,
+            'created_by' => $admin->id,
         ]);
 
         Sanctum::actingAs($admin);
 
         $this->postJson("/api/v1/security/shifts/{$shift->id}/assignments", [
             'guardUserId' => $guard->id,
-            'gateId'      => $gate->id,
+            'gateId' => $gate->id,
         ])
             ->assertCreated()
             ->assertJsonPath('data.guard_user_id', $guard->id);
@@ -229,18 +231,18 @@ class SecurityOperationsTest extends TestCase
 
     public function test_guard_can_checkin_and_checkout(): void
     {
-        $compound  = Compound::factory()->create();
-        $admin     = $this->makeAdmin();
-        $guard     = $this->makeGuard($compound);
-        $shift     = SecurityShift::factory()->active()->create([
+        $compound = Compound::factory()->create();
+        $admin = $this->makeAdmin();
+        $guard = $this->makeGuard($compound);
+        $shift = SecurityShift::factory()->active()->create([
             'compound_id' => $compound->id,
-            'created_by'  => $admin->id,
+            'created_by' => $admin->id,
         ]);
         $assignment = SecurityShiftAssignment::create([
-            'shift_id'      => $shift->id,
-            'gate_id'       => null,
+            'shift_id' => $shift->id,
+            'gate_id' => null,
             'guard_user_id' => $guard->id,
-            'is_active'     => true,
+            'is_active' => true,
         ]);
 
         Sanctum::actingAs($admin);
@@ -266,7 +268,7 @@ class SecurityOperationsTest extends TestCase
 
         $this->postJson('/api/v1/security/devices', [
             'compoundId' => $compound->id,
-            'name'       => 'Gate Scanner #1',
+            'name' => 'Gate Scanner #1',
             'appVersion' => '2.0.1',
         ])
             ->assertCreated()
@@ -278,13 +280,13 @@ class SecurityOperationsTest extends TestCase
     public function test_admin_can_revoke_device(): void
     {
         $compound = Compound::factory()->create();
-        $admin    = $this->makeAdmin();
-        $device   = \App\Models\Security\SecurityDevice::create([
-            'compound_id'       => $compound->id,
-            'name'              => 'Old Scanner',
-            'device_identifier' => \Illuminate\Support\Str::random(64),
-            'status'            => 'active',
-            'registered_by'     => $admin->id,
+        $admin = $this->makeAdmin();
+        $device = SecurityDevice::create([
+            'compound_id' => $compound->id,
+            'name' => 'Old Scanner',
+            'device_identifier' => Str::random(64),
+            'status' => 'active',
+            'registered_by' => $admin->id,
         ]);
 
         Sanctum::actingAs($admin);
@@ -297,15 +299,15 @@ class SecurityOperationsTest extends TestCase
     public function test_revoking_already_revoked_device_fails(): void
     {
         $compound = Compound::factory()->create();
-        $admin    = $this->makeAdmin();
-        $device   = \App\Models\Security\SecurityDevice::create([
-            'compound_id'       => $compound->id,
-            'name'              => 'Old Scanner',
-            'device_identifier' => \Illuminate\Support\Str::random(64),
-            'status'            => 'revoked',
-            'registered_by'     => $admin->id,
-            'revoked_by'        => $admin->id,
-            'revoked_at'        => now(),
+        $admin = $this->makeAdmin();
+        $device = SecurityDevice::create([
+            'compound_id' => $compound->id,
+            'name' => 'Old Scanner',
+            'device_identifier' => Str::random(64),
+            'status' => 'revoked',
+            'registered_by' => $admin->id,
+            'revoked_by' => $admin->id,
+            'revoked_at' => now(),
         ]);
 
         Sanctum::actingAs($admin);
@@ -319,16 +321,16 @@ class SecurityOperationsTest extends TestCase
     public function test_guard_can_create_incident(): void
     {
         $compound = Compound::factory()->create();
-        $guard    = $this->makeGuard($compound);
+        $guard = $this->makeGuard($compound);
 
         Sanctum::actingAs($guard);
 
         $this->postJson('/api/v1/security/incidents', [
-            'compoundId'  => $compound->id,
-            'type'        => 'denied_entry',
-            'title'       => 'Denied entry to unknown vehicle',
+            'compoundId' => $compound->id,
+            'type' => 'denied_entry',
+            'title' => 'Denied entry to unknown vehicle',
             'description' => 'Vehicle with no prior notice attempted entry.',
-            'occurredAt'  => now()->toDateTimeString(),
+            'occurredAt' => now()->toDateTimeString(),
         ])
             ->assertCreated()
             ->assertJsonPath('data.type', 'denied_entry')
@@ -341,33 +343,33 @@ class SecurityOperationsTest extends TestCase
         Sanctum::actingAs($this->makeResident(['compound_id' => $compound->id]));
 
         $this->postJson('/api/v1/security/incidents', [
-            'compoundId'  => $compound->id,
-            'type'        => 'other',
-            'title'       => 'Test',
+            'compoundId' => $compound->id,
+            'type' => 'other',
+            'title' => 'Test',
             'description' => 'Test description.',
-            'occurredAt'  => now()->toDateTimeString(),
+            'occurredAt' => now()->toDateTimeString(),
         ])->assertForbidden();
     }
 
     public function test_invalid_incident_type_fails_validation(): void
     {
         $compound = Compound::factory()->create();
-        $admin    = $this->makeAdmin();
+        $admin = $this->makeAdmin();
         Sanctum::actingAs($admin);
 
         $this->postJson('/api/v1/security/incidents', [
-            'compoundId'  => $compound->id,
-            'type'        => 'not_a_real_type',
-            'title'       => 'Test',
+            'compoundId' => $compound->id,
+            'type' => 'not_a_real_type',
+            'title' => 'Test',
             'description' => 'Test.',
-            'occurredAt'  => now()->toDateTimeString(),
+            'occurredAt' => now()->toDateTimeString(),
         ])->assertUnprocessable();
     }
 
     public function test_admin_can_resolve_incident(): void
     {
         $compound = Compound::factory()->create();
-        $admin    = $this->makeAdmin();
+        $admin = $this->makeAdmin();
         $incident = SecurityIncident::factory()->create([
             'compound_id' => $compound->id,
             'reported_by' => $admin->id,
@@ -386,7 +388,7 @@ class SecurityOperationsTest extends TestCase
     {
         $compoundA = Compound::factory()->create();
         $compoundB = Compound::factory()->create();
-        $admin     = $this->makeAdmin();
+        $admin = $this->makeAdmin();
 
         SecurityIncident::factory()->count(3)->create([
             'compound_id' => $compoundA->id,
@@ -409,16 +411,16 @@ class SecurityOperationsTest extends TestCase
     public function test_guard_can_create_manual_entry(): void
     {
         $compound = Compound::factory()->create();
-        $guard    = $this->makeGuard($compound);
+        $guard = $this->makeGuard($compound);
 
         Sanctum::actingAs($guard);
 
         $this->postJson('/api/v1/security/manual-entries', [
-            'compoundId'  => $compound->id,
+            'compoundId' => $compound->id,
             'visitorName' => 'John Doe',
-            'reason'      => 'Delivery',
-            'status'      => 'allowed',
-            'occurredAt'  => now()->toDateTimeString(),
+            'reason' => 'Delivery',
+            'status' => 'allowed',
+            'occurredAt' => now()->toDateTimeString(),
         ])
             ->assertCreated()
             ->assertJsonPath('data.visitor_name', 'John Doe')
@@ -431,11 +433,11 @@ class SecurityOperationsTest extends TestCase
         Sanctum::actingAs($this->makeResident(['compound_id' => $compound->id]));
 
         $this->postJson('/api/v1/security/manual-entries', [
-            'compoundId'  => $compound->id,
+            'compoundId' => $compound->id,
             'visitorName' => 'Jane Doe',
-            'reason'      => 'Visit',
-            'status'      => 'allowed',
-            'occurredAt'  => now()->toDateTimeString(),
+            'reason' => 'Visit',
+            'status' => 'allowed',
+            'occurredAt' => now()->toDateTimeString(),
         ])->assertForbidden();
     }
 
@@ -445,11 +447,11 @@ class SecurityOperationsTest extends TestCase
         Sanctum::actingAs($this->makeAdmin());
 
         $this->postJson('/api/v1/security/manual-entries', [
-            'compoundId'  => $compound->id,
+            'compoundId' => $compound->id,
             'visitorName' => 'Jane Doe',
-            'reason'      => 'Visit',
-            'status'      => 'pending',
-            'occurredAt'  => now()->toDateTimeString(),
+            'reason' => 'Visit',
+            'status' => 'pending',
+            'occurredAt' => now()->toDateTimeString(),
         ])->assertUnprocessable();
     }
 
@@ -457,14 +459,14 @@ class SecurityOperationsTest extends TestCase
     {
         $compoundA = Compound::factory()->create();
         $compoundB = Compound::factory()->create();
-        $admin     = $this->makeAdmin();
+        $admin = $this->makeAdmin();
 
         ManualVisitorEntry::factory()->count(2)->create([
-            'compound_id'  => $compoundA->id,
+            'compound_id' => $compoundA->id,
             'processed_by' => $admin->id,
         ]);
         ManualVisitorEntry::factory()->create([
-            'compound_id'  => $compoundB->id,
+            'compound_id' => $compoundB->id,
             'processed_by' => $admin->id,
         ]);
 
@@ -480,24 +482,24 @@ class SecurityOperationsTest extends TestCase
     public function test_incidents_can_be_filtered_by_shift(): void
     {
         $compound = Compound::factory()->create();
-        $admin    = $this->makeAdmin();
-        $shiftA   = SecurityShift::factory()->active()->create([
+        $admin = $this->makeAdmin();
+        $shiftA = SecurityShift::factory()->active()->create([
             'compound_id' => $compound->id,
-            'created_by'  => $admin->id,
+            'created_by' => $admin->id,
         ]);
-        $shiftB   = SecurityShift::factory()->active()->create([
+        $shiftB = SecurityShift::factory()->active()->create([
             'compound_id' => $compound->id,
-            'created_by'  => $admin->id,
+            'created_by' => $admin->id,
         ]);
 
         SecurityIncident::factory()->count(2)->create([
             'compound_id' => $compound->id,
-            'shift_id'    => $shiftA->id,
+            'shift_id' => $shiftA->id,
             'reported_by' => $admin->id,
         ]);
         SecurityIncident::factory()->create([
             'compound_id' => $compound->id,
-            'shift_id'    => $shiftB->id,
+            'shift_id' => $shiftB->id,
             'reported_by' => $admin->id,
         ]);
 
@@ -513,18 +515,18 @@ class SecurityOperationsTest extends TestCase
     public function test_incidents_can_be_filtered_by_gate(): void
     {
         $compound = Compound::factory()->create();
-        $admin    = $this->makeAdmin();
-        $gateA    = SecurityGate::factory()->create(['compound_id' => $compound->id]);
-        $gateB    = SecurityGate::factory()->create(['compound_id' => $compound->id]);
+        $admin = $this->makeAdmin();
+        $gateA = SecurityGate::factory()->create(['compound_id' => $compound->id]);
+        $gateB = SecurityGate::factory()->create(['compound_id' => $compound->id]);
 
         SecurityIncident::factory()->count(3)->create([
             'compound_id' => $compound->id,
-            'gate_id'     => $gateA->id,
+            'gate_id' => $gateA->id,
             'reported_by' => $admin->id,
         ]);
         SecurityIncident::factory()->create([
             'compound_id' => $compound->id,
-            'gate_id'     => $gateB->id,
+            'gate_id' => $gateB->id,
             'reported_by' => $admin->id,
         ]);
 
@@ -539,7 +541,7 @@ class SecurityOperationsTest extends TestCase
 
     public function test_gate_can_be_scoped_to_building(): void
     {
-        $compound  = Compound::factory()->create();
+        $compound = Compound::factory()->create();
         $buildingA = Building::factory()->create(['compound_id' => $compound->id]);
 
         Sanctum::actingAs($this->makeAdmin());
@@ -547,7 +549,7 @@ class SecurityOperationsTest extends TestCase
         $response = $this->postJson('/api/v1/security/gates', [
             'compoundId' => $compound->id,
             'buildingId' => $buildingA->id,
-            'name'       => 'Building A Gate',
+            'name' => 'Building A Gate',
         ]);
         $response->assertCreated();
         $this->assertSame((string) $buildingA->id, $response->json('data.building_id'));

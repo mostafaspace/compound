@@ -26,15 +26,15 @@ class UserResource extends JsonResource
             'role' => $this->effective_role,
             'status' => $this->status->value,
             'emailVerifiedAt' => $this->email_verified_at?->toJSON(),
-            'lastLoginAt'     => $this->last_login_at?->toJSON(),
-            'legal_hold'      => $this->legal_hold ?? false,
-            'anonymized_at'   => $this->anonymized_at?->toJSON(),
-            'roles'       => $this->serializedRoleNames(),
+            'lastLoginAt' => $this->last_login_at?->toJSON(),
+            'legal_hold' => $this->legal_hold ?? false,
+            'anonymized_at' => $this->anonymized_at?->toJSON(),
+            'roles' => $this->serializedRoleNames(),
             'permissions' => $this->whenLoaded('permissions', fn () => $this->getAllPermissions()->pluck('name')->values()->all(), []),
-            'scopes'      => $this->whenLoaded('scopeAssignments', fn () => $this->scopeAssignments->map(fn ($a) => [
-                'role'       => $a->role_name,
+            'scopes' => $this->whenLoaded('scopeAssignments', fn () => $this->scopeAssignments->map(fn ($a) => [
+                'role' => $a->role_name,
                 'scope_type' => $a->scope_type,
-                'scope_id'   => $a->scope_id !== '' ? $a->scope_id : null,
+                'scope_id' => $a->scope_id !== '' ? $a->scope_id : null,
             ])->values()->all(), []),
         ];
     }

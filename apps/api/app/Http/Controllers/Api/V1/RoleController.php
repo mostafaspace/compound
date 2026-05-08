@@ -16,11 +16,11 @@ class RoleController extends Controller
             ->withCount('users')
             ->get()
             ->map(fn (Role $role) => [
-                'id'          => $role->id,
-                'name'        => $role->name,
+                'id' => $role->id,
+                'name' => $role->name,
                 'permissions' => $role->permissions->pluck('name'),
                 'users_count' => $role->users_count,
-                'is_system'   => (bool) $role->is_system,
+                'is_system' => (bool) $role->is_system,
             ]);
 
         return response()->json(['data' => $roles]);
@@ -29,8 +29,8 @@ class RoleController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'name'          => ['required', 'string', 'max:64', 'regex:/^[a-z_]+$/', 'unique:roles,name'],
-            'permissions'   => ['nullable', 'array'],
+            'name' => ['required', 'string', 'max:64', 'regex:/^[a-z_]+$/', 'unique:roles,name'],
+            'permissions' => ['nullable', 'array'],
             'permissions.*' => ['string', 'exists:permissions,name'],
         ]);
 
@@ -40,29 +40,29 @@ class RoleController extends Controller
         }
 
         return response()->json(['data' => [
-            'id'          => $role->id,
-            'name'        => $role->name,
+            'id' => $role->id,
+            'name' => $role->name,
             'permissions' => $role->permissions->pluck('name'),
             'users_count' => 0,
-            'is_system'   => false,
+            'is_system' => false,
         ]], 201);
     }
 
     public function update(Request $request, Role $role): JsonResponse
     {
         $validated = $request->validate([
-            'permissions'   => ['required', 'array'],
+            'permissions' => ['required', 'array'],
             'permissions.*' => ['string', 'exists:permissions,name'],
         ]);
 
         $role->syncPermissions($validated['permissions']);
 
         return response()->json(['data' => [
-            'id'          => $role->id,
-            'name'        => $role->name,
+            'id' => $role->id,
+            'name' => $role->name,
             'permissions' => $role->fresh('permissions')->permissions->pluck('name'),
             'users_count' => $role->users()->count(),
-            'is_system'   => (bool) $role->is_system,
+            'is_system' => (bool) $role->is_system,
         ]]);
     }
 

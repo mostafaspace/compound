@@ -12,7 +12,9 @@ use App\Services\IssueService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class IssueAttachmentController extends Controller
 {
@@ -44,12 +46,12 @@ class IssueAttachmentController extends Controller
             ->setStatusCode(201);
     }
 
-    public function view(Request $request, Issue $issue, IssueAttachment $attachment): \Symfony\Component\HttpFoundation\StreamedResponse|\Illuminate\Http\Response
+    public function view(Request $request, Issue $issue, IssueAttachment $attachment): StreamedResponse|\Illuminate\Http\Response
     {
         abort_unless($this->issueService->userCanAccessIssue($request->user(), $issue), Response::HTTP_FORBIDDEN);
         abort_if($attachment->issue_id !== $issue->id, Response::HTTP_BAD_REQUEST);
 
-        return \Illuminate\Support\Facades\Storage::disk($attachment->disk)
+        return Storage::disk($attachment->disk)
             ->response($attachment->path, $attachment->original_name);
     }
 

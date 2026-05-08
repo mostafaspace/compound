@@ -16,27 +16,27 @@ class MeetingAgendaController extends Controller
         abort_if($meeting->status === 'cancelled', 422, 'Cannot edit agenda of a cancelled meeting.');
 
         $validated = $request->validate([
-            'title'           => ['required', 'string', 'max:200'],
-            'description'     => ['nullable', 'string', 'max:2000'],
-            'position'        => ['nullable', 'integer', 'min:0'],
+            'title' => ['required', 'string', 'max:200'],
+            'description' => ['nullable', 'string', 'max:2000'],
+            'position' => ['nullable', 'integer', 'min:0'],
             'durationMinutes' => ['nullable', 'integer', 'min:5', 'max:240'],
             'presenterUserId' => ['nullable', 'integer', 'exists:users,id'],
-            'linkedType'      => ['nullable', 'string', 'max:60'],
-            'linkedId'        => ['nullable', 'string', 'max:26'],
+            'linkedType' => ['nullable', 'string', 'max:60'],
+            'linkedId' => ['nullable', 'string', 'max:26'],
         ]);
 
         // Auto-assign next position if not given
         $position = $validated['position'] ?? ($meeting->agendaItems()->max('position') + 1);
 
         $item = MeetingAgendaItem::create([
-            'meeting_id'       => $meeting->id,
-            'position'         => $position,
-            'title'            => $validated['title'],
-            'description'      => $validated['description'] ?? null,
+            'meeting_id' => $meeting->id,
+            'position' => $position,
+            'title' => $validated['title'],
+            'description' => $validated['description'] ?? null,
             'duration_minutes' => $validated['durationMinutes'] ?? null,
-            'presenter_user_id'=> $validated['presenterUserId'] ?? null,
-            'linked_type'      => $validated['linkedType'] ?? null,
-            'linked_id'        => $validated['linkedId'] ?? null,
+            'presenter_user_id' => $validated['presenterUserId'] ?? null,
+            'linked_type' => $validated['linkedType'] ?? null,
+            'linked_id' => $validated['linkedId'] ?? null,
         ]);
 
         return response()->json(['data' => $item->load('presenter')], 201);
@@ -48,24 +48,24 @@ class MeetingAgendaController extends Controller
         abort_if($meeting->status === 'cancelled', 422, 'Cannot edit agenda of a cancelled meeting.');
 
         $validated = $request->validate([
-            'title'           => ['sometimes', 'required', 'string', 'max:200'],
-            'description'     => ['nullable', 'string', 'max:2000'],
-            'position'        => ['nullable', 'integer', 'min:0'],
+            'title' => ['sometimes', 'required', 'string', 'max:200'],
+            'description' => ['nullable', 'string', 'max:2000'],
+            'position' => ['nullable', 'integer', 'min:0'],
             'durationMinutes' => ['nullable', 'integer', 'min:5', 'max:240'],
             'presenterUserId' => ['nullable', 'integer', 'exists:users,id'],
-            'linkedType'      => ['nullable', 'string', 'max:60'],
-            'linkedId'        => ['nullable', 'string', 'max:26'],
+            'linkedType' => ['nullable', 'string', 'max:60'],
+            'linkedId' => ['nullable', 'string', 'max:26'],
         ]);
 
         $changes = [];
         foreach ([
-            'title'           => 'title',
-            'description'     => 'description',
-            'position'        => 'position',
+            'title' => 'title',
+            'description' => 'description',
+            'position' => 'position',
             'durationMinutes' => 'duration_minutes',
             'presenterUserId' => 'presenter_user_id',
-            'linkedType'      => 'linked_type',
-            'linkedId'        => 'linked_id',
+            'linkedType' => 'linked_type',
+            'linkedId' => 'linked_id',
         ] as $in => $db) {
             if (array_key_exists($in, $validated)) {
                 $changes[$db] = $validated[$in];

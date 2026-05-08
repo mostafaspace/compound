@@ -17,15 +17,15 @@ class PaymentSessionFactory extends Factory
     public function definition(): array
     {
         return [
-            'unit_account_id'    => UnitAccount::factory(),
-            'initiated_by'       => User::factory(),
-            'provider'           => 'mock',
-            'provider_session_id' => 'mock_sess_' . Str::ulid(),
-            'amount'             => $this->faker->randomFloat(2, 100, 5000),
-            'currency'           => 'EGP',
-            'status'             => PaymentSessionStatus::Pending,
-            'provider_metadata'  => ['note' => 'factory'],
-            'expires_at'         => now()->addHour(),
+            'unit_account_id' => UnitAccount::factory(),
+            'initiated_by' => User::factory(),
+            'provider' => 'mock',
+            'provider_session_id' => 'mock_sess_'.Str::ulid(),
+            'amount' => $this->faker->randomFloat(2, 100, 5000),
+            'currency' => 'EGP',
+            'status' => PaymentSessionStatus::Pending,
+            'provider_metadata' => ['note' => 'factory'],
+            'expires_at' => now()->addHour(),
         ];
     }
 

@@ -19,15 +19,15 @@ class BudgetFactory extends Factory
     public function definition(): array
     {
         return [
-            'compound_id'  => Compound::factory(),
-            'name'         => 'Budget ' . $this->faker->year(),
-            'period_type'  => BudgetPeriodType::Annual->value,
-            'period_year'  => (int) date('Y'),
+            'compound_id' => Compound::factory(),
+            'name' => 'Budget '.$this->faker->year(),
+            'period_type' => BudgetPeriodType::Annual->value,
+            'period_year' => (int) date('Y'),
             'period_month' => null,
-            'status'       => BudgetStatus::Draft->value,
-            'notes'        => null,
-            'created_by'   => User::factory(),
-            'closed_at'    => null,
+            'status' => BudgetStatus::Draft->value,
+            'notes' => null,
+            'created_by' => User::factory(),
+            'closed_at' => null,
         ];
     }
 

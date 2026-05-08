@@ -35,11 +35,11 @@ class Budget extends Model
     protected function casts(): array
     {
         return [
-            'period_type'  => BudgetPeriodType::class,
-            'period_year'  => 'integer',
+            'period_type' => BudgetPeriodType::class,
+            'period_year' => 'integer',
             'period_month' => 'integer',
-            'status'       => BudgetStatus::class,
-            'closed_at'    => 'datetime',
+            'status' => BudgetStatus::class,
+            'closed_at' => 'datetime',
         ];
     }
 

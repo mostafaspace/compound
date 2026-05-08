@@ -7,8 +7,12 @@ use App\Enums\DeliveryStatus;
 use App\Enums\NotificationChannel;
 use App\Models\Notification;
 use App\Models\NotificationDeliveryLog;
+use App\Models\NotificationPreference;
 use App\Models\NotificationTemplate;
 use App\Models\User;
+use App\Services\Channels\MockEmailChannel;
+use App\Services\Channels\MockPushChannel;
+use App\Services\Channels\MockSmsChannel;
 
 class ExternalNotificationService
 {
@@ -20,9 +24,9 @@ class ExternalNotificationService
         private readonly CompoundContextService $compoundContext,
     ) {
         $this->channels = [
-            NotificationChannel::Push->value  => app(\App\Services\Channels\MockPushChannel::class),
-            NotificationChannel::Email->value => app(\App\Services\Channels\MockEmailChannel::class),
-            NotificationChannel::Sms->value   => app(\App\Services\Channels\MockSmsChannel::class),
+            NotificationChannel::Push->value => app(MockPushChannel::class),
+            NotificationChannel::Email->value => app(MockEmailChannel::class),
+            NotificationChannel::Sms->value => app(MockSmsChannel::class),
         ];
     }
 
@@ -44,11 +48,12 @@ class ExternalNotificationService
         // Quiet-hours gate: skip non-critical external dispatch during quiet hours
         if (! $isCritical && $preference && $this->notificationService->isQuietHourActive($user)) {
             $this->logSkipped($notification, null, 'quiet_hours');
+
             return;
         }
 
         $compoundId = $this->compoundContext->resolveUserCompoundId($user);
-        $locale     = app()->getLocale() ?? 'en';
+        $locale = app()->getLocale() ?? 'en';
 
         foreach (NotificationChannel::cases() as $channel) {
             $this->dispatchChannel($notification, $user, $preference, $channel, $compoundId, $locale);
@@ -58,20 +63,21 @@ class ExternalNotificationService
     private function dispatchChannel(
         Notification $notification,
         User $user,
-        ?\App\Models\NotificationPreference $preference,
+        ?NotificationPreference $preference,
         NotificationChannel $channel,
         ?string $compoundId,
         string $locale,
     ): void {
         // Check user preference for this channel
         $enabled = match ($channel) {
-            NotificationChannel::Push  => $preference?->push_enabled  ?? false,
+            NotificationChannel::Push => $preference?->push_enabled ?? false,
             NotificationChannel::Email => $preference?->email_enabled ?? true,
-            NotificationChannel::Sms   => false, // SMS off by default; enabled per compound setting in future
+            NotificationChannel::Sms => false, // SMS off by default; enabled per compound setting in future
         };
 
         if (! $enabled) {
             $this->logDelivery($notification, $channel, DeliveryStatus::Skipped, null, 'mock', null, 'channel_disabled');
+
             return;
         }
 
@@ -89,6 +95,7 @@ class ExternalNotificationService
 
         if (! $template) {
             $this->logDelivery($notification, $channel, DeliveryStatus::Skipped, null, 'mock', null, 'no_template');
+
             return;
         }
 
@@ -98,8 +105,8 @@ class ExternalNotificationService
         ];
 
         $payload = [
-            'title'   => $template->render($template->title_template, $context),
-            'body'    => $template->render($template->body_template, $context),
+            'title' => $template->render($template->title_template, $context),
+            'body' => $template->render($template->body_template, $context),
             'subject' => $template->subject ? $template->render($template->subject, $context) : null,
         ];
 
@@ -107,11 +114,12 @@ class ExternalNotificationService
 
         if (! $adapter) {
             $this->logDelivery($notification, $channel, DeliveryStatus::Skipped, null, 'mock', null, 'no_adapter');
+
             return;
         }
 
         try {
-            $result   = $adapter->dispatch($user, $payload);
+            $result = $adapter->dispatch($user, $payload);
             $provider = $result['provider'] ?? 'mock';
             $response = $result['response'] ?? [];
 
@@ -134,10 +142,10 @@ class ExternalNotificationService
             throw new \RuntimeException('Notification not found');
         }
 
-        $user       = $notification->user;
-        $channel    = $log->channel;
+        $user = $notification->user;
+        $channel = $log->channel;
         $compoundId = $this->compoundContext->resolveUserCompoundId($user);
-        $locale     = app()->getLocale() ?? 'en';
+        $locale = app()->getLocale() ?? 'en';
 
         $template = NotificationTemplate::query()
             ->active()
@@ -151,21 +159,22 @@ class ExternalNotificationService
             ->first();
 
         $payload = $template ? [
-            'title'   => $template->render($template->title_template, ['category' => $notification->category->value]),
-            'body'    => $template->render($template->body_template, ['category' => $notification->category->value]),
+            'title' => $template->render($template->title_template, ['category' => $notification->category->value]),
+            'body' => $template->render($template->body_template, ['category' => $notification->category->value]),
             'subject' => $template->subject ? $template->render($template->subject, ['category' => $notification->category->value]) : null,
         ] : [
             'title' => $notification->title,
-            'body'  => $notification->body,
+            'body' => $notification->body,
         ];
 
-        $adapter       = $this->channels[$channel->value] ?? null;
+        $adapter = $this->channels[$channel->value] ?? null;
         $attemptNumber = $log->attempt_number + 1;
 
         try {
-            $result    = $adapter?->dispatch($user, $payload) ?? throw new \RuntimeException('No adapter for channel');
-            $newLog    = $this->logDelivery($notification, $channel, DeliveryStatus::Sent, $this->obfuscateRecipient($channel, $user), $result['provider'] ?? 'mock', $result['response'] ?? [], null, $attemptNumber);
+            $result = $adapter?->dispatch($user, $payload) ?? throw new \RuntimeException('No adapter for channel');
+            $newLog = $this->logDelivery($notification, $channel, DeliveryStatus::Sent, $this->obfuscateRecipient($channel, $user), $result['provider'] ?? 'mock', $result['response'] ?? [], null, $attemptNumber);
             $log->update(['status' => DeliveryStatus::Retried]);
+
             return $newLog;
         } catch (\Throwable $e) {
             return $this->logDelivery($notification, $channel, DeliveryStatus::Failed, null, 'mock', null, $e->getMessage(), $attemptNumber);
@@ -190,14 +199,14 @@ class ExternalNotificationService
         int $attemptNumber = 1,
     ): NotificationDeliveryLog {
         return NotificationDeliveryLog::create([
-            'notification_id'   => $notification->id,
-            'channel'           => $channel->value,
-            'status'            => $status->value,
-            'recipient'         => $recipient,
-            'provider'          => $provider,
+            'notification_id' => $notification->id,
+            'channel' => $channel->value,
+            'status' => $status->value,
+            'recipient' => $recipient,
+            'provider' => $provider,
             'provider_response' => $providerResponse,
-            'error_message'     => $errorMessage,
-            'attempt_number'    => $attemptNumber,
+            'error_message' => $errorMessage,
+            'attempt_number' => $attemptNumber,
         ]);
     }
 
@@ -205,8 +214,8 @@ class ExternalNotificationService
     {
         return match ($channel) {
             NotificationChannel::Email => $user->email ? substr($user->email, 0, 3).'***' : null,
-            NotificationChannel::Sms   => $user->phone_number ? '***'.substr($user->phone_number ?? '', -4) : null,
-            NotificationChannel::Push  => 'push_device',
+            NotificationChannel::Sms => $user->phone_number ? '***'.substr($user->phone_number ?? '', -4) : null,
+            NotificationChannel::Push => 'push_device',
         };
     }
 }

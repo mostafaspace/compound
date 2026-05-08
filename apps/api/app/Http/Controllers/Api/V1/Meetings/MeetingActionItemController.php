@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Meetings;
 use App\Http\Controllers\Controller;
 use App\Models\Meetings\Meeting;
 use App\Models\Meetings\MeetingActionItem;
+use App\Models\User;
 use App\Services\CompoundContextService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -16,7 +17,7 @@ class MeetingActionItemController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        /** @var \App\Models\User $actor */
+        /** @var User $actor */
         $actor = $request->user();
         $requestedCompoundId = $request->header('X-Compound-Id') ?: $request->query('compoundId');
         $compoundIds = $this->context->resolveRequestedAccessibleCompoundIds($actor, $requestedCompoundId);
@@ -37,23 +38,23 @@ class MeetingActionItemController extends Controller
         $this->context->ensureUserCanAccessCompound($request->user(), $meeting->compound_id);
 
         $validated = $request->validate([
-            'title'       => ['required', 'string', 'max:200'],
+            'title' => ['required', 'string', 'max:200'],
             'description' => ['nullable', 'string', 'max:2000'],
-            'assignedTo'  => ['nullable', 'integer', 'exists:users,id'],
-            'dueDate'     => ['nullable', 'date'],
+            'assignedTo' => ['nullable', 'integer', 'exists:users,id'],
+            'dueDate' => ['nullable', 'date'],
         ]);
 
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = $request->user();
 
         $item = MeetingActionItem::create([
-            'meeting_id'  => $meeting->id,
-            'title'       => $validated['title'],
+            'meeting_id' => $meeting->id,
+            'title' => $validated['title'],
             'description' => $validated['description'] ?? null,
             'assigned_to' => $validated['assignedTo'] ?? null,
-            'due_date'    => $validated['dueDate'] ?? null,
-            'status'      => 'open',
-            'created_by'  => $user->id,
+            'due_date' => $validated['dueDate'] ?? null,
+            'status' => 'open',
+            'created_by' => $user->id,
         ]);
 
         return response()->json(['data' => $item->load(['assignee', 'creator'])], 201);
@@ -65,20 +66,20 @@ class MeetingActionItemController extends Controller
         abort_if((string) $actionItem->meeting_id !== (string) $meeting->id, 404);
 
         $validated = $request->validate([
-            'title'       => ['sometimes', 'required', 'string', 'max:200'],
+            'title' => ['sometimes', 'required', 'string', 'max:200'],
             'description' => ['nullable', 'string', 'max:2000'],
-            'assignedTo'  => ['nullable', 'integer', 'exists:users,id'],
-            'dueDate'     => ['nullable', 'date'],
-            'status'      => ['sometimes', 'required', 'string', 'in:open,in_progress,done,cancelled'],
+            'assignedTo' => ['nullable', 'integer', 'exists:users,id'],
+            'dueDate' => ['nullable', 'date'],
+            'status' => ['sometimes', 'required', 'string', 'in:open,in_progress,done,cancelled'],
         ]);
 
         $changes = [];
         foreach ([
-            'title'       => 'title',
+            'title' => 'title',
             'description' => 'description',
-            'assignedTo'  => 'assigned_to',
-            'dueDate'     => 'due_date',
-            'status'      => 'status',
+            'assignedTo' => 'assigned_to',
+            'dueDate' => 'due_date',
+            'status' => 'status',
         ] as $in => $db) {
             if (array_key_exists($in, $validated)) {
                 $changes[$db] = $validated[$in];

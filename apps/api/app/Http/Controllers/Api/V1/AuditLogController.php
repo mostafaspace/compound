@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Enums\AuditSeverity;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\AuditLogResource;
 use App\Models\AuditLog;
 use App\Models\User;
 use App\Services\CompoundContextService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -19,17 +19,17 @@ class AuditLogController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $validated = $request->validate([
-            'action'        => ['nullable', 'string', 'max:160'],
-            'actorId'       => ['nullable', 'string', 'max:200'],
-            'from'          => ['nullable', 'date'],
-            'method'        => ['nullable', 'string', 'max:10'],
-            'module'        => ['nullable', 'string', 'max:80'],
-            'severity'      => ['nullable', 'string', 'in:info,warning,critical'],
+            'action' => ['nullable', 'string', 'max:160'],
+            'actorId' => ['nullable', 'string', 'max:200'],
+            'from' => ['nullable', 'date'],
+            'method' => ['nullable', 'string', 'max:10'],
+            'module' => ['nullable', 'string', 'max:80'],
+            'severity' => ['nullable', 'string', 'in:info,warning,critical'],
             'auditableType' => ['nullable', 'string', 'max:200'],
-            'auditableId'   => ['nullable', 'string', 'max:200'],
-            'perPage'       => ['nullable', 'integer', 'min:1', 'max:100'],
-            'q'             => ['nullable', 'string', 'max:160'],
-            'to'            => ['nullable', 'date', 'after_or_equal:from'],
+            'auditableId' => ['nullable', 'string', 'max:200'],
+            'perPage' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'q' => ['nullable', 'string', 'max:160'],
+            'to' => ['nullable', 'date', 'after_or_equal:from'],
         ]);
 
         $query = $this->buildBaseQuery($request, $validated);
@@ -46,7 +46,7 @@ class AuditLogController extends Controller
     {
         $validated = $request->validate([
             'entity_type' => ['required', 'string', 'max:200'],
-            'entity_id'   => ['required', 'string', 'max:200'],
+            'entity_id' => ['required', 'string', 'max:200'],
         ]);
 
         /** @var User $actor */
@@ -77,22 +77,22 @@ class AuditLogController extends Controller
     public function export(Request $request): StreamedResponse
     {
         $validated = $request->validate([
-            'action'        => ['nullable', 'string', 'max:160'],
-            'actorId'       => ['nullable', 'string', 'max:200'],
-            'from'          => ['nullable', 'date'],
-            'method'        => ['nullable', 'string', 'max:10'],
-            'module'        => ['nullable', 'string', 'max:80'],
-            'severity'      => ['nullable', 'string', 'in:info,warning,critical'],
+            'action' => ['nullable', 'string', 'max:160'],
+            'actorId' => ['nullable', 'string', 'max:200'],
+            'from' => ['nullable', 'date'],
+            'method' => ['nullable', 'string', 'max:10'],
+            'module' => ['nullable', 'string', 'max:80'],
+            'severity' => ['nullable', 'string', 'in:info,warning,critical'],
             'auditableType' => ['nullable', 'string', 'max:200'],
-            'auditableId'   => ['nullable', 'string', 'max:200'],
-            'q'             => ['nullable', 'string', 'max:160'],
-            'to'            => ['nullable', 'date', 'after_or_equal:from'],
+            'auditableId' => ['nullable', 'string', 'max:200'],
+            'q' => ['nullable', 'string', 'max:160'],
+            'to' => ['nullable', 'date', 'after_or_equal:from'],
         ]);
 
         /** @var User $reviewer */
-        $reviewer    = $request->user();
+        $reviewer = $request->user();
         $generatedAt = now()->toIso8601String();
-        $filename    = 'audit-export-'.now()->format('Y-m-d-His').'.csv';
+        $filename = 'audit-export-'.now()->format('Y-m-d-His').'.csv';
 
         $query = $this->buildBaseQuery($request, $validated);
 
@@ -143,7 +143,7 @@ class AuditLogController extends Controller
     /**
      * @param  array<string, mixed>  $validated
      */
-    private function buildBaseQuery(Request $request, array $validated): \Illuminate\Database\Eloquent\Builder
+    private function buildBaseQuery(Request $request, array $validated): Builder
     {
         /** @var User $actor */
         $actor = $request->user();

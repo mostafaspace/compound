@@ -15,7 +15,6 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 
 class OnlinePaymentService
 {
@@ -36,13 +35,13 @@ class OnlinePaymentService
         return DB::transaction(function () use ($account, $initiator, $gateway, $amount, $currency, $returnUrl): PaymentSession {
             $session = PaymentSession::query()->create([
                 'unit_account_id' => $account->id,
-                'initiated_by'    => $initiator->id,
-                'provider'        => $gateway->providerName(),
-                'amount'          => $amount,
-                'currency'        => strtoupper($currency),
-                'status'          => PaymentSessionStatus::Pending,
-                'return_url'      => $returnUrl,
-                'expires_at'      => now()->addHour(),
+                'initiated_by' => $initiator->id,
+                'provider' => $gateway->providerName(),
+                'amount' => $amount,
+                'currency' => strtoupper($currency),
+                'status' => PaymentSessionStatus::Pending,
+                'return_url' => $returnUrl,
+                'expires_at' => now()->addHour(),
             ]);
 
             /** @var PaymentSession $session */
@@ -50,8 +49,8 @@ class OnlinePaymentService
 
             $session->forceFill([
                 'provider_session_id' => $providerData['provider_session_id'],
-                'provider_metadata'   => $providerData['metadata'] ?? [],
-                'expires_at'          => $providerData['expires_at'] ? now()->parse($providerData['expires_at']) : $session->expires_at,
+                'provider_metadata' => $providerData['metadata'] ?? [],
+                'expires_at' => $providerData['expires_at'] ? now()->parse($providerData['expires_at']) : $session->expires_at,
             ])->save();
 
             return $session->refresh();
@@ -74,6 +73,7 @@ class OnlinePaymentService
 
         if ($existing?->processed) {
             Log::info('Webhook already processed', ['transaction_id' => $event['provider_transaction_id']]);
+
             return $existing;
         }
 
@@ -83,23 +83,23 @@ class OnlinePaymentService
             : null;
 
         $tx = $existing ?? GatewayTransaction::query()->create([
-            'payment_session_id'      => $session?->id,
-            'provider'                => $gateway->providerName(),
+            'payment_session_id' => $session?->id,
+            'provider' => $gateway->providerName(),
             'provider_transaction_id' => $event['provider_transaction_id'],
-            'event_type'              => $event['event_type'],
-            'status'                  => $event['status'],
-            'amount'                  => $event['amount'],
-            'currency'                => $event['currency'],
-            'raw_payload'             => $event['raw'],
-            'processed'               => false,
+            'event_type' => $event['event_type'],
+            'status' => $event['status'],
+            'amount' => $event['amount'],
+            'currency' => $event['currency'],
+            'raw_payload' => $event['raw'],
+            'processed' => false,
         ]);
 
         try {
             DB::transaction(function () use ($tx, $session, $event): void {
                 match ($event['status']) {
                     'confirmed' => $this->reconcilePayment($tx, $session, $event),
-                    'refunded'  => $this->processRefund($tx, $session, $event),
-                    default     => $this->markSessionFailed($session),
+                    'refunded' => $this->processRefund($tx, $session, $event),
+                    default => $this->markSessionFailed($session),
                 };
 
                 $tx->forceFill(['processed' => true, 'processing_error' => null])->save();
@@ -108,7 +108,7 @@ class OnlinePaymentService
             $tx->forceFill(['processing_error' => $e->getMessage()])->save();
             Log::error('Webhook processing failed', [
                 'transaction_id' => $tx->id,
-                'error'          => $e->getMessage(),
+                'error' => $e->getMessage(),
             ]);
             throw $e;
         }
@@ -127,17 +127,17 @@ class OnlinePaymentService
 
         // Create PaymentSubmission (auto-approved since gateway confirmed)
         $submission = PaymentSubmission::query()->create([
-            'unit_account_id'  => $session->unit_account_id,
-            'submitted_by'     => $session->initiated_by,
-            'amount'           => $tx->amount,
-            'currency'         => $tx->currency,
-            'method'           => 'online',
-            'reference'        => $tx->provider . '_' . $tx->provider_transaction_id,
-            'payment_date'     => now()->toDateString(),
-            'status'           => PaymentStatus::Approved,
-            'notes'            => 'Auto-reconciled from ' . $tx->provider . ' payment',
-            'metadata'         => ['gateway_transaction_id' => $tx->id],
-            'reviewed_at'      => now(),
+            'unit_account_id' => $session->unit_account_id,
+            'submitted_by' => $session->initiated_by,
+            'amount' => $tx->amount,
+            'currency' => $tx->currency,
+            'method' => 'online',
+            'reference' => $tx->provider.'_'.$tx->provider_transaction_id,
+            'payment_date' => now()->toDateString(),
+            'status' => PaymentStatus::Approved,
+            'notes' => 'Auto-reconciled from '.$tx->provider.' payment',
+            'metadata' => ['gateway_transaction_id' => $tx->id],
+            'reviewed_at' => now(),
         ]);
 
         // Post ledger entry
@@ -146,7 +146,7 @@ class OnlinePaymentService
             account: $account,
             type: LedgerEntryType::Payment,
             amount: -1 * (float) $tx->amount,
-            description: 'Online payment via ' . $tx->provider,
+            description: 'Online payment via '.$tx->provider,
             referenceType: $submission::class,
             referenceId: $submission->id,
         );
@@ -173,7 +173,7 @@ class OnlinePaymentService
                         account: $account,
                         type: LedgerEntryType::Refund,
                         amount: (float) $tx->amount,
-                        description: 'Refund for online payment via ' . $tx->provider,
+                        description: 'Refund for online payment via '.$tx->provider,
                         referenceType: $submission::class,
                         referenceId: $submission->id,
                     );
@@ -201,18 +201,18 @@ class OnlinePaymentService
         $refundData = $gateway->refund($tx->provider_transaction_id, $amount, $tx->currency);
 
         $refundTx = GatewayTransaction::query()->create([
-            'payment_session_id'      => $tx->payment_session_id,
-            'provider'                => $tx->provider,
+            'payment_session_id' => $tx->payment_session_id,
+            'provider' => $tx->provider,
             'provider_transaction_id' => $refundData['provider_refund_id'],
-            'event_type'              => 'refund.created',
-            'status'                  => GatewayTransactionStatus::Refunded,
-            'amount'                  => $amount,
-            'currency'                => $tx->currency,
-            'raw_payload'             => $refundData,
-            'processed'               => false,
+            'event_type' => 'refund.created',
+            'status' => GatewayTransactionStatus::Refunded,
+            'amount' => $amount,
+            'currency' => $tx->currency,
+            'raw_payload' => $refundData,
+            'processed' => false,
         ]);
 
-        DB::transaction(function () use ($refundTx, $tx): void {
+        DB::transaction(function () use ($refundTx): void {
             $session = $refundTx->paymentSession;
             $this->processRefund($refundTx, $session, []);
             $refundTx->forceFill(['processed' => true])->save();

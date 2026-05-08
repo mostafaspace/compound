@@ -6,8 +6,8 @@ use App\Enums\AccountStatus;
 use App\Enums\AuditSeverity;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
-use App\Models\User;
 use App\Models\DeviceToken;
+use App\Models\User;
 use App\Support\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -22,7 +22,7 @@ class AnonymizationController extends Controller
     public function legalHold(Request $request, User $user): JsonResponse
     {
         $validated = $request->validate([
-            'hold'   => ['required', 'boolean'],
+            'hold' => ['required', 'boolean'],
             'reason' => ['required', 'string', 'max:500'],
         ]);
 
@@ -62,11 +62,11 @@ class AnonymizationController extends Controller
         $anonymousId = 'anon-'.Str::random(10);
 
         $user->update([
-            'name'           => 'Deleted User',
-            'email'          => $anonymousId.'@deleted.invalid',
-            'phone'          => null,
-            'status'         => AccountStatus::Archived,
-            'anonymized_at'  => now(),
+            'name' => 'Deleted User',
+            'email' => $anonymousId.'@deleted.invalid',
+            'phone' => null,
+            'status' => AccountStatus::Archived,
+            'anonymized_at' => now(),
         ]);
 
         // Revoke all device tokens to force logout

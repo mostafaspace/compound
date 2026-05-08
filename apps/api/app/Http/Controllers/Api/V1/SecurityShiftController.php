@@ -36,9 +36,9 @@ class SecurityShiftController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'compoundId'     => ['required', 'string', 'max:26'],
-            'name'           => ['required', 'string', 'max:120'],
-            'handoverNotes'  => ['nullable', 'string', 'max:5000'],
+            'compoundId' => ['required', 'string', 'max:26'],
+            'name' => ['required', 'string', 'max:120'],
+            'handoverNotes' => ['nullable', 'string', 'max:5000'],
         ]);
 
         $this->context->ensureUserCanAccessCompound($request->user(), $validated['compoundId']);
@@ -47,11 +47,11 @@ class SecurityShiftController extends Controller
         $user = $request->user();
 
         $shift = SecurityShift::create([
-            'compound_id'    => $validated['compoundId'],
-            'name'           => $validated['name'],
+            'compound_id' => $validated['compoundId'],
+            'name' => $validated['name'],
             'handover_notes' => $validated['handoverNotes'] ?? null,
-            'status'         => 'draft',
-            'created_by'     => $user->id,
+            'status' => 'draft',
+            'created_by' => $user->id,
         ]);
 
         return response()->json(['data' => $shift->load('creator')], 201);
@@ -71,7 +71,7 @@ class SecurityShiftController extends Controller
         $this->context->ensureUserCanAccessCompound($request->user(), $securityShift->compound_id);
 
         $validated = $request->validate([
-            'name'          => ['sometimes', 'required', 'string', 'max:120'],
+            'name' => ['sometimes', 'required', 'string', 'max:120'],
             'handoverNotes' => ['nullable', 'string', 'max:5000'],
         ]);
 
@@ -95,7 +95,7 @@ class SecurityShiftController extends Controller
         abort_if($securityShift->status !== 'draft', 422, 'Only draft shifts can be activated.');
 
         $securityShift->update([
-            'status'     => 'active',
+            'status' => 'active',
             'started_at' => now(),
         ]);
 
@@ -116,9 +116,9 @@ class SecurityShiftController extends Controller
         $user = $request->user();
 
         $securityShift->update([
-            'status'         => 'closed',
-            'ended_at'       => now(),
-            'closed_by'      => $user->id,
+            'status' => 'closed',
+            'ended_at' => now(),
+            'closed_by' => $user->id,
             'handover_notes' => $request->input('handoverNotes') ?? $securityShift->handover_notes,
         ]);
 
@@ -128,7 +128,7 @@ class SecurityShiftController extends Controller
             ->whereNull('checked_out_at')
             ->update([
                 'checked_out_at' => now(),
-                'is_active'      => false,
+                'is_active' => false,
             ]);
 
         return response()->json(['data' => $securityShift->fresh()->load(['creator', 'closer'])]);
@@ -143,14 +143,14 @@ class SecurityShiftController extends Controller
 
         $validated = $request->validate([
             'guardUserId' => ['required', 'integer', 'exists:users,id'],
-            'gateId'      => ['nullable', 'string', 'max:26', 'exists:security_gates,id'],
+            'gateId' => ['nullable', 'string', 'max:26', 'exists:security_gates,id'],
         ]);
 
         $assignment = SecurityShiftAssignment::create([
-            'shift_id'      => $securityShift->id,
-            'gate_id'       => $validated['gateId'] ?? null,
+            'shift_id' => $securityShift->id,
+            'gate_id' => $validated['gateId'] ?? null,
             'guard_user_id' => $validated['guardUserId'],
-            'is_active'     => true,
+            'is_active' => true,
         ]);
 
         return response()->json(['data' => $assignment->load(['guardUser', 'gate'])], 201);
@@ -166,7 +166,7 @@ class SecurityShiftController extends Controller
 
         $assignment->update([
             'checked_in_at' => now(),
-            'is_active'     => true,
+            'is_active' => true,
         ]);
 
         return response()->json(['data' => $assignment->fresh()->load(['guardUser', 'gate'])]);
@@ -182,7 +182,7 @@ class SecurityShiftController extends Controller
 
         $assignment->update([
             'checked_out_at' => now(),
-            'is_active'      => false,
+            'is_active' => false,
         ]);
 
         return response()->json(['data' => $assignment->fresh()->load(['guardUser', 'gate'])]);

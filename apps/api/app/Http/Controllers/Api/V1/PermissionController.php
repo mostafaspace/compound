@@ -16,10 +16,10 @@ class PermissionController extends Controller
             ->withCount('roles')
             ->get()
             ->map(fn ($p) => [
-                'id'          => $p->id,
-                'name'        => $p->name,
+                'id' => $p->id,
+                'name' => $p->name,
                 'roles_count' => $p->roles_count,
-                'is_core'     => in_array($p->name, Permission::values()),
+                'is_core' => in_array($p->name, Permission::values()),
             ]);
 
         return response()->json(['data' => $permissions]);
@@ -32,15 +32,15 @@ class PermissionController extends Controller
         ]);
 
         $permission = SpatiePermission::create([
-            'name'       => $validated['name'],
+            'name' => $validated['name'],
             'guard_name' => 'sanctum',
         ]);
 
         return response()->json(['data' => [
-            'id'          => $permission->id,
-            'name'        => $permission->name,
+            'id' => $permission->id,
+            'name' => $permission->name,
             'roles_count' => 0,
-            'is_core'     => false,
+            'is_core' => false,
         ]], 201);
     }
 

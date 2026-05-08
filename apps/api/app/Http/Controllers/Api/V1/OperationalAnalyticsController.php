@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Services\CompoundContextService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 // CM-109: Operational analytics dashboard
@@ -18,30 +18,30 @@ class OperationalAnalyticsController extends Controller
     {
         $validated = $request->validate([
             'buildingId' => ['nullable', 'string', 'max:36'],
-            'from'       => ['nullable', 'date'],
-            'to'         => ['nullable', 'date', 'after_or_equal:from'],
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date', 'after_or_equal:from'],
         ]);
 
-        /** @var \App\Models\User $actor */
+        /** @var User $actor */
         $actor = $request->user();
         $requestedCompoundId = $request->header('X-Compound-Id') ?: $request->query('compoundId');
         $compoundIds = $this->context->resolveRequestedAccessibleCompoundIds($actor, $requestedCompoundId);
 
         $buildingId = $validated['buildingId'] ?? null;
-        $from       = $validated['from'] ?? null;
-        $to         = isset($validated['to']) ? $validated['to'].' 23:59:59' : null;
+        $from = $validated['from'] ?? null;
+        $to = isset($validated['to']) ? $validated['to'].' 23:59:59' : null;
 
         return response()->json([
             'data' => [
-                'users'         => $this->userMetrics($compoundIds, $from, $to),
-                'invitations'   => $this->invitationMetrics($compoundIds, $from, $to),
+                'users' => $this->userMetrics($compoundIds, $from, $to),
+                'invitations' => $this->invitationMetrics($compoundIds, $from, $to),
                 'verifications' => $this->verificationMetrics($compoundIds, $from, $to),
-                'documents'     => $this->documentMetrics($compoundIds, $from, $to),
-                'visitors'      => $this->visitorMetrics($compoundIds, $buildingId, $from, $to),
-                'issues'        => $this->issueMetrics($compoundIds, $buildingId, $from, $to),
+                'documents' => $this->documentMetrics($compoundIds, $from, $to),
+                'visitors' => $this->visitorMetrics($compoundIds, $buildingId, $from, $to),
+                'issues' => $this->issueMetrics($compoundIds, $buildingId, $from, $to),
                 'announcements' => $this->announcementMetrics($compoundIds, $from, $to),
-                'votes'         => $this->voteMetrics($compoundIds, $buildingId, $from, $to),
-                'generatedAt'   => now()->toIso8601String(),
+                'votes' => $this->voteMetrics($compoundIds, $buildingId, $from, $to),
+                'generatedAt' => now()->toIso8601String(),
             ],
         ]);
     }
@@ -54,18 +54,18 @@ class OperationalAnalyticsController extends Controller
         $counts = DB::table('users')
             ->when($compoundIds !== null, fn ($q) => $q->whereIn('compound_id', $compoundIds))
             ->when($from, fn ($q) => $q->where('created_at', '>=', $from))
-            ->when($to,   fn ($q) => $q->where('created_at', '<=', $to))
+            ->when($to, fn ($q) => $q->where('created_at', '<=', $to))
             ->select('status', DB::raw('count(*) as count'))
             ->groupBy('status')
             ->pluck('count', 'status');
 
         return [
-            'total'         => (int) $counts->sum(),
-            'active'        => (int) ($counts['active'] ?? 0),
-            'invited'       => (int) ($counts['invited'] ?? 0),
+            'total' => (int) $counts->sum(),
+            'active' => (int) ($counts['active'] ?? 0),
+            'invited' => (int) ($counts['invited'] ?? 0),
             'pendingReview' => (int) ($counts['pending_review'] ?? 0),
-            'suspended'     => (int) ($counts['suspended'] ?? 0),
-            'archived'      => (int) ($counts['archived'] ?? 0),
+            'suspended' => (int) ($counts['suspended'] ?? 0),
+            'archived' => (int) ($counts['archived'] ?? 0),
         ];
     }
 
@@ -76,17 +76,17 @@ class OperationalAnalyticsController extends Controller
             ->leftJoin('units', 'units.id', '=', 'ri.unit_id')
             ->when($compoundIds !== null, fn ($q) => $q->whereIn('units.compound_id', $compoundIds))
             ->when($from, fn ($q) => $q->where('ri.created_at', '>=', $from))
-            ->when($to,   fn ($q) => $q->where('ri.created_at', '<=', $to))
+            ->when($to, fn ($q) => $q->where('ri.created_at', '<=', $to))
             ->select('ri.status', DB::raw('count(*) as count'))
             ->groupBy('ri.status')
             ->pluck('count', 'ri.status');
 
         return [
-            'total'    => (int) $counts->sum(),
-            'pending'  => (int) ($counts['pending'] ?? 0),
+            'total' => (int) $counts->sum(),
+            'pending' => (int) ($counts['pending'] ?? 0),
             'accepted' => (int) ($counts['accepted'] ?? 0),
-            'revoked'  => (int) ($counts['revoked'] ?? 0),
-            'expired'  => (int) ($counts['expired'] ?? 0),
+            'revoked' => (int) ($counts['revoked'] ?? 0),
+            'expired' => (int) ($counts['expired'] ?? 0),
         ];
     }
 
@@ -97,17 +97,17 @@ class OperationalAnalyticsController extends Controller
             ->join('users as u', 'u.id', '=', 'vr.user_id')
             ->when($compoundIds !== null, fn ($q) => $q->whereIn('u.compound_id', $compoundIds))
             ->when($from, fn ($q) => $q->where('vr.created_at', '>=', $from))
-            ->when($to,   fn ($q) => $q->where('vr.created_at', '<=', $to))
+            ->when($to, fn ($q) => $q->where('vr.created_at', '<=', $to))
             ->select('vr.status', DB::raw('count(*) as count'))
             ->groupBy('vr.status')
             ->pluck('count', 'vr.status');
 
         return [
-            'total'             => (int) $counts->sum(),
-            'pendingReview'     => (int) ($counts['pending_review'] ?? 0),
+            'total' => (int) $counts->sum(),
+            'pendingReview' => (int) ($counts['pending_review'] ?? 0),
             'moreInfoRequested' => (int) ($counts['more_info_requested'] ?? 0),
-            'approved'          => (int) ($counts['approved'] ?? 0),
-            'rejected'          => (int) ($counts['rejected'] ?? 0),
+            'approved' => (int) ($counts['approved'] ?? 0),
+            'rejected' => (int) ($counts['rejected'] ?? 0),
         ];
     }
 
@@ -118,16 +118,16 @@ class OperationalAnalyticsController extends Controller
             ->join('users as u', 'u.id', '=', 'ud.user_id')
             ->when($compoundIds !== null, fn ($q) => $q->whereIn('u.compound_id', $compoundIds))
             ->when($from, fn ($q) => $q->where('ud.created_at', '>=', $from))
-            ->when($to,   fn ($q) => $q->where('ud.created_at', '<=', $to))
+            ->when($to, fn ($q) => $q->where('ud.created_at', '<=', $to))
             ->select('ud.status', DB::raw('count(*) as count'))
             ->groupBy('ud.status')
             ->pluck('count', 'ud.status');
 
         return [
-            'total'     => (int) $counts->sum(),
+            'total' => (int) $counts->sum(),
             'submitted' => (int) ($counts['submitted'] ?? 0),
-            'approved'  => (int) ($counts['approved'] ?? 0),
-            'rejected'  => (int) ($counts['rejected'] ?? 0),
+            'approved' => (int) ($counts['approved'] ?? 0),
+            'rejected' => (int) ($counts['rejected'] ?? 0),
         ];
     }
 
@@ -140,16 +140,16 @@ class OperationalAnalyticsController extends Controller
             ->when($compoundIds !== null, fn ($q) => $q->whereIn('buildings.compound_id', $compoundIds))
             ->when($buildingId, fn ($q) => $q->where('buildings.id', $buildingId))
             ->when($from, fn ($q) => $q->where('vr.created_at', '>=', $from))
-            ->when($to,   fn ($q) => $q->where('vr.created_at', '<=', $to))
+            ->when($to, fn ($q) => $q->where('vr.created_at', '<=', $to))
             ->select('vr.status', DB::raw('count(*) as count'))
             ->groupBy('vr.status')
             ->pluck('count', 'vr.status');
 
         return [
-            'total'     => (int) $counts->sum(),
-            'pending'   => (int) ($counts['pending'] ?? 0),
-            'allowed'   => (int) ($counts['allowed'] ?? 0),
-            'denied'    => (int) ($counts['denied'] ?? 0),
+            'total' => (int) $counts->sum(),
+            'pending' => (int) ($counts['pending'] ?? 0),
+            'allowed' => (int) ($counts['allowed'] ?? 0),
+            'denied' => (int) ($counts['denied'] ?? 0),
             'completed' => (int) ($counts['completed'] ?? 0),
             'cancelled' => (int) ($counts['cancelled'] ?? 0),
         ];
@@ -162,18 +162,18 @@ class OperationalAnalyticsController extends Controller
             ->when($compoundIds !== null, fn ($q) => $q->whereIn('compound_id', $compoundIds))
             ->when($buildingId, fn ($q) => $q->where('building_id', $buildingId))
             ->when($from, fn ($q) => $q->where('created_at', '>=', $from))
-            ->when($to,   fn ($q) => $q->where('created_at', '<=', $to))
+            ->when($to, fn ($q) => $q->where('created_at', '<=', $to))
             ->select('status', DB::raw('count(*) as count'))
             ->groupBy('status')
             ->pluck('count', 'status');
 
         return [
-            'total'      => (int) $counts->sum(),
-            'new'        => (int) ($counts['new'] ?? 0),
+            'total' => (int) $counts->sum(),
+            'new' => (int) ($counts['new'] ?? 0),
             'inProgress' => (int) ($counts['in_progress'] ?? 0),
-            'escalated'  => (int) ($counts['escalated'] ?? 0),
-            'resolved'   => (int) ($counts['resolved'] ?? 0),
-            'closed'     => (int) ($counts['closed'] ?? 0),
+            'escalated' => (int) ($counts['escalated'] ?? 0),
+            'resolved' => (int) ($counts['resolved'] ?? 0),
+            'closed' => (int) ($counts['closed'] ?? 0),
         ];
     }
 
@@ -183,7 +183,7 @@ class OperationalAnalyticsController extends Controller
         $base = DB::table('announcements')
             ->when($compoundIds !== null, fn ($q) => $q->whereIn('compound_id', $compoundIds))
             ->when($from, fn ($q) => $q->where('created_at', '>=', $from))
-            ->when($to,   fn ($q) => $q->where('created_at', '<=', $to));
+            ->when($to, fn ($q) => $q->where('created_at', '<=', $to));
 
         $counts = (clone $base)
             ->select('status', DB::raw('count(*) as count'))
@@ -203,12 +203,12 @@ class OperationalAnalyticsController extends Controller
             : 0;
 
         return [
-            'total'           => (int) $counts->sum(),
-            'draft'           => (int) ($counts['draft'] ?? 0),
-            'published'       => (int) ($counts['published'] ?? 0),
-            'archived'        => (int) ($counts['archived'] ?? 0),
+            'total' => (int) $counts->sum(),
+            'draft' => (int) ($counts['draft'] ?? 0),
+            'published' => (int) ($counts['published'] ?? 0),
+            'archived' => (int) ($counts['archived'] ?? 0),
             'requiresAckCount' => $requiresAckIds->count(),
-            'ackCount'        => $ackCount,
+            'ackCount' => $ackCount,
         ];
     }
 
@@ -219,7 +219,7 @@ class OperationalAnalyticsController extends Controller
             ->when($compoundIds !== null, fn ($q) => $q->whereIn('compound_id', $compoundIds))
             ->when($buildingId, fn ($q) => $q->where('building_id', $buildingId))
             ->when($from, fn ($q) => $q->where('created_at', '>=', $from))
-            ->when($to,   fn ($q) => $q->where('created_at', '<=', $to));
+            ->when($to, fn ($q) => $q->where('created_at', '<=', $to));
 
         $counts = (clone $base)
             ->select('status', DB::raw('count(*) as count'))
@@ -233,11 +233,11 @@ class OperationalAnalyticsController extends Controller
             : 0;
 
         return [
-            'total'          => (int) $counts->sum(),
-            'draft'          => (int) ($counts['draft'] ?? 0),
-            'active'         => (int) ($counts['active'] ?? 0),
-            'closed'         => (int) ($counts['closed'] ?? 0),
-            'cancelled'      => (int) ($counts['cancelled'] ?? 0),
+            'total' => (int) $counts->sum(),
+            'draft' => (int) ($counts['draft'] ?? 0),
+            'active' => (int) ($counts['active'] ?? 0),
+            'closed' => (int) ($counts['closed'] ?? 0),
+            'cancelled' => (int) ($counts['cancelled'] ?? 0),
             'participations' => $participationCount,
         ];
     }

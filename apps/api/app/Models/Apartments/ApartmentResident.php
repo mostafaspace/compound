@@ -18,6 +18,7 @@ class ApartmentResident extends Model
 {
     /** @use HasFactory<ApartmentResidentFactory> */
     use HasFactory;
+
     use SoftDeletes;
 
     protected static function newFactory(): ApartmentResidentFactory

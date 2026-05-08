@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Meetings;
 use App\Http\Controllers\Controller;
 use App\Models\Meetings\Meeting;
 use App\Models\Meetings\MeetingParticipant;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -23,7 +24,7 @@ class MeetingParticipantController extends Controller
         abort_if($meeting->status === 'cancelled', 422, 'Cannot invite to a cancelled meeting.');
 
         $validated = $request->validate([
-            'userIds'   => ['required', 'array', 'min:1'],
+            'userIds' => ['required', 'array', 'min:1'],
             'userIds.*' => ['integer', 'exists:users,id'],
         ]);
 
@@ -49,7 +50,7 @@ class MeetingParticipantController extends Controller
         ]);
 
         $participant->update([
-            'attended'                => $validated['attended'],
+            'attended' => $validated['attended'],
             'attendance_confirmed_at' => now(),
         ]);
 
@@ -64,7 +65,7 @@ class MeetingParticipantController extends Controller
             'status' => ['required', 'string', 'in:accepted,declined'],
         ]);
 
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = $request->user();
 
         $participant = MeetingParticipant::where('meeting_id', $meeting->id)

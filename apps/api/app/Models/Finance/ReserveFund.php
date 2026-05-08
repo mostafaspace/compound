@@ -14,8 +14,8 @@ class ReserveFund extends Model
     use HasFactory, HasUlids;
 
     protected $attributes = [
-        'balance'   => '0.00',
-        'currency'  => 'EGP',
+        'balance' => '0.00',
+        'currency' => 'EGP',
         'is_active' => true,
     ];
 
@@ -31,7 +31,7 @@ class ReserveFund extends Model
     protected function casts(): array
     {
         return [
-            'balance'   => 'decimal:2',
+            'balance' => 'decimal:2',
             'is_active' => 'boolean',
         ];
     }

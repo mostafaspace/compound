@@ -18,14 +18,14 @@ class ManualVisitorEntryFactory extends Factory
         return [
             'processed_by' => User::factory(),
             'visitor_name' => fake()->name(),
-            'visitor_phone'=> fake()->optional(0.7)->phoneNumber(),
-            'vehicle_plate'=> fake()->optional(0.4)->bothify('??-####'),
+            'visitor_phone' => fake()->optional(0.7)->phoneNumber(),
+            'vehicle_plate' => fake()->optional(0.4)->bothify('??-####'),
             'host_user_id' => null,
             'host_unit_id' => null,
-            'reason'       => fake()->sentence(),
-            'notes'        => null,
-            'status'       => 'allowed',
-            'occurred_at'  => now(),
+            'reason' => fake()->sentence(),
+            'notes' => null,
+            'status' => 'allowed',
+            'occurred_at' => now(),
         ];
     }
 

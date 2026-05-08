@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\NotificationCategory;
 use App\Enums\NotificationChannel;
+use App\Models\Property\Compound;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -25,14 +26,14 @@ class NotificationTemplate extends Model
     ];
 
     protected $casts = [
-        'category'  => NotificationCategory::class,
-        'channel'   => NotificationChannel::class,
+        'category' => NotificationCategory::class,
+        'channel' => NotificationChannel::class,
         'is_active' => 'boolean',
     ];
 
     public function compound(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\Property\Compound::class);
+        return $this->belongsTo(Compound::class);
     }
 
     /**

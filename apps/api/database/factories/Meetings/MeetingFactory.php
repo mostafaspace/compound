@@ -16,19 +16,19 @@ class MeetingFactory extends Factory
     public function definition(): array
     {
         return [
-            'title'            => fake()->sentence(5),
-            'description'      => fake()->optional(0.6)->paragraph(),
-            'scope'            => fake()->randomElement(['association', 'building', 'committee']),
-            'scope_ref_id'     => null,
-            'status'           => 'draft',
-            'scheduled_at'     => now()->addDays(fake()->numberBetween(1, 30)),
+            'title' => fake()->sentence(5),
+            'description' => fake()->optional(0.6)->paragraph(),
+            'scope' => fake()->randomElement(['association', 'building', 'committee']),
+            'scope_ref_id' => null,
+            'status' => 'draft',
+            'scheduled_at' => now()->addDays(fake()->numberBetween(1, 30)),
             'duration_minutes' => fake()->randomElement([30, 60, 90, 120]),
-            'location'         => fake()->optional(0.7)->randomElement(['Conference Room A', 'Community Hall', 'Board Room', 'Online']),
-            'location_url'     => null,
-            'created_by'       => User::factory(),
-            'cancelled_by'     => null,
-            'cancelled_at'     => null,
-            'published_at'     => null,
+            'location' => fake()->optional(0.7)->randomElement(['Conference Room A', 'Community Hall', 'Board Room', 'Online']),
+            'location_url' => null,
+            'created_by' => User::factory(),
+            'cancelled_by' => null,
+            'cancelled_at' => null,
+            'published_at' => null,
         ];
     }
 
@@ -40,7 +40,7 @@ class MeetingFactory extends Factory
     public function completed(): static
     {
         return $this->state([
-            'status'       => 'completed',
+            'status' => 'completed',
             'scheduled_at' => now()->subDays(2),
         ]);
     }
@@ -48,7 +48,7 @@ class MeetingFactory extends Factory
     public function cancelled(): static
     {
         return $this->state(fn (array $attrs) => [
-            'status'       => 'cancelled',
+            'status' => 'cancelled',
             'cancelled_at' => now(),
             'cancelled_by' => User::factory(),
         ]);

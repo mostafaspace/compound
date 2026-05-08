@@ -60,15 +60,15 @@ class SecurityIncidentController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'compoundId'  => ['required', 'string', 'max:26'],
-            'gateId'      => ['nullable', 'string', 'max:26', 'exists:security_gates,id'],
-            'shiftId'     => ['nullable', 'string', 'max:26', 'exists:security_shifts,id'],
-            'type'        => ['required', 'string', 'in:'.implode(',', self::INCIDENT_TYPES)],
-            'title'       => ['required', 'string', 'max:200'],
+            'compoundId' => ['required', 'string', 'max:26'],
+            'gateId' => ['nullable', 'string', 'max:26', 'exists:security_gates,id'],
+            'shiftId' => ['nullable', 'string', 'max:26', 'exists:security_shifts,id'],
+            'type' => ['required', 'string', 'in:'.implode(',', self::INCIDENT_TYPES)],
+            'title' => ['required', 'string', 'max:200'],
             'description' => ['required', 'string', 'max:5000'],
-            'notes'       => ['nullable', 'string', 'max:5000'],
-            'metadata'    => ['nullable', 'array'],
-            'occurredAt'  => ['required', 'date'],
+            'notes' => ['nullable', 'string', 'max:5000'],
+            'metadata' => ['nullable', 'array'],
+            'occurredAt' => ['required', 'date'],
         ]);
 
         $this->context->ensureUserCanAccessCompound($request->user(), $validated['compoundId']);
@@ -78,14 +78,14 @@ class SecurityIncidentController extends Controller
 
         $incident = SecurityIncident::create([
             'compound_id' => $validated['compoundId'],
-            'gate_id'     => $validated['gateId'] ?? null,
-            'shift_id'    => $validated['shiftId'] ?? null,
+            'gate_id' => $validated['gateId'] ?? null,
+            'shift_id' => $validated['shiftId'] ?? null,
             'reported_by' => $user->id,
-            'type'        => $validated['type'],
-            'title'       => $validated['title'],
+            'type' => $validated['type'],
+            'title' => $validated['title'],
             'description' => $validated['description'],
-            'notes'       => $validated['notes'] ?? null,
-            'metadata'    => $validated['metadata'] ?? null,
+            'notes' => $validated['notes'] ?? null,
+            'metadata' => $validated['metadata'] ?? null,
             'occurred_at' => $validated['occurredAt'],
         ]);
 
@@ -111,7 +111,7 @@ class SecurityIncidentController extends Controller
 
         $securityIncident->update([
             'resolved_at' => now(),
-            'notes'       => $request->input('notes') ?? $securityIncident->notes,
+            'notes' => $request->input('notes') ?? $securityIncident->notes,
         ]);
 
         return response()->json(['data' => $securityIncident->fresh()->load(['gate', 'shift', 'reporter'])]);

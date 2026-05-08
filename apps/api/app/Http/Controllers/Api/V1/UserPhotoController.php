@@ -25,7 +25,7 @@ class UserPhotoController extends Controller
             }
         }
 
-        $path = $request->file('photo')->store("users/photos", 'public');
+        $path = $request->file('photo')->store('users/photos', 'public');
         $user->update(['photo_url' => Storage::disk('public')->url($path)]);
 
         return response()->json(new UserResource($user->fresh()->loadAuthorizationSnapshot()));

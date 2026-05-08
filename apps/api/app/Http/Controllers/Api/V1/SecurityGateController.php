@@ -35,12 +35,12 @@ class SecurityGateController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'compoundId'  => ['required', 'string', 'max:26'],
-            'buildingId'  => ['nullable', 'string', 'max:26', 'exists:buildings,id'],
-            'name'        => ['required', 'string', 'max:120'],
-            'zone'        => ['nullable', 'string', 'max:60'],
+            'compoundId' => ['required', 'string', 'max:26'],
+            'buildingId' => ['nullable', 'string', 'max:26', 'exists:buildings,id'],
+            'name' => ['required', 'string', 'max:120'],
+            'zone' => ['nullable', 'string', 'max:60'],
             'description' => ['nullable', 'string', 'max:1000'],
-            'isActive'    => ['boolean'],
+            'isActive' => ['boolean'],
         ]);
 
         $this->context->ensureUserCanAccessCompound($request->user(), $validated['compoundId']);
@@ -48,10 +48,10 @@ class SecurityGateController extends Controller
         $gate = SecurityGate::create([
             'compound_id' => $validated['compoundId'],
             'building_id' => $validated['buildingId'] ?? null,
-            'name'        => $validated['name'],
-            'zone'        => $validated['zone'] ?? null,
+            'name' => $validated['name'],
+            'zone' => $validated['zone'] ?? null,
             'description' => $validated['description'] ?? null,
-            'is_active'   => $validated['isActive'] ?? true,
+            'is_active' => $validated['isActive'] ?? true,
         ]);
 
         return response()->json(['data' => $gate->load('building')], 201);
@@ -69,11 +69,11 @@ class SecurityGateController extends Controller
         $this->context->ensureUserCanAccessCompound($request->user(), $securityGate->compound_id);
 
         $validated = $request->validate([
-            'buildingId'  => ['nullable', 'string', 'max:26', 'exists:buildings,id'],
-            'name'        => ['sometimes', 'required', 'string', 'max:120'],
-            'zone'        => ['nullable', 'string', 'max:60'],
+            'buildingId' => ['nullable', 'string', 'max:26', 'exists:buildings,id'],
+            'name' => ['sometimes', 'required', 'string', 'max:120'],
+            'zone' => ['nullable', 'string', 'max:60'],
             'description' => ['nullable', 'string', 'max:1000'],
-            'isActive'    => ['boolean'],
+            'isActive' => ['boolean'],
         ]);
 
         $changes = [];

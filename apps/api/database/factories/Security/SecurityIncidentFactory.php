@@ -17,11 +17,11 @@ class SecurityIncidentFactory extends Factory
     {
         return [
             'reported_by' => User::factory(),
-            'type'        => fake()->randomElement(['denied_entry', 'suspicious_activity', 'emergency', 'vehicle_issue', 'operational_handover', 'other']),
-            'title'       => fake()->sentence(5),
+            'type' => fake()->randomElement(['denied_entry', 'suspicious_activity', 'emergency', 'vehicle_issue', 'operational_handover', 'other']),
+            'title' => fake()->sentence(5),
             'description' => fake()->paragraph(),
-            'notes'       => null,
-            'metadata'    => null,
+            'notes' => null,
+            'metadata' => null,
             'occurred_at' => now(),
             'resolved_at' => null,
         ];

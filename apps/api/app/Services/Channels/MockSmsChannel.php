@@ -25,7 +25,7 @@ class MockSmsChannel implements NotificationChannelInterface
             'provider' => 'mock',
             'response' => [
                 'message_id' => 'mock_sms_'.substr(md5($phone.time()), 0, 12),
-                'recipient'  => substr($phone, 0, -4).'****',
+                'recipient' => substr($phone, 0, -4).'****',
             ],
         ];
     }

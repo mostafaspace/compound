@@ -20,7 +20,7 @@ class LocalizationTest extends TestCase
     private function makeAdmin(array $attrs = []): User
     {
         return User::factory()->create(array_merge([
-            'role'   => UserRole::SuperAdmin->value,
+            'role' => UserRole::SuperAdmin->value,
             'status' => AccountStatus::Active->value,
         ], $attrs));
     }
@@ -28,7 +28,7 @@ class LocalizationTest extends TestCase
     private function makeResident(array $attrs = []): User
     {
         return User::factory()->create(array_merge([
-            'role'   => UserRole::ResidentOwner->value,
+            'role' => UserRole::ResidentOwner->value,
             'status' => AccountStatus::Active->value,
         ], $attrs));
     }
@@ -71,8 +71,8 @@ class LocalizationTest extends TestCase
     public function test_compound_admin_gets_their_compound_locale(): void
     {
         $compound = Compound::factory()->create();
-        $admin    = User::factory()->create([
-            'role'        => UserRole::CompoundAdmin->value,
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
             'compound_id' => $compound->id,
         ]);
         Sanctum::actingAs($admin);
@@ -80,9 +80,9 @@ class LocalizationTest extends TestCase
         // Override locale for this compound
         CompoundSetting::create([
             'compound_id' => $compound->id,
-            'namespace'   => 'localization',
-            'key'         => 'locale',
-            'value'       => 'en',
+            'namespace' => 'localization',
+            'key' => 'locale',
+            'value' => 'en',
         ]);
 
         $response = $this->getJson('/api/v1/locale')->assertOk();
@@ -94,14 +94,14 @@ class LocalizationTest extends TestCase
     public function test_super_admin_with_compound_header_gets_compound_locale(): void
     {
         $compound = Compound::factory()->create();
-        $admin    = $this->makeAdmin();
+        $admin = $this->makeAdmin();
         Sanctum::actingAs($admin);
 
         CompoundSetting::create([
             'compound_id' => $compound->id,
-            'namespace'   => 'localization',
-            'key'         => 'timezone',
-            'value'       => 'Europe/London',
+            'namespace' => 'localization',
+            'key' => 'timezone',
+            'value' => 'Europe/London',
         ]);
 
         $response = $this->getJson('/api/v1/locale', ['X-Compound-Id' => $compound->id])->assertOk();
@@ -132,9 +132,9 @@ class LocalizationTest extends TestCase
 
         CompoundSetting::create([
             'compound_id' => null,
-            'namespace'   => 'localization',
-            'key'         => 'locale',
-            'value'       => 'en',
+            'namespace' => 'localization',
+            'key' => 'locale',
+            'value' => 'en',
         ]);
 
         $response = $this->getJson('/api/v1/locale')->assertOk();
@@ -152,7 +152,7 @@ class LocalizationTest extends TestCase
     public function test_settings_service_returns_all_localization_defaults(): void
     {
         $service = app(SettingsService::class);
-        $data    = $service->getNamespace('localization');
+        $data = $service->getNamespace('localization');
 
         $this->assertArrayHasKey('locale', $data);
         $this->assertArrayHasKey('timezone', $data);

@@ -36,9 +36,9 @@ class SecurityDeviceController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'compoundId'  => ['required', 'string', 'max:26'],
-            'name'        => ['required', 'string', 'max:120'],
-            'appVersion'  => ['nullable', 'string', 'max:20'],
+            'compoundId' => ['required', 'string', 'max:26'],
+            'name' => ['required', 'string', 'max:120'],
+            'appVersion' => ['nullable', 'string', 'max:20'],
         ]);
 
         $this->context->ensureUserCanAccessCompound($request->user(), $validated['compoundId']);
@@ -47,12 +47,12 @@ class SecurityDeviceController extends Controller
         $user = $request->user();
 
         $device = SecurityDevice::create([
-            'compound_id'       => $validated['compoundId'],
-            'name'              => $validated['name'],
+            'compound_id' => $validated['compoundId'],
+            'name' => $validated['name'],
             'device_identifier' => Str::random(64),
-            'app_version'       => $validated['appVersion'] ?? null,
-            'status'            => 'active',
-            'registered_by'     => $user->id,
+            'app_version' => $validated['appVersion'] ?? null,
+            'status' => 'active',
+            'registered_by' => $user->id,
         ]);
 
         return response()->json(['data' => $device->load('registeredBy')], 201);
@@ -77,7 +77,7 @@ class SecurityDeviceController extends Controller
 
         $securityDevice->update([
             'last_seen_at' => now(),
-            'app_version'  => $validated['appVersion'] ?? $securityDevice->app_version,
+            'app_version' => $validated['appVersion'] ?? $securityDevice->app_version,
         ]);
 
         return response()->json(['data' => $securityDevice->fresh()]);
@@ -93,7 +93,7 @@ class SecurityDeviceController extends Controller
         $user = $request->user();
 
         $securityDevice->update([
-            'status'     => 'revoked',
+            'status' => 'revoked',
             'revoked_by' => $user->id,
             'revoked_at' => now(),
         ]);

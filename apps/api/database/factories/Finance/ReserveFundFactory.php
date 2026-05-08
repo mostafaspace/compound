@@ -17,11 +17,11 @@ class ReserveFundFactory extends Factory
     {
         return [
             'compound_id' => Compound::factory(),
-            'name'        => $this->faker->words(3, true) . ' Fund',
+            'name' => $this->faker->words(3, true).' Fund',
             'description' => $this->faker->optional()->sentence(),
-            'balance'     => $this->faker->randomFloat(2, 0, 100000),
-            'currency'    => 'EGP',
-            'is_active'   => true,
+            'balance' => $this->faker->randomFloat(2, 0, 100000),
+            'currency' => 'EGP',
+            'is_active' => true,
         ];
     }
 }

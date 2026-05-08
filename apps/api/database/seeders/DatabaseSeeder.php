@@ -20,10 +20,10 @@ class DatabaseSeeder extends Seeder
         User::firstOrCreate(
             ['email' => 'admin@compound.local'],
             [
-                'name'     => 'Compound Admin',
-                'phone'    => '+201000000001',
-                'role'     => UserRole::CompoundAdmin->value,
-                'status'   => AccountStatus::Active->value,
+                'name' => 'Compound Admin',
+                'phone' => '+201000000001',
+                'role' => UserRole::CompoundAdmin->value,
+                'status' => AccountStatus::Active->value,
                 'password' => bcrypt('password'),
             ]
         );
@@ -31,10 +31,10 @@ class DatabaseSeeder extends Seeder
         User::firstOrCreate(
             ['email' => 'resident@compound.local'],
             [
-                'name'     => 'Demo Resident',
-                'phone'    => '+201000000002',
-                'role'     => UserRole::ResidentOwner->value,
-                'status'   => AccountStatus::Active->value,
+                'name' => 'Demo Resident',
+                'phone' => '+201000000002',
+                'role' => UserRole::ResidentOwner->value,
+                'status' => AccountStatus::Active->value,
                 'password' => bcrypt('password'),
             ]
         );

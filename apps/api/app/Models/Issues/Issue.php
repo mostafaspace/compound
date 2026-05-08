@@ -17,6 +17,7 @@ class Issue extends Model
 {
     /** @use HasFactory<IssueFactory> */
     use HasFactory;
+
     use HasUlids;
 
     protected static function newFactory(): IssueFactory

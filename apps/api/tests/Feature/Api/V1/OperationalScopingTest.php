@@ -1,4 +1,5 @@
 <?php
+
 namespace Tests\Feature\Api\V1;
 
 use App\Enums\AnnouncementStatus;
@@ -258,7 +259,7 @@ class OperationalScopingTest extends TestCase
             'titleEn' => 'Hacked',
             'bodyEn' => 'Hacked',
             'category' => 'general',
-            'targetType' => 'compound'
+            'targetType' => 'compound',
         ])->assertForbidden();
     }
 

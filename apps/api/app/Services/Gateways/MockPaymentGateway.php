@@ -23,7 +23,7 @@ class MockPaymentGateway implements PaymentGatewayInterface
 
     public function createSession(PaymentSession $session): array
     {
-        $fakeSessionId = 'mock_sess_' . Str::ulid();
+        $fakeSessionId = 'mock_sess_'.Str::ulid();
 
         return [
             'provider_session_id' => $fakeSessionId,
@@ -44,21 +44,21 @@ class MockPaymentGateway implements PaymentGatewayInterface
         $payload = $request->json()->all();
 
         return [
-            'event_type'             => $payload['event_type'] ?? 'payment.succeeded',
-            'provider_transaction_id' => $payload['transaction_id'] ?? 'mock_tx_' . Str::ulid(),
-            'status'                 => $payload['status'] ?? 'confirmed',
-            'amount'                 => (float) ($payload['amount'] ?? 0),
-            'currency'               => $payload['currency'] ?? 'EGP',
-            'provider_session_id'    => $payload['session_id'] ?? null,
-            'raw'                    => $payload,
+            'event_type' => $payload['event_type'] ?? 'payment.succeeded',
+            'provider_transaction_id' => $payload['transaction_id'] ?? 'mock_tx_'.Str::ulid(),
+            'status' => $payload['status'] ?? 'confirmed',
+            'amount' => (float) ($payload['amount'] ?? 0),
+            'currency' => $payload['currency'] ?? 'EGP',
+            'provider_session_id' => $payload['session_id'] ?? null,
+            'raw' => $payload,
         ];
     }
 
     public function refund(string $providerTransactionId, float $amount, string $currency): array
     {
         return [
-            'provider_refund_id' => 'mock_refund_' . Str::ulid(),
-            'status'             => 'refunded',
+            'provider_refund_id' => 'mock_refund_'.Str::ulid(),
+            'status' => 'refunded',
         ];
     }
 }

@@ -11,9 +11,7 @@ use Illuminate\Http\Request;
 
 class NotificationPreferenceController extends Controller
 {
-    public function __construct(private AuditLogger $auditLogger)
-    {
-    }
+    public function __construct(private AuditLogger $auditLogger) {}
 
     public function show(Request $request): JsonResponse
     {
@@ -64,7 +62,7 @@ class NotificationPreferenceController extends Controller
             $updates['muted_categories'] = $request->input('mutedCategories');
         }
 
-        if (!empty($updates)) {
+        if (! empty($updates)) {
             $preference->update($updates);
         }
 

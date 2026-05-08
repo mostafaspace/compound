@@ -21,6 +21,7 @@ class WorkOrder extends Model
 {
     /** @use HasFactory<WorkOrderFactory> */
     use HasFactory;
+
     use HasUlids;
 
     protected static function newFactory(): WorkOrderFactory
@@ -61,14 +62,14 @@ class WorkOrder extends Model
     {
         return [
             'target_completion_at' => 'datetime',
-            'scheduled_at'         => 'datetime',
-            'started_at'           => 'datetime',
-            'completed_at'         => 'datetime',
-            'approved_at'          => 'datetime',
-            'cancelled_at'         => 'datetime',
-            'estimated_cost'       => 'decimal:2',
-            'approved_cost'        => 'decimal:2',
-            'actual_cost'          => 'decimal:2',
+            'scheduled_at' => 'datetime',
+            'started_at' => 'datetime',
+            'completed_at' => 'datetime',
+            'approved_at' => 'datetime',
+            'cancelled_at' => 'datetime',
+            'estimated_cost' => 'decimal:2',
+            'approved_cost' => 'decimal:2',
+            'actual_cost' => 'decimal:2',
         ];
     }
 

@@ -21,7 +21,7 @@ class DeviceToken extends Model
     ];
 
     protected $casts = [
-        'platform'     => DevicePlatform::class,
+        'platform' => DevicePlatform::class,
         'last_seen_at' => 'datetime',
     ];
 

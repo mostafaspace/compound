@@ -41,13 +41,13 @@ class VendorController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'compound_id'  => ['required', 'string', 'exists:compounds,id'],
-            'name'         => ['required', 'string', 'max:255'],
-            'type'         => ['nullable', Rule::in(['contractor', 'supplier', 'service_provider', 'legal_advisor', 'other'])],
+            'compound_id' => ['required', 'string', 'exists:compounds,id'],
+            'name' => ['required', 'string', 'max:255'],
+            'type' => ['nullable', Rule::in(['contractor', 'supplier', 'service_provider', 'legal_advisor', 'other'])],
             'contact_name' => ['nullable', 'string', 'max:255'],
-            'phone'        => ['nullable', 'string', 'max:50'],
-            'email'        => ['nullable', 'email', 'max:255'],
-            'notes'        => ['nullable', 'string'],
+            'phone' => ['nullable', 'string', 'max:50'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'notes' => ['nullable', 'string'],
         ]);
 
         $this->compoundContextService->ensureUserCanAccessCompound($request->user(), $data['compound_id']);
@@ -73,13 +73,13 @@ class VendorController extends Controller
         $this->compoundContextService->ensureUserCanAccessCompound($request->user(), $vendor->compound_id);
 
         $data = $request->validate([
-            'name'         => ['sometimes', 'string', 'max:255'],
-            'type'         => ['sometimes', Rule::in(['contractor', 'supplier', 'service_provider', 'legal_advisor', 'other'])],
+            'name' => ['sometimes', 'string', 'max:255'],
+            'type' => ['sometimes', Rule::in(['contractor', 'supplier', 'service_provider', 'legal_advisor', 'other'])],
             'contact_name' => ['nullable', 'string', 'max:255'],
-            'phone'        => ['nullable', 'string', 'max:50'],
-            'email'        => ['nullable', 'email', 'max:255'],
-            'notes'        => ['nullable', 'string'],
-            'is_active'    => ['sometimes', 'boolean'],
+            'phone' => ['nullable', 'string', 'max:50'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'notes' => ['nullable', 'string'],
+            'is_active' => ['sometimes', 'boolean'],
         ]);
 
         $vendor->update($data);

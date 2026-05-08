@@ -18,15 +18,15 @@ class VisitorRequestFactory extends Factory
     public function definition(): array
     {
         return [
-            'host_user_id'    => User::factory(),
-            'unit_id'         => Unit::factory(),
-            'visitor_name'    => fake()->name(),
-            'visitor_phone'   => fake()->e164PhoneNumber(),
-            'vehicle_plate'   => null,
+            'host_user_id' => User::factory(),
+            'unit_id' => Unit::factory(),
+            'visitor_name' => fake()->name(),
+            'visitor_phone' => fake()->e164PhoneNumber(),
+            'vehicle_plate' => null,
             'visit_starts_at' => now()->addDay(),
-            'visit_ends_at'   => now()->addDays(2),
-            'notes'           => null,
-            'status'          => VisitorRequestStatus::Pending->value,
+            'visit_ends_at' => now()->addDays(2),
+            'notes' => null,
+            'status' => VisitorRequestStatus::Pending->value,
         ];
     }
 
@@ -38,7 +38,7 @@ class VisitorRequestFactory extends Factory
     public function completed(): static
     {
         return $this->state([
-            'status'       => VisitorRequestStatus::Completed->value,
+            'status' => VisitorRequestStatus::Completed->value,
             'completed_at' => now(),
         ]);
     }

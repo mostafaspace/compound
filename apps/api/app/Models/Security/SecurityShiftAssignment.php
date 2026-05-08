@@ -20,9 +20,9 @@ class SecurityShiftAssignment extends Model
     protected function casts(): array
     {
         return [
-            'checked_in_at'  => 'datetime',
+            'checked_in_at' => 'datetime',
             'checked_out_at' => 'datetime',
-            'is_active'      => 'boolean',
+            'is_active' => 'boolean',
         ];
     }
 

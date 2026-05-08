@@ -14,7 +14,6 @@ use App\Support\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
-use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\Response;
 
 class ExpenseController extends Controller
@@ -75,14 +74,14 @@ class ExpenseController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'compound_id'        => ['required', 'string', 'exists:compounds,id'],
+            'compound_id' => ['required', 'string', 'exists:compounds,id'],
             'budget_category_id' => ['nullable', 'string', 'exists:budget_categories,id'],
-            'vendor_id'          => ['nullable', 'string', 'exists:vendors,id'],
-            'title'              => ['required', 'string', 'max:255'],
-            'description'        => ['nullable', 'string'],
-            'amount'             => ['required', 'numeric', 'min:0.01'],
-            'currency'           => ['nullable', 'string', 'size:3'],
-            'expense_date'       => ['required', 'date'],
+            'vendor_id' => ['nullable', 'string', 'exists:vendors,id'],
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'amount' => ['required', 'numeric', 'min:0.01'],
+            'currency' => ['nullable', 'string', 'size:3'],
+            'expense_date' => ['required', 'date'],
         ]);
 
         $this->compoundContextService->ensureUserCanAccessCompound($request->user(), $data['compound_id']);
@@ -127,12 +126,12 @@ class ExpenseController extends Controller
 
         $expense->approvals()->create([
             'actor_id' => $request->user()->id,
-            'action'   => ExpenseApprovalAction::Approve,
-            'reason'   => $data['reason'] ?? null,
+            'action' => ExpenseApprovalAction::Approve,
+            'reason' => $data['reason'] ?? null,
         ]);
 
         $expense->update([
-            'status'      => ExpenseStatus::Approved,
+            'status' => ExpenseStatus::Approved,
             'approved_by' => $request->user()->id,
             'approved_at' => now(),
         ]);
@@ -159,12 +158,12 @@ class ExpenseController extends Controller
 
         $expense->approvals()->create([
             'actor_id' => $request->user()->id,
-            'action'   => ExpenseApprovalAction::Reject,
-            'reason'   => $data['reason'],
+            'action' => ExpenseApprovalAction::Reject,
+            'reason' => $data['reason'],
         ]);
 
         $expense->update([
-            'status'           => ExpenseStatus::Rejected,
+            'status' => ExpenseStatus::Rejected,
             'rejection_reason' => $data['reason'],
         ]);
 

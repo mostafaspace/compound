@@ -13,6 +13,7 @@ class MeetingActionItem extends Model
 {
     /** @use HasFactory<MeetingActionItemFactory> */
     use HasFactory;
+
     use HasUlids;
 
     protected static function newFactory(): MeetingActionItemFactory
@@ -34,7 +35,7 @@ class MeetingActionItem extends Model
     protected function casts(): array
     {
         return [
-            'due_date'     => 'date',
+            'due_date' => 'date',
             'completed_at' => 'datetime',
         ];
     }

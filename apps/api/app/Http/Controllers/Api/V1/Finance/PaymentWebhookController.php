@@ -21,7 +21,7 @@ class PaymentWebhookController extends Controller
     public function handle(Request $request, string $provider): GatewayTransactionResource
     {
         $gateway = match ($provider) {
-            'mock'  => new MockPaymentGateway,
+            'mock' => new MockPaymentGateway,
             default => abort(404, "Unknown payment provider: {$provider}"),
         };
 

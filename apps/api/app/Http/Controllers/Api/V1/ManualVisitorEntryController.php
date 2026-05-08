@@ -51,18 +51,18 @@ class ManualVisitorEntryController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'compoundId'    => ['required', 'string', 'max:26'],
-            'gateId'        => ['nullable', 'string', 'max:26', 'exists:security_gates,id'],
-            'shiftId'       => ['nullable', 'string', 'max:26', 'exists:security_shifts,id'],
-            'visitorName'   => ['required', 'string', 'max:120'],
-            'visitorPhone'  => ['nullable', 'string', 'max:30'],
-            'vehiclePlate'  => ['nullable', 'string', 'max:20'],
-            'hostUserId'    => ['nullable', 'integer', 'exists:users,id'],
-            'hostUnitId'    => ['nullable', 'string', 'max:26', 'exists:units,id'],
-            'reason'        => ['required', 'string', 'max:500'],
-            'notes'         => ['nullable', 'string', 'max:2000'],
-            'status'        => ['required', 'string', 'in:allowed,denied'],
-            'occurredAt'    => ['required', 'date'],
+            'compoundId' => ['required', 'string', 'max:26'],
+            'gateId' => ['nullable', 'string', 'max:26', 'exists:security_gates,id'],
+            'shiftId' => ['nullable', 'string', 'max:26', 'exists:security_shifts,id'],
+            'visitorName' => ['required', 'string', 'max:120'],
+            'visitorPhone' => ['nullable', 'string', 'max:30'],
+            'vehiclePlate' => ['nullable', 'string', 'max:20'],
+            'hostUserId' => ['nullable', 'integer', 'exists:users,id'],
+            'hostUnitId' => ['nullable', 'string', 'max:26', 'exists:units,id'],
+            'reason' => ['required', 'string', 'max:500'],
+            'notes' => ['nullable', 'string', 'max:2000'],
+            'status' => ['required', 'string', 'in:allowed,denied'],
+            'occurredAt' => ['required', 'date'],
         ]);
 
         $this->context->ensureUserCanAccessCompound($request->user(), $validated['compoundId']);
@@ -71,19 +71,19 @@ class ManualVisitorEntryController extends Controller
         $user = $request->user();
 
         $entry = ManualVisitorEntry::create([
-            'compound_id'  => $validated['compoundId'],
-            'gate_id'      => $validated['gateId'] ?? null,
-            'shift_id'     => $validated['shiftId'] ?? null,
+            'compound_id' => $validated['compoundId'],
+            'gate_id' => $validated['gateId'] ?? null,
+            'shift_id' => $validated['shiftId'] ?? null,
             'processed_by' => $user->id,
             'visitor_name' => $validated['visitorName'],
-            'visitor_phone'=> $validated['visitorPhone'] ?? null,
-            'vehicle_plate'=> $validated['vehiclePlate'] ?? null,
+            'visitor_phone' => $validated['visitorPhone'] ?? null,
+            'vehicle_plate' => $validated['vehiclePlate'] ?? null,
             'host_user_id' => $validated['hostUserId'] ?? null,
             'host_unit_id' => $validated['hostUnitId'] ?? null,
-            'reason'       => $validated['reason'],
-            'notes'        => $validated['notes'] ?? null,
-            'status'       => $validated['status'],
-            'occurred_at'  => $validated['occurredAt'],
+            'reason' => $validated['reason'],
+            'notes' => $validated['notes'] ?? null,
+            'status' => $validated['status'],
+            'occurred_at' => $validated['occurredAt'],
         ]);
 
         return response()->json([

@@ -31,10 +31,10 @@ class GatewayTransaction extends Model
     protected function casts(): array
     {
         return [
-            'amount'      => 'decimal:2',
+            'amount' => 'decimal:2',
             'raw_payload' => 'array',
-            'processed'   => 'boolean',
-            'status'      => GatewayTransactionStatus::class,
+            'processed' => 'boolean',
+            'status' => GatewayTransactionStatus::class,
         ];
     }
 

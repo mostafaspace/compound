@@ -27,7 +27,7 @@ class VisitorScopingTest extends TestCase
         $unitB = Unit::factory()->create(['compound_id' => $compound->id, 'building_id' => $buildingB->id]);
 
         $residentB = User::factory()->create();
-        
+
         // Setup visitor request for Building B
         $visitorRequestB = VisitorRequest::query()->create([
             'host_user_id' => $residentB->id,
@@ -50,7 +50,7 @@ class VisitorScopingTest extends TestCase
         $this->actingAs($guard);
 
         // 1. Verify index doesn't include Building B visitor
-        $response = $this->getJson("/api/v1/visitor-requests");
+        $response = $this->getJson('/api/v1/visitor-requests');
         $response->assertOk();
         $response->assertJsonMissing(['id' => $visitorRequestB->id]);
 

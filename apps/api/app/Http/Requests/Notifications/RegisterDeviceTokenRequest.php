@@ -16,8 +16,8 @@ class RegisterDeviceTokenRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'token'       => ['required', 'string', 'max:512'],
-            'platform'    => ['required', new Enum(DevicePlatform::class)],
+            'token' => ['required', 'string', 'max:512'],
+            'platform' => ['required', new Enum(DevicePlatform::class)],
             'device_name' => ['nullable', 'string', 'max:100'],
         ];
     }

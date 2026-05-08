@@ -23,7 +23,7 @@ class MockEmailChannel implements NotificationChannelInterface
             'provider' => 'mock',
             'response' => [
                 'message_id' => 'mock_email_'.substr(md5($user->email.time()), 0, 12),
-                'recipient'  => $user->email,
+                'recipient' => $user->email,
             ],
         ];
     }

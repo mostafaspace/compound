@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api\V1;
 
 use App\Enums\UserRole;
+use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
@@ -24,7 +25,7 @@ class SharedContractTest extends TestCase
         $user->assignRole($spatieRole);
 
         // 3. Verify UserResource reflects 'super_admin'
-        $resource = new \App\Http\Resources\UserResource($user->refresh());
+        $resource = new UserResource($user->refresh());
         $data = $resource->toArray(request());
 
         $this->assertEquals('super_admin', $data['role']);
@@ -39,7 +40,7 @@ class SharedContractTest extends TestCase
         ]);
 
         // 2. Verify UserResource reflects 'compound_admin'
-        $resource = new \App\Http\Resources\UserResource($user->refresh());
+        $resource = new UserResource($user->refresh());
         $data = $resource->toArray(request());
 
         $this->assertEquals('compound_admin', $data['role']);

@@ -22,7 +22,7 @@ class UserPolicyConsent extends Model
     {
         return [
             'accepted_at' => 'datetime',
-            'revoked_at'  => 'datetime',
+            'revoked_at' => 'datetime',
         ];
     }
 

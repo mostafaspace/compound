@@ -24,7 +24,7 @@ class BudgetCategory extends Model
     {
         return [
             'planned_amount' => 'decimal:2',
-            'actual_amount'  => 'decimal:2',
+            'actual_amount' => 'decimal:2',
         ];
     }
 

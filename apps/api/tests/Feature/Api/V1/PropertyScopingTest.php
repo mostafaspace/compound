@@ -5,6 +5,7 @@ namespace Tests\Feature\Api\V1;
 use App\Enums\UserRole;
 use App\Models\Property\Building;
 use App\Models\Property\Compound;
+use App\Models\Property\Floor;
 use App\Models\Property\Unit;
 use App\Models\User;
 use App\Models\UserScopeAssignment;
@@ -56,9 +57,9 @@ class PropertyScopingTest extends TestCase
         // 5. THE FIX: Verify they CANNOT see units in Building B (Hardened)
         $response = $this->getJson("/api/v1/buildings/{$buildingB->id}/units");
         $response->assertForbidden();
-        
+
         // 6. THE FIX: Verify they CANNOT see Building B units in the general lookup
-        $response = $this->getJson("/api/v1/units");
+        $response = $this->getJson('/api/v1/units');
         $response->assertJsonFragment(['id' => $unitA->id]);
         $response->assertJsonMissing(['id' => $unitB->id]);
     }
@@ -70,9 +71,9 @@ class PropertyScopingTest extends TestCase
     {
         $compound = Compound::factory()->create();
         $building = Building::factory()->create(['compound_id' => $compound->id]);
-        
-        $floor1 = \App\Models\Property\Floor::factory()->create(['building_id' => $building->id, 'label' => 'Floor 1', 'level_number' => 1]);
-        $floor2 = \App\Models\Property\Floor::factory()->create(['building_id' => $building->id, 'label' => 'Floor 2', 'level_number' => 2]);
+
+        $floor1 = Floor::factory()->create(['building_id' => $building->id, 'label' => 'Floor 1', 'level_number' => 1]);
+        $floor2 = Floor::factory()->create(['building_id' => $building->id, 'label' => 'Floor 2', 'level_number' => 2]);
 
         $unit1 = Unit::factory()->create(['compound_id' => $compound->id, 'building_id' => $building->id, 'floor_id' => $floor1->id]);
         $unit2 = Unit::factory()->create(['compound_id' => $compound->id, 'building_id' => $building->id, 'floor_id' => $floor2->id]);
@@ -98,7 +99,7 @@ class PropertyScopingTest extends TestCase
         $response->assertForbidden();
 
         // Verify general lookup only returns Floor 1
-        $response = $this->getJson("/api/v1/units");
+        $response = $this->getJson('/api/v1/units');
         $response->assertJsonFragment(['id' => $unit1->id]);
         $response->assertJsonMissing(['id' => $unit2->id]);
     }

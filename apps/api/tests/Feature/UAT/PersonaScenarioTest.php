@@ -2,18 +2,19 @@
 
 namespace Tests\Feature\UAT;
 
+use App\Models\Finance\UnitAccount;
 use App\Models\Property\Compound;
 use App\Models\User;
 use App\Models\Visitors\VisitorRequest;
+use App\Services\VisitorPassService;
 use Database\Seeders\RbacSeeder;
 use Database\Seeders\UatSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
  * Persona-Based UAT Scenario Tests (CM-128).
- * 
+ *
  * Proves that all core personas can complete their primary workflows
  * and that the system is operationally ready for launch.
  */
@@ -58,9 +59,9 @@ class PersonaScenarioTest extends TestCase
                     'infrastructure',
                     'launch' => [
                         'property_health',
-                        'finance_readiness'
-                    ]
-                ]
+                        'finance_readiness',
+                    ],
+                ],
             ]);
     }
 
@@ -71,7 +72,6 @@ class PersonaScenarioTest extends TestCase
     {
         $compound = Compound::first();
         $ca = User::where('email', 'compound-admin@uat.compound.local')->firstOrFail();
-        
 
         // UAT-CA-01: Building management
         $this->actingAs($ca)
@@ -106,18 +106,17 @@ class PersonaScenarioTest extends TestCase
         $unit = $floor->units->first();
 
         $guard = User::where('email', 'security-guard@uat.compound.local')->firstOrFail();
-        
 
         // UAT-SG-01: Visitor pass validation
         $request = VisitorRequest::factory()->create([
             'unit_id' => $unit->id,
             'status' => 'pending',
         ]);
-        $token = app(\App\Services\VisitorPassService::class)->issuePass($request);
+        $token = app(VisitorPassService::class)->issuePass($request);
 
         $this->actingAs($guard)
             ->postJson('/api/v1/visitor-requests/validate-pass', [
-                'token' => $token
+                'token' => $token,
             ])
             ->assertStatus(200)
             ->assertJsonPath('data.visitorRequest.id', $request->id);
@@ -148,9 +147,8 @@ class PersonaScenarioTest extends TestCase
         $unit = $compound->units->first();
         $fr = User::where('email', 'finance-reviewer@uat.compound.local')->firstOrFail();
 
-
         // UAT-FR-01: Unit account and ledger entry
-        $unitAccount = \App\Models\Finance\UnitAccount::where('unit_id', $unit->id)->firstOrFail();
+        $unitAccount = UnitAccount::where('unit_id', $unit->id)->firstOrFail();
         $unitAccount->update(['balance' => 1000]);
 
         $this->actingAs($fr)
@@ -171,7 +169,6 @@ class PersonaScenarioTest extends TestCase
     {
         $compound = Compound::first();
         $bm = User::where('email', 'board-member@uat.compound.local')->firstOrFail();
-
 
         // UAT-BM-02: Meeting management
         $this->actingAs($bm)
@@ -194,7 +191,6 @@ class PersonaScenarioTest extends TestCase
         $unit = $compound->units->first();
         $resident = User::where('email', 'resident-owner@uat.compound.local')->firstOrFail();
 
-
         // UAT-RO-02: Issue submission
         $this->actingAs($resident)
             ->postJson('/api/v1/issues', [
@@ -209,7 +205,7 @@ class PersonaScenarioTest extends TestCase
         // UAT-RO-04: Data export request
         $this->actingAs($resident)
             ->postJson('/api/v1/privacy/export-requests', [
-                'format' => 'json'
+                'format' => 'json',
             ])
             ->assertStatus(201);
     }

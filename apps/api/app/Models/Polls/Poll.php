@@ -35,10 +35,10 @@ class Poll extends Model
     {
         return [
             'allow_multiple' => 'boolean',
-            'starts_at'      => 'datetime',
-            'ends_at'        => 'datetime',
-            'published_at'   => 'datetime',
-            'closed_at'      => 'datetime',
+            'starts_at' => 'datetime',
+            'ends_at' => 'datetime',
+            'published_at' => 'datetime',
+            'closed_at' => 'datetime',
         ];
     }
 

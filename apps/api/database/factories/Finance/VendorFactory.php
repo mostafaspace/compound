@@ -17,14 +17,14 @@ class VendorFactory extends Factory
     public function definition(): array
     {
         return [
-            'compound_id'  => Compound::factory(),
-            'name'         => $this->faker->company(),
-            'type'         => VendorType::ServiceProvider->value,
+            'compound_id' => Compound::factory(),
+            'name' => $this->faker->company(),
+            'type' => VendorType::ServiceProvider->value,
             'contact_name' => $this->faker->optional()->name(),
-            'phone'        => $this->faker->optional()->phoneNumber(),
-            'email'        => $this->faker->optional()->safeEmail(),
-            'notes'        => null,
-            'is_active'    => true,
+            'phone' => $this->faker->optional()->phoneNumber(),
+            'email' => $this->faker->optional()->safeEmail(),
+            'notes' => null,
+            'is_active' => true,
         ];
     }
 }

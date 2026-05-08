@@ -15,6 +15,7 @@ class SecurityGate extends Model
 {
     /** @use HasFactory<SecurityGateFactory> */
     use HasFactory;
+
     use HasUlids;
 
     protected static function newFactory(): SecurityGateFactory

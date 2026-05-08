@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api\V1;
 
 use App\Enums\UserRole;
+use App\Models\Documents\DocumentType;
 use App\Models\Documents\UserDocument;
 use App\Models\Property\Building;
 use App\Models\Property\Compound;
@@ -10,7 +11,6 @@ use App\Models\Property\Unit;
 use App\Models\User;
 use App\Models\UserScopeAssignment;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -30,7 +30,7 @@ class DocumentScopingTest extends TestCase
         $unitB = Unit::factory()->create(['compound_id' => $compound->id, 'building_id' => $buildingB->id]);
 
         $residentB = User::factory()->create();
-        $docType = \App\Models\Documents\DocumentType::query()->create([
+        $docType = DocumentType::query()->create([
             'key' => 'id_card',
             'name' => 'ID Card',
             'is_active' => true,
@@ -62,7 +62,7 @@ class DocumentScopingTest extends TestCase
         $this->actingAs($staff);
 
         // 1. Verify index doesn't include Building B document
-        $response = $this->getJson("/api/v1/documents");
+        $response = $this->getJson('/api/v1/documents');
         $response->assertOk();
         $response->assertJsonMissing(['id' => $documentB->id]);
 

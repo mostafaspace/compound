@@ -68,7 +68,7 @@ class SettingsTest extends TestCase
     public function test_compound_admin_can_read_namespace_for_their_compound(): void
     {
         $compound = Compound::factory()->create();
-        $admin    = User::factory()->create([
+        $admin = User::factory()->create([
             'role' => UserRole::CompoundAdmin->value,
             'compound_id' => $compound->id,
         ]);
@@ -109,16 +109,16 @@ class SettingsTest extends TestCase
 
     public function test_compound_override_is_returned_over_default(): void
     {
-        $admin    = User::factory()->create(['role' => UserRole::SuperAdmin->value]);
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin->value]);
         $compound = Compound::factory()->create();
         Sanctum::actingAs($admin);
 
         // Insert a compound-specific override
         CompoundSetting::create([
             'compound_id' => $compound->id,
-            'namespace'   => 'visitors',
-            'key'         => 'max_visitors_per_unit_per_day',
-            'value'       => 5,
+            'namespace' => 'visitors',
+            'key' => 'max_visitors_per_unit_per_day',
+            'value' => 5,
         ]);
 
         $response = $this->getJson("/api/v1/settings/visitors?compoundId={$compound->id}")->assertOk();
@@ -132,9 +132,9 @@ class SettingsTest extends TestCase
 
         CompoundSetting::create([
             'compound_id' => null,
-            'namespace'   => 'finance',
-            'key'         => 'late_fee_enabled',
-            'value'       => true,
+            'namespace' => 'finance',
+            'key' => 'late_fee_enabled',
+            'value' => true,
         ]);
 
         $response = $this->getJson('/api/v1/settings/finance')->assertOk();
@@ -147,14 +147,14 @@ class SettingsTest extends TestCase
 
     public function test_admin_can_update_settings(): void
     {
-        $admin    = User::factory()->create(['role' => UserRole::SuperAdmin->value]);
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin->value]);
         $compound = Compound::factory()->create();
         Sanctum::actingAs($admin);
 
-        $response = $this->patchJson("/api/v1/settings/visitors", [
+        $response = $this->patchJson('/api/v1/settings/visitors', [
             'compoundId' => $compound->id,
-            'settings'   => [
-                'require_pre_approval'          => true,
+            'settings' => [
+                'require_pre_approval' => true,
                 'max_visitors_per_unit_per_day' => 3,
             ],
         ])->assertOk();
@@ -166,8 +166,8 @@ class SettingsTest extends TestCase
         // Verify persisted in DB
         $this->assertDatabaseHas('compound_settings', [
             'compound_id' => $compound->id,
-            'namespace'   => 'visitors',
-            'key'         => 'require_pre_approval',
+            'namespace' => 'visitors',
+            'key' => 'require_pre_approval',
         ]);
     }
 
@@ -225,8 +225,8 @@ class SettingsTest extends TestCase
 
         $this->assertDatabaseHas('compound_settings', [
             'compound_id' => null,
-            'namespace'   => 'governance',
-            'key'         => 'default_eligibility',
+            'namespace' => 'governance',
+            'key' => 'default_eligibility',
         ]);
     }
 
@@ -266,19 +266,19 @@ class SettingsTest extends TestCase
 
     public function test_updating_settings_writes_audit_log(): void
     {
-        $admin    = User::factory()->create(['role' => UserRole::SuperAdmin->value]);
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin->value]);
         $compound = Compound::factory()->create();
         Sanctum::actingAs($admin);
 
         $this->patchJson('/api/v1/settings/finance', [
             'compoundId' => $compound->id,
-            'settings'   => ['late_fee_percentage' => 5.0],
-            'reason'     => 'Approved by board meeting 2026-04-23',
+            'settings' => ['late_fee_percentage' => 5.0],
+            'reason' => 'Approved by board meeting 2026-04-23',
         ])->assertOk();
 
         $this->assertDatabaseHas('audit_logs', [
             'actor_id' => $admin->id,
-            'action'   => 'settings.updated',
+            'action' => 'settings.updated',
         ]);
 
         $log = AuditLog::query()->where('action', 'settings.updated')->latest()->first();
@@ -297,7 +297,7 @@ class SettingsTest extends TestCase
 
         $this->patchJson('/api/v1/settings/notifications', [
             'settings' => [
-                'sms_enabled'      => true,
+                'sms_enabled' => true,
                 'digest_frequency' => 'daily',
             ],
         ])->assertOk();
@@ -315,14 +315,14 @@ class SettingsTest extends TestCase
     public function test_settings_service_returns_default_when_no_row_exists(): void
     {
         $service = app(SettingsService::class);
-        $value   = $service->get('documents', 'max_file_size_mb');
+        $value = $service->get('documents', 'max_file_size_mb');
         $this->assertEquals(10, $value);
     }
 
     public function test_settings_service_returns_fallback_for_unknown_key(): void
     {
         $service = app(SettingsService::class);
-        $value   = $service->get('documents', 'nonexistent_key', null, 'my-fallback');
+        $value = $service->get('documents', 'nonexistent_key', null, 'my-fallback');
         $this->assertEquals('my-fallback', $value);
     }
 
@@ -333,21 +333,21 @@ class SettingsTest extends TestCase
         // Set a global override
         CompoundSetting::create([
             'compound_id' => null,
-            'namespace'   => 'finance',
-            'key'         => 'late_fee_enabled',
-            'value'       => true,
+            'namespace' => 'finance',
+            'key' => 'late_fee_enabled',
+            'value' => true,
         ]);
 
         // Set a compound override
         CompoundSetting::create([
             'compound_id' => $compound->id,
-            'namespace'   => 'finance',
-            'key'         => 'late_fee_percentage',
-            'value'       => 3.5,
+            'namespace' => 'finance',
+            'key' => 'late_fee_percentage',
+            'value' => 3.5,
         ]);
 
         $service = app(SettingsService::class);
-        $result  = $service->getNamespace('finance', $compound->id);
+        $result = $service->getNamespace('finance', $compound->id);
 
         $this->assertTrue($result['late_fee_enabled']);          // global override
         $this->assertEquals(3.5, $result['late_fee_percentage']); // compound override

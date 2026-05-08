@@ -7,12 +7,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Announcements\Announcement;
 use App\Models\CompoundSetting;
 use App\Models\Finance\UnitAccount;
-use App\Models\Governance\Vote;
-use App\Models\Issues\Issue;
 use App\Models\Property\Compound;
 use App\Models\ResidentInvitation;
 use App\Models\VerificationRequest;
-use App\Models\Visitors\VisitorRequest;
 use App\Services\CompoundContextService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -64,43 +61,43 @@ class CompoundOnboardingController extends Controller
 
         $steps = [
             [
-                'key'       => 'compound_activated',
-                'label'     => 'Compound is active',
+                'key' => 'compound_activated',
+                'label' => 'Compound is active',
                 'completed' => $compound->status === CompoundStatus::Active,
             ],
             [
-                'key'       => 'settings_configured',
-                'label'     => 'Default settings configured',
+                'key' => 'settings_configured',
+                'label' => 'Default settings configured',
                 'completed' => $settingsConfigured,
             ],
             [
-                'key'       => 'has_buildings',
-                'label'     => 'At least one building added',
+                'key' => 'has_buildings',
+                'label' => 'At least one building added',
                 'completed' => $buildingsExist,
             ],
             [
-                'key'       => 'has_units',
-                'label'     => 'At least one unit added',
+                'key' => 'has_units',
+                'label' => 'At least one unit added',
                 'completed' => $unitsExist,
             ],
             [
-                'key'       => 'residents_invited',
-                'label'     => 'First resident invited',
+                'key' => 'residents_invited',
+                'label' => 'First resident invited',
                 'completed' => $residentsInvited,
             ],
             [
-                'key'       => 'first_resident_verified',
-                'label'     => 'First resident verified',
+                'key' => 'first_resident_verified',
+                'label' => 'First resident verified',
                 'completed' => $firstResidentVerified,
             ],
             [
-                'key'       => 'first_finance_account',
-                'label'     => 'First unit finance account created',
+                'key' => 'first_finance_account',
+                'label' => 'First unit finance account created',
                 'completed' => $firstFinanceAccount,
             ],
             [
-                'key'       => 'first_announcement',
-                'label'     => 'First announcement published',
+                'key' => 'first_announcement',
+                'label' => 'First announcement published',
                 'completed' => $firstAnnouncement,
             ],
         ];
@@ -110,12 +107,12 @@ class CompoundOnboardingController extends Controller
 
         return response()->json([
             'data' => [
-                'compoundId'     => $compound->id,
-                'compoundName'   => $compound->name,
+                'compoundId' => $compound->id,
+                'compoundName' => $compound->name,
                 'completedSteps' => $completedCount,
-                'totalSteps'     => $totalCount,
+                'totalSteps' => $totalCount,
                 'percentComplete' => $totalCount > 0 ? round($completedCount / $totalCount * 100) : 0,
-                'steps'          => $steps,
+                'steps' => $steps,
             ],
         ]);
     }

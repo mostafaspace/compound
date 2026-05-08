@@ -4,7 +4,7 @@ namespace App\Enums;
 
 enum AuditSeverity: string
 {
-    case Info     = 'info';
-    case Warning  = 'warning';
+    case Info = 'info';
+    case Warning = 'warning';
     case Critical = 'critical';
 }

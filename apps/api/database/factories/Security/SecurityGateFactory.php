@@ -15,10 +15,10 @@ class SecurityGateFactory extends Factory
     public function definition(): array
     {
         return [
-            'name'        => fake()->randomElement(['Main Gate', 'Back Gate', 'Pedestrian Gate', 'Delivery Gate', 'Service Gate']),
-            'zone'        => fake()->optional(0.5)->randomElement(['Zone A', 'Zone B', 'North', 'South']),
+            'name' => fake()->randomElement(['Main Gate', 'Back Gate', 'Pedestrian Gate', 'Delivery Gate', 'Service Gate']),
+            'zone' => fake()->optional(0.5)->randomElement(['Zone A', 'Zone B', 'North', 'South']),
             'description' => fake()->optional(0.5)->sentence(),
-            'is_active'   => true,
+            'is_active' => true,
         ];
     }
 

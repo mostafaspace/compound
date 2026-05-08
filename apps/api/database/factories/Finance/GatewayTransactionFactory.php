@@ -16,15 +16,15 @@ class GatewayTransactionFactory extends Factory
     public function definition(): array
     {
         return [
-            'payment_session_id'      => PaymentSession::factory(),
-            'provider'                => 'mock',
-            'provider_transaction_id' => 'mock_tx_' . Str::ulid(),
-            'event_type'              => 'payment.succeeded',
-            'status'                  => GatewayTransactionStatus::Confirmed,
-            'amount'                  => $this->faker->randomFloat(2, 100, 5000),
-            'currency'                => 'EGP',
-            'raw_payload'             => ['note' => 'factory'],
-            'processed'               => true,
+            'payment_session_id' => PaymentSession::factory(),
+            'provider' => 'mock',
+            'provider_transaction_id' => 'mock_tx_'.Str::ulid(),
+            'event_type' => 'payment.succeeded',
+            'status' => GatewayTransactionStatus::Confirmed,
+            'amount' => $this->faker->randomFloat(2, 100, 5000),
+            'currency' => 'EGP',
+            'raw_payload' => ['note' => 'factory'],
+            'processed' => true,
         ];
     }
 

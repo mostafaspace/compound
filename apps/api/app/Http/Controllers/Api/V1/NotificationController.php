@@ -8,8 +8,8 @@ use App\Http\Resources\NotificationResource;
 use App\Models\Notification;
 use App\Services\NotificationService;
 use App\Support\AuditLogger;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -18,8 +18,7 @@ class NotificationController extends Controller
     public function __construct(
         private NotificationService $notificationService,
         private AuditLogger $auditLogger,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request): AnonymousResourceCollection
     {

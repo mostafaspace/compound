@@ -14,8 +14,9 @@ use Database\Seeders\RbacSeeder;
 use Database\Seeders\UatSeeder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -96,6 +97,7 @@ class AuthController extends Controller
     public function me(Request $request): UserResource
     {
         $user = $request->user()->load(['roles', 'permissions', 'scopeAssignments']);
+
         return UserResource::make($user);
     }
 
@@ -165,7 +167,7 @@ class AuthController extends Controller
         $record = DB::table('password_reset_tokens')->where('email', $email)->first();
 
         abort_unless($record && Hash::check($validated['token'], $record->token), 422, 'The password reset token is invalid.');
-        abort_if($record->created_at && \Illuminate\Support\Carbon::parse($record->created_at)->lt(now()->subHours(2)), 422, 'The password reset token has expired.');
+        abort_if($record->created_at && Carbon::parse($record->created_at)->lt(now()->subHours(2)), 422, 'The password reset token has expired.');
 
         /** @var User $user */
         $user = User::query()->where('email', $email)->firstOrFail();

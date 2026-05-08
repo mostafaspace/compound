@@ -16,6 +16,7 @@ class Meeting extends Model
 {
     /** @use HasFactory<MeetingFactory> */
     use HasFactory;
+
     use HasUlids;
 
     protected static function newFactory(): MeetingFactory
@@ -43,9 +44,9 @@ class Meeting extends Model
     protected function casts(): array
     {
         return [
-            'scheduled_at'  => 'datetime',
-            'cancelled_at'  => 'datetime',
-            'published_at'  => 'datetime',
+            'scheduled_at' => 'datetime',
+            'cancelled_at' => 'datetime',
+            'published_at' => 'datetime',
         ];
     }
 

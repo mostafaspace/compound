@@ -4,7 +4,6 @@ namespace Tests\Feature\Database;
 
 use App\Models\Apartments\ApartmentResident;
 use App\Models\Property\Unit;
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 

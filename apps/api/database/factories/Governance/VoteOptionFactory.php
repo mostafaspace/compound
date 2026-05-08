@@ -16,8 +16,8 @@ class VoteOptionFactory extends Factory
     public function definition(): array
     {
         return [
-            'vote_id'    => Vote::factory(),
-            'label'      => fake()->words(3, true),
+            'vote_id' => Vote::factory(),
+            'label' => fake()->words(3, true),
             'sort_order' => 0,
         ];
     }

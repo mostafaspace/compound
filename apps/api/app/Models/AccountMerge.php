@@ -22,10 +22,10 @@ class AccountMerge extends Model
     protected function casts(): array
     {
         return [
-            'status'         => AccountMergeStatus::class,
+            'status' => AccountMergeStatus::class,
             'merge_analysis' => 'array',
-            'completed_at'   => 'datetime',
-            'cancelled_at'   => 'datetime',
+            'completed_at' => 'datetime',
+            'cancelled_at' => 'datetime',
         ];
     }
 

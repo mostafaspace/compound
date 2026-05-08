@@ -47,12 +47,12 @@ class PollTypeController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'compoundId'  => ['nullable', 'string', 'exists:compounds,id'],
-            'name'        => ['required', 'string', 'max:100'],
+            'compoundId' => ['nullable', 'string', 'exists:compounds,id'],
+            'name' => ['required', 'string', 'max:100'],
             'description' => ['nullable', 'string'],
-            'color'       => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
-            'isActive'    => ['nullable', 'boolean'],
-            'sortOrder'   => ['nullable', 'integer', 'min:0'],
+            'color' => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
+            'isActive' => ['nullable', 'boolean'],
+            'sortOrder' => ['nullable', 'integer', 'min:0'],
         ]);
 
         $user = $request->user();
@@ -64,12 +64,12 @@ class PollTypeController extends Controller
 
         $pollType = PollType::create([
             'compound_id' => $validated['compoundId'] ?? null,
-            'name'        => $validated['name'],
+            'name' => $validated['name'],
             'description' => $validated['description'] ?? null,
-            'color'       => $validated['color'] ?? '#14b8a6',
-            'is_active'   => $validated['isActive'] ?? true,
-            'sort_order'  => $validated['sortOrder'] ?? 0,
-            'created_by'  => $user->id,
+            'color' => $validated['color'] ?? '#14b8a6',
+            'is_active' => $validated['isActive'] ?? true,
+            'sort_order' => $validated['sortOrder'] ?? 0,
+            'created_by' => $user->id,
         ]);
 
         return response()->json(['data' => PollTypeResource::make($pollType)->resolve()], 201);
@@ -78,22 +78,22 @@ class PollTypeController extends Controller
     public function update(Request $request, PollType $pollType): PollTypeResource
     {
         $validated = $request->validate([
-            'name'        => ['sometimes', 'required', 'string', 'max:100'],
+            'name' => ['sometimes', 'required', 'string', 'max:100'],
             'description' => ['nullable', 'string'],
-            'color'       => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
-            'isActive'    => ['sometimes', 'boolean'],
-            'sortOrder'   => ['sometimes', 'integer', 'min:0'],
+            'color' => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
+            'isActive' => ['sometimes', 'boolean'],
+            'sortOrder' => ['sometimes', 'integer', 'min:0'],
         ]);
 
         $user = $request->user();
         $this->ensurePollTypeAccess($request, $pollType);
 
         $pollType->update(array_filter([
-            'name'        => $validated['name'] ?? null,
+            'name' => $validated['name'] ?? null,
             'description' => $validated['description'] ?? null,
-            'color'       => $validated['color'] ?? null,
-            'is_active'   => $validated['isActive'] ?? null,
-            'sort_order'  => $validated['sortOrder'] ?? null,
+            'color' => $validated['color'] ?? null,
+            'is_active' => $validated['isActive'] ?? null,
+            'sort_order' => $validated['sortOrder'] ?? null,
         ], fn ($v) => ! is_null($v)));
 
         return PollTypeResource::make($pollType->fresh());

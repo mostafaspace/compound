@@ -39,9 +39,9 @@ class ReserveFundController extends Controller
     {
         $data = $request->validate([
             'compound_id' => ['required', 'string', 'exists:compounds,id'],
-            'name'        => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'currency'    => ['nullable', 'string', 'size:3'],
+            'currency' => ['nullable', 'string', 'size:3'],
         ]);
 
         $this->compoundContextService->ensureUserCanAccessCompound($request->user(), $data['compound_id']);
@@ -67,9 +67,9 @@ class ReserveFundController extends Controller
         $this->compoundContextService->ensureUserCanAccessCompound($request->user(), $reserveFund->compound_id);
 
         $data = $request->validate([
-            'name'        => ['sometimes', 'string', 'max:255'],
+            'name' => ['sometimes', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'is_active'   => ['sometimes', 'boolean'],
+            'is_active' => ['sometimes', 'boolean'],
         ]);
 
         $reserveFund->update($data);
@@ -84,10 +84,10 @@ class ReserveFundController extends Controller
         $this->compoundContextService->ensureUserCanAccessCompound($request->user(), $reserveFund->compound_id);
 
         $data = $request->validate([
-            'type'        => ['required', Rule::in(['deposit', 'withdrawal', 'transfer'])],
-            'amount'      => ['required', 'numeric', 'min:0.01'],
+            'type' => ['required', Rule::in(['deposit', 'withdrawal', 'transfer'])],
+            'amount' => ['required', 'numeric', 'min:0.01'],
             'description' => ['nullable', 'string', 'max:500'],
-            'reference'   => ['nullable', 'string', 'max:255'],
+            'reference' => ['nullable', 'string', 'max:255'],
         ]);
 
         $data['created_by'] = $request->user()->id;

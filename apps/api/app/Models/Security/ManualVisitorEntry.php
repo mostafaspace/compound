@@ -15,6 +15,7 @@ class ManualVisitorEntry extends Model
 {
     /** @use HasFactory<ManualVisitorEntryFactory> */
     use HasFactory;
+
     use HasUlids;
 
     protected static function newFactory(): ManualVisitorEntryFactory

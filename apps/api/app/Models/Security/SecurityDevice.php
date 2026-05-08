@@ -28,7 +28,7 @@ class SecurityDevice extends Model
     {
         return [
             'last_seen_at' => 'datetime',
-            'revoked_at'   => 'datetime',
+            'revoked_at' => 'datetime',
         ];
     }
 

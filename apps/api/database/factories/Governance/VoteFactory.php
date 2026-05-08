@@ -21,35 +21,35 @@ class VoteFactory extends Factory
     public function definition(): array
     {
         return [
-            'compound_id'             => Compound::factory(),
-            'building_id'             => null,
-            'type'                    => fake()->randomElement(VoteType::cases())->value,
-            'title'                   => fake()->sentence(5),
-            'description'             => fake()->paragraph(),
-            'status'                  => VoteStatus::Draft->value,
-            'scope'                   => VoteScope::Compound->value,
-            'eligibility'             => VoteEligibility::OwnersOnly->value,
+            'compound_id' => Compound::factory(),
+            'building_id' => null,
+            'type' => fake()->randomElement(VoteType::cases())->value,
+            'title' => fake()->sentence(5),
+            'description' => fake()->paragraph(),
+            'status' => VoteStatus::Draft->value,
+            'scope' => VoteScope::Compound->value,
+            'eligibility' => VoteEligibility::OwnersOnly->value,
             'requires_doc_compliance' => false,
-            'is_anonymous'            => false,
-            'starts_at'               => null,
-            'ends_at'                 => null,
-            'created_by'              => User::factory(),
+            'is_anonymous' => false,
+            'starts_at' => null,
+            'ends_at' => null,
+            'created_by' => User::factory(),
         ];
     }
 
     public function active(): static
     {
         return $this->state(fn (array $attributes) => [
-            'status'    => VoteStatus::Active->value,
+            'status' => VoteStatus::Active->value,
             'starts_at' => now()->subHour(),
-            'ends_at'   => now()->addDay(),
+            'ends_at' => now()->addDay(),
         ]);
     }
 
     public function closed(): static
     {
         return $this->state(fn (array $attributes) => [
-            'status'  => VoteStatus::Closed->value,
+            'status' => VoteStatus::Closed->value,
             'ends_at' => now()->subHour(),
         ]);
     }
@@ -64,7 +64,7 @@ class VoteFactory extends Factory
     public function election(): static
     {
         return $this->state(fn (array $attributes) => [
-            'type'        => VoteType::Election->value,
+            'type' => VoteType::Election->value,
             'eligibility' => VoteEligibility::OwnersOnly->value,
         ]);
     }

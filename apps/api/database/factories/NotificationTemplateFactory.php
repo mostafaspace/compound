@@ -14,14 +14,14 @@ class NotificationTemplateFactory extends Factory
     public function definition(): array
     {
         return [
-            'compound_id'    => null,
-            'category'       => fake()->randomElement(NotificationCategory::cases())->value,
-            'channel'        => fake()->randomElement(NotificationChannel::cases())->value,
-            'locale'         => 'en',
-            'subject'        => null,
+            'compound_id' => null,
+            'category' => fake()->randomElement(NotificationCategory::cases())->value,
+            'channel' => fake()->randomElement(NotificationChannel::cases())->value,
+            'locale' => 'en',
+            'subject' => null,
             'title_template' => 'You have a new {{category}} update',
-            'body_template'  => 'Open the app to see your {{category}} update.',
-            'is_active'      => true,
+            'body_template' => 'Open the app to see your {{category}} update.',
+            'is_active' => true,
         ];
     }
 

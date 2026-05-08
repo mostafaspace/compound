@@ -6,7 +6,6 @@ use App\Enums\NotificationCategory;
 use App\Events\NotificationCreatedEvent;
 use App\Jobs\DispatchExternalNotificationsJob;
 use App\Models\Notification;
-use App\Models\NotificationPreference;
 use App\Models\User;
 
 class NotificationService
@@ -72,7 +71,7 @@ class NotificationService
     {
         $preference = $user->notificationPreference;
 
-        if (!$preference || !$preference->quiet_hours_start || !$preference->quiet_hours_end) {
+        if (! $preference || ! $preference->quiet_hours_start || ! $preference->quiet_hours_end) {
             return false;
         }
 

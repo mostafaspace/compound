@@ -19,7 +19,7 @@ class PrivacyTest extends TestCase
     private function makeAdmin(array $attrs = []): User
     {
         return User::factory()->create(array_merge([
-            'role'   => UserRole::SuperAdmin->value,
+            'role' => UserRole::SuperAdmin->value,
             'status' => AccountStatus::Active->value,
         ], $attrs));
     }
@@ -27,7 +27,7 @@ class PrivacyTest extends TestCase
     private function makeResident(array $attrs = []): User
     {
         return User::factory()->create(array_merge([
-            'role'   => UserRole::ResidentOwner->value,
+            'role' => UserRole::ResidentOwner->value,
             'status' => AccountStatus::Active->value,
         ], $attrs));
     }
@@ -44,7 +44,7 @@ class PrivacyTest extends TestCase
         Sanctum::actingAs($this->makeResident());
 
         $this->postJson('/api/v1/privacy/consents', [
-            'policyType'    => 'privacy_policy',
+            'policyType' => 'privacy_policy',
             'policyVersion' => '2026-04-01',
         ])
             ->assertCreated()
@@ -58,18 +58,18 @@ class PrivacyTest extends TestCase
         Sanctum::actingAs($user);
 
         $this->postJson('/api/v1/privacy/consents', [
-            'policyType'    => 'privacy_policy',
+            'policyType' => 'privacy_policy',
             'policyVersion' => '2025-01-01',
         ])->assertCreated();
 
         $this->postJson('/api/v1/privacy/consents', [
-            'policyType'    => 'privacy_policy',
+            'policyType' => 'privacy_policy',
             'policyVersion' => '2026-04-01',
         ])->assertCreated();
 
         // Old one should be revoked
         $this->assertDatabaseHas('user_policy_consents', [
-            'user_id'        => $user->id,
+            'user_id' => $user->id,
             'policy_version' => '2025-01-01',
         ]);
         $old = UserPolicyConsent::where('user_id', $user->id)
@@ -82,10 +82,10 @@ class PrivacyTest extends TestCase
     {
         $user = $this->makeResident();
         UserPolicyConsent::create([
-            'user_id'        => $user->id,
-            'policy_type'    => 'terms_of_service',
+            'user_id' => $user->id,
+            'policy_type' => 'terms_of_service',
             'policy_version' => '2026-01-01',
-            'accepted_at'    => now(),
+            'accepted_at' => now(),
         ]);
 
         Sanctum::actingAs($user);
@@ -100,7 +100,7 @@ class PrivacyTest extends TestCase
         Sanctum::actingAs($this->makeResident());
 
         $this->postJson('/api/v1/privacy/consents', [
-            'policyType'    => 'invalid_policy',
+            'policyType' => 'invalid_policy',
             'policyVersion' => '2026-04-01',
         ])->assertUnprocessable();
     }
@@ -109,10 +109,10 @@ class PrivacyTest extends TestCase
     {
         $user = $this->makeResident();
         UserPolicyConsent::create([
-            'user_id'        => $user->id,
-            'policy_type'    => 'privacy_policy',
+            'user_id' => $user->id,
+            'policy_type' => 'privacy_policy',
             'policy_version' => '2026-04-01',
-            'accepted_at'    => now(),
+            'accepted_at' => now(),
         ]);
 
         Sanctum::actingAs($this->makeAdmin());
@@ -150,11 +150,11 @@ class PrivacyTest extends TestCase
     public function test_user_can_view_their_export_request(): void
     {
         $user = $this->makeResident();
-        $req  = DataExportRequest::create([
+        $req = DataExportRequest::create([
             'requested_by' => $user->id,
-            'user_id'      => $user->id,
-            'status'       => 'pending',
-            'expires_at'   => now()->addDays(7),
+            'user_id' => $user->id,
+            'status' => 'pending',
+            'expires_at' => now()->addDays(7),
         ]);
 
         Sanctum::actingAs($user);
@@ -169,9 +169,9 @@ class PrivacyTest extends TestCase
         $user = $this->makeResident();
         DataExportRequest::create([
             'requested_by' => $user->id,
-            'user_id'      => $user->id,
-            'status'       => 'pending',
-            'expires_at'   => now()->addDays(7),
+            'user_id' => $user->id,
+            'status' => 'pending',
+            'expires_at' => now()->addDays(7),
         ]);
 
         Sanctum::actingAs($this->makeAdmin());
@@ -183,11 +183,11 @@ class PrivacyTest extends TestCase
     public function test_admin_can_process_export_request(): void
     {
         $user = $this->makeResident();
-        $req  = DataExportRequest::create([
+        $req = DataExportRequest::create([
             'requested_by' => $user->id,
-            'user_id'      => $user->id,
-            'status'       => 'pending',
-            'expires_at'   => now()->addDays(7),
+            'user_id' => $user->id,
+            'status' => 'pending',
+            'expires_at' => now()->addDays(7),
         ]);
 
         Sanctum::actingAs($this->makeAdmin());
@@ -203,11 +203,11 @@ class PrivacyTest extends TestCase
     public function test_cannot_process_already_processed_export(): void
     {
         $user = $this->makeResident();
-        $req  = DataExportRequest::create([
+        $req = DataExportRequest::create([
             'requested_by' => $user->id,
-            'user_id'      => $user->id,
-            'status'       => 'ready',
-            'expires_at'   => now()->addDays(7),
+            'user_id' => $user->id,
+            'status' => 'ready',
+            'expires_at' => now()->addDays(7),
         ]);
 
         Sanctum::actingAs($this->makeAdmin());
@@ -224,7 +224,7 @@ class PrivacyTest extends TestCase
         Sanctum::actingAs($this->makeAdmin());
 
         $this->postJson("/api/v1/privacy/users/{$user->id}/legal-hold", [
-            'hold'   => true,
+            'hold' => true,
             'reason' => 'Active litigation.',
         ])
             ->assertOk()
@@ -237,7 +237,7 @@ class PrivacyTest extends TestCase
         Sanctum::actingAs($this->makeResident());
 
         $this->postJson("/api/v1/privacy/users/{$user->id}/legal-hold", [
-            'hold'   => true,
+            'hold' => true,
             'reason' => 'test',
         ])->assertForbidden();
     }

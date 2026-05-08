@@ -32,10 +32,10 @@ class PaymentSession extends Model
     protected function casts(): array
     {
         return [
-            'amount'            => 'decimal:2',
+            'amount' => 'decimal:2',
             'provider_metadata' => 'array',
-            'expires_at'        => 'datetime',
-            'status'            => PaymentSessionStatus::class,
+            'expires_at' => 'datetime',
+            'status' => PaymentSessionStatus::class,
         ];
     }
 

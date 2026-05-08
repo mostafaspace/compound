@@ -31,8 +31,8 @@ class LaunchReadinessController extends Controller
 
     public function __invoke(Request $request): JsonResponse
     {
-        $ops     = $this->ops->operatorStatus();
-        $launch  = $this->launchChecks();
+        $ops = $this->ops->operatorStatus();
+        $launch = $this->launchChecks();
 
         $allOk = $ops['status'] === 'ok'
             && collect($launch)->every(fn ($c) => ($c['status'] ?? 'fail') === 'pass');
@@ -49,12 +49,12 @@ class LaunchReadinessController extends Controller
 
         return response()->json([
             'data' => [
-                'overall'      => $overall,
-                'timestamp'    => now()->toIso8601String(),
-                'environment'  => app()->environment(),
+                'overall' => $overall,
+                'timestamp' => now()->toIso8601String(),
+                'environment' => app()->environment(),
                 'infrastructure' => $ops['checks'],
-                'launch'         => $launch,
-                'warnings'       => array_merge(
+                'launch' => $launch,
+                'warnings' => array_merge(
                     $ops['warnings'] ?? [],
                     $this->launchWarnings($launch),
                 ),
@@ -68,14 +68,14 @@ class LaunchReadinessController extends Controller
     private function launchChecks(): array
     {
         return [
-            'seed_data'           => $this->seedDataCheck(),
-            'property_health'     => $this->propertyHealthCheck(),
-            'finance_readiness'   => $this->financeReadinessCheck(),
-            'audit_log'           => $this->auditLogCheck(),
+            'seed_data' => $this->seedDataCheck(),
+            'property_health' => $this->propertyHealthCheck(),
+            'finance_readiness' => $this->financeReadinessCheck(),
+            'audit_log' => $this->auditLogCheck(),
             'notification_config' => $this->notificationConfigCheck(),
-            'privacy_config'      => $this->privacyConfigCheck(),
-            'debug_mode'          => $this->debugModeCheck(),
-            'scheduled_jobs'      => $this->scheduledJobsCheck(),
+            'privacy_config' => $this->privacyConfigCheck(),
+            'debug_mode' => $this->debugModeCheck(),
+            'scheduled_jobs' => $this->scheduledJobsCheck(),
         ];
     }
 
@@ -146,15 +146,15 @@ class LaunchReadinessController extends Controller
     private function seedDataCheck(): array
     {
         try {
-            $superAdminCount  = $this->countUsersForEffectiveRole('super_admin');
+            $superAdminCount = $this->countUsersForEffectiveRole('super_admin');
             $compoundAdminCount = $this->countUsersForEffectiveRole('compound_admin');
-            $hasUatAccounts   = User::query()->where('email', 'like', '%@uat.compound.local')->exists();
+            $hasUatAccounts = User::query()->where('email', 'like', '%@uat.compound.local')->exists();
 
             return [
-                'status'            => $superAdminCount > 0 ? 'pass' : 'fail',
-                'superAdmins'       => $superAdminCount,
-                'compoundAdmins'    => $compoundAdminCount,
-                'hasUatPersonas'    => $hasUatAccounts,
+                'status' => $superAdminCount > 0 ? 'pass' : 'fail',
+                'superAdmins' => $superAdminCount,
+                'compoundAdmins' => $compoundAdminCount,
+                'hasUatPersonas' => $hasUatAccounts,
             ];
         } catch (Throwable $e) {
             return ['status' => 'fail', 'message' => mb_substr($e->getMessage(), 0, 160)];
@@ -187,14 +187,14 @@ class LaunchReadinessController extends Controller
     private function auditLogCheck(): array
     {
         try {
-            $total   = AuditLog::query()->count();
-            $recent  = AuditLog::query()
+            $total = AuditLog::query()->count();
+            $recent = AuditLog::query()
                 ->where('created_at', '>=', now()->subDays(1))
                 ->count();
 
             return [
-                'status'      => 'pass',
-                'totalLogs'   => $total,
+                'status' => 'pass',
+                'totalLogs' => $total,
                 'last24Hours' => $recent,
             ];
         } catch (Throwable $e) {
@@ -202,20 +202,19 @@ class LaunchReadinessController extends Controller
         }
     }
 
-
     /**
      * @return array<string, mixed>
      */
     private function notificationConfigCheck(): array
     {
         $emailDriver = config('mail.default', 'log');
-        $smsDriver   = config('services.sms.driver', null);
+        $smsDriver = config('services.sms.driver', null);
 
         return [
-            'status'     => $emailDriver !== 'log' ? 'pass' : 'warn',
+            'status' => $emailDriver !== 'log' ? 'pass' : 'warn',
             'emailDriver' => $emailDriver,
-            'smsDriver'   => $smsDriver ?? 'not_configured',
-            'note'        => $emailDriver === 'log'
+            'smsDriver' => $smsDriver ?? 'not_configured',
+            'note' => $emailDriver === 'log'
                 ? 'Email driver is set to log — configure SMTP/SES for production.'
                 : null,
         ];
@@ -227,15 +226,15 @@ class LaunchReadinessController extends Controller
     private function privacyConfigCheck(): array
     {
         try {
-            $legalHoldCount  = DB::table('users')->where('legal_hold', true)->count();
-            $consentCount    = DB::table('user_policy_consents')
+            $legalHoldCount = DB::table('users')->where('legal_hold', true)->count();
+            $consentCount = DB::table('user_policy_consents')
                 ->whereNull('revoked_at')
                 ->count();
 
             return [
-                'status'           => 'pass',
+                'status' => 'pass',
                 'activeLegalHolds' => $legalHoldCount,
-                'activeConsents'   => $consentCount,
+                'activeConsents' => $consentCount,
             ];
         } catch (Throwable $e) {
             return ['status' => 'fail', 'message' => mb_substr($e->getMessage(), 0, 160)];
@@ -251,8 +250,8 @@ class LaunchReadinessController extends Controller
 
         return [
             'status' => $debug ? 'fail' : 'pass',
-            'debug'  => $debug,
-            'note'   => $debug ? 'APP_DEBUG must be false in production.' : null,
+            'debug' => $debug,
+            'note' => $debug ? 'APP_DEBUG must be false in production.' : null,
         ];
     }
 
@@ -263,11 +262,11 @@ class LaunchReadinessController extends Controller
     {
         try {
             $failedJobCount = DB::table('failed_jobs')->count();
-            $hasScheduler   = file_exists(base_path('artisan'));
+            $hasScheduler = file_exists(base_path('artisan'));
 
             return [
-                'status'         => $failedJobCount === 0 ? 'pass' : 'warn',
-                'failedJobs'     => $failedJobCount,
+                'status' => $failedJobCount === 0 ? 'pass' : 'warn',
+                'failedJobs' => $failedJobCount,
                 'schedulerReady' => $hasScheduler,
             ];
         } catch (Throwable $e) {

@@ -25,10 +25,10 @@ class NotificationDeliveryLog extends Model
     ];
 
     protected $casts = [
-        'channel'           => NotificationChannel::class,
-        'status'            => DeliveryStatus::class,
+        'channel' => NotificationChannel::class,
+        'status' => DeliveryStatus::class,
         'provider_response' => 'array',
-        'attempt_number'    => 'integer',
+        'attempt_number' => 'integer',
     ];
 
     public function notification(): BelongsTo

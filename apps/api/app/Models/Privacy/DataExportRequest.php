@@ -27,8 +27,8 @@ class DataExportRequest extends Model
     protected function casts(): array
     {
         return [
-            'modules'      => 'array',
-            'expires_at'   => 'datetime',
+            'modules' => 'array',
+            'expires_at' => 'datetime',
             'processed_at' => 'datetime',
         ];
     }

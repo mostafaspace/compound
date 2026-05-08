@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
 
 class IssueAttachment extends Model
 {
@@ -46,6 +47,6 @@ class IssueAttachment extends Model
 
     public function getUrlAttribute(): string
     {
-        return \Illuminate\Support\Facades\Storage::disk($this->disk)->url($this->path);
+        return Storage::disk($this->disk)->url($this->path);
     }
 }

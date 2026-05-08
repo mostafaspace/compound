@@ -5,10 +5,10 @@ namespace App\Http\Controllers\Api\V1\Maintenance;
 use App\Http\Controllers\Controller;
 use App\Models\Maintenance\WorkOrder;
 use App\Models\Maintenance\WorkOrderEstimate;
+use App\Models\User;
+use App\Services\CompoundContextService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-
-use App\Services\CompoundContextService;
 
 // CM-83 / CM-118: Vendor estimates for work orders
 class WorkOrderEstimateController extends Controller
@@ -17,7 +17,7 @@ class WorkOrderEstimateController extends Controller
 
     public function store(Request $request, WorkOrder $workOrder): JsonResponse
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = $request->user();
         $this->context->ensureUserCanAccessCompound($user, $workOrder->compound_id);
 
@@ -25,23 +25,23 @@ class WorkOrderEstimateController extends Controller
 
         $validated = $request->validate([
             'vendorId' => ['nullable', 'string', 'exists:vendors,id'],
-            'amount'   => ['required', 'numeric', 'min:0'],
-            'notes'    => ['nullable', 'string', 'max:2000'],
+            'amount' => ['required', 'numeric', 'min:0'],
+            'notes' => ['nullable', 'string', 'max:2000'],
         ]);
 
         $estimate = WorkOrderEstimate::create([
             'work_order_id' => $workOrder->id,
-            'vendor_id'     => $validated['vendorId'] ?? $workOrder->vendor_id,
-            'amount'        => $validated['amount'],
-            'notes'         => $validated['notes'] ?? null,
-            'status'        => 'pending',
-            'submitted_by'  => $user->id,
+            'vendor_id' => $validated['vendorId'] ?? $workOrder->vendor_id,
+            'amount' => $validated['amount'],
+            'notes' => $validated['notes'] ?? null,
+            'status' => 'pending',
+            'submitted_by' => $user->id,
         ]);
 
         // Auto-advance work order to 'quoted' if still in draft/requested
         if (in_array($workOrder->status, ['draft', 'requested'], true)) {
             $workOrder->update([
-                'status'         => 'quoted',
+                'status' => 'quoted',
                 'estimated_cost' => $validated['amount'],
             ]);
         }
@@ -51,7 +51,7 @@ class WorkOrderEstimateController extends Controller
 
     public function review(Request $request, WorkOrder $workOrder, WorkOrderEstimate $estimate): JsonResponse
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = $request->user();
         $this->context->ensureUserCanAccessCompound($user, $workOrder->compound_id);
 
@@ -59,14 +59,14 @@ class WorkOrderEstimateController extends Controller
         abort_if($estimate->status !== 'pending', 422, 'Estimate has already been reviewed.');
 
         $validated = $request->validate([
-            'status'      => ['required', 'string', 'in:approved,rejected'],
+            'status' => ['required', 'string', 'in:approved,rejected'],
             'reviewNotes' => ['nullable', 'string', 'max:1000'],
         ]);
 
         $estimate->update([
-            'status'       => $validated['status'],
-            'reviewed_by'  => $user->id,
-            'reviewed_at'  => now(),
+            'status' => $validated['status'],
+            'reviewed_by' => $user->id,
+            'reviewed_at' => now(),
             'review_notes' => $validated['reviewNotes'] ?? null,
         ]);
 
@@ -74,7 +74,7 @@ class WorkOrderEstimateController extends Controller
         if ($validated['status'] === 'approved') {
             $workOrder->update([
                 'approved_cost' => $estimate->amount,
-                'vendor_id'     => $estimate->vendor_id ?? $workOrder->vendor_id,
+                'vendor_id' => $estimate->vendor_id ?? $workOrder->vendor_id,
             ]);
         }
 

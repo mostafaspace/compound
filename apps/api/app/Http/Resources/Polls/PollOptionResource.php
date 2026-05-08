@@ -10,9 +10,9 @@ class PollOptionResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id'         => $this->id,
-            'label'      => $this->label,
-            'sortOrder'  => $this->sort_order,
+            'id' => $this->id,
+            'label' => $this->label,
+            'sortOrder' => $this->sort_order,
             'votesCount' => $this->votes_count,
         ];
     }

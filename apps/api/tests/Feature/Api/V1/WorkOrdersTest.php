@@ -25,7 +25,7 @@ class WorkOrdersTest extends TestCase
     private function makeAdmin(array $attrs = []): User
     {
         return User::factory()->create(array_merge([
-            'role'   => UserRole::SuperAdmin->value,
+            'role' => UserRole::SuperAdmin->value,
             'status' => AccountStatus::Active->value,
         ], $attrs));
     }
@@ -33,7 +33,7 @@ class WorkOrdersTest extends TestCase
     private function makeResident(array $attrs = []): User
     {
         return User::factory()->create(array_merge([
-            'role'   => UserRole::ResidentOwner->value,
+            'role' => UserRole::ResidentOwner->value,
             'status' => AccountStatus::Active->value,
         ], $attrs));
     }
@@ -52,8 +52,8 @@ class WorkOrdersTest extends TestCase
 
         $this->postJson(self::BASE, [
             'compoundId' => $compound->id,
-            'title'      => 'Fix pipe',
-            'category'   => 'plumbing',
+            'title' => 'Fix pipe',
+            'category' => 'plumbing',
         ])->assertForbidden();
     }
 
@@ -71,11 +71,11 @@ class WorkOrdersTest extends TestCase
         Sanctum::actingAs($this->makeAdmin());
 
         $this->postJson(self::BASE, [
-            'compoundId'  => $compound->id,
-            'title'       => 'Fix broken pipe in lobby',
+            'compoundId' => $compound->id,
+            'title' => 'Fix broken pipe in lobby',
             'description' => 'Water leaking near entrance.',
-            'category'    => 'plumbing',
-            'priority'    => 'high',
+            'category' => 'plumbing',
+            'priority' => 'high',
         ])
             ->assertCreated()
             ->assertJsonPath('data.title', 'Fix broken pipe in lobby')
@@ -87,10 +87,10 @@ class WorkOrdersTest extends TestCase
     public function test_admin_can_update_work_order(): void
     {
         $compound = Compound::factory()->create();
-        $admin    = $this->makeAdmin();
-        $order    = WorkOrder::factory()->create([
+        $admin = $this->makeAdmin();
+        $order = WorkOrder::factory()->create([
             'compound_id' => $compound->id,
-            'created_by'  => $admin->id,
+            'created_by' => $admin->id,
         ]);
 
         Sanctum::actingAs($admin);
@@ -107,7 +107,7 @@ class WorkOrdersTest extends TestCase
         $admin = $this->makeAdmin();
         $order = WorkOrder::factory()->completed()->create([
             'compound_id' => Compound::factory()->create()->id,
-            'created_by'  => $admin->id,
+            'created_by' => $admin->id,
         ]);
 
         Sanctum::actingAs($admin);
@@ -120,7 +120,7 @@ class WorkOrdersTest extends TestCase
     {
         $compoundA = Compound::factory()->create();
         $compoundB = Compound::factory()->create();
-        $admin     = $this->makeAdmin();
+        $admin = $this->makeAdmin();
 
         WorkOrder::factory()->count(3)->create(['compound_id' => $compoundA->id, 'created_by' => $admin->id]);
         WorkOrder::factory()->create(['compound_id' => $compoundB->id, 'created_by' => $admin->id]);
@@ -139,7 +139,7 @@ class WorkOrdersTest extends TestCase
         $admin = $this->makeAdmin();
         $order = WorkOrder::factory()->create([
             'compound_id' => Compound::factory()->create()->id,
-            'created_by'  => $admin->id,
+            'created_by' => $admin->id,
         ]);
 
         Sanctum::actingAs($admin);
@@ -154,7 +154,7 @@ class WorkOrdersTest extends TestCase
         $admin = $this->makeAdmin();
         $order = WorkOrder::factory()->requested()->create([
             'compound_id' => Compound::factory()->create()->id,
-            'created_by'  => $admin->id,
+            'created_by' => $admin->id,
         ]);
 
         Sanctum::actingAs($admin);
@@ -168,7 +168,7 @@ class WorkOrdersTest extends TestCase
         $admin = $this->makeAdmin();
         $order = WorkOrder::factory()->requested()->create([
             'compound_id' => Compound::factory()->create()->id,
-            'created_by'  => $admin->id,
+            'created_by' => $admin->id,
         ]);
 
         Sanctum::actingAs($admin);
@@ -184,7 +184,7 @@ class WorkOrdersTest extends TestCase
         $admin = $this->makeAdmin();
         $order = WorkOrder::factory()->quoted()->create([
             'compound_id' => Compound::factory()->create()->id,
-            'created_by'  => $admin->id,
+            'created_by' => $admin->id,
         ]);
 
         Sanctum::actingAs($admin);
@@ -200,7 +200,7 @@ class WorkOrdersTest extends TestCase
         $admin = $this->makeAdmin();
         $order = WorkOrder::factory()->approved()->create([
             'compound_id' => Compound::factory()->create()->id,
-            'created_by'  => $admin->id,
+            'created_by' => $admin->id,
         ]);
 
         Sanctum::actingAs($admin);
@@ -216,14 +216,14 @@ class WorkOrdersTest extends TestCase
         $admin = $this->makeAdmin();
         $order = WorkOrder::factory()->inProgress()->create([
             'compound_id' => Compound::factory()->create()->id,
-            'created_by'  => $admin->id,
+            'created_by' => $admin->id,
         ]);
 
         Sanctum::actingAs($admin);
 
         $this->postJson(self::BASE."/{$order->id}/complete", [
             'completionNotes' => 'Pipe replaced successfully.',
-            'actualCost'      => 1200.00,
+            'actualCost' => 1200.00,
         ])
             ->assertOk()
             ->assertJsonPath('data.status', 'completed')
@@ -236,7 +236,7 @@ class WorkOrdersTest extends TestCase
         $admin = $this->makeAdmin();
         $order = WorkOrder::factory()->requested()->create([
             'compound_id' => Compound::factory()->create()->id,
-            'created_by'  => $admin->id,
+            'created_by' => $admin->id,
         ]);
 
         Sanctum::actingAs($admin);
@@ -251,7 +251,7 @@ class WorkOrdersTest extends TestCase
         $admin = $this->makeAdmin();
         $order = WorkOrder::factory()->completed()->create([
             'compound_id' => Compound::factory()->create()->id,
-            'created_by'  => $admin->id,
+            'created_by' => $admin->id,
         ]);
 
         Sanctum::actingAs($admin);
@@ -264,10 +264,10 @@ class WorkOrdersTest extends TestCase
 
     public function test_admin_can_add_estimate(): void
     {
-        $admin  = $this->makeAdmin();
-        $order  = WorkOrder::factory()->requested()->create([
+        $admin = $this->makeAdmin();
+        $order = WorkOrder::factory()->requested()->create([
             'compound_id' => Compound::factory()->create()->id,
-            'created_by'  => $admin->id,
+            'created_by' => $admin->id,
         ]);
         $vendor = Vendor::factory()->create(['compound_id' => $order->compound_id]);
 
@@ -275,8 +275,8 @@ class WorkOrdersTest extends TestCase
 
         $this->postJson(self::BASE."/{$order->id}/estimates", [
             'vendorId' => $vendor->id,
-            'amount'   => 2500.00,
-            'notes'    => 'Including materials.',
+            'amount' => 2500.00,
+            'notes' => 'Including materials.',
         ])
             ->assertCreated()
             ->assertJsonPath('data.amount', '2500.00')
@@ -288,7 +288,7 @@ class WorkOrdersTest extends TestCase
         $admin = $this->makeAdmin();
         $order = WorkOrder::factory()->requested()->create([
             'compound_id' => Compound::factory()->create()->id,
-            'created_by'  => $admin->id,
+            'created_by' => $admin->id,
         ]);
 
         Sanctum::actingAs($admin);
@@ -301,22 +301,22 @@ class WorkOrdersTest extends TestCase
 
     public function test_admin_can_review_estimate(): void
     {
-        $admin    = $this->makeAdmin();
-        $order    = WorkOrder::factory()->quoted()->create([
+        $admin = $this->makeAdmin();
+        $order = WorkOrder::factory()->quoted()->create([
             'compound_id' => Compound::factory()->create()->id,
-            'created_by'  => $admin->id,
+            'created_by' => $admin->id,
         ]);
         $estimate = WorkOrderEstimate::create([
             'work_order_id' => $order->id,
-            'amount'        => 3000.00,
-            'status'        => 'pending',
-            'submitted_by'  => $admin->id,
+            'amount' => 3000.00,
+            'status' => 'pending',
+            'submitted_by' => $admin->id,
         ]);
 
         Sanctum::actingAs($admin);
 
         $this->postJson(self::BASE."/{$order->id}/estimates/{$estimate->id}/review", [
-            'status'      => 'approved',
+            'status' => 'approved',
             'reviewNotes' => 'Cost is acceptable.',
         ])
             ->assertOk()
@@ -325,16 +325,16 @@ class WorkOrdersTest extends TestCase
 
     public function test_cannot_review_estimate_twice(): void
     {
-        $admin    = $this->makeAdmin();
-        $order    = WorkOrder::factory()->quoted()->create([
+        $admin = $this->makeAdmin();
+        $order = WorkOrder::factory()->quoted()->create([
             'compound_id' => Compound::factory()->create()->id,
-            'created_by'  => $admin->id,
+            'created_by' => $admin->id,
         ]);
         $estimate = WorkOrderEstimate::create([
             'work_order_id' => $order->id,
-            'amount'        => 3000.00,
-            'status'        => 'approved',
-            'submitted_by'  => $admin->id,
+            'amount' => 3000.00,
+            'status' => 'approved',
+            'submitted_by' => $admin->id,
         ]);
 
         Sanctum::actingAs($admin);
@@ -362,8 +362,8 @@ class WorkOrdersTest extends TestCase
 
         $this->postJson(self::BASE, [
             'compoundId' => $compound->id,
-            'title'      => 'Test order',
-            'category'   => 'invalid_category',
+            'title' => 'Test order',
+            'category' => 'invalid_category',
         ])->assertUnprocessable();
     }
 
@@ -372,7 +372,7 @@ class WorkOrdersTest extends TestCase
         $admin = $this->makeAdmin();
         $order = WorkOrder::factory()->requested()->create([
             'compound_id' => Compound::factory()->create()->id,
-            'created_by'  => $admin->id,
+            'created_by' => $admin->id,
         ]);
 
         Sanctum::actingAs($admin);
