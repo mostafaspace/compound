@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Pressable,
   StyleSheet,
   Text,
   TextInput,
@@ -10,15 +11,24 @@ import {
 } from "react-native";
 import { Button } from "../../../../components/ui/Button";
 import { colors, radii, shadows, spacing, typography } from "../../../../theme";
-import { useAppendNoteMutation, useListNotesQuery } from "../../../../services/apartments/notesApi";
+import {
+  useAppendNoteMutation,
+  useDeleteNoteMutation,
+  useListNotesQuery,
+  useUpdateNoteMutation,
+} from "../../../../services/apartments/notesApi";
 import type { ApartmentDetail, ApartmentNote } from "../../../../services/apartments/types";
 
 export function NotesTab({ apartment }: { apartment: ApartmentDetail }) {
   const isDark = useColorScheme() === "dark";
   const [body, setBody] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [editingNote, setEditingNote] = useState<ApartmentNote | null>(null);
+  const [editingBody, setEditingBody] = useState("");
   const { data = apartment.recentNotes, isLoading } = useListNotesQuery(apartment.id);
   const [appendNote, appendState] = useAppendNoteMutation();
+  const [updateNote, updateState] = useUpdateNoteMutation();
+  const [deleteNote, deleteState] = useDeleteNoteMutation();
 
   const submit = async () => {
     const trimmed = body.trim();
@@ -37,6 +47,52 @@ export function NotesTab({ apartment }: { apartment: ApartmentDetail }) {
     }
   };
 
+  const startEditing = (note: ApartmentNote) => {
+    setEditingNote(note);
+    setEditingBody(note.body);
+    setError(null);
+  };
+
+  const cancelEditing = () => {
+    setEditingNote(null);
+    setEditingBody("");
+  };
+
+  const submitEdit = async () => {
+    if (!editingNote) {
+      return;
+    }
+
+    const trimmed = editingBody.trim();
+
+    if (!trimmed) {
+      setError("Note body is required.");
+      return;
+    }
+
+    setError(null);
+
+    try {
+      await updateNote({ unitId: apartment.id, noteId: editingNote.id, body: trimmed }).unwrap();
+      cancelEditing();
+    } catch {
+      setError("Could not update note. Please try again.");
+    }
+  };
+
+  const removeNote = async (note: ApartmentNote) => {
+    setError(null);
+
+    try {
+      await deleteNote({ unitId: apartment.id, noteId: note.id }).unwrap();
+      if (editingNote?.id === note.id) {
+        cancelEditing();
+      }
+    } catch {
+      setError("Could not delete note. Please try again.");
+    }
+  };
+
   return (
     <FlatList
       data={data}
@@ -51,6 +107,40 @@ export function NotesTab({ apartment }: { apartment: ApartmentDetail }) {
           <Text style={[styles.title, { color: colors.text.primary[isDark ? "dark" : "light"] }]}>
             Add a timeline entry
           </Text>
+          {editingNote ? (
+            <View style={[styles.editingPanel, { borderColor: colors.border[isDark ? "dark" : "light"] }]}>
+              <Text style={[styles.editingTitle, { color: colors.text.primary[isDark ? "dark" : "light"] }]}>
+                Editing note
+              </Text>
+              <TextInput
+                multiline
+                placeholder="Update this note..."
+                placeholderTextColor={colors.text.secondary[isDark ? "dark" : "light"]}
+                value={editingBody}
+                onChangeText={setEditingBody}
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: colors.surfaceMuted[isDark ? "dark" : "light"],
+                    borderColor: colors.border[isDark ? "dark" : "light"],
+                    color: colors.text.primary[isDark ? "dark" : "light"],
+                  },
+                ]}
+                textAlignVertical="top"
+              />
+              <View style={styles.rowActions}>
+                <Button title="Cancel" variant="ghost" onPress={cancelEditing} disabled={updateState.isLoading} style={styles.rowActionButton} />
+                <Button
+                  title={updateState.isLoading ? "Saving..." : "Save changes"}
+                  onPress={() => {
+                    void submitEdit();
+                  }}
+                  disabled={!editingBody.trim() || updateState.isLoading}
+                  style={styles.rowActionButton}
+                />
+              </View>
+            </View>
+          ) : null}
           <TextInput
             multiline
             placeholder="Add a dated note for this apartment..."
@@ -77,15 +167,37 @@ export function NotesTab({ apartment }: { apartment: ApartmentDetail }) {
             style={styles.submitButton}
           />
           {isLoading ? <ActivityIndicator color={colors.primary[isDark ? "dark" : "light"]} style={styles.loader} /> : null}
+          {deleteState.isLoading ? <ActivityIndicator color={colors.primary[isDark ? "dark" : "light"]} style={styles.loader} /> : null}
         </View>
       }
       ListEmptyComponent={<EmptyState />}
-      renderItem={({ item }) => <NoteRow note={item} isDark={isDark} />}
+      renderItem={({ item }) => (
+        <NoteRow
+          note={item}
+          isDark={isDark}
+          onEdit={() => startEditing(item)}
+          onDelete={() => {
+            void removeNote(item);
+          }}
+        />
+      )}
     />
   );
 }
 
-function NoteRow({ note, isDark }: { note: ApartmentNote; isDark: boolean }) {
+function NoteRow({
+  note,
+  isDark,
+  onEdit,
+  onDelete,
+}: {
+  note: ApartmentNote;
+  isDark: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const actionColor = colors.primary[isDark ? "dark" : "light"];
+
   return (
     <View
       style={[
@@ -100,6 +212,14 @@ function NoteRow({ note, isDark }: { note: ApartmentNote; isDark: boolean }) {
       <Text style={[styles.noteMeta, { color: colors.text.secondary[isDark ? "dark" : "light"] }]}>
         {note.author?.name ?? "Resident"} · {formatDate(note.createdAt)}
       </Text>
+      <View style={styles.noteActions}>
+        <Pressable onPress={onEdit} hitSlop={8}>
+          <Text style={[styles.noteActionText, { color: actionColor }]}>Edit</Text>
+        </Pressable>
+        <Pressable onPress={onDelete} hitSlop={8}>
+          <Text style={[styles.noteActionText, { color: colors.error }]}>Delete</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -113,7 +233,7 @@ function EmptyState() {
         No notes yet
       </Text>
       <Text style={[styles.emptyBody, { color: colors.text.secondary[isDark ? "dark" : "light"] }]}>
-        Notes are append-only in this first version, so each entry becomes part of the apartment timeline.
+        Add notes for resident, vehicle, parking, or document context. You can edit or delete entries later.
       </Text>
     </View>
   );
@@ -155,6 +275,23 @@ const styles = StyleSheet.create({
   submitButton: {
     marginTop: spacing.md,
   },
+  editingPanel: {
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    marginTop: spacing.md,
+    padding: spacing.md,
+  },
+  editingTitle: {
+    ...typography.bodyStrong,
+  },
+  rowActions: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  rowActionButton: {
+    flex: 1,
+  },
   loader: {
     marginTop: spacing.md,
   },
@@ -174,6 +311,14 @@ const styles = StyleSheet.create({
   noteMeta: {
     ...typography.caption,
     marginTop: spacing.sm,
+  },
+  noteActions: {
+    flexDirection: "row",
+    gap: spacing.lg,
+    marginTop: spacing.md,
+  },
+  noteActionText: {
+    ...typography.bodyStrong,
   },
   empty: {
     borderRadius: radii.xl,

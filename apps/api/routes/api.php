@@ -135,6 +135,8 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             ->names('apartments.parking-spots');
         Route::get('/apartments/{unit}/notes', [ApartmentNoteController::class, 'index'])->name('apartments.notes.index');
         Route::post('/apartments/{unit}/notes', [ApartmentNoteController::class, 'store'])->name('apartments.notes.store');
+        Route::patch('/apartments/{unit}/notes/{note}', [ApartmentNoteController::class, 'update'])->name('apartments.notes.update');
+        Route::delete('/apartments/{unit}/notes/{note}', [ApartmentNoteController::class, 'destroy'])->name('apartments.notes.destroy');
         Route::get('/apartments/{unit}/violations', [ApartmentViolationController::class, 'index'])
             ->name('apartments.violations.index');
         Route::get('/apartments/{unit}/documents', [ApartmentDocumentController::class, 'index'])

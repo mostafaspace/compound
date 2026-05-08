@@ -18,6 +18,18 @@ class NoteService
         ]);
     }
 
+    public function update(ApartmentNote $note, string $body): ApartmentNote
+    {
+        $note->update(['body' => $body]);
+
+        return $note->refresh();
+    }
+
+    public function delete(ApartmentNote $note): void
+    {
+        $note->delete();
+    }
+
     public function paginate(Unit $unit, int $perPage = 20): LengthAwarePaginator
     {
         return ApartmentNote::query()

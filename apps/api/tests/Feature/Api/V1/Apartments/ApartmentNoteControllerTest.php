@@ -57,6 +57,64 @@ class ApartmentNoteControllerTest extends TestCase
             ->assertJsonPath('data.authorId', $this->user->id);
     }
 
+    public function test_member_can_update_note(): void
+    {
+        $note = ApartmentNote::factory()->create([
+            'unit_id' => $this->unit->id,
+            'author_id' => User::factory(),
+            'body' => 'Old note body.',
+        ]);
+
+        $this->patchJson("/api/v1/apartments/{$this->unit->id}/notes/{$note->id}", [
+            'body' => 'Updated note body.',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.body', 'Updated note body.')
+            ->assertJsonPath('data.id', $note->id);
+
+        $this->assertDatabaseHas('apartment_notes', [
+            'id' => $note->id,
+            'body' => 'Updated note body.',
+        ]);
+    }
+
+    public function test_member_can_delete_note(): void
+    {
+        $note = ApartmentNote::factory()->create([
+            'unit_id' => $this->unit->id,
+            'author_id' => User::factory(),
+        ]);
+
+        $this->deleteJson("/api/v1/apartments/{$this->unit->id}/notes/{$note->id}")
+            ->assertNoContent();
+
+        $this->assertDatabaseMissing('apartment_notes', [
+            'id' => $note->id,
+        ]);
+    }
+
+    public function test_member_cannot_manage_note_from_another_unit(): void
+    {
+        $otherUnit = Unit::factory()->create();
+        $note = ApartmentNote::factory()->create([
+            'unit_id' => $otherUnit->id,
+            'author_id' => User::factory(),
+            'body' => 'Other unit note.',
+        ]);
+
+        $this->patchJson("/api/v1/apartments/{$this->unit->id}/notes/{$note->id}", [
+            'body' => 'Cross-unit update attempt.',
+        ])->assertNotFound();
+
+        $this->deleteJson("/api/v1/apartments/{$this->unit->id}/notes/{$note->id}")
+            ->assertNotFound();
+
+        $this->assertDatabaseHas('apartment_notes', [
+            'id' => $note->id,
+            'body' => 'Other unit note.',
+        ]);
+    }
+
     public function test_non_member_blocked(): void
     {
         $unit = Unit::factory()->create();

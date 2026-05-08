@@ -31,7 +31,7 @@ export default async function DocumentReviewsPage({ searchParams }: DocumentRevi
             </Link>
             <h1 className="mt-2 text-3xl font-semibold md:text-4xl">Document reviews</h1>
             <p className="mt-2 max-w-3xl text-sm text-muted">
-              Review replacement uploads. The current document remains active until approval.
+              Review replacement uploads. Open the new document, then approve or reject the change.
             </p>
           </div>
           <div className="rounded-lg border border-line bg-background px-4 py-3">
@@ -51,8 +51,7 @@ export default async function DocumentReviewsPage({ searchParams }: DocumentRevi
               <thead className="bg-background text-muted">
                 <tr>
                   <th className="px-4 py-3 text-start font-semibold">Unit / type</th>
-                  <th className="px-4 py-3 text-start font-semibold">Current file</th>
-                  <th className="px-4 py-3 text-start font-semibold">Pending file</th>
+                  <th className="px-4 py-3 text-start font-semibold">New document</th>
                   <th className="px-4 py-3 text-start font-semibold">Uploader</th>
                   <th className="px-4 py-3 text-start font-semibold">Submitted</th>
                   <th className="px-4 py-3 text-start font-semibold">Review</th>
@@ -63,7 +62,7 @@ export default async function DocumentReviewsPage({ searchParams }: DocumentRevi
                   reviews.map((review) => <ReviewRow key={review.id} review={review} />)
                 ) : (
                   <tr>
-                    <td className="px-4 py-8 text-muted" colSpan={6}>
+                    <td className="px-4 py-8 text-muted" colSpan={5}>
                       No document replacements are waiting for review.
                     </td>
                   </tr>
@@ -85,13 +84,9 @@ function ReviewRow({ review }: { review: ApartmentDocumentReview }) {
       <td className="px-4 py-4">
         <div className="font-semibold">Unit {document?.unitId ?? "Unknown"}</div>
         <div className="mt-1 text-xs capitalize text-muted">{document?.documentType?.replace(/_/g, " ") ?? "Document"}</div>
-        <div className="mt-1 text-xs text-muted">Current v{document?.version ?? "-"}</div>
       </td>
       <td className="px-4 py-4">
-        {document?.filePath ? <FileLink filePath={document.filePath} label="Open current" /> : <span className="text-muted">-</span>}
-      </td>
-      <td className="px-4 py-4">
-        <FileLink filePath={review.filePath} label="Open pending" />
+        <FileLink filePath={review.filePath} label="Open new document" />
         <div className="mt-1 text-xs text-muted">{review.mimeType ?? "Unknown type"}</div>
       </td>
       <td className="px-4 py-4">

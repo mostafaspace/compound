@@ -20,7 +20,34 @@ export const notesApi = api.injectEndpoints({
         { type: "ApartmentNote", id: unitId },
       ],
     }),
+    updateNote: builder.mutation<ApartmentNote, { unitId: string; noteId: number; body: string }>({
+      query: ({ unitId, noteId, body }) => ({
+        url: `/apartments/${unitId}/notes/${noteId}`,
+        method: "PATCH",
+        body: { body },
+      }),
+      transformResponse: (response: ApiEnvelope<ApartmentNote>) => response.data,
+      invalidatesTags: (_result, _error, { unitId }) => [
+        { type: "ApartmentDetail", id: unitId },
+        { type: "ApartmentNote", id: unitId },
+      ],
+    }),
+    deleteNote: builder.mutation<void, { unitId: string; noteId: number }>({
+      query: ({ unitId, noteId }) => ({
+        url: `/apartments/${unitId}/notes/${noteId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (_result, _error, { unitId }) => [
+        { type: "ApartmentDetail", id: unitId },
+        { type: "ApartmentNote", id: unitId },
+      ],
+    }),
   }),
 });
 
-export const { useListNotesQuery, useAppendNoteMutation } = notesApi;
+export const {
+  useListNotesQuery,
+  useAppendNoteMutation,
+  useUpdateNoteMutation,
+  useDeleteNoteMutation,
+} = notesApi;

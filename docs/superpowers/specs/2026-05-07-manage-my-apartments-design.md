@@ -26,10 +26,10 @@ Web access for residents is deferred. Mobile is the only resident surface in thi
 ## Non-Goals
 
 - Inline payment processing. Receipts only.
-- Rich document diffing in admin review (visual side-by-side is enough).
+- Rich document diffing in admin review. Admin only opens the new pending upload, then approves or rejects it.
 - Cross-unit reporting for owners (per-unit only).
 - New finance primitives. Existing `UnitAccount`, `LedgerEntry`, `RecurringCharge`, `PaymentSubmission`, `PaymentAllocation` are reused.
-- Edit history on notes (append-only timeline).
+- Edit history/audit trail on notes.
 
 ## Roles and Permissions
 
@@ -233,7 +233,7 @@ Quality gates: `pint`, PHPStan, ESLint, TypeScript, mobile component tests.
 
 - Web for owners: deferred. Mobile only in v1.
 - Pay action: receipts only via existing `PaymentSubmission`.
-- Notes: append-only timeline.
+- Notes: create, edit, and delete entries.
 - Capability flags: `unit.has_vehicle`, `unit.has_parking` admin-set.
 - Violation balance: separate from `LedgerEntry`.
 - Doc review: replacement creates pending version, current stays active until approval.
@@ -244,5 +244,4 @@ Quality gates: `pint`, PHPStan, ESLint, TypeScript, mobile component tests.
 - Visual diff in admin doc review.
 - Cross-unit owner reporting.
 - Inline payment processing.
-- Edit/delete on notes.
 - Bulk violation application.
