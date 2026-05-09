@@ -48,4 +48,30 @@ class PermissionsTest extends TestCase
         $this->assertTrue($financeReviewer->hasPermissionTo('apartments_admin', 'sanctum'));
         $this->assertTrue($financeReviewer->hasPermissionTo('apply_apartment_violation', 'sanctum'));
     }
+
+    public function test_rbac_seeder_grants_admin_operations_permissions_to_expected_roles(): void
+    {
+        $this->seed(RbacSeeder::class);
+
+        $compoundAdmin = Role::findByName(UserRole::CompoundAdmin->value, 'sanctum');
+        $compoundHead = Role::findByName('compound_head', 'sanctum');
+        $supportAgent = Role::findByName(UserRole::SupportAgent->value, 'sanctum');
+        $securityGuard = Role::findByName(UserRole::SecurityGuard->value, 'sanctum');
+        $superAdmin = Role::findByName(UserRole::SuperAdmin->value, 'sanctum');
+
+        foreach ([
+            Permission::LookupVehicles,
+            Permission::ManageApartmentPenaltyPoints,
+            Permission::ViewAdminSecurity,
+            Permission::ManageAdminSecurity,
+        ] as $permission) {
+            $this->assertTrue($compoundAdmin->hasPermissionTo($permission->value, 'sanctum'));
+            $this->assertTrue($compoundHead->hasPermissionTo($permission->value, 'sanctum'));
+            $this->assertTrue($superAdmin->hasPermissionTo($permission->value, 'sanctum'));
+        }
+
+        $this->assertTrue($supportAgent->hasPermissionTo(Permission::LookupVehicles->value, 'sanctum'));
+        $this->assertTrue($supportAgent->hasPermissionTo(Permission::ViewAdminSecurity->value, 'sanctum'));
+        $this->assertTrue($securityGuard->hasPermissionTo(Permission::LookupVehicles->value, 'sanctum'));
+    }
 }
