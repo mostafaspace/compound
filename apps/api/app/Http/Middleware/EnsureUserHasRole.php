@@ -118,6 +118,10 @@ class EnsureUserHasRole
                 Permission::ManageMeetings->value,
                 Permission::ViewMaintenance->value,
                 Permission::ManageMaintenance->value,
+                Permission::LookupVehicles->value,
+                Permission::ManageApartmentPenaltyPoints->value,
+                Permission::ViewAdminSecurity->value,
+                Permission::ManageAdminSecurity->value,
                 Permission::ManageSettings->value,
             ],
             UserRole::BoardMember => [
@@ -140,6 +144,7 @@ class EnsureUserHasRole
                 Permission::ManageSecurity->value,
                 Permission::ViewVisitors->value,
                 Permission::ManageVisitors->value,
+                Permission::LookupVehicles->value,
             ],
             UserRole::ResidentOwner => [
                 Permission::ViewVisitors->value,
@@ -166,6 +171,8 @@ class EnsureUserHasRole
                 Permission::ViewFinance->value,
                 Permission::ViewAuditLogs->value,
                 Permission::ViewAnalytics->value,
+                Permission::LookupVehicles->value,
+                Permission::ViewAdminSecurity->value,
             ],
         };
     }
