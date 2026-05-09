@@ -60,6 +60,8 @@ export const linking: LinkingOptions<RootStackParamList> = {
       AuditLog: 'admin/audit-log',
       AuditLogTimeline: 'admin/audit-log/:entityType/:entityId',
       CreateAnnouncement: 'announcements/new',
+      VehicleNotifySearch: 'apartments/notify-search',
+      VehicleNotifyInbox: 'apartments/notify-inbox',
     },
   },
 };

@@ -4,7 +4,8 @@ import { Button } from "../../../components/ui/Button";
 import { Input } from "../../../components/ui/Input";
 import { colors, radii, shadows, spacing, typography } from "../../../theme";
 import { useCreateVehicleMutation, useUpdateVehicleMutation } from "../../../services/apartments/vehiclesApi";
-import type { ApartmentDetail, ApartmentVehicle } from "../../../services/apartments/types";
+import type { ApartmentDetail, ApartmentVehicle, PlateFormat } from "../../../services/apartments/types";
+import { PlateInput } from "./PlateInput";
 
 export function VehicleSheet({
   apartment,
@@ -16,7 +17,9 @@ export function VehicleSheet({
   onClose: () => void;
 }) {
   const isDark = useColorScheme() === "dark";
-  const [plate, setPlate] = useState(vehicle?.plate ?? "");
+  const [plateFormat, setPlateFormat] = useState<PlateFormat>(vehicle?.plateFormat ?? "letters_numbers");
+  const [plateLetters, setPlateLetters] = useState(vehicle?.plateLettersAr ?? "");
+  const [plateDigits, setPlateDigits] = useState(vehicle?.plateDigits ?? "");
   const [make, setMake] = useState(vehicle?.make ?? "");
   const [model, setModel] = useState(vehicle?.model ?? "");
   const [color, setColor] = useState(vehicle?.color ?? "");
@@ -28,15 +31,21 @@ export function VehicleSheet({
   const isSaving = createState.isLoading || updateState.isLoading;
 
   const submit = async () => {
-    if (!plate.trim()) {
-      setError("Plate is required.");
+    if (!plateDigits.trim()) {
+      setError("Plate digits are required.");
+      return;
+    }
+    if (plateFormat === "letters_numbers" && !plateLetters.trim()) {
+      setError("Plate letters are required for this format.");
       return;
     }
 
     setError(null);
 
     const body = {
-      plate: plate.trim(),
+      plate_format: plateFormat,
+      plate_letters_input: plateFormat === "letters_numbers" ? plateLetters.trim() : undefined,
+      plate_digits_input: plateDigits.trim(),
       make: make.trim() || null,
       model: model.trim() || null,
       color: color.trim() || null,
@@ -70,14 +79,23 @@ export function VehicleSheet({
               Vehicle capacity is capped at 4 per unit.
             </Text>
 
-            <Input label="Plate" value={plate} onChangeText={setPlate} placeholder="ABC-1234" autoCapitalize="characters" error={error && !plate.trim() ? error : null} />
+            <PlateInput
+              format={plateFormat}
+              letters={plateLetters}
+              digits={plateDigits}
+              onChange={({ format, letters, digits }) => {
+                setPlateFormat(format);
+                setPlateLetters(letters);
+                setPlateDigits(digits);
+              }}
+            />
             <Input label="Make" value={make} onChangeText={setMake} placeholder="Toyota" />
             <Input label="Model" value={model} onChangeText={setModel} placeholder="Corolla" />
             <Input label="Color" value={color} onChangeText={setColor} placeholder="White" />
             <Input label="Sticker code" value={stickerCode} onChangeText={setStickerCode} placeholder="Optional" />
             <Input label="Notes" value={notes} onChangeText={setNotes} placeholder="Optional notes" multiline />
 
-            {error && plate.trim() ? <Text style={styles.error}>{error}</Text> : null}
+            {error ? <Text style={styles.error}>{error}</Text> : null}
 
             <View style={styles.actions}>
               <Button title="Cancel" variant="ghost" onPress={onClose} disabled={isSaving} style={styles.actionButton} />

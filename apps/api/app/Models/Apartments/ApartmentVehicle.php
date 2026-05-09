@@ -2,6 +2,7 @@
 
 namespace App\Models\Apartments;
 
+use App\Enums\PlateFormat;
 use App\Models\Property\Unit;
 use App\Models\User;
 use Database\Factories\Apartments\ApartmentVehicleFactory;
@@ -26,6 +27,12 @@ class ApartmentVehicle extends Model
         'unit_id',
         'apartment_resident_id',
         'plate',
+        'plate_format',
+        'plate_letters_ar',
+        'plate_letters_en',
+        'plate_digits',
+        'plate_digits_normalized',
+        'plate_normalized',
         'make',
         'model',
         'color',
@@ -33,6 +40,16 @@ class ApartmentVehicle extends Model
         'notes',
         'created_by',
     ];
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function casts(): array
+    {
+        return [
+            'plate_format' => PlateFormat::class,
+        ];
+    }
 
     /**
      * @return BelongsTo<Unit, $this>

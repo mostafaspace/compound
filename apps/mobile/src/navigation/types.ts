@@ -19,6 +19,9 @@ export type RootStackParamList = {
   AuditLog: undefined;
   AuditLogTimeline: { entityType: string; entityId: string };
   CreateAnnouncement: undefined;
+  CreatePoll: undefined;
+  VehicleNotifySearch: undefined;
+  VehicleNotifyInbox: undefined;
 };
 
 export type AuthStackParamList = {

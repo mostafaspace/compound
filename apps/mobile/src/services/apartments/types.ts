@@ -55,11 +55,17 @@ export type ApartmentResident = {
   updatedAt: string | null;
 };
 
+export type PlateFormat = "letters_numbers" | "numbers_only";
+
 export type ApartmentVehicle = {
   id: number;
   unitId: string;
   apartmentResidentId: number | null;
   plate: string;
+  plateFormat: PlateFormat | null;
+  plateLettersAr: string | null;
+  plateLettersEn: string | null;
+  plateDigits: string | null;
   make: string | null;
   model: string | null;
   color: string | null;

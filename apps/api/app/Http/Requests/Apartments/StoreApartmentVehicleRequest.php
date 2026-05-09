@@ -18,12 +18,14 @@ class StoreApartmentVehicleRequest extends FormRequest
     {
         return [
             'apartment_resident_id' => ['nullable', 'integer', 'exists:apartment_residents,id'],
-            'plate' => ['required', 'string', 'max:50'],
-            'make' => ['nullable', 'string', 'max:100'],
-            'model' => ['nullable', 'string', 'max:100'],
-            'color' => ['nullable', 'string', 'max:50'],
-            'sticker_code' => ['nullable', 'string', 'max:100'],
-            'notes' => ['nullable', 'string', 'max:1000'],
+            'plate_format' => ['required', 'string', 'in:letters_numbers,numbers_only'],
+            'plate_letters_input' => ['nullable', 'string', 'max:50', 'required_if:plate_format,letters_numbers'],
+            'plate_digits_input' => ['required', 'string', 'max:20'],
+            'make' => ['nullable', 'string', 'max:80'],
+            'model' => ['nullable', 'string', 'max:80'],
+            'color' => ['nullable', 'string', 'max:40'],
+            'sticker_code' => ['nullable', 'string', 'max:80'],
+            'notes' => ['nullable', 'string', 'max:500'],
         ];
     }
 }

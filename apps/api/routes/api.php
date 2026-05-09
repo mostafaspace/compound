@@ -1,10 +1,14 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AccountMergeController;
+use App\Http\Controllers\Api\V1\Admin\AdminSecurityController;
+use App\Http\Controllers\Api\V1\Admin\AnnouncementTargetPreviewController;
 use App\Http\Controllers\Api\V1\Admin\Apartments\ApartmentController as AdminApartmentController;
 use App\Http\Controllers\Api\V1\Admin\Apartments\ApartmentDocumentReviewController as AdminApartmentDocumentReviewController;
+use App\Http\Controllers\Api\V1\Admin\Apartments\ApartmentPenaltyPointController as AdminApartmentPenaltyPointController;
 use App\Http\Controllers\Api\V1\Admin\Apartments\ViolationApplicationController as AdminViolationApplicationController;
 use App\Http\Controllers\Api\V1\Admin\Apartments\ViolationRuleController as AdminViolationRuleController;
+use App\Http\Controllers\Api\V1\Admin\VehicleLookupController;
 use App\Http\Controllers\Api\V1\AnnouncementController;
 use App\Http\Controllers\Api\V1\Apartments\ApartmentController;
 use App\Http\Controllers\Api\V1\Apartments\ApartmentDocumentController;
@@ -13,6 +17,7 @@ use App\Http\Controllers\Api\V1\Apartments\ApartmentParkingSpotController;
 use App\Http\Controllers\Api\V1\Apartments\ApartmentResidentController;
 use App\Http\Controllers\Api\V1\Apartments\ApartmentVehicleController;
 use App\Http\Controllers\Api\V1\Apartments\ApartmentViolationController;
+use App\Http\Controllers\Api\V1\Apartments\VehicleNotificationController;
 use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BuildingController;
@@ -112,7 +117,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         ->middleware('throttle:invitation-show')
         ->name('owner-registration.status');
 
-    Route::middleware('auth:sanctum')->group(function (): void {
+    Route::middleware(['auth:sanctum', 'record_admin_session'])->group(function (): void {
         Route::get('/auth/me', [AuthController::class, 'me'])->name('auth.me');
         Route::post('/auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
 
@@ -150,6 +155,17 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::get('/apartments/{unit}/documents/{document}/download', [ApartmentDocumentController::class, 'download'])
             ->name('apartments.documents.download');
 
+        // Vehicle plate notifications
+        Route::post('/vehicle-notifications/search', [VehicleNotificationController::class, 'search'])
+            ->name('vehicle-notifications.search');
+        Route::post('/vehicle-notifications', [VehicleNotificationController::class, 'send'])
+            ->middleware('throttle:30,1')
+            ->name('vehicle-notifications.send');
+        Route::get('/vehicle-notifications', [VehicleNotificationController::class, 'index'])
+            ->name('vehicle-notifications.index');
+        Route::patch('/vehicle-notifications/{recipient}/read', [VehicleNotificationController::class, 'markRead'])
+            ->name('vehicle-notifications.mark-read');
+
         Route::apiResource('/admin/compounds/{compound}/violation-rules', AdminViolationRuleController::class)
             ->parameters(['violation-rules' => 'rule'])
             ->only(['index', 'store', 'update', 'destroy'])
@@ -168,6 +184,29 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             ->name('admin.document-reviews.index');
         Route::patch('/admin/document-reviews/{version}', [AdminApartmentDocumentReviewController::class, 'update'])
             ->name('admin.document-reviews.update');
+
+        // Vehicle & Security operations
+        Route::get('/admin/vehicle-lookup', VehicleLookupController::class)
+            ->name('admin.vehicle-lookup');
+
+        Route::get('/admin/apartments/{unit}/penalty-points', [AdminApartmentPenaltyPointController::class, 'index'])
+            ->name('admin.apartments.penalty-points.index');
+        Route::post('/admin/apartments/{unit}/penalty-points', [AdminApartmentPenaltyPointController::class, 'store'])
+            ->name('admin.apartments.penalty-points.store');
+        Route::patch('/admin/apartment-penalty-points/{event}/void', [AdminApartmentPenaltyPointController::class, 'void'])
+            ->name('admin.apartment-penalty-points.void');
+
+        Route::get('/admin/security/flags', [AdminSecurityController::class, 'indexFlags'])
+            ->name('admin.security.flags.index');
+        Route::patch('/admin/security/flags/{flag}/review', [AdminSecurityController::class, 'reviewFlag'])
+            ->name('admin.security.flags.review');
+        Route::get('/admin/security/users/{user}/sessions', [AdminSecurityController::class, 'userSessions'])
+            ->name('admin.security.users.sessions');
+        Route::post('/admin/security/users/{user}/suspend', [AdminSecurityController::class, 'suspendAdmin'])
+            ->name('admin.security.users.suspend');
+
+        Route::post('/announcements/target-preview', AnnouncementTargetPreviewController::class)
+            ->name('announcements.target-preview');
 
         // ─── Localization (CM-85) ─────────────────────────────────────────
         // Returns effective locale settings for the current compound.

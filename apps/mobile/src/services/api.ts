@@ -230,6 +230,7 @@ export const api = createApi({
     "ApartmentNote",
     "ApartmentViolation",
     "ApartmentDocument",
+    "VehicleNotification",
   ],
   endpoints: () => ({}),
 });

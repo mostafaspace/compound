@@ -1,6 +1,9 @@
 import React from "react";
-import { ActivityIndicator, StyleSheet, Text, useColorScheme, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Text, useColorScheme, View } from "react-native";
 import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
+import { useNavigation } from "@react-navigation/native";
+import type { StackNavigationProp } from "@react-navigation/stack";
+import type { RootStackParamList } from "../../../navigation/types";
 import { ScreenContainer } from "../../../components/layout/ScreenContainer";
 import { colors, radii, spacing, typography } from "../../../theme";
 import { useGetApartmentQuery } from "../../../services/apartments/apartmentsApi";
@@ -8,9 +11,8 @@ import type { ApartmentDetail } from "../../../services/apartments/types";
 import { DocumentsTab } from "./tabs/DocumentsTab";
 import { FinanceTab } from "./tabs/FinanceTab";
 import { NotesTab } from "./tabs/NotesTab";
-import { ParkingTab } from "./tabs/ParkingTab";
 import { ResidentsTab } from "./tabs/ResidentsTab";
-import { VehiclesTab } from "./tabs/VehiclesTab";
+import { VehiclesParkingTab } from "./tabs/VehiclesParkingTab";
 import { ViolationsTab } from "./tabs/ViolationsTab";
 
 type ApartmentDetailScreenProps = {
@@ -23,8 +25,7 @@ type ApartmentDetailScreenProps = {
 
 type ApartmentTabParamList = {
   Residents: undefined;
-  Vehicles: undefined;
-  Parking: undefined;
+  "Vehicles & Parking": undefined;
   Violations: undefined;
   Notes: undefined;
   Documents: undefined;
@@ -49,6 +50,8 @@ export function ApartmentDetailScreen({ route }: ApartmentDetailScreenProps) {
     );
   }
 
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
+
   return (
     <ScreenContainer withKeyboard={false} style={styles.container}>
       <View style={[styles.hero, { backgroundColor: colors.surface[isDark ? "dark" : "light"] }]}>
@@ -61,6 +64,14 @@ export function ApartmentDetailScreen({ route }: ApartmentDetailScreenProps) {
         <Text style={[styles.subtitle, { color: colors.text.secondary[isDark ? "dark" : "light"] }]}>
           {data.residents.length} residents · {data.vehicles.length} vehicles · {data.documents.length} documents
         </Text>
+        <View style={styles.heroActions}>
+          <Pressable style={[styles.heroBtn, { borderColor: colors.primary[isDark ? "dark" : "light"] }]} onPress={() => navigation.navigate("VehicleNotifySearch")}>
+            <Text style={[styles.heroBtnText, { color: colors.primary[isDark ? "dark" : "light"] }]}>Notify a vehicle</Text>
+          </Pressable>
+          <Pressable style={[styles.heroBtn, { borderColor: colors.border[isDark ? "dark" : "light"] }]} onPress={() => navigation.navigate("VehicleNotifyInbox")}>
+            <Text style={[styles.heroBtnText, { color: colors.text.secondary[isDark ? "dark" : "light"] }]}>Vehicle messages</Text>
+          </Pressable>
+        </View>
       </View>
 
       <View style={styles.tabs}>
@@ -77,12 +88,7 @@ export function ApartmentDetailScreen({ route }: ApartmentDetailScreenProps) {
           }}
         >
           <Tab.Screen name="Residents">{() => <ResidentsTab apartment={data} />}</Tab.Screen>
-          {data.unit.hasVehicle ? (
-            <Tab.Screen name="Vehicles">{() => <VehiclesTab apartment={data} />}</Tab.Screen>
-          ) : null}
-          {data.unit.hasParking ? (
-            <Tab.Screen name="Parking">{() => <ParkingTab apartment={data} />}</Tab.Screen>
-          ) : null}
+          <Tab.Screen name="Vehicles & Parking">{() => <VehiclesParkingTab apartment={data} />}</Tab.Screen>
           <Tab.Screen name="Violations">{() => <ViolationsTab apartment={data} />}</Tab.Screen>
           <Tab.Screen name="Notes">{() => <NotesTab apartment={data} />}</Tab.Screen>
           <Tab.Screen name="Documents">{() => <DocumentsTab apartment={data} />}</Tab.Screen>
@@ -136,6 +142,20 @@ const styles = StyleSheet.create({
   subtitle: {
     ...typography.caption,
     marginTop: spacing.xs,
+  },
+  heroActions: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  heroBtn: {
+    borderRadius: radii.md,
+    borderWidth: 1,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  heroBtnText: {
+    ...typography.caption,
   },
   tabs: {
     flex: 1,

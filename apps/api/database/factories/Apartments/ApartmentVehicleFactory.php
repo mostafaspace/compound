@@ -18,10 +18,19 @@ class ApartmentVehicleFactory extends Factory
      */
     public function definition(): array
     {
+        $letters = 'أ ب ج';
+        $digits = (string) fake()->numberBetween(1000, 9999);
+
         return [
             'unit_id' => Unit::factory(),
             'apartment_resident_id' => null,
-            'plate' => strtoupper(fake()->bothify('???-####')),
+            'plate' => "{$letters} {$digits}",
+            'plate_format' => 'letters_numbers',
+            'plate_letters_ar' => $letters,
+            'plate_letters_en' => 'A B G',
+            'plate_digits' => $digits,
+            'plate_digits_normalized' => $digits,
+            'plate_normalized' => 'abg'.$digits,
             'make' => fake()->randomElement(['Toyota', 'Honda', 'BMW', 'Hyundai']),
             'model' => fake()->word(),
             'color' => fake()->safeColorName(),

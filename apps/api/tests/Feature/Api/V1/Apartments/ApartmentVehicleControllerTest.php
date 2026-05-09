@@ -38,11 +38,15 @@ class ApartmentVehicleControllerTest extends TestCase
     public function test_member_can_create_vehicle(): void
     {
         $this->postJson("/api/v1/apartments/{$this->unit->id}/vehicles", [
-            'plate' => 'ABC-1234',
+            'plate_format' => 'letters_numbers',
+            'plate_letters_input' => 'أ ب ج',
+            'plate_digits_input' => '1234',
             'make' => 'Toyota',
         ])
             ->assertCreated()
-            ->assertJsonPath('data.plate', 'ABC-1234');
+            ->assertJsonPath('data.plate', 'أ ب ج 1234')
+            ->assertJsonPath('data.plateFormat', 'letters_numbers')
+            ->assertJsonPath('data.plateLettersAr', 'أ ب ج');
     }
 
     public function test_capability_disabled_returns_validation_status(): void
@@ -50,7 +54,9 @@ class ApartmentVehicleControllerTest extends TestCase
         $this->unit->update(['has_vehicle' => false]);
 
         $this->postJson("/api/v1/apartments/{$this->unit->id}/vehicles", [
-            'plate' => 'ABC-1234',
+            'plate_format' => 'letters_numbers',
+            'plate_letters_input' => 'أ',
+            'plate_digits_input' => '1',
         ])->assertStatus(422);
     }
 
@@ -59,7 +65,9 @@ class ApartmentVehicleControllerTest extends TestCase
         ApartmentVehicle::factory()->count(4)->create(['unit_id' => $this->unit->id]);
 
         $this->postJson("/api/v1/apartments/{$this->unit->id}/vehicles", [
-            'plate' => 'ABC-1234',
+            'plate_format' => 'letters_numbers',
+            'plate_letters_input' => 'أ',
+            'plate_digits_input' => '1',
         ])->assertStatus(409);
     }
 
@@ -68,11 +76,12 @@ class ApartmentVehicleControllerTest extends TestCase
         $vehicle = ApartmentVehicle::factory()->create(['unit_id' => $this->unit->id]);
 
         $this->patchJson("/api/v1/apartments/{$this->unit->id}/vehicles/{$vehicle->id}", [
-            'plate' => 'XYZ-9876',
+            'plate_format' => 'numbers_only',
+            'plate_digits_input' => '9876',
             'color' => 'Blue',
         ])
             ->assertOk()
-            ->assertJsonPath('data.plate', 'XYZ-9876')
+            ->assertJsonPath('data.plate', '9876')
             ->assertJsonPath('data.color', 'Blue');
     }
 

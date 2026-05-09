@@ -3,7 +3,9 @@ import type { ApiEnvelope, ApartmentVehicle } from "./types";
 
 type VehicleInput = {
   apartment_resident_id?: number | null;
-  plate?: string;
+  plate_format: string;
+  plate_letters_input?: string | null;
+  plate_digits_input: string;
   make?: string | null;
   model?: string | null;
   color?: string | null;

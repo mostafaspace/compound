@@ -18,6 +18,7 @@ import { usePushNotifications } from '../hooks/usePushNotifications';
 import { CreateVisitorScreen } from '../features/visitors/screens/CreateVisitorScreen';
 import { ShareVisitorPassScreen } from '../features/visitors/screens/ShareVisitorPassScreen';
 import { PollDetailScreen } from '../features/polls/screens/PollDetailScreen';
+import { CreatePollScreen } from '../features/polls/screens/CreatePollScreen';
 import { AddEditIssueScreen } from '../features/issues/screens/AddEditIssueScreen';
 import { IssueDetailScreen } from '../features/issues/screens/IssueDetailScreen';
 import { UploadDocumentScreen } from '../features/documents/screens/UploadDocumentScreen';
@@ -26,6 +27,8 @@ import { CreateInvitationScreen } from '../features/admin/screens/CreateInvitati
 import { AuditLogScreen } from '../features/admin/screens/AuditLogScreen';
 import { AuditLogTimelineScreen } from '../features/admin/screens/AuditLogTimelineScreen';
 import { CreateAnnouncementScreen } from '../features/announcements/screens/CreateAnnouncementScreen';
+import { VehicleNotifySearchScreen } from '../features/apartments/screens/notify/VehicleNotifySearchScreen';
+import { VehicleNotifyInboxScreen } from '../features/apartments/screens/notify/VehicleNotifyInboxScreen';
 import { ScreenHeader } from '../components/layout/ScreenHeader';
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -161,6 +164,30 @@ export const RootNavigator = () => {
               options={{
                 headerShown: true,
                 header: () => <ScreenHeader title={t("Announcements.createNew", { defaultValue: "Create Announcement" })} />
+              }}
+            />
+            <Stack.Screen
+              name="CreatePoll"
+              component={CreatePollScreen}
+              options={{
+                headerShown: true,
+                header: () => <ScreenHeader title={t("Polls.createNew", { defaultValue: "Create Poll" })} />
+              }}
+            />
+            <Stack.Screen
+              name="VehicleNotifySearch"
+              component={VehicleNotifySearchScreen}
+              options={{
+                headerShown: true,
+                header: () => <ScreenHeader title="Notify a vehicle" />
+              }}
+            />
+            <Stack.Screen
+              name="VehicleNotifyInbox"
+              component={VehicleNotifyInboxScreen}
+              options={{
+                headerShown: true,
+                header: () => <ScreenHeader title="Vehicle messages" />
               }}
             />
           </Stack.Group>

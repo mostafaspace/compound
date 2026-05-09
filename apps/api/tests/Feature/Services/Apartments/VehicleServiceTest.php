@@ -20,11 +20,14 @@ class VehicleServiceTest extends TestCase
         $unit = Unit::factory()->create(['has_vehicle' => true]);
 
         $vehicle = app(VehicleService::class)->create($unit, User::factory()->create(), [
-            'plate' => 'ABC-1234',
+            'plate_format' => 'letters_numbers',
+            'plate_letters_input' => 'أ ب ج',
+            'plate_digits_input' => '1234',
             'make' => 'Toyota',
         ]);
 
-        $this->assertSame('ABC-1234', $vehicle->plate);
+        $this->assertSame('أ ب ج 1234', $vehicle->plate);
+        $this->assertSame('abg1234', $vehicle->plate_normalized);
     }
 
     public function test_rejects_when_capability_disabled(): void
@@ -33,7 +36,11 @@ class VehicleServiceTest extends TestCase
 
         $this->expectException(CapabilityDisabledException::class);
 
-        app(VehicleService::class)->create($unit, User::factory()->create(), ['plate' => 'X-1']);
+        app(VehicleService::class)->create($unit, User::factory()->create(), [
+            'plate_format' => 'letters_numbers',
+            'plate_letters_input' => 'أ',
+            'plate_digits_input' => '1',
+        ]);
     }
 
     public function test_rejects_over_capacity(): void
@@ -43,6 +50,10 @@ class VehicleServiceTest extends TestCase
 
         $this->expectException(CapacityExceededException::class);
 
-        app(VehicleService::class)->create($unit, User::factory()->create(), ['plate' => 'Y-1']);
+        app(VehicleService::class)->create($unit, User::factory()->create(), [
+            'plate_format' => 'letters_numbers',
+            'plate_letters_input' => 'ب',
+            'plate_digits_input' => '1',
+        ]);
     }
 }
