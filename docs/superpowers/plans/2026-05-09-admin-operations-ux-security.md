@@ -91,7 +91,7 @@
 - Search/Modify: any permission or role seeder returned by `rg -n "Permission::|permissions" apps/api/database/seeders apps/api/database/migrations`
 - Test: `apps/api/tests/Feature/Api/V1/Admin/PermissionBaselineTest.php`
 
-- [ ] **Step 1: Write the failing permission baseline test**
+- [x] **Step 1: Write the failing permission baseline test**
 
 Create `apps/api/tests/Feature/Api/V1/Admin/PermissionBaselineTest.php`:
 
@@ -115,13 +115,13 @@ class PermissionBaselineTest extends TestCase
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd apps/api && php artisan test --filter PermissionBaselineTest`
 
 Expected: FAIL because the enum cases do not exist.
 
-- [ ] **Step 3: Add enum cases**
+- [x] **Step 3: Add enum cases**
 
 Modify `apps/api/app/Enums/Permission.php`:
 
@@ -134,7 +134,7 @@ case ManageAdminSecurity = 'manage_admin_security';
 
 Place them near the related security/apartments permissions.
 
-- [ ] **Step 4: Grant permissions in seeders**
+- [x] **Step 4: Grant permissions in seeders**
 
 In seeders that assign compound admin, support agent, security, and super admin permissions, grant:
 
@@ -152,13 +152,13 @@ Recommended grants:
 - `support_agent`: `lookup_vehicles`, `view_admin_security`.
 - `security_guard`: `lookup_vehicles`.
 
-- [ ] **Step 5: Run test to verify it passes**
+- [x] **Step 5: Run test to verify it passes**
 
 Run: `cd apps/api && php artisan test --filter PermissionBaselineTest`
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add apps/api/app/Enums/Permission.php apps/api/database/seeders apps/api/tests/Feature/Api/V1/Admin/PermissionBaselineTest.php
