@@ -30,16 +30,23 @@ class RbacSeeder extends Seeder
             Permission::ViewIssues, Permission::ManageIssues,
             Permission::ViewGovernance, Permission::ManageGovernance,
             Permission::ViewSecurity, Permission::ManageSecurity,
+            Permission::ViewAdminSecurity, Permission::ManageAdminSecurity,
             Permission::ViewVisitors, Permission::ManageVisitors,
             Permission::ViewOrgChart, Permission::ViewAnalytics,
             Permission::ViewAuditLogs, Permission::ViewMeetings,
             Permission::ManageMeetings, Permission::ViewMaintenance,
             Permission::ManageMaintenance, Permission::ApartmentsAdmin,
-            Permission::ApplyApartmentViolation, Permission::ManageSettings,
+            Permission::ApplyApartmentViolation, Permission::ManageApartmentPenaltyPoints,
+            Permission::LookupVehicles, Permission::ManageSettings,
         );
 
         $rolePermissions = [
-            UserRole::SuperAdmin->value => [], // bypassed via Gate::before
+            UserRole::SuperAdmin->value => $p(
+                Permission::LookupVehicles,
+                Permission::ManageApartmentPenaltyPoints,
+                Permission::ViewAdminSecurity,
+                Permission::ManageAdminSecurity,
+            ), // otherwise bypassed via Gate::before
 
             UserRole::CompoundAdmin->value => $compoundAdminPermissions,
 
@@ -77,6 +84,7 @@ class RbacSeeder extends Seeder
             UserRole::SecurityGuard->value => $p(
                 Permission::ViewSecurity, Permission::ManageSecurity,
                 Permission::ViewVisitors, Permission::ManageVisitors,
+                Permission::LookupVehicles,
             ),
 
             UserRole::ResidentOwner->value => $p(
@@ -122,6 +130,7 @@ class RbacSeeder extends Seeder
                 Permission::ViewUsers, Permission::ViewCompounds,
                 Permission::ViewIssues, Permission::ViewAnnouncements,
                 Permission::ViewFinance, Permission::ViewAuditLogs,
+                Permission::LookupVehicles, Permission::ViewAdminSecurity,
             ),
         ];
 

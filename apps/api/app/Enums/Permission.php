@@ -18,6 +18,8 @@ enum Permission: string
     case ManageGovernance = 'manage_governance';
     case ViewSecurity = 'view_security';
     case ManageSecurity = 'manage_security';
+    case ViewAdminSecurity = 'view_admin_security';
+    case ManageAdminSecurity = 'manage_admin_security';
     case ViewVisitors = 'view_visitors';
     case ManageVisitors = 'manage_visitors';
     case ViewOrgChart = 'view_org_chart';
@@ -29,6 +31,8 @@ enum Permission: string
     case ManageMaintenance = 'manage_maintenance';
     case ApartmentsAdmin = 'apartments_admin';
     case ApplyApartmentViolation = 'apply_apartment_violation';
+    case ManageApartmentPenaltyPoints = 'manage_apartment_penalty_points';
+    case LookupVehicles = 'lookup_vehicles';
     case ManageSettings = 'manage_settings';
     case ManageRoles = 'manage_roles';
 
