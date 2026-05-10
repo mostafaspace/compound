@@ -18,7 +18,7 @@ import {
   markNotificationReadAction,
   refreshNotificationsAction,
   updateNotificationPreferencesAction,
-} from "@/app/notifications/actions";
+} from "@/app/(admin)/notifications/actions";
 import { subscribeToUserNotifications } from "@/lib/realtime-notifications";
 
 interface NotificationCenterProps {
@@ -93,7 +93,8 @@ export function NotificationCenter({
   initialPreferences,
   initialUnreadCount,
   userId,
-}: NotificationCenterProps) {
+  fixed = false,
+}: NotificationCenterProps & { fixed?: boolean }) {
   const pathname = usePathname();
   const locale = useLocale();
   const t = useTranslations("Notifications");
@@ -205,7 +206,7 @@ export function NotificationCenter({
   }
 
   return (
-    <div className="fixed start-4 top-4 z-50 md:start-6">
+    <div className={fixed ? "fixed start-4 top-4 z-50 md:start-6" : "relative z-40"}>
       <button
         aria-label={t("ariaLabel", { count: unreadCount })}
         className="relative inline-flex size-11 items-center justify-center rounded-lg border border-line bg-panel text-foreground shadow-sm transition hover:border-brand focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2"
@@ -221,7 +222,7 @@ export function NotificationCenter({
       </button>
 
       {isOpen ? (
-        <section className="mt-3 w-[min(calc(100vw-2rem),28rem)] overflow-hidden rounded-lg border border-line bg-panel shadow-xl">
+        <section className="absolute end-0 mt-3 w-[min(calc(100vw-2rem),28rem)] overflow-hidden rounded-lg border border-line bg-panel shadow-xl">
           <div className="flex items-start justify-between gap-4 border-b border-line p-4">
             <div>
               <h2 className="text-base font-semibold">{t("title")}</h2>

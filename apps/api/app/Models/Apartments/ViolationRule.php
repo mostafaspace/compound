@@ -23,6 +23,7 @@ class ViolationRule extends Model
         'name_ar',
         'description',
         'default_fee',
+        'default_points',
         'is_active',
         'created_by',
     ];
@@ -38,8 +39,9 @@ class ViolationRule extends Model
     protected function casts(): array
     {
         return [
-            'is_active' => 'boolean',
-            'default_fee' => 'decimal:2',
+            'is_active'      => 'boolean',
+            'default_fee'    => 'decimal:2',
+            'default_points' => 'integer',
         ];
     }
 

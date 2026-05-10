@@ -87,6 +87,40 @@ class VehicleNotificationService
         });
     }
 
+    public function sendFromAdmin(
+        ApartmentVehicle $vehicle,
+        string $message,
+        User $admin,
+        ?string $alias = null,
+    ): VehicleNotification {
+        return DB::transaction(function () use ($vehicle, $message, $admin, $alias) {
+            $notification = VehicleNotification::query()->create([
+                'sender_user_id' => $admin->id,
+                'sender_unit_id' => null,
+                'sender_mode' => VehicleNotificationSenderMode::Admin,
+                'sender_alias' => $alias ?: 'Compound Management',
+                'target_vehicle_id' => $vehicle->id,
+                'target_unit_id' => $vehicle->unit_id,
+                'target_plate_query' => $vehicle->plate,
+                'message' => $message,
+            ]);
+
+            $recipientUserIds = $this->verifiedResidentsQuery($vehicle->unit_id)
+                ->whereNotNull('user_id')
+                ->pluck('user_id')
+                ->unique();
+
+            foreach ($recipientUserIds as $userId) {
+                VehicleNotificationRecipient::query()->create([
+                    'vehicle_notification_id' => $notification->id,
+                    'user_id' => $userId,
+                ]);
+            }
+
+            return $notification;
+        });
+    }
+
     /**
      * @return LengthAwarePaginator<int, VehicleNotificationRecipient>
      */

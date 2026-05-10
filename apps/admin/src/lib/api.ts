@@ -108,6 +108,22 @@ import type {
   DenyOwnerRegistrationInput,
 } from "@compound/contracts";
 
+import {
+  VehicleLookupResult,
+  ApartmentPenaltyEvent,
+  AdminSecurityFlag,
+  AdminSession,
+  AnnouncementTargetPreview,
+} from "./api-types";
+
+export type {
+  VehicleLookupResult,
+  ApartmentPenaltyEvent,
+  AdminSecurityFlag,
+  AdminSession,
+  AnnouncementTargetPreview,
+};
+
 import { config } from "./config";
 import { getAuthToken } from "./session";
 
@@ -3607,5 +3623,149 @@ export async function reviewDocumentVersion(
 
   if (!response.ok) {
     throw new Error(`Failed to review document version: ${response.status}`);
+  }
+}
+
+// ─── Vehicle Lookup ───────────────────────────────────────────────────────────
+
+export async function lookupVehicles(q: string): Promise<VehicleLookupResult[]> {
+  if (q.trim().length < 2) return [];
+  try {
+    const response = await fetch(
+      `${config.apiBaseUrl}/admin/vehicle-lookup?q=${encodeURIComponent(q.trim())}`,
+      { cache: "no-store", headers: await apiHeaders(true) },
+    );
+    if (!response.ok) return [];
+    const payload = (await response.json()) as { data: VehicleLookupResult[] };
+    return payload.data;
+  } catch {
+    return [];
+  }
+}
+
+export async function notifyVehicleOwner(
+  vehicleId: number | string,
+  message: string,
+  alias?: string,
+): Promise<{ id: number; recipientCount: number } | { error: string }> {
+  try {
+    const headers = { ...(await apiHeaders(true)), "Content-Type": "application/json" };
+    const response = await fetch(`${config.apiBaseUrl}/admin/vehicles/${vehicleId}/notify`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ message, alias: alias || undefined }),
+    });
+    if (!response.ok) {
+      const errPayload = await response.json().catch(() => ({ message: "Failed to notify" }));
+      return { error: (errPayload as { message?: string }).message ?? "Failed to notify" };
+    }
+    const payload = (await response.json()) as { data: { id: number; recipientCount: number } };
+    return payload.data;
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Network error" };
+  }
+}
+
+// ─── Penalty Points ───────────────────────────────────────────────────────────
+
+export async function listPenaltyPoints(unitId: string): Promise<ApartmentPenaltyEvent[]> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/admin/apartments/${unitId}/penalty-points`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+    if (!response.ok) return [];
+    const payload = (await response.json()) as PaginatedEnvelope<ApartmentPenaltyEvent>;
+    return payload.data;
+  } catch {
+    return [];
+  }
+}
+
+export async function addPenaltyPoints(
+  unitId: string,
+  body: { points: number; reason: string; notes?: string; expires_at?: string },
+): Promise<ApartmentPenaltyEvent> {
+  const response = await fetch(`${config.apiBaseUrl}/admin/apartments/${unitId}/penalty-points`, {
+    body: JSON.stringify(body),
+    headers: { ...(await apiHeaders(true)), "Content-Type": "application/json" },
+    method: "POST",
+  });
+  if (!response.ok) throw new Error(`Failed to add penalty points: ${response.status}`);
+  const payload = (await response.json()) as ApiEnvelope<ApartmentPenaltyEvent>;
+  return payload.data;
+}
+
+export async function voidPenaltyPoint(eventId: number, reason: string): Promise<ApartmentPenaltyEvent> {
+  const response = await fetch(`${config.apiBaseUrl}/admin/apartment-penalty-points/${eventId}/void`, {
+    body: JSON.stringify({ reason }),
+    headers: { ...(await apiHeaders(true)), "Content-Type": "application/json" },
+    method: "PATCH",
+  });
+  if (!response.ok) throw new Error(`Failed to void penalty point: ${response.status}`);
+  const payload = (await response.json()) as ApiEnvelope<ApartmentPenaltyEvent>;
+  return payload.data;
+}
+
+// ─── Admin Security ───────────────────────────────────────────────────────────
+
+export async function getAdminSecurityFlags(): Promise<AdminSecurityFlag[]> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/admin/security/flags`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+    if (!response.ok) return [];
+    const payload = (await response.json()) as PaginatedEnvelope<AdminSecurityFlag>;
+    return payload.data;
+  } catch {
+    return [];
+  }
+}
+
+export async function reviewAdminSecurityFlag(
+  flagId: number,
+  status: "reviewed" | "dismissed",
+): Promise<void> {
+  const response = await fetch(`${config.apiBaseUrl}/admin/security/flags/${flagId}/review`, {
+    body: JSON.stringify({ status }),
+    headers: { ...(await apiHeaders(true)), "Content-Type": "application/json" },
+    method: "PATCH",
+  });
+  if (!response.ok) throw new Error(`Failed to review flag: ${response.status}`);
+}
+
+export async function getAdminSessions(userId: number): Promise<AdminSession[]> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/admin/security/users/${userId}/sessions`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+    if (!response.ok) return [];
+    const payload = (await response.json()) as PaginatedEnvelope<AdminSession>;
+    return payload.data;
+  } catch {
+    return [];
+  }
+}
+
+// ─── Announcement Target Preview ──────────────────────────────────────────────
+
+export async function previewAnnouncementTarget(input: {
+  targetType: string;
+  targetIds?: string[];
+  requiresVerifiedMembership?: boolean;
+}): Promise<AnnouncementTargetPreview | null> {
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/announcements/target-preview`, {
+      body: JSON.stringify(input),
+      headers: { ...(await apiHeaders(true)), "Content-Type": "application/json" },
+      method: "POST",
+    });
+    if (!response.ok) return null;
+    const payload = (await response.json()) as { data: AnnouncementTargetPreview };
+    return payload.data;
+  } catch {
+    return null;
   }
 }

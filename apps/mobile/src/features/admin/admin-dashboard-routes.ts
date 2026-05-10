@@ -5,6 +5,7 @@ export type AdminDashboardActionRoute =
   | "AuditLog"
   | "AdminInvitations"
   | "Polls"
+  | "CreatePoll"
   | "profile";
 
 export interface AdminDashboardNavigationTarget {
@@ -26,6 +27,7 @@ const QUICK_ACTIONS: AdminDashboardQuickAction[] = [
   { key: "AuditLog", route: "AuditLog" },
   { key: "AdminInvitations", route: "AdminInvitations" },
   { key: "Polls", route: "Polls" },
+  { key: "CreatePoll", route: "CreatePoll" },
 ];
 
 export function getAdminDashboardQuickActions(): AdminDashboardQuickAction[] {
@@ -45,6 +47,10 @@ export function getAdminDashboardNavigationTarget(
       return {
         screen: "More",
         params: { screen: "Polls" },
+      };
+    case "CreatePoll":
+      return {
+        screen: "CreatePoll",
       };
     default:
       return { screen: route };

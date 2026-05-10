@@ -78,21 +78,3 @@ export function appendScannerHistoryEntry(
   return [entry, ...history].slice(0, limit);
 }
 
-export type ScannerPreviewState =
-  | { mode: "camera"; lens: "back" | "front" }
-  | { mode: "fallback"; reason: "no-camera" };
-
-export function getScannerPreviewState(args: {
-  hasBackCamera: boolean;
-  hasFrontCamera: boolean;
-}): ScannerPreviewState {
-  if (args.hasBackCamera) {
-    return { mode: "camera", lens: "back" };
-  }
-
-  if (args.hasFrontCamera) {
-    return { mode: "camera", lens: "front" };
-  }
-
-  return { mode: "fallback", reason: "no-camera" };
-}

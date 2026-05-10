@@ -4,7 +4,6 @@ import assert from "node:assert/strict";
 import {
   appendScannerHistoryEntry,
   getScannerAvailableActions,
-  getScannerPreviewState,
   normalizeScannedVisitorToken,
 } from "./scanner-utils.ts";
 
@@ -26,36 +25,6 @@ test("normalizeScannedVisitorToken falls back to path segments for deep links", 
   const url = `compound://visitor/${token}`;
 
   assert.equal(normalizeScannedVisitorToken(url), token);
-});
-
-test("getScannerPreviewState prefers the back camera when available", () => {
-  assert.deepEqual(
-    getScannerPreviewState({
-      hasBackCamera: true,
-      hasFrontCamera: true,
-    }),
-    { mode: "camera", lens: "back" }
-  );
-});
-
-test("getScannerPreviewState falls back to the front camera when back camera is missing", () => {
-  assert.deepEqual(
-    getScannerPreviewState({
-      hasBackCamera: false,
-      hasFrontCamera: true,
-    }),
-    { mode: "camera", lens: "front" }
-  );
-});
-
-test("getScannerPreviewState reports fallback mode when no cameras are available", () => {
-  assert.deepEqual(
-    getScannerPreviewState({
-      hasBackCamera: false,
-      hasFrontCamera: false,
-    }),
-    { mode: "fallback", reason: "no-camera" }
-  );
 });
 
 test("appendScannerHistoryEntry puts newest scans first and caps history", () => {

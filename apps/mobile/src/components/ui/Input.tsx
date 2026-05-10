@@ -44,7 +44,7 @@ export const Input: React.FC<InputProps> = ({
       {label && <Typography variant="label" style={[styles.label, textDirectionStyle(isRtl)]}>{label}</Typography>}
       <View style={styles.inputWrapper}>
         <TextInput
-          placeholderTextColor={mutedColor}
+          placeholderTextColor={isDark ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.15)"}
           secureTextEntry={isPassword ? hidden : undefined}
           style={[
             styles.input,

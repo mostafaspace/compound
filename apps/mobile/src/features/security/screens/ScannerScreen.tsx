@@ -1,18 +1,15 @@
-import React, { useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   StyleSheet,
   useColorScheme,
-  Platform,
   Linking,
+  AppState,
 } from 'react-native';
 import {
-  Camera,
-  isScannedCode,
-  useCameraDevice,
-  useCameraPermission,
-  useObjectOutput,
-} from 'react-native-vision-camera';
+  BarcodeScanner,
+  CameraView,
+} from '@pushpendersingh/react-native-scanner';
 import { useTranslation } from 'react-i18next';
 import { useValidatePassMutation, usePerformVisitorActionMutation } from '../../../services/security';
 import { ScreenContainer } from '../../../components/layout/ScreenContainer';
@@ -24,60 +21,35 @@ import { Icon } from '../../../components/ui/Icon';
 import {
   appendScannerHistoryEntry,
   getScannerAvailableActions,
-  getScannerPreviewState,
   normalizeScannedVisitorToken,
   type ScannerHistoryEntry,
 } from '../scanner-utils';
 
-function IOSScannerPreview({ onScanned }: { onScanned: (value: string) => void }) {
-  const backCameraDevice = useCameraDevice('back');
-  const frontCameraDevice = useCameraDevice('front');
-  const previewState = getScannerPreviewState({
-    hasBackCamera: Boolean(backCameraDevice),
-    hasFrontCamera: Boolean(frontCameraDevice),
-  });
-  const objectOutput = useObjectOutput({
-    types: ['qr'],
-    onObjectsScanned(objects) {
-      const code = objects.find(isScannedCode);
-      if (code?.value) {
-        onScanned(code.value);
+function ScannerPreview({ onScanned }: { onScanned: (value: string) => void }) {
+  const scannedRef = useRef(false);
+
+  useEffect(() => {
+    BarcodeScanner.startScanning((barcodes) => {
+      if (scannedRef.current || barcodes.length === 0) return;
+      const qr = barcodes.find((b) => b.type === 'QR_CODE') ?? barcodes[0];
+      if (qr?.data) {
+        scannedRef.current = true;
+        BarcodeScanner.stopScanning();
+        onScanned(qr.data);
       }
-    },
-  });
+    });
 
-  if (previewState.mode === 'fallback') {
-    return (
-      <View style={styles.placeholder}>
-        <Icon name="qr" color={colors.primary.light} size={44} />
-        <Typography variant="caption" style={styles.placeholderText}>
-          {'No camera is available here. If you are on the iOS Simulator, use manual token entry or test live scanning on a physical iPhone.'}
-        </Typography>
-      </View>
-    );
-  }
-
-  const cameraDevice = previewState.lens === 'back' ? backCameraDevice : frontCameraDevice;
-
-  if (!cameraDevice) {
-    return null;
-  }
+    return () => {
+      BarcodeScanner.stopScanning();
+      BarcodeScanner.releaseCamera();
+    };
+  }, [onScanned]);
 
   return (
     <View style={styles.cameraViewport}>
-      <Camera
-        style={StyleSheet.absoluteFill}
-        device={cameraDevice}
-        isActive
-        outputs={[objectOutput]}
-      />
+      <CameraView style={StyleSheet.absoluteFill} />
       <View pointerEvents="none" style={styles.cameraOverlay}>
         <View style={styles.scanFrame} />
-        {previewState.lens === 'front' ? (
-          <Typography variant="caption" style={styles.overlayNote}>
-            Using the front camera because a back camera is not available on this device.
-          </Typography>
-        ) : null}
         <Typography variant="caption" style={styles.overlayText}>
           Align the QR inside the frame
         </Typography>
@@ -89,10 +61,10 @@ function IOSScannerPreview({ onScanned }: { onScanned: (value: string) => void }
 export const ScannerScreen = () => {
   const { t } = useTranslation();
   const isDark = useColorScheme() === 'dark';
-  const { hasPermission, requestPermission, canRequestPermission } = useCameraPermission();
 
   const [token, setToken] = useState('');
   const [scannerEnabled, setScannerEnabled] = useState(false);
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [scanHistory, setScanHistory] = useState<ScannerHistoryEntry[]>([]);
   const [validatePass, { isLoading: isValidating }] = useValidatePassMutation();
   const [performAction, { isLoading: isPerforming }] = usePerformVisitorActionMutation();
@@ -109,7 +81,20 @@ export const ScannerScreen = () => {
     scannedAt?: string;
   } | null>(null);
 
-  const handleProcessToken = async (rawToken: string) => {
+  useEffect(() => {
+    BarcodeScanner.hasCameraPermission().then(setHasPermission);
+  }, []);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        BarcodeScanner.hasCameraPermission().then(setHasPermission);
+      }
+    });
+    return () => sub.remove();
+  }, []);
+
+  const handleProcessToken = useCallback(async (rawToken: string) => {
     const normalizedToken = normalizeScannedVisitorToken(rawToken);
 
     if (!normalizedToken || scanLockRef.current) {
@@ -173,7 +158,7 @@ export const ScannerScreen = () => {
       setScannerEnabled(false);
       scanLockRef.current = false;
     }
-  };
+  }, [validatePass, t]);
 
   const handleManualValidate = async () => {
     await handleProcessToken(token);
@@ -189,6 +174,14 @@ export const ScannerScreen = () => {
   const handleCloseScanner = () => {
     scanLockRef.current = false;
     setScannerEnabled(false);
+  };
+
+  const handleRequestPermission = async () => {
+    const granted = await BarcodeScanner.requestCameraPermission();
+    setHasPermission(granted);
+    if (!granted) {
+      await Linking.openSettings();
+    }
   };
 
   const handleVisitorAction = async (action: 'arrive' | 'allow' | 'deny' | 'complete') => {
@@ -243,16 +236,6 @@ export const ScannerScreen = () => {
     }
   };
 
-  const handleRequestPermission = async () => {
-    if (canRequestPermission) {
-      await requestPermission();
-      return;
-    }
-
-    await Linking.openSettings();
-  };
-
-  const canUseNativeScanner = Platform.OS === 'ios' && hasPermission && scannerEnabled;
   const surfaceColor = isDark ? colors.surface.dark : colors.surface.light;
   const borderColor = isDark ? colors.border.dark : colors.border.light;
   const availableActions = scanResult
@@ -298,32 +281,23 @@ export const ScannerScreen = () => {
             />
           )}
         </View>
-        {Platform.OS !== 'ios' ? (
-          <View style={styles.placeholder}>
-            <Icon name="qr" color={colors.primary.light} size={44} />
-            <Typography variant="caption" style={styles.placeholderText}>
-              {t('Security.iosScannerOnly', { defaultValue: 'Live QR scanning is currently enabled on iPhone. Manual token entry still works below.' })}
-            </Typography>
-          </View>
-        ) : !hasPermission ? (
+        {hasPermission === false ? (
           <View style={styles.placeholder}>
             <Icon name="camera" color={colors.primary.light} size={44} />
             <Typography variant="caption" style={styles.placeholderText}>
               {t('Security.cameraPermissionNeeded', { defaultValue: 'Camera access is required to scan visitor QR passes.' })}
             </Typography>
             <Button
-              title={canRequestPermission
-                ? t('Security.enableCamera', { defaultValue: 'Enable Camera' })
-                : t('Security.openSettings', { defaultValue: 'Open Settings' })}
+              title={t('Security.enableCamera', { defaultValue: 'Enable Camera' })}
               onPress={handleRequestPermission}
               style={styles.permissionButton}
             />
           </View>
-        ) : canUseNativeScanner ? (
-          <IOSScannerPreview onScanned={(value) => { void handleProcessToken(value); }} />
+        ) : scannerEnabled ? (
+          <ScannerPreview onScanned={(value) => { void handleProcessToken(value); }} />
         ) : (
           <View style={styles.placeholder}>
-            <Icon name="scanner" color={colors.primary.light} size={44} />
+            <Icon name="qr" color={colors.primary.light} size={44} />
             <Typography variant="caption" style={styles.placeholderText}>
               {t('Security.scanAnotherHint', { defaultValue: 'Open the camera when the next visitor pass is ready.' })}
             </Typography>
@@ -527,20 +501,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'center',
   },
-  overlayNote: {
-    marginTop: spacing.md,
-    color: '#fff',
-    maxWidth: 240,
-    textAlign: 'center',
-  },
   inputSection: {
     marginBottom: layout.sectionGap,
   },
   inputContainer: {
     marginBottom: spacing.md,
-  },
-  manualActions: {
-    gap: spacing.sm,
   },
   scanButton: {
     width: '100%',

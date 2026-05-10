@@ -12,13 +12,13 @@ interface Props {
 /**
  * A slim banner that shows the currently active compound context.
  * For super-admins it also renders a switcher to change the context.
- * Renders nothing when no compound context is set and the user is not a super-admin.
+ * Renders nothing for compound admins so scoped users avoid cross-compound context UI.
  */
 export async function CompoundContextBanner({ isSuperAdmin = false }: Props) {
+  if (!isSuperAdmin) return null;
+
   const compoundId = await getCompoundContext();
   const t = await getTranslations("CompoundContext");
-
-  if (!compoundId && !isSuperAdmin) return null;
 
   const [compound, allCompounds] = await Promise.all([
     compoundId ? getCompound(compoundId) : Promise.resolve(null),

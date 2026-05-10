@@ -29,6 +29,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => EnsureUserHasRole::class,
             'permission' => PermissionMiddleware::class,
+            'record_admin_session' => \App\Http\Middleware\RecordAdminSession::class,
         ]);
     })
     ->withExceptions(function ($exceptions): void {

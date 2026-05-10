@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\AccountStatus;
 use App\Enums\UserRole;
+use App\Models\Admin\AdminSession;
 use App\Models\Apartments\ApartmentResident;
 use App\Models\Documents\UserDocument;
 use App\Models\Property\Compound;
@@ -248,5 +249,13 @@ class User extends Authenticatable
         }
 
         return array_values(array_unique($roleNames));
+    }
+
+    /**
+     * @return HasMany<AdminSession, $this>
+     */
+    public function adminSessions(): HasMany
+    {
+        return $this->hasMany(AdminSession::class);
     }
 }

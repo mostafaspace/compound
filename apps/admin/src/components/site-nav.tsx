@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LogoutButton } from "./logout-button";
+import { useTranslations } from "next-intl";
 
 interface Crumb {
   label: string;
@@ -19,18 +19,21 @@ function ChevronIcon() {
 }
 
 export function SiteNav({ breadcrumb = [] }: SiteNavProps) {
+  const t = useTranslations("Navigation");
   return (
-    <nav className="sticky top-0 z-20 border-b border-line bg-panel/95 backdrop-blur-sm">
+    <nav className="border-b border-line bg-panel/50">
       <div className="mx-auto flex max-w-7xl items-center gap-2 px-5 py-3 lg:px-8">
-        {/* Brand */}
-        <Link
-          href="/"
-          className="text-sm font-bold text-brand hover:text-brand-strong transition-colors shrink-0"
-        >
-          Compound
-        </Link>
+        {/* Breadcrumb start */}
+        <div className="flex items-center gap-2">
+          <Link
+            href="/"
+            className="text-sm font-medium text-muted hover:text-brand transition-colors"
+          >
+            {t("dashboard")}
+          </Link>
+        </div>
 
-        {/* Breadcrumb */}
+        {/* Breadcrumb path */}
         {breadcrumb.map((crumb, i) => (
           <div key={i} className="flex items-center gap-2">
             <ChevronIcon />
@@ -46,10 +49,6 @@ export function SiteNav({ breadcrumb = [] }: SiteNavProps) {
             )}
           </div>
         ))}
-
-        <div className="ml-auto">
-          <LogoutButton />
-        </div>
       </div>
     </nav>
   );

@@ -8,32 +8,36 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('vehicle_notifications', function (Blueprint $table): void {
-            $table->id();
-            $table->foreignId('sender_user_id')->constrained('users')->restrictOnDelete();
-            $table->foreignUlid('sender_unit_id')->nullable()->constrained('units')->nullOnDelete();
-            $table->string('sender_mode')->index();
-            $table->string('sender_alias', 50)->nullable();
-            $table->foreignId('target_vehicle_id')->nullable()->constrained('apartment_vehicles')->nullOnDelete();
-            $table->foreignUlid('target_unit_id')->nullable()->constrained('units')->nullOnDelete();
-            $table->string('target_plate_query');
-            $table->text('message');
-            $table->timestamps();
+        if (! Schema::hasTable('vehicle_notifications')) {
+            Schema::create('vehicle_notifications', function (Blueprint $table): void {
+                $table->id();
+                $table->foreignId('sender_user_id')->constrained('users')->restrictOnDelete();
+                $table->foreignUlid('sender_unit_id')->nullable()->constrained('units')->nullOnDelete();
+                $table->string('sender_mode')->index();
+                $table->string('sender_alias', 50)->nullable();
+                $table->foreignId('target_vehicle_id')->nullable()->constrained('apartment_vehicles')->nullOnDelete();
+                $table->foreignUlid('target_unit_id')->nullable()->constrained('units')->nullOnDelete();
+                $table->string('target_plate_query');
+                $table->text('message');
+                $table->timestamps();
 
-            $table->index('sender_user_id');
-            $table->index('target_vehicle_id');
-        });
+                $table->index('sender_user_id');
+                $table->index('target_vehicle_id');
+            });
+        }
 
-        Schema::create('vehicle_notification_recipients', function (Blueprint $table): void {
-            $table->id();
-            $table->foreignId('vehicle_notification_id')->constrained('vehicle_notifications')->cascadeOnDelete();
-            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
-            $table->timestamp('read_at')->nullable();
-            $table->timestamps();
+        if (! Schema::hasTable('vehicle_notification_recipients')) {
+            Schema::create('vehicle_notification_recipients', function (Blueprint $table): void {
+                $table->id();
+                $table->foreignId('vehicle_notification_id')->constrained('vehicle_notifications')->cascadeOnDelete();
+                $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+                $table->timestamp('read_at')->nullable();
+                $table->timestamps();
 
-            $table->index(['user_id', 'read_at']);
-            $table->unique(['vehicle_notification_id', 'user_id']);
-        });
+                $table->index(['user_id', 'read_at']);
+                $table->unique(['vehicle_notification_id', 'user_id'], 'vnr_notification_user_unique');
+            });
+        }
     }
 
     public function down(): void

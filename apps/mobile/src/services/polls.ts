@@ -6,6 +6,7 @@ import type {
   PollEligibilityResult,
   PollVoter,
   PollVoteInput,
+  CreatePollInput,
 } from "@compound/contracts";
 
 export const pollsApi = api.injectEndpoints({
@@ -66,6 +67,14 @@ export const pollsApi = api.injectEndpoints({
       }),
       invalidatesTags: (_result, _err, id) => [{ type: "Poll" as const, id }, "Poll"],
     }),
+    createPoll: builder.mutation<Poll, CreatePollInput>({
+      query: (body) => ({
+        url: "/polls",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Poll"],
+    }),
   }),
 });
 
@@ -79,4 +88,5 @@ export const {
   useRemovePollVoteMutation,
   usePublishPollMutation,
   useClosePollMutation,
+  useCreatePollMutation,
 } = pollsApi;

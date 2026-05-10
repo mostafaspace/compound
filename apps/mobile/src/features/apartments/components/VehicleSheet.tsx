@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Modal, ScrollView, StyleSheet, Text, useColorScheme, View } from "react-native";
+import { useTranslation } from "react-i18next";
 import { Button } from "../../../components/ui/Button";
 import { Input } from "../../../components/ui/Input";
 import { colors, radii, shadows, spacing, typography } from "../../../theme";
@@ -17,6 +18,7 @@ export function VehicleSheet({
   onClose: () => void;
 }) {
   const isDark = useColorScheme() === "dark";
+  const { t } = useTranslation();
   const [plateFormat, setPlateFormat] = useState<PlateFormat>(vehicle?.plateFormat ?? "letters_numbers");
   const [plateLetters, setPlateLetters] = useState(vehicle?.plateLettersAr ?? "");
   const [plateDigits, setPlateDigits] = useState(vehicle?.plateDigits ?? "");
@@ -32,11 +34,11 @@ export function VehicleSheet({
 
   const submit = async () => {
     if (!plateDigits.trim()) {
-      setError("Plate digits are required.");
+      setError(t("Vehicles.required", { field: t("Vehicles.plateDigits") }));
       return;
     }
     if (plateFormat === "letters_numbers" && !plateLetters.trim()) {
-      setError("Plate letters are required for this format.");
+      setError(t("Vehicles.formatRequired", { field: t("Vehicles.plateLetters") }));
       return;
     }
 
@@ -62,7 +64,7 @@ export function VehicleSheet({
 
       onClose();
     } catch {
-      setError("Could not save vehicle. Please try again.");
+      setError(t("Vehicles.saveError"));
     }
   };
 
@@ -73,10 +75,10 @@ export function VehicleSheet({
           <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             <View style={styles.handle} />
             <Text style={[styles.title, { color: colors.text.primary[isDark ? "dark" : "light"] }]}>
-              {vehicle ? "Edit vehicle" : "Add vehicle"}
+              {vehicle ? t("Vehicles.editVehicle") : t("Vehicles.addVehicle")}
             </Text>
             <Text style={[styles.subtitle, { color: colors.text.secondary[isDark ? "dark" : "light"] }]}>
-              Vehicle capacity is capped at 4 per unit.
+              {t("Vehicles.capacityNote")}
             </Text>
 
             <PlateInput
@@ -89,17 +91,17 @@ export function VehicleSheet({
                 setPlateDigits(digits);
               }}
             />
-            <Input label="Make" value={make} onChangeText={setMake} placeholder="Toyota" />
-            <Input label="Model" value={model} onChangeText={setModel} placeholder="Corolla" />
-            <Input label="Color" value={color} onChangeText={setColor} placeholder="White" />
-            <Input label="Sticker code" value={stickerCode} onChangeText={setStickerCode} placeholder="Optional" />
-            <Input label="Notes" value={notes} onChangeText={setNotes} placeholder="Optional notes" multiline />
+            <Input label={t("Vehicles.make")} value={make} onChangeText={setMake} placeholder={t("Vehicles.makePlaceholder")} />
+            <Input label={t("Vehicles.model")} value={model} onChangeText={setModel} placeholder={t("Vehicles.modelPlaceholder")} />
+            <Input label={t("Vehicles.color")} value={color} onChangeText={setColor} placeholder={t("Vehicles.colorPlaceholder")} />
+            <Input label={t("Vehicles.stickerCode")} value={stickerCode} onChangeText={setStickerCode} placeholder={t("Vehicles.optional")} />
+            <Input label={t("Vehicles.notes")} value={notes} onChangeText={setNotes} placeholder={t("Vehicles.optionalNotes")} multiline />
 
             {error ? <Text style={styles.error}>{error}</Text> : null}
 
             <View style={styles.actions}>
-              <Button title="Cancel" variant="ghost" onPress={onClose} disabled={isSaving} style={styles.actionButton} />
-              <Button title={isSaving ? "Saving..." : "Save"} onPress={submit} disabled={isSaving} style={styles.actionButton} />
+              <Button title={t("Vehicles.cancel")} variant="ghost" onPress={onClose} disabled={isSaving} style={styles.actionButton} />
+              <Button title={isSaving ? t("Vehicles.saving") : t("Vehicles.save")} onPress={submit} disabled={isSaving} style={styles.actionButton} />
             </View>
           </ScrollView>
         </View>

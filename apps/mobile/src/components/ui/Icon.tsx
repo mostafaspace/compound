@@ -8,6 +8,7 @@ export type AppIconName =
   | 'arrow-right'
   | 'chevron-left'
   | 'building'
+  | 'calendar'
   | 'camera'
   | 'check'
   | 'chevron-right'
@@ -29,6 +30,7 @@ export type AppIconName =
   | 'scanner'
   | 'settings'
   | 'shield'
+  | 'trash'
   | 'units'
   | 'user'
   | 'visitors'
@@ -88,6 +90,14 @@ export function Icon({
           <Rect {...strokeProps} x="4" y="3" width="16" height="18" rx="2" />
           <Path {...strokeProps} d="M9 21v-4h6v4" />
           <Path {...strokeProps} d="M8 7h.01M12 7h.01M16 7h.01M8 11h.01M12 11h.01M16 11h.01" />
+        </>
+      ) : null}
+      {name === 'calendar' ? (
+        <>
+          <Rect {...strokeProps} x="3" y="4" width="18" height="18" rx="2" />
+          <Line {...strokeProps} x1="16" y1="2" x2="16" y2="6" />
+          <Line {...strokeProps} x1="8" y1="2" x2="8" y2="6" />
+          <Line {...strokeProps} x1="3" y1="10" x2="21" y2="10" />
         </>
       ) : null}
       {name === 'camera' || name === 'scanner' ? (
@@ -202,6 +212,14 @@ export function Icon({
         <>
           <Circle {...strokeProps} cx="12" cy="12" r="3" />
           <Path {...strokeProps} d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1A2 2 0 1 1 4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9L4.2 7A2 2 0 1 1 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1A2 2 0 1 1 19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1h.1a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z" />
+        </>
+      ) : null}
+      {name === 'trash' ? (
+        <>
+          <Polyline {...strokeProps} points="3 6 5 6 21 6" />
+          <Path {...strokeProps} d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+          <Line {...strokeProps} x1="10" y1="11" x2="10" y2="17" />
+          <Line {...strokeProps} x1="14" y1="11" x2="14" y2="17" />
         </>
       ) : null}
       {name === 'shield' ? (

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\AccountMergeController;
 use App\Http\Controllers\Api\V1\Admin\AdminSecurityController;
+use App\Http\Controllers\Api\V1\Admin\AdminVehicleNotificationController;
 use App\Http\Controllers\Api\V1\Admin\AnnouncementTargetPreviewController;
 use App\Http\Controllers\Api\V1\Admin\Apartments\ApartmentController as AdminApartmentController;
 use App\Http\Controllers\Api\V1\Admin\Apartments\ApartmentDocumentReviewController as AdminApartmentDocumentReviewController;
@@ -188,6 +189,9 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         // Vehicle & Security operations
         Route::get('/admin/vehicle-lookup', VehicleLookupController::class)
             ->name('admin.vehicle-lookup');
+        Route::post('/admin/vehicles/{vehicle}/notify', [AdminVehicleNotificationController::class, 'store'])
+            ->middleware('throttle:30,1')
+            ->name('admin.vehicles.notify');
 
         Route::get('/admin/apartments/{unit}/penalty-points', [AdminApartmentPenaltyPointController::class, 'index'])
             ->name('admin.apartments.penalty-points.index');

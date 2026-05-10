@@ -5,7 +5,7 @@ import type { AdminScopeAssignment, RoleRecord } from "@/lib/api";
 import {
   getUserRoleAssignments, assignUserRole, revokeUserRole,
   getRoles
-} from "@/app/support/users/actions";
+} from "@/app/(admin)/support/users/actions";
 
 interface Props {
   userId: number;

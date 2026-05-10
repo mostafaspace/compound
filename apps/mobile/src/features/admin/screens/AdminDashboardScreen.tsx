@@ -48,6 +48,8 @@ export const AdminDashboardScreen = () => {
         return 'user';
       case 'Polls':
         return 'polls';
+      case 'CreatePoll':
+        return 'plus';
       default:
         return 'more';
     }
@@ -67,6 +69,8 @@ export const AdminDashboardScreen = () => {
         return t('Admin.invites', 'Invites');
       case 'Polls':
         return t('Admin.polls', 'Polls');
+      case 'CreatePoll':
+        return t('Admin.createPoll', 'New Poll');
       default:
         return t('Common.profile', 'Profile');
     }

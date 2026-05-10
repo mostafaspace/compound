@@ -27,16 +27,19 @@ class VehicleLookupController extends Controller
             return response()->json(['data' => []]);
         }
 
-        $compoundId = $this->contextService->getCompoundId();
+        $compoundId = $this->contextService->resolve($request);
 
         // 1. Search Resident Vehicles
         $terms = $this->normalizer->searchTerms($query);
 
         $residentVehicles = ApartmentVehicle::query()
-            ->whereHas('unit', fn ($q) => $q->where('compound_id', $compoundId))
+            ->when($compoundId, fn ($q) => $q->whereHas('unit', fn ($u) => $u->where('compound_id', $compoundId)))
             ->where(function ($q) use ($query, $terms) {
                 $q->where('plate', 'like', "%{$query}%")
-                    ->orWhere('plate_normalized', 'like', "%{$terms['normalized']}%");
+                    ->orWhere('plate_normalized', 'like', "%{$terms['normalized']}%")
+                    ->orWhere('make', 'like', "%{$query}%")
+                    ->orWhere('model', 'like', "%{$query}%")
+                    ->orWhere('color', 'like', "%{$query}%");
                 if ($terms['lettersAr'] !== '') {
                     $q->orWhere('plate_letters_ar', 'like', "%{$terms['lettersAr']}%");
                 }
@@ -71,7 +74,7 @@ class VehicleLookupController extends Controller
 
         // 2. Search Recent Visitor Vehicles (last 30 days)
         $visitorVehicles = VisitorRequest::query()
-            ->whereHas('unit', fn ($q) => $q->where('compound_id', $compoundId))
+            ->when($compoundId, fn ($q) => $q->whereHas('unit', fn ($u) => $u->where('compound_id', $compoundId)))
             ->where('vehicle_plate', 'like', "%{$query}%")
             ->where('created_at', '>', now()->subDays(30))
             ->with(['unit.building', 'host'])

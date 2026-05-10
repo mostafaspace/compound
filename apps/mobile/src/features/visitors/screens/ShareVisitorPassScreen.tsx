@@ -2,7 +2,6 @@ import React, { useRef } from 'react';
 import { View, StyleSheet, useColorScheme, Platform, Image, TouchableOpacity, ScrollView } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
-import ViewShot from 'react-native-view-shot';
 import Share from 'react-native-share';
 import QRCode from 'react-native-qrcode-svg';
 import { RootStackParamList } from '../../../navigation/types';
@@ -22,7 +21,7 @@ export const ShareVisitorPassScreen = () => {
   const route = useRoute<ShareVisitorPassRouteProp>();
   const navigation = useNavigation<any>();
   const { visitorId } = route.params;
-  const viewShotRef = useRef<ViewShot>(null);
+  const viewShotRef = useRef<View>(null);
 
   const { data: visitor, isLoading, error, refetch } = useGetVisitorRequestQuery(visitorId);
   const [markAsShared] = useMarkAsSharedMutation();
@@ -88,11 +87,12 @@ export const ShareVisitorPassScreen = () => {
   const handleShare = async () => {
     try {
       if (viewShotRef.current) {
-        const uri = await (viewShotRef.current as any).capture({
+        // Dynamic require avoids TurboModuleRegistry.getEnforcing at module load time
+        const { captureRef } = require('react-native-view-shot');
+        const uri = await captureRef(viewShotRef, {
           format: 'png',
           quality: 1.0,
           result: 'tmpfile',
-          captureAllScrollableViews: true,
         });
         await Share.open({
           url: Platform.OS === 'android' ? 'file://' + uri : uri,
@@ -121,10 +121,10 @@ export const ShareVisitorPassScreen = () => {
   return (
     <ScreenContainer edges={['left', 'right', 'bottom']}>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-        <ViewShot
+        <View
           ref={viewShotRef}
-          options={{ format: "png", quality: 1.0, result: 'tmpfile' }}
           style={styles.viewShotContainer}
+          collapsable={false}
         >
           <View style={cardStyle}>
             {/* Header / Accent */}
@@ -209,7 +209,7 @@ export const ShareVisitorPassScreen = () => {
               </View>
             </View>
           </View>
-        </ViewShot>
+        </View>
 
         <View style={styles.actions}>
           <Button

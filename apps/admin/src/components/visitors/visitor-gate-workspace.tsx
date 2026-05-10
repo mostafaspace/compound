@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import type { FormEvent, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 
-import { validateVisitorPassAction, visitorDecisionAction } from "@/app/visitors/actions";
+import { validateVisitorPassAction, visitorDecisionAction } from "@/app/(admin)/visitors/actions";
 
 interface VisitorGateWorkspaceProps {
   initialVisitors: VisitorRequest[];

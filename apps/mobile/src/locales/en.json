@@ -495,5 +495,34 @@
       "terms_of_service": "Rules and guidelines for using the Compound platform.",
       "data_processing": "Details on how your data is processed."
     }
+  },
+  "Vehicles": {
+    "addVehicle": "Add vehicle",
+    "editVehicle": "Edit vehicle",
+    "capacityNote": "Vehicle capacity is capped at 4 per unit.",
+    "make": "Make",
+    "model": "Model",
+    "color": "Color",
+    "stickerCode": "Sticker code",
+    "notes": "Notes",
+    "plateNumber": "Plate Number",
+    "numbersOnly": "Numbers Only",
+    "lettersNumbers": "Letters & Numbers",
+    "save": "Save",
+    "saving": "Saving...",
+    "cancel": "Cancel",
+    "plateDigits": "Plate digits",
+    "plateLetters": "Plate letters",
+    "required": "{{field}} are required.",
+    "formatRequired": "{{field}} are required for this format.",
+    "saveError": "Could not save vehicle. Please try again.",
+    "platePlaceholder": "Plate number",
+    "lettersPlaceholder": "Letter",
+    "digitsPlaceholder": "Digits",
+    "optional": "Optional",
+    "optionalNotes": "Optional notes",
+    "makePlaceholder": "Toyota",
+    "modelPlaceholder": "Corolla",
+    "colorPlaceholder": "White"
   }
 }

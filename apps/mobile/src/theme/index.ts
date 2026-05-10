@@ -53,14 +53,17 @@ export const colors = {
   primary: {
     light: palette.teal[700],
     dark: palette.teal[500],
+    main: palette.teal[700],
   },
   secondary: {
     light: palette.ink[500],
     dark: palette.ink[400],
+    main: palette.ink[500],
   },
   cta: {
     light: palette.blue[600],
     dark: palette.blue[500],
+    main: palette.blue[600],
   },
   background: {
     light: '#F6F8F7',

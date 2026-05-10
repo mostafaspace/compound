@@ -6,6 +6,8 @@ import { resolveDashboardRoute } from "./dashboard-routes.ts";
 test("resolveDashboardRoute keeps valid admin routes intact", () => {
   assert.equal(resolveDashboardRoute("/issues?status=open"), "/issues?status=open");
   assert.equal(resolveDashboardRoute("/units/assign"), "/units/assign");
+  assert.equal(resolveDashboardRoute("/vehicles?q=ABC"), "/vehicles?q=ABC");
+  assert.equal(resolveDashboardRoute("/security/admin-activity"), "/security/admin-activity");
 });
 
 test("resolveDashboardRoute remaps known backend aliases to real admin pages", () => {

@@ -495,5 +495,34 @@
       "terms_of_service": "القواعد والإرشادات لاستخدام منصة الكمباوند.",
       "data_processing": "تفاصيل حول كيفية معالجة بياناتك."
     }
+  },
+  "Vehicles": {
+    "addVehicle": "إضافة مركبة",
+    "editVehicle": "تعديل مركبة",
+    "capacityNote": "الحد الأقصى لعدد المركبات هو 4 لكل وحدة.",
+    "make": "الماركة",
+    "model": "الموديل",
+    "color": "اللون",
+    "stickerCode": "كود الملصق",
+    "notes": "ملاحظات",
+    "plateNumber": "رقم اللوحة",
+    "numbersOnly": "أرقام فقط",
+    "lettersNumbers": "حروف وأرقام",
+    "save": "حفظ",
+    "saving": "جار الحفظ...",
+    "cancel": "إلغاء",
+    "plateDigits": "أرقام اللوحة",
+    "plateLetters": "حروف اللوحة",
+    "required": "{{field}} مطلوبة.",
+    "formatRequired": "{{field}} مطلوبة لهذا التنسيق.",
+    "saveError": "تعذر حفظ المركبة. يرجى المحاولة مرة أخرى.",
+    "platePlaceholder": "رقم اللوحة",
+    "lettersPlaceholder": "حرف",
+    "digitsPlaceholder": "أرقام",
+    "optional": "اختياري",
+    "optionalNotes": "ملاحظات اختيارية",
+    "makePlaceholder": "تويوتا",
+    "modelPlaceholder": "كورولا",
+    "colorPlaceholder": "أبيض"
   }
 }

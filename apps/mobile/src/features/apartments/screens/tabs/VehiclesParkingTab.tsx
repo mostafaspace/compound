@@ -44,7 +44,7 @@ export function VehiclesParkingTab({ apartment }: { apartment: ApartmentDetail }
         <View style={[styles.empty, { backgroundColor: surface }]}>
           <Text style={[styles.emptyTitle, { color: text }]}>No vehicles yet</Text>
           <Text style={[styles.emptyBody, { color: secondary }]}>
-            {apartment.unit.hasVehicle ? "Add plate, make, color, and sticker details." : "Vehicles are disabled for this unit."}
+            Add plate, make, color, and sticker details.
           </Text>
         </View>
       ) : (
@@ -72,9 +72,9 @@ export function VehiclesParkingTab({ apartment }: { apartment: ApartmentDetail }
       )}
 
       <Button
-        title={apartment.unit.hasVehicle ? "Add vehicle" : "Vehicles disabled by admin"}
+        title={vehiclesAtCap ? "Vehicle capacity reached" : "Add vehicle"}
         onPress={() => setVehicleSheet({ open: true })}
-        disabled={!apartment.unit.hasVehicle || vehiclesAtCap}
+        disabled={vehiclesAtCap}
       />
 
       {/* ─── Parking section ─── */}

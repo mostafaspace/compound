@@ -38,6 +38,7 @@ export function ApartmentDetailScreen({ route }: ApartmentDetailScreenProps) {
   const isDark = useColorScheme() === "dark";
   const { unitId } = route.params;
   const { data, isLoading } = useGetApartmentQuery(unitId);
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
 
   if (isLoading || !data) {
     return (
@@ -49,8 +50,6 @@ export function ApartmentDetailScreen({ route }: ApartmentDetailScreenProps) {
       </ScreenContainer>
     );
   }
-
-  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
 
   return (
     <ScreenContainer withKeyboard={false} style={styles.container}>

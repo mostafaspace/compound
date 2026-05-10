@@ -173,13 +173,21 @@ export const propertyApi = api.injectEndpoints({
       }),
       invalidatesTags: ["Notification"],
     }),
-    createAnnouncement: builder.mutation<void, { title: string; content: string; category?: string; mustAcknowledge?: boolean }>({
+    createAnnouncement: builder.mutation<void, { title: string; content: string; category?: string; mustAcknowledge?: boolean; targetType?: string; targetIds?: string[] }>({
       query: (body) => ({
         url: "/announcements",
         method: "POST",
         body,
       }),
       invalidatesTags: ["Announcement"],
+    }),
+    previewAnnouncementRecipients: builder.mutation<{ recipientCount: number }, { targetType: string; targetIds?: string[]; targetRole?: string; requiresVerifiedMembership?: boolean }>({
+      query: (body) => ({
+        url: "/announcements/target-preview",
+        method: "POST",
+        body,
+      }),
+      transformResponse: (response: ApiEnvelope<{ recipientCount: number }>) => response.data,
     }),
   }),
 });
@@ -210,4 +218,5 @@ export const {
   useMarkNotificationReadMutation,
   useArchiveNotificationMutation,
   useDeleteIssueAttachmentMutation,
+  usePreviewAnnouncementRecipientsMutation,
 } = propertyApi;

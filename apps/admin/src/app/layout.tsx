@@ -4,8 +4,8 @@ import { getLocale, getMessages } from "next-intl/server";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { NotificationProvider } from "@/components/notifications/notification-provider";
 import { PermissionProviderWrapper } from "@/components/permission-provider-wrapper";
+import { ToastProvider } from "@/components/ui/toast";
 
 const geistSans = Geist({
   variable: "--font-sans",
@@ -36,7 +36,9 @@ export default async function RootLayout({
         <NextIntlClientProvider messages={messages}>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
             <PermissionProviderWrapper>
-              <NotificationProvider>{children}</NotificationProvider>
+              <ToastProvider>
+                {children}
+              </ToastProvider>
             </PermissionProviderWrapper>
           </ThemeProvider>
         </NextIntlClientProvider>

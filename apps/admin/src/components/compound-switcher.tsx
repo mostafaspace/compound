@@ -3,7 +3,7 @@
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { switchCompoundAction } from "@/app/compounds/actions";
+import { switchCompoundAction } from "@/app/(admin)/compounds/actions";
 
 interface CompoundOption {
   id: string;

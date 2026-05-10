@@ -1745,8 +1745,11 @@
       "shifts": "الورديات",
       "devices": "الأجهزة",
       "incidents": "الحوادث",
-      "manualEntries": "مداخل يدوية"
+      "manualEntries": "مداخل يدوية",
+      "adminAudit": "سجل المشرفين"
     },
+    "adminAuditTitle": "الأمن والتدقيق الإداري",
+    "adminAuditSubtitle": "مراقبة نشاط حسابات المسؤولين، ومراجعة الأعلام الأمنية، وتدقيق جلسات تسجيل الدخول.",
     "stats": {
       "gates": "البوابات النشطة",
       "activeShift": "الوردية النشطة",

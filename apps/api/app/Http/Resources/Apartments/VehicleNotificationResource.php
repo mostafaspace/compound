@@ -20,6 +20,7 @@ class VehicleNotificationResource extends JsonResource
         $senderLabel = match ($n->sender_mode->value) {
             'identified' => optional($n->sender)->name.($n->senderUnit ? " · Unit {$n->senderUnit->unit_number}" : ''),
             'anonymous' => $n->sender_alias ?: 'Another resident',
+            'admin' => $n->sender_alias ?: 'Compound Management',
             default => 'Another resident',
         };
 

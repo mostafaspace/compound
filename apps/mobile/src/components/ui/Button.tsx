@@ -17,7 +17,8 @@ import { isRtlLanguage, rowDirectionStyle, centerTextDirectionStyle } from '../.
 
 interface ButtonProps {
   onPress: () => void;
-  title: string;
+  title?: string;
+  children?: React.ReactNode;
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
   disabled?: boolean;
   loading?: boolean;
@@ -32,6 +33,7 @@ interface ButtonProps {
 export const Button: React.FC<ButtonProps> = ({
   onPress,
   title,
+  children,
   variant = 'primary',
   disabled,
   loading,
@@ -121,11 +123,13 @@ export const Button: React.FC<ButtonProps> = ({
       {loading ? (
         <ActivityIndicator color={variant === 'primary' ? colors.text.inverse : (isDark ? colors.cta.dark : colors.cta.light)} />
       ) : (
-        <View style={[styles.content, rowDirectionStyle(isRtl)]}>
-          {leftIcon ? <Icon name={leftIcon} color={iconColor} size={18} /> : null}
-          <Text style={[...getTextStyle(), centerTextDirectionStyle(isRtl)]}>{title}</Text>
-          {resolvedRightIcon ? <Icon name={resolvedRightIcon} color={iconColor} size={18} /> : null}
-        </View>
+        children || (
+          <View style={[styles.content, rowDirectionStyle(isRtl)]}>
+            {leftIcon ? <Icon name={leftIcon} color={iconColor} size={18} /> : null}
+            {title && <Text style={[...getTextStyle(), centerTextDirectionStyle(isRtl)]}>{title}</Text>}
+            {resolvedRightIcon ? <Icon name={resolvedRightIcon} color={iconColor} size={18} /> : null}
+          </View>
+        )
       )}
     </Pressable>
   );

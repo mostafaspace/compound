@@ -1745,8 +1745,11 @@
       "shifts": "Shifts",
       "devices": "Devices",
       "incidents": "Incidents",
-      "manualEntries": "Manual entries"
+      "manualEntries": "Manual entries",
+      "adminAudit": "Admin audit"
     },
+    "adminAuditTitle": "Admin Security & Audit",
+    "adminAuditSubtitle": "Monitor administrative account activity, review security flags, and audit login sessions.",
     "stats": {
       "gates": "Active gates",
       "activeShift": "Active shift",

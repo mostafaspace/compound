@@ -7,6 +7,7 @@ use App\Enums\UnitType;
 use App\Models\Apartments\ApartmentDocument;
 use App\Models\Apartments\ApartmentNote;
 use App\Models\Apartments\ApartmentParkingSpot;
+use App\Models\Apartments\ApartmentPenaltyEvent;
 use App\Models\Apartments\ApartmentResident;
 use App\Models\Apartments\ApartmentVehicle;
 use App\Models\Apartments\ApartmentViolation;
@@ -145,5 +146,24 @@ class Unit extends Model
         return $this->belongsToMany(User::class, 'apartment_residents')
             ->withPivot(['relation_type', 'starts_at', 'ends_at', 'is_primary', 'verification_status'])
             ->withTimestamps();
+    }
+
+    /**
+     * @return HasMany<ApartmentPenaltyEvent, $this>
+     */
+    public function apartmentPenaltyEvents(): HasMany
+    {
+        return $this->hasMany(ApartmentPenaltyEvent::class);
+    }
+
+    /**
+     * Sum of non-voided, non-expired penalty points for this unit.
+     */
+    public function activePenaltyPoints(): int
+    {
+        return (int) $this->apartmentPenaltyEvents()
+            ->whereNull('voided_at')
+            ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))
+            ->sum('points');
     }
 }

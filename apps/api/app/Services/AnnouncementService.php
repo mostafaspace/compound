@@ -23,26 +23,60 @@ class AnnouncementService
      */
     public function recipients(Announcement $announcement): Collection
     {
+        return $this->getRecipientQuery(
+            $announcement->target_type,
+            $announcement->target_ids,
+            $announcement->target_role,
+            $announcement->requires_verified_membership
+        )->get()->unique('id')->values();
+    }
+
+    /**
+     * @param  list<string>|null  $targetIds
+     */
+    public function previewRecipientsCount(
+        AnnouncementTargetType $targetType,
+        ?array $targetIds = null,
+        ?string $targetRole = null,
+        bool $requiresVerifiedMembership = false
+    ): int {
+        return $this->getRecipientQuery(
+            $targetType,
+            $targetIds,
+            $targetRole,
+            $requiresVerifiedMembership
+        )->distinct('users.id')->count('users.id');
+    }
+
+    /**
+     * @param  list<string>|null  $targetIds
+     */
+    private function getRecipientQuery(
+        AnnouncementTargetType $targetType,
+        ?array $targetIds = null,
+        ?string $targetRole = null,
+        bool $requiresVerifiedMembership = false
+    ): Builder {
         $query = User::query()
             ->where('status', AccountStatus::Active->value)
             ->orderBy('id');
 
-        match ($announcement->target_type) {
-            AnnouncementTargetType::Role => $this->applyRoleRecipientFilter($query, $announcement->target_role),
-            AnnouncementTargetType::Compound => $this->whereScopedToUnits($query, 'compound_id', $announcement->target_ids ?? []),
-            AnnouncementTargetType::Building => $this->whereScopedToUnits($query, 'building_id', $announcement->target_ids ?? []),
-            AnnouncementTargetType::Floor => $this->whereScopedToUnits($query, 'floor_id', $announcement->target_ids ?? []),
-            AnnouncementTargetType::Unit => $this->whereScopedToUnits($query, 'id', $announcement->target_ids ?? []),
-            AnnouncementTargetType::All => $announcement->requires_verified_membership
+        match ($targetType) {
+            AnnouncementTargetType::Role => $this->applyRoleRecipientFilter($query, $targetRole),
+            AnnouncementTargetType::Compound => $this->whereScopedToUnits($query, 'compound_id', $targetIds ?? []),
+            AnnouncementTargetType::Building => $this->whereScopedToUnits($query, 'building_id', $targetIds ?? []),
+            AnnouncementTargetType::Floor => $this->whereScopedToUnits($query, 'floor_id', $targetIds ?? []),
+            AnnouncementTargetType::Unit => $this->whereScopedToUnits($query, 'id', $targetIds ?? []),
+            AnnouncementTargetType::All => $requiresVerifiedMembership
                 ? $query->whereHas('apartmentResidents', fn (Builder $membership): Builder => $membership->activeForAccess())
                 : $query,
         };
 
-        if ($announcement->requires_verified_membership && $announcement->target_type === AnnouncementTargetType::Role) {
+        if ($requiresVerifiedMembership && $targetType === AnnouncementTargetType::Role) {
             $query->whereHas('apartmentResidents', fn (Builder $membership): Builder => $membership->activeForAccess());
         }
 
-        return $query->get()->unique('id')->values();
+        return $query;
     }
 
     public function applyVisibleToUser(Builder $query, User $user): Builder

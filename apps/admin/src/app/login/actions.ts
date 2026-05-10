@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 
 import { login } from "@/lib/api";
+import { getCompoundAdminLoginDestination } from "@/lib/admin-navigation";
 import { hasEffectiveRole, setAuthToken, setCompoundContext } from "@/lib/session";
 
 export async function loginAction(formData: FormData) {
@@ -23,7 +24,7 @@ export async function loginAction(formData: FormData) {
     // every subsequent API call sends the correct X-Compound-Id header.
     if (hasEffectiveRole(result.user, "compound_admin") && result.user.compoundId) {
       await setCompoundContext(result.user.compoundId);
-      destination = `/compounds/${result.user.compoundId}`;
+      destination = getCompoundAdminLoginDestination();
     } else {
       await setCompoundContext(null);
     }

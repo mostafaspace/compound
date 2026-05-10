@@ -16,6 +16,7 @@ const SAFE_DASHBOARD_PATHS = new Set([
   "/privacy",
   "/representative-assignments",
   "/security",
+  "/security/admin-activity",
   "/security/devices",
   "/security/gates",
   "/security/incidents",
@@ -27,6 +28,7 @@ const SAFE_DASHBOARD_PATHS = new Set([
   "/support/merges",
   "/support/users",
   "/units/assign",
+  "/vehicles",
   "/visitors",
   "/work-orders",
 ]);
