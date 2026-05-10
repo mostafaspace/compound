@@ -1,9 +1,6 @@
 import React from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, useColorScheme, View } from "react-native";
+import { ActivityIndicator, StyleSheet, Text, useColorScheme, View } from "react-native";
 import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
-import { useNavigation } from "@react-navigation/native";
-import type { StackNavigationProp } from "@react-navigation/stack";
-import type { RootStackParamList } from "../../../navigation/types";
 import { ScreenContainer } from "../../../components/layout/ScreenContainer";
 import { colors, radii, spacing, typography } from "../../../theme";
 import { useGetApartmentQuery } from "../../../services/apartments/apartmentsApi";
@@ -38,8 +35,6 @@ export function ApartmentDetailScreen({ route }: ApartmentDetailScreenProps) {
   const isDark = useColorScheme() === "dark";
   const { unitId } = route.params;
   const { data, isLoading } = useGetApartmentQuery(unitId);
-  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
-
   if (isLoading || !data) {
     return (
       <ScreenContainer style={styles.center}>
@@ -63,14 +58,6 @@ export function ApartmentDetailScreen({ route }: ApartmentDetailScreenProps) {
         <Text style={[styles.subtitle, { color: colors.text.secondary[isDark ? "dark" : "light"] }]}>
           {data.residents.length} residents · {data.vehicles.length} vehicles · {data.documents.length} documents
         </Text>
-        <View style={styles.heroActions}>
-          <Pressable style={[styles.heroBtn, { borderColor: colors.primary[isDark ? "dark" : "light"] }]} onPress={() => navigation.navigate("VehicleNotifySearch")}>
-            <Text style={[styles.heroBtnText, { color: colors.primary[isDark ? "dark" : "light"] }]}>Notify a vehicle</Text>
-          </Pressable>
-          <Pressable style={[styles.heroBtn, { borderColor: colors.border[isDark ? "dark" : "light"] }]} onPress={() => navigation.navigate("VehicleNotifyInbox")}>
-            <Text style={[styles.heroBtnText, { color: colors.text.secondary[isDark ? "dark" : "light"] }]}>Vehicle messages</Text>
-          </Pressable>
-        </View>
       </View>
 
       <View style={styles.tabs}>

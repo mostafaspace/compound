@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
-import { LogoutButton } from "@/components/logout-button";
 import { getCurrentUser, getWorkOrder } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
 
@@ -100,7 +99,6 @@ export default async function WorkOrderDetailPage({ params }: Props) {
             </div>
             <p className="mt-1 text-sm text-muted capitalize">{workOrder.category}</p>
           </div>
-          <LogoutButton />
         </div>
       </header>
 

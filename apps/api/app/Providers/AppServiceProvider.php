@@ -9,6 +9,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
+use Kreait\Firebase\Contract\Messaging;
+use Kreait\Firebase\Factory as FirebaseFactory;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -17,7 +19,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(Messaging::class, function (): Messaging {
+            $credentialsPath = env('FIREBASE_CREDENTIALS', storage_path('app/firebase-credentials.json'));
+
+            return (new FirebaseFactory)
+                ->withServiceAccount($credentialsPath)
+                ->createMessaging();
+        });
     }
 
     /**

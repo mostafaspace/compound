@@ -23,6 +23,7 @@ export type RootStackParamList = {
   VehicleNotifySearch: undefined;
   VehicleNotifyInbox: undefined;
   NotificationsCenter: undefined;
+  DocumentViewer: { url: string; title?: string };
 };
 
 export type AuthStackParamList = {

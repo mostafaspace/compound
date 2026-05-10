@@ -1,24 +1,45 @@
 import React, { useState } from "react";
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, useColorScheme, View } from "react-native";
+import { ActivityIndicator, FlatList, Linking, Pressable, StyleSheet, Text, useColorScheme, View } from "react-native";
 import { pick, types } from "@react-native-documents/picker";
 import { Button } from "../../../../components/ui/Button";
 import { colors, radii, shadows, spacing, typography } from "../../../../theme";
 import {
+  useGetApartmentDocumentShareLinkMutation,
   useListApartmentDocumentsQuery,
   useUploadApartmentDocumentMutation,
 } from "../../../../services/apartments/documentsApi";
 import type { ApartmentDetail, ApartmentDocument, UploadFile } from "../../../../services/apartments/types";
 import { DocumentReplaceSheet } from "../../components/DocumentReplaceSheet";
 
+import { useNavigation } from "@react-navigation/native";
+import { StackNavigationProp } from "@react-navigation/stack";
+import { RootStackParamList } from "../../../../navigation/types";
+
 const DOCUMENT_TYPES = ["ownership_proof", "lease", "id_copy", "utility_bill", "other"] as const;
 
 export function DocumentsTab({ apartment }: { apartment: ApartmentDetail }) {
   const isDark = useColorScheme() === "dark";
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const { data = apartment.documents, isLoading } = useListApartmentDocumentsQuery(apartment.id);
   const [uploadDocument, uploadState] = useUploadApartmentDocumentMutation();
+  const [getShareLink, shareLinkState] = useGetApartmentDocumentShareLinkMutation();
   const [uploadingType, setUploadingType] = useState<string | null>(null);
   const [replacingDocument, setReplacingDocument] = useState<ApartmentDocument | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [openingId, setOpeningId] = useState<number | string | null>(null);
+
+  const openDocument = async (document: ApartmentDocument) => {
+    try {
+      setError(null);
+      setOpeningId(document.id);
+      const { url } = await getShareLink({ unitId: apartment.id, documentId: document.id }).unwrap();
+      navigation.navigate("DocumentViewer", { url, title: formatDocumentType(document.documentType) });
+    } catch {
+      setError("Could not open document. Please try again.");
+    } finally {
+      setOpeningId(null);
+    }
+  };
 
   const pickAndUpload = async (documentType: string) => {
     try {
@@ -91,7 +112,13 @@ export function DocumentsTab({ apartment }: { apartment: ApartmentDetail }) {
           </View>
         }
         renderItem={({ item }) => (
-          <DocumentRow document={item} isDark={isDark} onReplace={() => setReplacingDocument(item)} />
+          <DocumentRow
+            document={item}
+            isDark={isDark}
+            opening={openingId === item.id}
+            onReplace={() => setReplacingDocument(item)}
+            onOpen={() => openDocument(item)}
+          />
         )}
       />
 
@@ -109,22 +136,28 @@ export function DocumentsTab({ apartment }: { apartment: ApartmentDetail }) {
 function DocumentRow({
   document,
   isDark,
+  opening,
   onReplace,
+  onOpen,
 }: {
   document: ApartmentDocument;
   isDark: boolean;
+  opening: boolean;
   onReplace: () => void;
+  onOpen: () => void;
 }) {
   const text = colors.text.primary[isDark ? "dark" : "light"];
   const secondary = colors.text.secondary[isDark ? "dark" : "light"];
 
   return (
-    <View
-      style={[
+    <Pressable
+      onPress={onOpen}
+      style={({ pressed }) => [
         styles.document,
         {
           backgroundColor: colors.surface[isDark ? "dark" : "light"],
           borderColor: colors.border[isDark ? "dark" : "light"],
+          opacity: pressed ? 0.7 : 1,
         },
       ]}
     >
@@ -142,8 +175,22 @@ function DocumentRow({
       <Text style={[styles.fileName, { color: secondary }]} numberOfLines={1}>
         {filename(document.filePath)}
       </Text>
-      <Button title="Replace" variant="secondary" onPress={onReplace} style={styles.replaceButton} />
-    </View>
+      <View style={styles.actionsRow}>
+        <Button
+          title={opening ? "Opening..." : "View"}
+          variant="primary"
+          onPress={onOpen}
+          disabled={opening}
+          style={styles.actionBtn}
+        />
+        <Button
+          title="Replace"
+          variant="secondary"
+          onPress={onReplace}
+          style={styles.actionBtn}
+        />
+      </View>
+    </Pressable>
   );
 }
 
@@ -262,6 +309,14 @@ const styles = StyleSheet.create({
   },
   replaceButton: {
     marginTop: spacing.md,
+  },
+  actionsRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  actionBtn: {
+    flex: 1,
   },
   empty: {
     borderRadius: radii.xl,

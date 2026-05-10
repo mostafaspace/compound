@@ -2,7 +2,7 @@ import type { InvitationStatus, OwnerRegistrationRequest, ResidentInvitation, Ve
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 
-import { LogoutButton } from "@/components/logout-button";
+import { SiteNav } from "@/components/site-nav";
 import { getCurrentUser, getOwnerRegistrationRequests, getResidentInvitations, getSystemStatus, getVerificationRequests } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
 
@@ -222,25 +222,23 @@ export default async function OnboardingPage({ searchParams }: OnboardingPagePro
 
   return (
     <main className="min-h-screen bg-background text-foreground">
+      <SiteNav breadcrumb={[{ label: t("title") }]} />
+
       <header className="border-b border-line bg-panel">
         <div className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-6 md:flex-row md:items-center md:justify-between lg:px-8">
           <div>
-            <Link className="text-sm font-semibold text-brand hover:text-brand-strong" href="/">
-              {t("back")}
-            </Link>
-            <h1 className="mt-2 text-3xl font-semibold">{t("title")}</h1>
+            <h1 className="text-3xl font-semibold">{t("title")}</h1>
             <p className="mt-2 max-w-2xl text-sm text-muted">
               {t("subtitle")}
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
             <Link
-              className="inline-flex h-11 items-center justify-center rounded-lg border border-line bg-panel px-4 text-sm font-semibold hover:border-brand"
+              className="inline-flex h-11 items-center justify-center rounded-lg border border-line bg-panel px-4 text-sm font-semibold hover:border-brand transition-colors"
               href="/compounds"
             >
               {t("propertyRegistry")}
             </Link>
-            <LogoutButton />
           </div>
         </div>
       </header>
@@ -331,9 +329,15 @@ export default async function OnboardingPage({ searchParams }: OnboardingPagePro
                       <td className="px-4 py-4 align-top">
                         <div className="grid gap-1">
                           {request.documents.map((document) => (
-                            <span key={document.id} className="rounded-md bg-background px-2 py-1 text-xs font-semibold text-muted">
+                            <a
+                              key={document.id}
+                              href={`/api/proxy/document?requestId=${request.id}&documentId=${document.id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="rounded-md bg-background px-2 py-1 text-xs font-semibold text-muted underline decoration-muted/40 hover:text-foreground hover:decoration-foreground/60 transition-colors"
+                            >
                               {document.type.replace("_", " ")}: {document.originalName}
-                            </span>
+                            </a>
                           ))}
                         </div>
                       </td>

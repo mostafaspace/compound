@@ -59,9 +59,12 @@ export const authApi = api.injectEndpoints({
     }),
     registerDevice: builder.mutation<void, { token: string; platform: string }>({
       query: (data) => ({
-        url: "/auth/devices",
+        url: "/device-tokens",
         method: "POST",
-        body: data,
+        body: {
+          token: data.token,
+          platform: data.platform === "android" ? "fcm" : "apns",
+        },
       }),
     }),
   }),

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\AccountStatus;
+use App\Enums\NotificationCategory;
 use App\Enums\UnitRelationType;
 use App\Enums\UnitStatus;
 use App\Enums\UnitType;
@@ -20,6 +21,7 @@ use App\Models\Property\Floor;
 use App\Models\Property\Unit;
 use App\Models\User;
 use App\Services\CompoundContextService;
+use App\Services\NotificationService;
 use App\Support\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -27,14 +29,17 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class OwnerRegistrationController extends Controller
 {
     public function __construct(
         private readonly AuditLogger $auditLogger,
         private readonly CompoundContextService $compoundContext,
+        private readonly NotificationService $notificationService,
     ) {}
 
     public function buildings(): JsonResponse
@@ -236,6 +241,8 @@ class OwnerRegistrationController extends Controller
                 'reviewed_at' => now(),
             ])->save();
 
+            $this->copyRegistrationDocumentsToApartment($ownerRegistrationRequest, $unit->id, $user->id);
+
             return $ownerRegistrationRequest;
         });
 
@@ -244,6 +251,16 @@ class OwnerRegistrationController extends Controller
             'unit_id' => $registrationRequest->unit_id,
             'user_id' => $registrationRequest->user_id,
         ]);
+
+        $this->notificationService->create(
+            userId: $registrationRequest->user_id,
+            category: NotificationCategory::Onboarding,
+            title: 'Owner registration approved',
+            body: "Your registration for {$registrationRequest->apartment_code} has been approved. You can now sign in.",
+            metadata: ['owner_registration_request_id' => $registrationRequest->id],
+            priority: 'high',
+            respectPreferences: false,
+        );
 
         return new OwnerRegistrationRequestResource(
             $registrationRequest->refresh()->load(['building', 'documents', 'unit', 'user']),
@@ -272,6 +289,17 @@ class OwnerRegistrationController extends Controller
         ]);
 
         return OwnerRegistrationRequestResource::make($ownerRegistrationRequest->refresh()->load(['building', 'documents', 'unit', 'user']));
+    }
+
+    public function downloadDocument(Request $request, OwnerRegistrationRequest $ownerRegistrationRequest, int $documentId): StreamedResponse
+    {
+        $this->compoundContext->ensureCompoundAccess($request, $ownerRegistrationRequest->compound_id);
+
+        $document = $ownerRegistrationRequest->documents()->where('id', $documentId)->firstOrFail();
+
+        abort_unless(Storage::exists($document->path), Response::HTTP_NOT_FOUND, 'Document file not found.');
+
+        return Storage::download($document->path, $document->original_name);
     }
 
     private function nextPointCompound(): Compound
@@ -364,5 +392,46 @@ class OwnerRegistrationController extends Controller
         $user->syncRoles([UserRole::defaultForNewUser()->value]);
 
         return $user;
+    }
+
+    private function copyRegistrationDocumentsToApartment(
+        OwnerRegistrationRequest $registration,
+        string $unitId,
+        int $userId,
+    ): void {
+        $docs = DB::table('owner_registration_documents')
+            ->where('owner_registration_request_id', $registration->id)
+            ->whereNull('migrated_to_apartment_document_id')
+            ->get();
+
+        foreach ($docs as $doc) {
+            $apartmentDocumentId = DB::table('apartment_documents')->insertGetId([
+                'unit_id' => $unitId,
+                'uploaded_by_user_id' => $userId,
+                'document_type' => $this->mapRegistrationDocType($doc->type ?? 'other'),
+                'file_path' => $doc->path,
+                'mime_type' => $doc->mime_type ?? null,
+                'size_bytes' => $doc->size_bytes ?? null,
+                'status' => 'active',
+                'version' => 1,
+                'created_at' => $doc->created_at,
+                'updated_at' => now(),
+            ]);
+
+            DB::table('owner_registration_documents')
+                ->where('id', $doc->id)
+                ->update(['migrated_to_apartment_document_id' => $apartmentDocumentId]);
+        }
+    }
+
+    private function mapRegistrationDocType(string $source): string
+    {
+        return match (strtolower($source)) {
+            'contract', 'lease', 'rental_contract' => 'lease',
+            'id', 'id_card', 'id_copy', 'national_id', 'passport' => 'id_copy',
+            'utility', 'utility_bill' => 'utility_bill',
+            'handover', 'ownership', 'ownership_proof', 'title_deed' => 'ownership_proof',
+            default => 'other',
+        };
     }
 }

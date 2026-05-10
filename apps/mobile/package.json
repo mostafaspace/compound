@@ -45,6 +45,7 @@
     "react-native-vector-icons": "^10.3.0",
     "react-native-view-shot": "^4.0.3",
     "react-native-vision-camera": "^5.0.7",
+    "react-native-webview": "^13.16.1",
     "react-native-worklets-core": "^1.6.3",
     "react-redux": "^9.2.0",
     "redux-logger": "^3.0.6",

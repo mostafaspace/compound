@@ -41,7 +41,7 @@ export const MoreScreen = ({ navigation }: { navigation: MoreScreenNavigationPro
 
   const sections: Array<{
     title: string;
-    items: Array<{ id: string; label: string; icon: AppIconName; screen: string; show: boolean }>;
+    items: Array<{ id: string; label: string; icon: AppIconName; screen: string; show: boolean; rootScreen?: boolean }>;
   }> = [
     {
       title: t("More.sections.property", "Property & Community"),
@@ -66,6 +66,27 @@ export const MoreScreen = ({ navigation }: { navigation: MoreScreenNavigationPro
           icon: "polls",
           screen: "Polls",
           show: canViewPolls && isAdmin,
+        },
+      ],
+    },
+    {
+      title: t("More.sections.vehicles", "Vehicles"),
+      items: [
+        {
+          id: "notify-vehicle",
+          label: t("Vehicles.notifyOwner", "Notify a vehicle"),
+          icon: "visitors",
+          screen: "VehicleNotifySearch",
+          rootScreen: true,
+          show: roleType === 'resident',
+        },
+        {
+          id: "vehicle-messages",
+          label: t("Vehicles.inboxLabel", "Vehicle messages"),
+          icon: "notifications",
+          screen: "VehicleNotifyInbox",
+          rootScreen: true,
+          show: roleType === 'resident',
         },
       ],
     },
@@ -137,7 +158,14 @@ export const MoreScreen = ({ navigation }: { navigation: MoreScreenNavigationPro
               {visibleItems.map((item, itemIdx) => (
                 <Pressable
                   key={item.id}
-                  onPress={() => navigation.navigate(item.screen as any)}
+                  onPress={() => {
+                    if (item.rootScreen) {
+                      // Navigate to a screen in the parent root stack
+                      navigation.getParent()?.getParent()?.navigate(item.screen as never);
+                    } else {
+                      navigation.navigate(item.screen as never);
+                    }
+                  }}
                   style={({ pressed }) => [
                     styles.menuItem,
                     rowDirectionStyle(isRtl),

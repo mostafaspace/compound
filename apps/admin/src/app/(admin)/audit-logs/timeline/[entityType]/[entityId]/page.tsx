@@ -2,7 +2,6 @@ import type { AuditLogEntry, AuditSeverity } from "@compound/contracts";
 import { getLocale, getTranslations } from "next-intl/server";
 import Link from "next/link";
 
-import { LogoutButton } from "@/components/logout-button";
 import { getAuditTimeline, getCurrentUser } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
 
@@ -77,7 +76,6 @@ export default async function AuditTimelinePage({ params }: AuditTimelinePagePro
               {t("subtitle", { entityType: decodedType, entityId: decodedId })}
             </p>
           </div>
-          <LogoutButton />
         </div>
       </header>
 

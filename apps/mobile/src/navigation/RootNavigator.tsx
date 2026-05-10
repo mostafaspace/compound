@@ -31,6 +31,7 @@ import { VehicleNotifySearchScreen } from '../features/apartments/screens/notify
 import { VehicleNotifyInboxScreen } from '../features/apartments/screens/notify/VehicleNotifyInboxScreen';
 import { NotificationsScreen } from '../features/notifications/screens/NotificationsScreen';
 import { ScreenHeader } from '../components/layout/ScreenHeader';
+import { DocumentViewerScreen } from '../features/documents/screens/DocumentViewerScreen';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -198,6 +199,14 @@ export const RootNavigator = () => {
                 headerShown: true,
                 header: () => <ScreenHeader title={t("Notifications.title", { defaultValue: "Notifications" })} />
               }}
+            />
+            <Stack.Screen
+              name="DocumentViewer"
+              component={DocumentViewerScreen}
+              options={({ route }) => ({
+                headerShown: true,
+                header: () => <ScreenHeader title={route.params?.title ?? "Document"} />
+              })}
             />
           </Stack.Group>
         )}

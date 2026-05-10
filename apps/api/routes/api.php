@@ -114,6 +114,8 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
     Route::post('/public/owner-registration-requests', [OwnerRegistrationController::class, 'store'])
         ->middleware('throttle:document-upload')
         ->name('owner-registration.store');
+    Route::get('/public/apartment-documents/{document}/view', [ApartmentDocumentController::class, 'view'])
+        ->name('apartments.documents.view');
     Route::get('/public/owner-registration-requests/status', [OwnerRegistrationController::class, 'status'])
         ->middleware('throttle:invitation-show')
         ->name('owner-registration.status');
@@ -155,6 +157,8 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             ->name('apartments.documents.replace');
         Route::get('/apartments/{unit}/documents/{document}/download', [ApartmentDocumentController::class, 'download'])
             ->name('apartments.documents.download');
+        Route::get('/apartments/{unit}/documents/{document}/share-link', [ApartmentDocumentController::class, 'shareLink'])
+            ->name('apartments.documents.share-link');
 
         // Vehicle plate notifications
         Route::post('/vehicle-notifications/search', [VehicleNotificationController::class, 'search'])
@@ -370,6 +374,8 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             Route::patch('/owner-registration-requests/{ownerRegistrationRequest}/deny', [OwnerRegistrationController::class, 'deny'])
                 ->middleware('role:manage_users')
                 ->name('owner-registration.deny');
+            Route::get('/owner-registration-requests/{ownerRegistrationRequest}/documents/{document}/download', [OwnerRegistrationController::class, 'downloadDocument'])
+                ->name('owner-registration.document.download');
             Route::patch('/verification-requests/{verificationRequest}/approve', [VerificationRequestController::class, 'approve'])
                 ->name('verification-requests.approve');
             Route::patch('/verification-requests/{verificationRequest}/reject', [VerificationRequestController::class, 'reject'])

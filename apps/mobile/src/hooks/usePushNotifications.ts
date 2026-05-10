@@ -1,26 +1,33 @@
 import { useEffect } from 'react';
-import messaging from '@react-native-firebase/messaging';
-import { Platform } from 'react-native';
+import messaging, { FirebaseMessagingTypes } from '@react-native-firebase/messaging';
+import { Alert, Platform } from 'react-native';
 import { useRegisterDeviceMutation } from '../services/auth';
 import { useSelector } from 'react-redux';
 import { selectCurrentToken } from '../store/authSlice';
+
+function showForegroundNotification(remoteMessage: FirebaseMessagingTypes.RemoteMessage) {
+  const title = remoteMessage.notification?.title;
+  const body = remoteMessage.notification?.body;
+  if (title || body) {
+    Alert.alert(title ?? '', body ?? '');
+  }
+}
 
 export const usePushNotifications = (enabled = true) => {
   const [registerDevice] = useRegisterDeviceMutation();
   const authToken = useSelector(selectCurrentToken);
 
   useEffect(() => {
-    // Only register the device after session restore has completed and the user is authenticated.
     if (!enabled || !authToken) return;
 
     const setupPushNotifications = async () => {
       try {
         const authStatus = await messaging().requestPermission();
-        const enabled =
+        const granted =
           authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
           authStatus === messaging.AuthorizationStatus.PROVISIONAL;
 
-        if (enabled) {
+        if (granted) {
           const token = await messaging().getToken();
           if (token) {
             await registerDevice({
@@ -36,20 +43,22 @@ export const usePushNotifications = (enabled = true) => {
 
     void setupPushNotifications();
 
-    // Listen to token refresh
     const unsubscribeTokenRefresh = messaging().onTokenRefresh(async (token) => {
       try {
         await registerDevice({
           token,
           platform: Platform.OS,
         }).unwrap();
-      } catch (error) {
+      } catch {
         // Ignored
       }
     });
 
+    const unsubscribeForeground = messaging().onMessage(showForegroundNotification);
+
     return () => {
       unsubscribeTokenRefresh();
+      unsubscribeForeground();
     };
   }, [authToken, enabled, registerDevice]);
 };

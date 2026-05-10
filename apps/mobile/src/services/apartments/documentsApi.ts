@@ -41,6 +41,17 @@ export const documentsApi = api.injectEndpoints({
         { type: "ApartmentDocument", id: unitId },
       ],
     }),
+    getApartmentDocumentShareLink: builder.mutation<
+      { url: string; mimeType: string | null; expiresInSeconds: number },
+      { unitId: string; documentId: number | string }
+    >({
+      query: ({ unitId, documentId }) => ({
+        url: `/apartments/${unitId}/documents/${documentId}/share-link`,
+        method: "GET",
+      }),
+      transformResponse: (response: ApiEnvelope<{ url: string; mimeType: string | null; expiresInSeconds: number }>) =>
+        response.data,
+    }),
   }),
 });
 
@@ -48,4 +59,5 @@ export const {
   useListApartmentDocumentsQuery,
   useUploadApartmentDocumentMutation,
   useReplaceApartmentDocumentMutation,
+  useGetApartmentDocumentShareLinkMutation,
 } = documentsApi;

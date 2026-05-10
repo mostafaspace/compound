@@ -12,4 +12,5 @@ enum NotificationCategory: string
     case Finance = 'finance';
     case System = 'system';
     case Vehicles = 'vehicles';
+    case Onboarding = 'onboarding';
 }

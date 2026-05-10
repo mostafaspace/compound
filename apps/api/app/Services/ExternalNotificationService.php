@@ -11,7 +11,7 @@ use App\Models\NotificationPreference;
 use App\Models\NotificationTemplate;
 use App\Models\User;
 use App\Services\Channels\MockEmailChannel;
-use App\Services\Channels\MockPushChannel;
+use App\Services\Channels\FcmPushChannel;
 use App\Services\Channels\MockSmsChannel;
 
 class ExternalNotificationService
@@ -24,7 +24,7 @@ class ExternalNotificationService
         private readonly CompoundContextService $compoundContext,
     ) {
         $this->channels = [
-            NotificationChannel::Push->value => app(MockPushChannel::class),
+            NotificationChannel::Push->value => app(FcmPushChannel::class),
             NotificationChannel::Email->value => app(MockEmailChannel::class),
             NotificationChannel::Sms->value => app(MockSmsChannel::class),
         ];

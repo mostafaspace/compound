@@ -1627,6 +1627,28 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
+  - react-native-webview (13.16.1):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
   - react-native-worklets-core (1.6.3):
     - hermes-engine
     - RCTRequired
@@ -2404,6 +2426,7 @@ DEPENDENCIES:
   - react-native-pager-view (from `../../../node_modules/react-native-pager-view`)
   - react-native-safe-area-context (from `../../../node_modules/react-native-safe-area-context`)
   - react-native-view-shot (from `../../../node_modules/react-native-view-shot`)
+  - react-native-webview (from `../../../node_modules/react-native-webview`)
   - react-native-worklets-core (from `../../../node_modules/react-native-worklets-core`)
   - React-NativeModulesApple (from `../../../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios`)
   - React-networking (from `../../../node_modules/react-native/ReactCommon/react/networking`)
@@ -2559,6 +2582,8 @@ EXTERNAL SOURCES:
     :path: "../../../node_modules/react-native-safe-area-context"
   react-native-view-shot:
     :path: "../../../node_modules/react-native-view-shot"
+  react-native-webview:
+    :path: "../../../node_modules/react-native-webview"
   react-native-worklets-core:
     :path: "../../../node_modules/react-native-worklets-core"
   React-NativeModulesApple:
@@ -2712,6 +2737,7 @@ SPEC CHECKSUMS:
   react-native-pager-view: 4eb2faa444dc7caec9ed5749af4da2e0142e7ca7
   react-native-safe-area-context: ba7283e541a5f57c6b27a7e33f2c40b8977888c0
   react-native-view-shot: 11e720a9a6989a9b9c4b2fb69d972aa8e1a8104c
+  react-native-webview: 2a4da2e03d3ec2c731c4d1a389cb86aaa4902167
   react-native-worklets-core: c39f6043ebcc3885ad718b744c25886ae75c10e4
   React-NativeModulesApple: 993744f42aab769eb02bf5d256b6767c546d0bb5
   React-networking: 723406be4a3bd0ff5f28442e1486704c3ecfe4f4
