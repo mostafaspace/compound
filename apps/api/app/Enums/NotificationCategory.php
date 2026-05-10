@@ -11,4 +11,5 @@ enum NotificationCategory: string
     case Polls = 'polls';
     case Finance = 'finance';
     case System = 'system';
+    case Vehicles = 'vehicles';
 }

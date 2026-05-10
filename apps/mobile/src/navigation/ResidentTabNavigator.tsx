@@ -12,7 +12,7 @@ import { ApartmentDetailScreen } from '../features/apartments/screens/ApartmentD
 import { MoreNavigator } from './MoreNavigator';
 import { colors, componentSize, radii, spacing } from '../theme';
 import { usePermission } from '../hooks/usePermission';
-import { LogoutButton } from '../components/ui/LogoutButton';
+import { NotificationBell } from '../components/ui/NotificationBell';
 import { ScreenHeader } from '../components/layout/ScreenHeader';
 import { Icon, type AppIconName } from '../components/ui/Icon';
 
@@ -75,7 +75,7 @@ export const ResidentTabNavigator = () => {
           fontSize: 18,
           color: isDark ? colors.text.primary.dark : colors.text.primary.light,
         },
-        headerRight: () => <LogoutButton />,
+        headerRight: () => <NotificationBell />,
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: '600',
@@ -94,7 +94,7 @@ export const ResidentTabNavigator = () => {
         component={DashboardScreen}
         options={{ 
           title: t('Dashboard.title', { defaultValue: 'Dashboard' }),
-          header: () => <ScreenHeader title={t('Dashboard.title', { defaultValue: 'Dashboard' })} showBack={false} rightElement={<LogoutButton />} />
+          header: () => <ScreenHeader title={t('Dashboard.title', { defaultValue: 'Dashboard' })} showBack={false} rightElement={<NotificationBell />} />
         }}
       />
       <Tab.Screen
@@ -110,7 +110,7 @@ export const ResidentTabNavigator = () => {
         component={VisitorsScreen}
         options={{ 
           title: t('Visitors.qrLabel', 'Visitor QR'),
-          header: () => <ScreenHeader title={t('Visitors.qrLabel', 'Visitor QR')} showBack={false} rightElement={<LogoutButton />} />
+          header: () => <ScreenHeader title={t('Visitors.qrLabel', 'Visitor QR')} showBack={false} rightElement={<NotificationBell />} />
         }}
       />
       {canViewPolls && (
@@ -119,7 +119,7 @@ export const ResidentTabNavigator = () => {
           component={PollsScreen}
           options={{
             title: t('Polls.label'),
-            header: () => <ScreenHeader title={t('Polls.label')} showBack={false} rightElement={<LogoutButton />} />
+            header: () => <ScreenHeader title={t('Polls.label')} showBack={false} rightElement={<NotificationBell />} />
           }}
         />
       )}

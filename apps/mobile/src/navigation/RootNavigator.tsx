@@ -29,6 +29,7 @@ import { AuditLogTimelineScreen } from '../features/admin/screens/AuditLogTimeli
 import { CreateAnnouncementScreen } from '../features/announcements/screens/CreateAnnouncementScreen';
 import { VehicleNotifySearchScreen } from '../features/apartments/screens/notify/VehicleNotifySearchScreen';
 import { VehicleNotifyInboxScreen } from '../features/apartments/screens/notify/VehicleNotifyInboxScreen';
+import { NotificationsScreen } from '../features/notifications/screens/NotificationsScreen';
 import { ScreenHeader } from '../components/layout/ScreenHeader';
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -188,6 +189,14 @@ export const RootNavigator = () => {
               options={{
                 headerShown: true,
                 header: () => <ScreenHeader title="Vehicle messages" />
+              }}
+            />
+            <Stack.Screen
+              name="NotificationsCenter"
+              component={NotificationsScreen}
+              options={{
+                headerShown: true,
+                header: () => <ScreenHeader title={t("Notifications.title", { defaultValue: "Notifications" })} />
               }}
             />
           </Stack.Group>

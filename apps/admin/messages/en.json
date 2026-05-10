@@ -191,7 +191,8 @@
       "issues": "Issues",
       "polls": "Polls",
       "system": "System",
-      "visitors": "Visitors"
+      "visitors": "Visitors",
+      "vehicles": "Vehicles"
     },
     "preferencesForm": {
       "inApp": "In-app",

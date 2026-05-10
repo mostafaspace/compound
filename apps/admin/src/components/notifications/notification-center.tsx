@@ -7,7 +7,7 @@ import type {
   UserNotification,
 } from "@compound/contracts";
 import { notificationCategoryValues } from "@compound/contracts";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useMemo, useState, useTransition } from "react";
 
@@ -36,7 +36,49 @@ const categoryIcons: Record<NotificationCategory, string> = {
   polls: "M4 4.5A1.5 1.5 0 0 1 5.5 3h9A1.5 1.5 0 0 1 16 4.5v11a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 4 15.5v-11Zm2.25 2.25a.75.75 0 0 0 0 1.5h7.5a.75.75 0 0 0 0-1.5h-7.5Zm0 3a.75.75 0 0 0 0 1.5H10a.75.75 0 0 0 0-1.5H6.25Zm0 3a.75.75 0 0 0 0 1.5h4.5a.75.75 0 0 0 0-1.5h-4.5Z",
   system: "M10 2.5 16.5 6v8L10 17.5 3.5 14V6L10 2.5Zm0 4a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z",
   visitors: "M7.5 9a2.75 2.75 0 1 1 0-5.5A2.75 2.75 0 0 1 7.5 9Zm5.75 7.5H2.75a4.75 4.75 0 0 1 9.5 0Zm.25-7.25a2.25 2.25 0 1 0 0-4.5 2.25 2.25 0 0 0 0 4.5Zm.8 7.25a6.2 6.2 0 0 0-1.2-3.65 3.75 3.75 0 0 1 5.65 3.65H14.3Z",
+  vehicles: "M5 4.5h10c.7 0 1.3.4 1.6 1l1.4 3v6.5c0 .3-.2.5-.5.5h-1c-.3 0-.5-.2-.5-.5V14H4v1c0 .3-.2.5-.5.5h-1c-.3 0-.5-.2-.5-.5V8.5l1.4-3c.3-.6.9-1 1.6-1ZM5 9.5a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm10 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2ZM4.5 8h11l-1-2.5h-9L4.5 8Z",
 };
+
+function getDeepLinkWeb(
+  metadata: Record<string, unknown> | undefined | null,
+  category: NotificationCategory,
+): string | null {
+  if (!metadata) {
+    return categoryFallbackUrl(category);
+  }
+  const m = metadata as Record<string, unknown>;
+  const dl = m.deep_link as { web?: string } | undefined;
+  if (dl?.web) return dl.web;
+
+  // Infer from common metadata keys
+  const pollId = (m.poll_id ?? m.pollId) as string | number | undefined;
+  if (pollId) return `/polls/${pollId}`;
+  const issueId = (m.issue_id ?? m.issueId) as string | number | undefined;
+  if (issueId) return `/issues/${issueId}`;
+  const visitorRequestId = (m.visitor_request_id ?? m.visitorRequestId) as string | number | undefined;
+  if (visitorRequestId) return `/visitors`;
+  const announcementId = (m.announcement_id ?? m.announcementId) as string | number | undefined;
+  if (announcementId) return `/announcements`;
+  const documentId = (m.document_id ?? m.documentId) as string | number | undefined;
+  if (documentId) return `/documents`;
+  const plate = (m.plate ?? m.vehicle_plate) as string | undefined;
+  if (plate) return `/vehicles?q=${encodeURIComponent(plate)}`;
+
+  return categoryFallbackUrl(category);
+}
+
+function categoryFallbackUrl(category: NotificationCategory): string | null {
+  const map: Partial<Record<NotificationCategory, string>> = {
+    polls: "/polls",
+    issues: "/issues",
+    announcements: "/announcements",
+    documents: "/documents",
+    visitors: "/visitors",
+    finance: "/finance",
+    vehicles: "/vehicles",
+  };
+  return map[category] ?? null;
+}
 
 function BellIcon() {
   return (
@@ -96,6 +138,7 @@ export function NotificationCenter({
   fixed = false,
 }: NotificationCenterProps & { fixed?: boolean }) {
   const pathname = usePathname();
+  const router = useRouter();
   const locale = useLocale();
   const t = useTranslations("Notifications");
   const [isOpen, setIsOpen] = useState(false);
@@ -172,6 +215,17 @@ export function NotificationCenter({
       setNotifications(nextState.notifications);
       setUnreadCount(nextState.unreadCount);
     });
+  }
+
+  function handleRowClick(notification: UserNotification) {
+    if (!notification.readAt) {
+      markRead(notification.id);
+    }
+    const target = getDeepLinkWeb(notification.metadata, notification.category);
+    if (target) {
+      setIsOpen(false);
+      router.push(target);
+    }
   }
 
   function archive(notificationId: string) {
@@ -288,9 +342,17 @@ export function NotificationCenter({
           <div className="max-h-[60vh] overflow-y-auto">
             {visibleNotifications.length > 0 ? (
               <ul className="divide-y divide-line">
-                {visibleNotifications.map((notification) => (
-                  <li className="p-4" key={notification.id}>
-                    <div className="flex gap-3">
+                {visibleNotifications.map((notification) => {
+                  const hasDeepLink = !!getDeepLinkWeb(notification.metadata, notification.category);
+                  return (
+                  <li key={notification.id}>
+                    <div
+                      className={`flex gap-3 p-4 ${hasDeepLink ? "cursor-pointer hover:bg-background" : ""}`}
+                      onClick={hasDeepLink ? () => handleRowClick(notification) : undefined}
+                      onKeyDown={hasDeepLink ? (e) => { if (e.key === "Enter") handleRowClick(notification); } : undefined}
+                      role={hasDeepLink ? "button" : undefined}
+                      tabIndex={hasDeepLink ? 0 : undefined}
+                    >
                       <span className="mt-1 inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-background text-brand">
                         <IconPath category={notification.category} />
                       </span>
@@ -304,7 +366,7 @@ export function NotificationCenter({
                         </div>
                         <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                           <span className="text-xs text-muted">{formatTime(notification.createdAt, locale)}</span>
-                          <div className="flex gap-3">
+                          <div className="flex gap-3" onClick={(e) => e.stopPropagation()}>
                             {!notification.readAt ? (
                               <button className="text-xs font-semibold text-brand" onClick={() => markRead(notification.id)} type="button">
                                 {t("read")}
@@ -318,7 +380,8 @@ export function NotificationCenter({
                       </div>
                     </div>
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             ) : (
               <div className="p-6 text-center text-sm text-muted">{t("empty")}</div>

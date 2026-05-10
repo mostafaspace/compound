@@ -22,6 +22,7 @@ export type RootStackParamList = {
   CreatePoll: undefined;
   VehicleNotifySearch: undefined;
   VehicleNotifyInbox: undefined;
+  NotificationsCenter: undefined;
 };
 
 export type AuthStackParamList = {

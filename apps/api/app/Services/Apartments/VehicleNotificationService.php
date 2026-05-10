@@ -2,6 +2,7 @@
 
 namespace App\Services\Apartments;
 
+use App\Enums\NotificationCategory;
 use App\Enums\VehicleNotificationSenderMode;
 use App\Enums\VerificationStatus;
 use App\Models\Apartments\ApartmentResident;
@@ -9,6 +10,7 @@ use App\Models\Apartments\ApartmentVehicle;
 use App\Models\Apartments\VehicleNotification;
 use App\Models\Apartments\VehicleNotificationRecipient;
 use App\Models\User;
+use App\Services\NotificationService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
@@ -24,7 +26,10 @@ final class VehicleNotificationSearchResult
 
 class VehicleNotificationService
 {
-    public function __construct(private readonly PlateNormalizer $normalizer) {}
+    public function __construct(
+        private readonly PlateNormalizer $normalizer,
+        private readonly NotificationService $notifier,
+    ) {}
 
     public function search(string $plate, User $sender): VehicleNotificationSearchResult
     {
@@ -77,10 +82,11 @@ class VehicleNotificationService
                 ->unique();
 
             foreach ($recipientUserIds as $userId) {
-                VehicleNotificationRecipient::query()->create([
+                $recipient = VehicleNotificationRecipient::query()->create([
                     'vehicle_notification_id' => $notification->id,
                     'user_id' => $userId,
                 ]);
+                $this->emitUnifiedNotification($userId, $notification, $recipient, $vehicle);
             }
 
             return $notification;
@@ -111,14 +117,46 @@ class VehicleNotificationService
                 ->unique();
 
             foreach ($recipientUserIds as $userId) {
-                VehicleNotificationRecipient::query()->create([
+                $recipient = VehicleNotificationRecipient::query()->create([
                     'vehicle_notification_id' => $notification->id,
                     'user_id' => $userId,
                 ]);
+                $this->emitUnifiedNotification($userId, $notification, $recipient, $vehicle);
             }
 
             return $notification;
         });
+    }
+
+    private function emitUnifiedNotification(
+        int $userId,
+        VehicleNotification $notification,
+        VehicleNotificationRecipient $recipient,
+        ApartmentVehicle $vehicle,
+    ): void {
+        $isAdmin = $notification->sender_mode === VehicleNotificationSenderMode::Admin;
+        $title = $isAdmin
+            ? 'Vehicle alert from management'
+            : 'Someone sent a message about your vehicle';
+
+        $this->notifier->create(
+            userId: $userId,
+            category: NotificationCategory::Vehicles,
+            title: $title,
+            body: mb_strimwidth($notification->message, 0, 140, '…'),
+            metadata: [
+                'type' => 'vehicle_notification',
+                'vehicle_notification_id' => $notification->id,
+                'vehicle_notification_recipient_id' => $recipient->id,
+                'plate' => $vehicle->plate,
+                'deep_link' => [
+                    'screen' => 'VehicleNotifyInbox',
+                    'params' => ['recipientId' => $recipient->id],
+                    'web' => '/vehicles?q='.urlencode($vehicle->plate),
+                ],
+            ],
+            priority: $isAdmin ? 'high' : 'normal',
+        );
     }
 
     /**

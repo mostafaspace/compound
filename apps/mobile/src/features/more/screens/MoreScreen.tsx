@@ -5,13 +5,17 @@ import { useTranslation } from "react-i18next";
 import { ScreenContainer } from "../../../components/layout/ScreenContainer";
 import { Typography } from "../../../components/ui/Typography";
 import { usePermission } from "../../../hooks/usePermission";
-import { useSelector } from "react-redux";
-import { selectCurrentUser } from "../../../store/authSlice";
+import { useDispatch, useSelector } from "react-redux";
+import * as Keychain from "react-native-keychain";
+import { logout, selectCurrentUser } from "../../../store/authSlice";
 import { getEffectiveRoleType } from "@compound/contracts";
 import { MoreStackParamList } from "../../../navigation/types";
 import { colors, layout, radii, shadows, spacing } from "../../../theme";
 import { Icon, type AppIconName } from "../../../components/ui/Icon";
 import { isRtlLanguage, rowDirectionStyle, textDirectionStyle } from "../../../i18n/direction";
+import { api } from "../../../services/api";
+
+const authTokenService = "compound.mobile.authToken";
 
 type MoreScreenNavigationProp = StackNavigationProp<MoreStackParamList, "MoreHome">;
 
@@ -19,13 +23,21 @@ export const MoreScreen = ({ navigation }: { navigation: MoreScreenNavigationPro
   const { t, i18n } = useTranslation();
   const isDark = useColorScheme() === "dark";
   const isRtl = isRtlLanguage(i18n.language);
+  const dispatch = useDispatch();
 
   const user = useSelector(selectCurrentUser);
   const roleType = getEffectiveRoleType(user);
   const isAdmin = roleType === 'admin';
 
+  const handleLogout = async () => {
+    dispatch(logout());
+    setTimeout(() => { dispatch(api.util.resetApiState()); }, 100);
+    try { await Keychain.resetGenericPassword({ service: authTokenService }); } catch { /* ignore */ }
+  };
+
   const canViewAnnouncements = usePermission("view_announcements");
   const canViewOrgChart = usePermission("view_org_chart") || isAdmin || roleType === 'resident';
+  const canViewPolls = usePermission("view_governance");
 
   const sections: Array<{
     title: string;
@@ -53,7 +65,7 @@ export const MoreScreen = ({ navigation }: { navigation: MoreScreenNavigationPro
           label: t("Polls.label", "Polls"),
           icon: "polls",
           screen: "Polls",
-          show: true,
+          show: canViewPolls && isAdmin,
         },
       ],
     },
@@ -147,6 +159,23 @@ export const MoreScreen = ({ navigation }: { navigation: MoreScreenNavigationPro
           </View>
         );
       })}
+
+      <Pressable
+        onPress={handleLogout}
+        style={({ pressed }) => [
+          styles.logoutBtn,
+          { backgroundColor: isDark ? colors.surface.dark : colors.surface.light, borderColor: colors.error },
+          pressed && { opacity: 0.7 },
+        ]}
+        accessibilityRole="button"
+        accessibilityLabel={t('Auth.logout', 'Sign out')}
+      >
+        <Icon name="settings" color={colors.error} size={20} />
+        <Typography variant="h3" style={styles.logoutText}>
+          {t('Auth.logout', 'Sign out')}
+        </Typography>
+      </Pressable>
+
       <View style={{ height: spacing.xl }} />
     </ScreenContainer>
   );
@@ -197,5 +226,20 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  logoutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    paddingVertical: spacing.md,
+    marginTop: spacing.md,
+    ...shadows.sm,
+  },
+  logoutText: {
+    color: colors.error,
+    fontWeight: '700',
   },
 });

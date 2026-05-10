@@ -475,17 +475,6 @@ export const LoginScreen = () => {
                 </View>
               </View>
 
-              <View style={[styles.footer, isArabic && styles.rowReverse]}>
-                <Typography variant="caption" style={styles.footerText}>
-                  {t("Auth.noAccount", { defaultValue: "Don't have an account?" })}
-                </Typography>
-                <Pressable onPress={handleContactAdmin} accessibilityRole="button">
-                  <Typography style={styles.footerLink}>
-                    {t("Auth.contactAdmin", { defaultValue: "Contact Admin" })}
-                  </Typography>
-                </Pressable>
-              </View>
-
               {ownerStatus ? (
                 <Pressable
                   onPress={handleRefreshOwnerStatus}
@@ -521,6 +510,17 @@ export const LoginScreen = () => {
                   </View>
                 </Pressable>
               ) : null}
+
+              <View style={[styles.footer, isArabic && styles.rowReverse]}>
+                <Typography variant="caption" style={styles.footerText}>
+                  {t("Auth.noAccount", { defaultValue: "Don't have an account?" })}
+                </Typography>
+                <Pressable onPress={handleContactAdmin} accessibilityRole="button">
+                  <Typography style={styles.footerLink}>
+                    {t("Auth.contactAdmin", { defaultValue: "Contact Admin" })}
+                  </Typography>
+                </Pressable>
+              </View>
           </View>
         </ScrollView>
       </View>

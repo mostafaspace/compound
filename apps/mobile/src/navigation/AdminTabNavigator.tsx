@@ -8,7 +8,7 @@ import { VisitorsScreen } from '../features/visitors/screens/VisitorsScreen';
 import { AdminFinanceScreen } from '../features/admin/screens/AdminFinanceScreen';
 import { AdminUnitsScreen } from '../features/admin/screens/AdminUnitsScreen';
 import { colors, componentSize, radii, spacing } from '../theme';
-import { LogoutButton } from '../components/ui/LogoutButton';
+import { NotificationBell } from '../components/ui/NotificationBell';
 import { ScreenHeader } from '../components/layout/ScreenHeader';
 import { MoreNavigator } from './MoreNavigator';
 import { Icon, type AppIconName } from '../components/ui/Icon';
@@ -51,7 +51,7 @@ export const AdminTabNavigator = () => {
           fontSize: 18,
           color: isDark ? colors.text.primary.dark : colors.text.primary.light,
         },
-        headerRight: () => <LogoutButton />,
+        headerRight: () => <NotificationBell />,
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: '600',
@@ -70,7 +70,7 @@ export const AdminTabNavigator = () => {
         component={AdminDashboardScreen}
         options={{ 
           title: t('Admin.dashboard', 'Dashboard'),
-          header: () => <ScreenHeader title={t('Admin.dashboard', 'Dashboard')} showBack={false} rightElement={<LogoutButton />} />
+          header: () => <ScreenHeader title={t('Admin.dashboard', 'Dashboard')} showBack={false} rightElement={<NotificationBell />} />
         }}
       />
       <Tab.Screen
@@ -78,7 +78,7 @@ export const AdminTabNavigator = () => {
         component={VisitorsScreen}
         options={{ 
           title: t('Visitors.qrLabel', 'Visitor QR'),
-          header: () => <ScreenHeader title={t('Visitors.qrLabel', 'Visitor QR')} showBack={false} rightElement={<LogoutButton />} />
+          header: () => <ScreenHeader title={t('Visitors.qrLabel', 'Visitor QR')} showBack={false} rightElement={<NotificationBell />} />
         }}
       />
       <Tab.Screen
@@ -86,7 +86,7 @@ export const AdminTabNavigator = () => {
         component={AdminFinanceScreen}
         options={{ 
           title: t('Finance.label', 'Finance'),
-          header: () => <ScreenHeader title={t('Finance.label', 'Finance')} showBack={false} rightElement={<LogoutButton />} />
+          header: () => <ScreenHeader title={t('Finance.label', 'Finance')} showBack={false} rightElement={<NotificationBell />} />
         }}
       />
       <Tab.Screen
@@ -94,7 +94,7 @@ export const AdminTabNavigator = () => {
         component={AdminUnitsScreen}
         options={{ 
           title: t('Admin.units', 'Units'),
-          header: () => <ScreenHeader title={t('Admin.units', 'Units')} showBack={false} rightElement={<LogoutButton />} />
+          header: () => <ScreenHeader title={t('Admin.units', 'Units')} showBack={false} rightElement={<NotificationBell />} />
         }}
       />
       <Tab.Screen

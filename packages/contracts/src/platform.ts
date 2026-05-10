@@ -29,7 +29,7 @@ export const invitationStatusValues = ["pending", "accepted", "revoked", "expire
 
 export type InvitationStatus = (typeof invitationStatusValues)[number];
 
-export const notificationCategoryValues = ["documents", "visitors", "issues", "announcements", "polls", "finance", "system"] as const;
+export const notificationCategoryValues = ["documents", "visitors", "issues", "announcements", "polls", "finance", "system", "vehicles"] as const;
 
 export type NotificationCategory = (typeof notificationCategoryValues)[number];
 

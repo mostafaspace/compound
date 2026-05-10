@@ -17,7 +17,7 @@ const groupLabels: Record<string, string> = {
 
 export function AdminSidebar({ user }: { user: AuthenticatedUser }) {
   const pathname = usePathname();
-  const sections = getAdminSections({ roles: user.roles ?? [] });
+  const sections = getAdminSections({ roles: user.roles ?? [], permissions: user.permissions ?? [] });
   const showCompound = shouldShowCompoundContext({ roles: user.roles ?? [] });
 
   const grouped = sections.reduce<Record<string, typeof sections>>((acc, s) => {

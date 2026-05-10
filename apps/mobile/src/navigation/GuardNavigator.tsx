@@ -7,7 +7,7 @@ import { GateScreen } from '../features/security/screens/GateScreen';
 import { ScannerScreen } from '../features/security/screens/ScannerScreen';
 import { InvitationsScreen } from '../features/security/screens/InvitationsScreen';
 import { colors, componentSize, radii, spacing } from '../theme';
-import { LogoutButton } from '../components/ui/LogoutButton';
+import { NotificationBell } from '../components/ui/NotificationBell';
 import { Icon, type AppIconName } from '../components/ui/Icon';
 
 const Tab = createBottomTabNavigator<GuardStackParamList>();
@@ -46,7 +46,7 @@ export const GuardNavigator = () => {
           fontSize: 18,
           color: isDark ? colors.text.primary.dark : colors.text.primary.light,
         },
-        headerRight: () => <LogoutButton />,
+        headerRight: () => <NotificationBell />,
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: '600',
