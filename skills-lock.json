@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "skills": {
+    "agent-device": {
+      "source": "callstackincubator/agent-device",
+      "sourceType": "github",
+      "skillPath": "skills/agent-device/SKILL.md",
+      "computedHash": "ee8ec8ef693d7febe38b19e8f80ad94cdc20c25a69c8f5fac5cd207af6dcc46a"
+    },
+    "dogfood": {
+      "source": "callstackincubator/agent-device",
+      "sourceType": "github",
+      "skillPath": "skills/dogfood/SKILL.md",
+      "computedHash": "252e1b69f0ad5b8e8af0d38725d11af7b94fe357032cf9fd586c8dcb8a5f5984"
+    },
+    "react-devtools": {
+      "source": "callstackincubator/agent-device",
+      "sourceType": "github",
+      "skillPath": "skills/react-devtools/SKILL.md",
+      "computedHash": "bf449e19406c4ab0d4510fcfca796e9d2ffd8cc3a3ab5fa388e319ee752b5c80"
+    }
+  }
+}

@@ -367,6 +367,41 @@ class PropertyRegistryTest extends TestCase
             ->assertJsonPath('data.endsAt', now()->toDateString());
     }
 
+    public function test_building_units_include_visible_resident_assignment_summary(): void
+    {
+        $resident = User::factory()->create([
+            'role' => UserRole::ResidentOwner->value,
+            'name' => 'UAT Resident Owner',
+        ]);
+        $compound = Compound::factory()->create();
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compound->id,
+        ]);
+        $building = Building::factory()->for($compound)->create();
+        $unit = Unit::factory()
+            ->for($compound)
+            ->for($building)
+            ->create(['floor_id' => null, 'unit_number' => 'AR-F1-F2']);
+
+        ApartmentResident::query()->create([
+            'unit_id' => $unit->id,
+            'user_id' => $resident->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'starts_at' => now()->subDay(),
+            'is_primary' => true,
+            'verification_status' => VerificationStatus::Verified->value,
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $this->getJson("/api/v1/buildings/{$building->id}/units")
+            ->assertOk()
+            ->assertJsonPath('data.0.unitNumber', 'AR-F1-F2')
+            ->assertJsonPath('data.0.residentName', 'UAT Resident Owner')
+            ->assertJsonPath('data.0.memberships.0.user.name', 'UAT Resident Owner');
+    }
+
     public function test_it_updates_apartment_resident_profile_fields(): void
     {
         $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value]);

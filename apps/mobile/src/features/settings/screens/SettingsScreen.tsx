@@ -7,7 +7,7 @@ import { Typography } from '../../../components/ui/Typography';
 import { colors, layout, radii, shadows, spacing } from '../../../theme';
 import { Icon } from '../../../components/ui/Icon';
 import { selectColorSchemePreference, setLanguagePreference } from '../../../store/systemSlice';
-import { applyNativeDirection, isRtlLanguage, textDirectionStyle } from '../../../i18n/direction';
+import { applyNativeDirection, isRtlLanguage, rowDirectionStyle, textDirectionStyle } from '../../../i18n/direction';
 import { persistMobilePreferences } from '../../../i18n/preferences';
 
 export const SettingsScreen = () => {
@@ -15,7 +15,8 @@ export const SettingsScreen = () => {
   const dispatch = useDispatch();
   const isDark = useColorScheme() === 'dark';
   const colorScheme = useSelector(selectColorSchemePreference);
-  const isArabic = isRtlLanguage(i18n.language);
+  const isArabic = i18n.language === 'ar';
+  const isRtl = isRtlLanguage(i18n.language);
 
   const toggleLanguage = () => {
     const newLang = i18n.language === 'en' ? 'ar' : 'en';
@@ -34,6 +35,7 @@ export const SettingsScreen = () => {
       onPress={onPress}
       style={({ pressed }) => [
         styles.optionRow,
+        rowDirectionStyle(isRtl),
         {
           backgroundColor: isDark ? colors.surface.dark : colors.surface.light,
           borderColor: isDark ? colors.border.dark : colors.border.light,
@@ -41,11 +43,11 @@ export const SettingsScreen = () => {
         pressed && styles.optionPressed,
       ]}
     >
-      <View style={styles.optionTitleRow}>
+      <View style={[styles.optionTitleRow, rowDirectionStyle(isRtl)]}>
         <View style={styles.iconBadge}>
           <Icon name="settings" color={colors.primary.light} size={20} />
         </View>
-        <Typography variant="body" style={styles.optionLabel}>{label}</Typography>
+        <Typography variant="body" style={[styles.optionLabel, textDirectionStyle(isRtl)]}>{label}</Typography>
       </View>
       <View style={[styles.valuePill, active && styles.valuePillActive]}>
         <Typography variant="caption" style={[styles.valueText, active && styles.valueTextActive]}>
@@ -58,32 +60,32 @@ export const SettingsScreen = () => {
   return (
     <ScreenContainer>
       <View style={styles.section}>
-        <Typography variant="label" style={[styles.sectionTitle, textDirectionStyle(isArabic)]}>
-          {t('Settings.preferences', { defaultValue: 'PREFERENCES' })}
+        <Typography variant="label" style={[styles.sectionTitle, textDirectionStyle(isRtl)]}>
+          {t('Settings.preferences')}
         </Typography>
         
         {renderOption(
-          t('Settings.language', { defaultValue: 'Language' }),
+          t('Settings.language'),
           i18n.language === 'en' ? 'English' : 'العربية',
           toggleLanguage
         )}
       </View>
 
       <View style={styles.section}>
-        <Typography variant="label" style={[styles.sectionTitle, textDirectionStyle(isArabic)]}>
-          {t('Settings.appearance', { defaultValue: 'APPEARANCE' })}
+        <Typography variant="label" style={[styles.sectionTitle, textDirectionStyle(isRtl)]}>
+          {t('Settings.appearance')}
         </Typography>
         
         {renderOption(
-          t('Settings.themeLight', { defaultValue: 'Light Mode' }),
-          !isDark ? t('Common.active', { defaultValue: 'Active' }) : t('Common.switch', { defaultValue: 'Switch' }),
+          t('Settings.themeLight'),
+          !isDark ? t('Common.active') : t('Common.switch'),
           () => setScheme('light'),
           !isDark
         )}
         
         {renderOption(
-          t('Settings.themeDark', { defaultValue: 'Dark Mode' }),
-          isDark ? t('Common.active', { defaultValue: 'Active' }) : t('Common.switch', { defaultValue: 'Switch' }),
+          t('Settings.themeDark'),
+          isDark ? t('Common.active') : t('Common.switch'),
           () => setScheme('dark'),
           isDark
         )}

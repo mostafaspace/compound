@@ -19,7 +19,7 @@ interface ButtonProps {
   onPress: () => void;
   title?: string;
   children?: React.ReactNode;
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'success' | 'danger';
   disabled?: boolean;
   loading?: boolean;
   style?: StyleProp<ViewStyle>;
@@ -47,7 +47,7 @@ export const Button: React.FC<ButtonProps> = ({
   const isDark = useColorScheme() === 'dark';
   const { i18n } = useTranslation();
   const isRtl = isRtlLanguage(i18n.language);
-  const resolvedRightIcon = rightIcon === 'chevron-right' && isRtl ? 'chevron-left' : rightIcon;
+  const resolvedRightIcon = rightIcon;
   
   const getButtonStyle = () => {
     const base: any[] = [styles.button];
@@ -82,6 +82,18 @@ export const Button: React.FC<ButtonProps> = ({
       case 'ghost':
         base.push({ backgroundColor: 'transparent' });
         break;
+      case 'success':
+        base.push({ 
+          backgroundColor: colors.success,
+          ...shadows.premium,
+        });
+        break;
+      case 'danger':
+        base.push({ 
+          backgroundColor: colors.error,
+          ...shadows.md,
+        });
+        break;
     }
     
     return base;
@@ -91,7 +103,7 @@ export const Button: React.FC<ButtonProps> = ({
     const base: any[] = [styles.text];
     if (textStyle) base.push(textStyle);
     
-    if (variant === 'primary') {
+    if (variant === 'primary' || variant === 'success' || variant === 'danger') {
       base.push({ color: colors.text.inverse });
     } else if (variant === 'outline' || variant === 'ghost') {
       base.push({ color: isDark ? colors.text.primary.dark : colors.text.primary.light });
@@ -102,7 +114,7 @@ export const Button: React.FC<ButtonProps> = ({
     return base;
   };
 
-  const iconColor = variant === 'primary'
+  const iconColor = (variant === 'primary' || variant === 'success' || variant === 'danger')
     ? colors.text.inverse
     : (isDark ? colors.text.primary.dark : colors.text.primary.light);
 
@@ -121,12 +133,21 @@ export const Button: React.FC<ButtonProps> = ({
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'primary' ? colors.text.inverse : (isDark ? colors.cta.dark : colors.cta.light)} />
+        <ActivityIndicator color={(variant === 'primary' || variant === 'success' || variant === 'danger') ? colors.text.inverse : (isDark ? colors.cta.dark : colors.cta.light)} />
       ) : (
         children || (
           <View style={[styles.content, rowDirectionStyle(isRtl)]}>
             {leftIcon ? <Icon name={leftIcon} color={iconColor} size={18} /> : null}
-            {title && <Text style={[...getTextStyle(), centerTextDirectionStyle(isRtl)]}>{title}</Text>}
+            {title && (
+              <Text 
+                style={[...getTextStyle(), centerTextDirectionStyle(isRtl)]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.7}
+              >
+                {title}
+              </Text>
+            )}
             {resolvedRightIcon ? <Icon name={resolvedRightIcon} color={iconColor} size={18} /> : null}
           </View>
         )

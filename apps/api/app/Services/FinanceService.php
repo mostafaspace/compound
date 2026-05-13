@@ -91,31 +91,43 @@ class FinanceService
         ?string $paymentDate = null,
         ?string $notes = null,
         ?UploadedFile $proof = null,
+        array $ledgerEntryIds = [],
     ): PaymentSubmission {
-        $path = null;
+        return DB::transaction(function () use ($account, $submitter, $amount, $currency, $method, $reference, $paymentDate, $notes, $proof, $ledgerEntryIds): PaymentSubmission {
+            $path = null;
 
-        if ($proof) {
-            $extension = $proof->getClientOriginalExtension() ?: $proof->extension() ?: 'bin';
-            $path = $proof->storeAs(
-                'payment-proofs/'.$account->id,
-                Str::ulid()->toBase32().'.'.$extension,
-                config('filesystems.default'),
-            );
-        }
+            if ($proof) {
+                $extension = $proof->getClientOriginalExtension() ?: $proof->extension() ?: 'bin';
+                $path = $proof->storeAs(
+                    'payment-proofs/'.$account->id,
+                    Str::ulid()->toBase32().'.'.$extension,
+                    config('filesystems.default'),
+                );
+            }
 
-        return PaymentSubmission::query()->create([
-            'unit_account_id' => $account->id,
-            'submitted_by' => $submitter->id,
-            'amount' => $amount,
-            'currency' => strtoupper($currency),
-            'method' => $method,
-            'reference' => $reference,
-            'payment_date' => $paymentDate,
-            'proof_path' => $path,
-            'status' => PaymentStatus::Submitted->value,
-            'notes' => $notes,
-            'metadata' => [],
-        ]);
+            $submission = PaymentSubmission::query()->create([
+                'unit_account_id' => $account->id,
+                'submitted_by' => $submitter->id,
+                'amount' => $amount,
+                'currency' => strtoupper($currency),
+                'method' => $method,
+                'reference' => $reference,
+                'payment_date' => $paymentDate,
+                'proof_path' => $path,
+                'status' => PaymentStatus::Submitted->value,
+                'notes' => $notes,
+                'metadata' => [],
+            ]);
+
+            foreach ($ledgerEntryIds as $entryId) {
+                $submission->allocations()->create([
+                    'ledger_entry_id' => $entryId,
+                    'amount' => 0, // In simple submissions, we don't partial-allocate yet
+                ]);
+            }
+
+            return $submission;
+        });
     }
 
     public function approvePayment(PaymentSubmission $payment, User $reviewer, ?string $description = null): PaymentSubmission

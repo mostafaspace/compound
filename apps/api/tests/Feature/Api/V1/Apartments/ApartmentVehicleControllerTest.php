@@ -49,7 +49,7 @@ class ApartmentVehicleControllerTest extends TestCase
             ->assertJsonPath('data.plateLettersAr', 'أ ب ج');
     }
 
-    public function test_capability_disabled_returns_validation_status(): void
+    public function test_member_can_create_vehicle_even_when_unit_vehicle_capability_is_disabled(): void
     {
         $this->unit->update(['has_vehicle' => false]);
 
@@ -57,7 +57,7 @@ class ApartmentVehicleControllerTest extends TestCase
             'plate_format' => 'letters_numbers',
             'plate_letters_input' => 'أ',
             'plate_digits_input' => '1',
-        ])->assertStatus(422);
+        ])->assertCreated();
     }
 
     public function test_capacity_exceeded_returns_conflict(): void

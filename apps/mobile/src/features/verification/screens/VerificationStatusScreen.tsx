@@ -7,6 +7,7 @@ import { useGetVerificationRequestsQuery } from "../../../services/property";
 import { colors, layout, radii, shadows, spacing } from "../../../theme";
 import { Icon, type AppIconName } from "../../../components/ui/Icon";
 import { StatusBadge } from "../../../components/ui/StatusBadge";
+import { isRtlLanguage, rowDirectionStyle, textDirectionStyle } from "../../../i18n/direction";
 
 const statusTone: Record<string, { background: string; text: string; icon: AppIconName }> = {
   pending_review: { background: colors.palette.amber[50], text: colors.palette.amber[600], icon: "id" },
@@ -16,8 +17,9 @@ const statusTone: Record<string, { background: string; text: string; icon: AppIc
 };
 
 export const VerificationStatusScreen = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const isDark = useColorScheme() === "dark";
+  const isRtl = isRtlLanguage(i18n.language);
   const { data: requests = [], isLoading, refetch } = useGetVerificationRequestsQuery();
 
   const surface = isDark ? colors.surface.dark : colors.surface.light;
@@ -35,66 +37,66 @@ export const VerificationStatusScreen = () => {
       >
         {!latest ? (
           <View style={styles.center}>
-            <Typography variant="caption">
+            <Typography variant="caption" style={textDirectionStyle(isRtl)}>
               {isLoading
                 ? t("Common.loading")
-                : t("Verification.noRequest", { defaultValue: "No verification request found." })}
+                : t("Verification.noRequest")}
             </Typography>
           </View>
         ) : (
           <View style={[styles.card, { backgroundColor: surface, borderColor: border }]}>
-            <View style={styles.statusRow}>
+            <View style={[styles.statusRow, rowDirectionStyle(isRtl)]}>
               <View style={styles.iconBadge}>
                 <Icon name={tone.icon} color={tone.text} size={22} />
               </View>
               <StatusBadge
-                label={t(`Common.statuses.${latest.status}`, { defaultValue: latest.status })}
+                label={t(`Common.statuses.${latest.status}`)}
                 backgroundColor={tone.background}
                 textColor={tone.text}
               />
             </View>
 
-            <Typography variant="h2" style={[styles.heading, { color: text }]}>
-              {t("Verification.statusHeading", { defaultValue: "Verification Status" })}
+            <Typography variant="h2" style={[styles.heading, { color: text }, textDirectionStyle(isRtl)]}>
+              {t("Verification.statusHeading")}
             </Typography>
 
-            <View style={styles.row}>
-              <Typography variant="caption" style={styles.fieldLabel}>
-                {t("Verification.role", { defaultValue: "Requested role" })}
+            <View style={[styles.row, rowDirectionStyle(isRtl)]}>
+              <Typography variant="caption" style={[styles.fieldLabel, textDirectionStyle(isRtl)]}>
+                {t("Verification.role")}
               </Typography>
-              <Typography variant="caption" style={{ color: text }}>
-                {t(`Common.roles.${latest.requestedRole}`, { defaultValue: latest.requestedRole })}
+              <Typography variant="caption" style={[{ color: text }, textDirectionStyle(isRtl)]}>
+                {t(`Common.roles.${latest.requestedRole}`)}
               </Typography>
             </View>
 
             {latest.relationType ? (
-              <View style={styles.row}>
-                <Typography variant="caption" style={styles.fieldLabel}>
-                  {t("Verification.relation", { defaultValue: "Relation" })}
+              <View style={[styles.row, rowDirectionStyle(isRtl)]}>
+                <Typography variant="caption" style={[styles.fieldLabel, textDirectionStyle(isRtl)]}>
+                  {t("Verification.relation")}
                 </Typography>
-                <Typography variant="caption" style={{ color: text }}>
-                  {t(`Common.relations.${latest.relationType}`, { defaultValue: latest.relationType })}
+                <Typography variant="caption" style={[{ color: text }, textDirectionStyle(isRtl)]}>
+                  {t(`Common.relations.${latest.relationType}`)}
                 </Typography>
               </View>
             ) : null}
 
             {latest.submittedAt ? (
-              <View style={styles.row}>
-                <Typography variant="caption" style={styles.fieldLabel}>
-                  {t("Verification.submitted", { defaultValue: "Submitted" })}
+              <View style={[styles.row, rowDirectionStyle(isRtl)]}>
+                <Typography variant="caption" style={[styles.fieldLabel, textDirectionStyle(isRtl)]}>
+                  {t("Verification.submitted")}
                 </Typography>
-                <Typography variant="caption" style={{ color: text }}>
-                  {new Date(latest.submittedAt).toLocaleDateString()}
+                <Typography variant="caption" style={[{ color: text }, textDirectionStyle(isRtl)]}>
+                  {new Date(latest.submittedAt).toLocaleDateString(i18n.language === 'ar' ? 'ar-EG' : 'en-US')}
                 </Typography>
               </View>
             ) : null}
 
             {latest.decisionNote ? (
               <View style={styles.noteBox}>
-                <Typography variant="caption" style={styles.fieldLabel}>
-                  {t("Verification.adminNote", { defaultValue: "Admin note" })}
+                <Typography variant="caption" style={[styles.fieldLabel, textDirectionStyle(isRtl)]}>
+                  {t("Verification.adminNote")}
                 </Typography>
-                <Typography variant="caption" style={{ color: text }}>
+                <Typography variant="caption" style={[{ color: text }, textDirectionStyle(isRtl)]}>
                   {latest.decisionNote}
                 </Typography>
               </View>
@@ -102,10 +104,10 @@ export const VerificationStatusScreen = () => {
 
             {latest.moreInfoNote ? (
               <View style={[styles.noteBox, { borderColor: colors.warning }]}>
-                <Typography variant="caption" style={[styles.fieldLabel, { color: colors.warning }]}>
-                  {t("Verification.moreInfoNote", { defaultValue: "Additional information requested" })}
+                <Typography variant="caption" style={[styles.fieldLabel, { color: colors.warning }, textDirectionStyle(isRtl)]}>
+                  {t("Verification.moreInfoNote")}
                 </Typography>
-                <Typography variant="caption" style={{ color: text }}>
+                <Typography variant="caption" style={[{ color: text }, textDirectionStyle(isRtl)]}>
                   {latest.moreInfoNote}
                 </Typography>
               </View>

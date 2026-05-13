@@ -8,7 +8,6 @@ use App\Http\Requests\Apartments\UpdateApartmentVehicleRequest;
 use App\Http\Resources\Apartments\ApartmentVehicleResource;
 use App\Models\Apartments\ApartmentVehicle;
 use App\Models\Property\Unit;
-use App\Services\Apartments\Exceptions\CapabilityDisabledException;
 use App\Services\Apartments\Exceptions\CapacityExceededException;
 use App\Services\Apartments\VehicleService;
 use Illuminate\Http\Request;
@@ -32,8 +31,6 @@ class ApartmentVehicleController extends Controller
 
         try {
             $vehicle = $this->service->create($unit, $request->user(), $request->validated());
-        } catch (CapabilityDisabledException $exception) {
-            abort(422, $exception->getMessage());
         } catch (CapacityExceededException $exception) {
             abort(409, $exception->getMessage());
         }

@@ -12,8 +12,7 @@ import { useSelector } from 'react-redux';
 import { Typography } from '../ui/Typography';
 import { colors, componentSize, radii, shadows, spacing } from '../../theme';
 import { Icon } from '../ui/Icon';
-import { selectLanguagePreference } from '../../store/systemSlice';
-import { isRtlLanguage, rowDirectionStyle, textDirectionStyle } from '../../i18n/direction';
+import { centerTextDirectionStyle, useIsRtl, rowDirectionStyle, textDirectionStyle } from '../../i18n/direction';
 
 interface ScreenHeaderProps {
   title: string;
@@ -28,8 +27,7 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
 }) => {
   const navigation = useNavigation();
   const isDark = useColorScheme() === 'dark';
-  const language = useSelector(selectLanguagePreference);
-  const isRtl = isRtlLanguage(language);
+  const isRtl = useIsRtl();
 
   return (
     <View style={[
@@ -41,7 +39,7 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
     ]}>
       <SafeAreaView edges={['top']}>
         <View style={[styles.content, rowDirectionStyle(isRtl)]}>
-          <View style={styles.leftContainer}>
+          <View style={[styles.leftContainer, { alignItems: 'flex-start' }]}>
             {showBack && navigation.canGoBack() && (
               <Pressable 
                 onPress={() => navigation.goBack()} 
@@ -50,18 +48,18 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
                 accessibilityRole="button"
                 accessibilityLabel="Go back"
               >
-                <Icon name={isRtl ? "arrow-right" : "arrow-left"} color={isDark ? colors.text.primary.dark : colors.text.primary.light} size={22} />
+                <Icon name="arrow-left" color={isDark ? colors.text.primary.dark : colors.text.primary.light} size={22} />
               </Pressable>
             )}
           </View>
 
           <View style={styles.titleContainer}>
-            <Typography numberOfLines={1} style={[styles.title, textDirectionStyle(isRtl)]}>
+            <Typography numberOfLines={1} style={[styles.title, centerTextDirectionStyle(isRtl)]}>
               {title}
             </Typography>
           </View>
 
-          <View style={styles.rightContainer}>
+          <View style={[styles.rightContainer, { alignItems: 'flex-end' }]}>
             {rightElement}
           </View>
         </View>
@@ -85,7 +83,6 @@ const styles = StyleSheet.create({
   },
   leftContainer: {
     width: 60,
-    alignItems: 'flex-start',
     justifyContent: 'center',
   },
   titleContainer: {
@@ -95,7 +92,6 @@ const styles = StyleSheet.create({
   },
   rightContainer: {
     width: 60,
-    alignItems: 'flex-end',
     justifyContent: 'center',
   },
   title: {

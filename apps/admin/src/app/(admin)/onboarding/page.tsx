@@ -296,7 +296,7 @@ export default async function OnboardingPage({ searchParams }: OnboardingPagePro
           </div>
 
           <div className="overflow-x-auto rounded-lg border border-line bg-panel">
-            <table className="w-full min-w-[1180px] border-collapse text-left text-sm">
+            <table className="w-full min-w-[1180px] border-collapse text-start text-sm">
               <thead className="bg-background text-muted">
                 <tr>
                   <th className="px-4 py-3 font-semibold">Owner</th>
@@ -437,7 +437,7 @@ export default async function OnboardingPage({ searchParams }: OnboardingPagePro
           ) : null}
 
           <div className="overflow-x-auto rounded-lg border border-line bg-panel">
-            <table className="w-full min-w-[1100px] border-collapse text-left text-sm">
+            <table className="w-full min-w-[1100px] border-collapse text-start text-sm">
               <thead className="bg-background text-muted">
                 <tr>
                   <th className="px-4 py-3 font-semibold">{t("fields.resident")}</th>
@@ -599,7 +599,7 @@ export default async function OnboardingPage({ searchParams }: OnboardingPagePro
         ) : null}
 
         <div className="overflow-hidden rounded-lg border border-line bg-panel">
-          <table className="w-full border-collapse text-left text-sm">
+          <table className="w-full border-collapse text-start text-sm">
               <thead className="bg-background text-muted">
                 <tr>
                 <th className="px-4 py-3 font-semibold">{t("fields.resident")}</th>

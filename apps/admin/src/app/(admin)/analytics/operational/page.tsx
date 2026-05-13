@@ -2,7 +2,6 @@ import type { OperationalAnalytics } from "@compound/contracts";
 import { getLocale, getTranslations } from "next-intl/server";
 import Link from "next/link";
 
-import { LogoutButton } from "@/components/logout-button";
 import { getCurrentUser, getOperationalAnalytics } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
 
@@ -84,7 +83,6 @@ export default async function OperationalAnalyticsPage({ searchParams }: Operati
             <h1 className="mt-2 text-3xl font-semibold">{t("title")}</h1>
             <p className="mt-2 max-w-2xl text-sm text-muted">{t("subtitle")}</p>
           </div>
-          <LogoutButton />
         </div>
       </header>
 

@@ -56,12 +56,15 @@ class PollController extends Controller
         $validated = $request->validate([
             'status' => ['nullable', 'string', Rule::in(array_column(PollStatus::cases(), 'value'))],
             'compoundId' => ['nullable', 'string'],
+            'perPage' => ['nullable', 'integer', 'min:1', 'max:50'],
         ]);
 
         $user = $request->user();
         $isAdmin = $this->isAdmin($user);
 
-        $query = Poll::query()->with('options');
+        $query = Poll::query()
+            ->with('options')
+            ->withCount('votes');
 
         if (! $isAdmin) {
             // Residents only see active polls in their verified units/buildings/compounds
@@ -110,7 +113,7 @@ class PollController extends Controller
             }
         }
 
-        $polls = $query->orderByDesc('created_at')->paginate(50);
+        $polls = $query->orderByDesc('created_at')->paginate($validated['perPage'] ?? 20);
 
         return PollResource::collection($polls);
     }

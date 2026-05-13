@@ -32,6 +32,7 @@ export interface UnitAccount {
   id: string;
   unitId: string;
   balance: string;
+  pendingBalance: string;
   currency: string;
   ledgerEntries?: LedgerEntry[];
   paymentSubmissions?: PaymentSubmission[];

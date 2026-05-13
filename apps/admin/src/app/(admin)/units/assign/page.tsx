@@ -160,7 +160,7 @@ export default async function AssignUnitPage({ searchParams }: AssignUnitPagePro
         {!hasUnits ? (
           <div className="mb-5 rounded-lg border border-[#e7d7a9] bg-[#fff8e8] px-4 py-3 text-sm text-[#7a5d1a]">
             {t("assignApartment.messages.noUnits", { compound: compound.name })}
-            <Link className="ml-2 font-semibold text-brand hover:text-brand-strong" href="/compounds">
+            <Link className="ms-2 font-semibold text-brand hover:text-brand-strong" href="/compounds">
               {t("assignApartment.messages.reviewCompoundSetup")}
             </Link>
           </div>
@@ -257,7 +257,7 @@ export default async function AssignUnitPage({ searchParams }: AssignUnitPagePro
                       ) : (
                         <div className="rounded-lg border border-dashed border-line bg-panel px-4 py-4 text-sm text-muted">
                           {t("assignApartment.unassignedUsers.unitSetupRequired")}
-                          <Link className="ml-2 font-semibold text-brand hover:text-brand-strong" href="/compounds">
+                          <Link className="ms-2 font-semibold text-brand hover:text-brand-strong" href="/compounds">
                             {t("assignApartment.unassignedUsers.openRegistry")}
                           </Link>
                         </div>
@@ -295,7 +295,7 @@ export default async function AssignUnitPage({ searchParams }: AssignUnitPagePro
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-left text-sm">
+                <table className="w-full border-collapse text-start text-sm">
                   <thead className="bg-background text-muted">
                     <tr>
                       <th className="px-4 py-3 font-semibold">{t("assignApartment.availableUnits.table.building")}</th>

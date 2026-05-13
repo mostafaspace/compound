@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
-import { LogoutButton } from "@/components/logout-button";
 import { getCurrentUser, getMeetingActionItems } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
 
@@ -50,7 +49,6 @@ export default async function MeetingActionItemsPage({
             <h1 className="mt-2 text-3xl font-semibold">{t("actionItems.title")}</h1>
             <p className="mt-2 max-w-2xl text-sm text-muted">{t("actionItems.subtitle")}</p>
           </div>
-          <LogoutButton />
         </div>
       </header>
 

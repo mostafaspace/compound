@@ -2,8 +2,9 @@ import type { AuthenticatedUser } from "@compound/contracts";
 import { getLocale, getTranslations } from "next-intl/server";
 import Link from "next/link";
 
-import { LogoutButton } from "@/components/logout-button";
-import { getCurrentUser, getUserDuplicates, getUserSupportView } from "@/lib/api";
+import { AdminUserPicker } from "@/components/admin-user-picker";
+import { getCurrentUser, getUserDuplicates, getUsers, getUserSupportView } from "@/lib/api";
+import { toAdminUserOption } from "@/lib/admin-user-options";
 import { formatRoleLabel, getPrimaryEffectiveRole } from "@/lib/auth-access";
 import { requireAdminUser } from "@/lib/session";
 import {
@@ -50,9 +51,10 @@ export default async function SupportUserDetailPage({ params, searchParams }: Su
   const sp = searchParams ? await searchParams : {};
   const numericUserId = Number(userId);
 
-  const [view, duplicates, t, locale] = await Promise.all([
+  const [view, duplicates, mergeTargetUsers, t, locale] = await Promise.all([
     getUserSupportView(numericUserId),
     getUserDuplicates(numericUserId),
+    getUsers({ perPage: 100 }),
     getTranslations("UserDetail"),
     getLocale(),
   ]);
@@ -99,7 +101,6 @@ export default async function SupportUserDetailPage({ params, searchParams }: Su
             <span className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${statusBadge(user.status)}`}>
               {user.status}
             </span>
-            <LogoutButton />
           </div>
         </div>
       </header>
@@ -305,16 +306,15 @@ export default async function SupportUserDetailPage({ params, searchParams }: Su
                 </summary>
                 <form action={initiateMergeAction} className="mt-3 space-y-3">
                   <input name="source_user_id" type="hidden" value={user.id} />
-                  <label className="block text-sm font-semibold">
-                    {t("mergeTargetLabel")}
-                    <input
-                      className="mt-1 h-9 w-full rounded-lg border border-line bg-background px-3 text-sm outline-none focus:border-brand"
-                      min="1"
-                      name="target_user_id"
-                      required
-                      type="number"
-                    />
-                  </label>
+                  <AdminUserPicker
+                    excludeUserId={user.id}
+                    initialUsers={mergeTargetUsers.map(toAdminUserOption)}
+                    label={t("mergeTargetLabel")}
+                    name="target_user_id"
+                    placeholder={t("mergeTargetPlaceholder")}
+                    required
+                    helperText={t("mergeTargetHelper")}
+                  />
                   <label className="block text-sm font-semibold">
                     {t("mergeNotesLabel")}
                     <textarea
@@ -351,7 +351,7 @@ export default async function SupportUserDetailPage({ params, searchParams }: Su
                         <p className="font-semibold">{m.unitNumber ?? m.unitName ?? m.unitId}</p>
                         <p className="text-muted">{m.relationType ?? "—"}</p>
                       </div>
-                      <div className="text-right text-muted">
+                      <div className="text-end text-muted">
                         <p>{formatDate(m.startsAt)} → {m.endsAt ? formatDate(m.endsAt) : "active"}</p>
                         {m.verificationStatus && (
                           <p className="text-xs">{m.verificationStatus}</p>

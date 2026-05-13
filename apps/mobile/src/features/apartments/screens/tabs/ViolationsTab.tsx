@@ -1,11 +1,15 @@
 import React from "react";
 import { ActivityIndicator, FlatList, StyleSheet, Text, useColorScheme, View } from "react-native";
+import { useTranslation } from "react-i18next";
 import { colors, radii, shadows, spacing, typography } from "../../../../theme";
 import { useListViolationsQuery } from "../../../../services/apartments/violationsApi";
 import type { ApartmentDetail, ApartmentViolation } from "../../../../services/apartments/types";
+import { isRtlLanguage, rowDirectionStyle, textDirectionStyle } from "../../../../i18n/direction";
 
 export function ViolationsTab({ apartment }: { apartment: ApartmentDetail }) {
+  const { t, i18n } = useTranslation();
   const isDark = useColorScheme() === "dark";
+  const isRtl = isRtlLanguage(i18n.language);
   const { data = [], isLoading } = useListViolationsQuery(apartment.id);
   const pendingTotal = data
     .filter((violation) => violation.status === "pending")
@@ -25,23 +29,23 @@ export function ViolationsTab({ apartment }: { apartment: ApartmentDetail }) {
       keyExtractor={(violation) => String(violation.id)}
       contentContainerStyle={styles.list}
       ListHeaderComponent={
-        <View style={[styles.summaryCard, { backgroundColor: colors.surface[isDark ? "dark" : "light"] }]}>
-          <Text style={[styles.eyebrow, { color: colors.primary[isDark ? "dark" : "light"] }]}>Violations</Text>
-          <Text style={[styles.total, { color: colors.text.primary[isDark ? "dark" : "light"] }]}>
+        <View style={[styles.summaryCard, { backgroundColor: colors.surface[isDark ? "dark" : "light"] }, textDirectionStyle(isRtl)]}>
+          <Text style={[styles.eyebrow, { color: colors.primary[isDark ? "dark" : "light"] }, textDirectionStyle(isRtl)]}>{t("Violations.label")}</Text>
+          <Text style={[styles.total, { color: colors.text.primary[isDark ? "dark" : "light"] }, textDirectionStyle(isRtl)]}>
             {pendingTotal.toFixed(2)}
           </Text>
-          <Text style={[styles.subtitle, { color: colors.text.secondary[isDark ? "dark" : "light"] }]}>
-            Pending violation balance across {data.length} records.
+          <Text style={[styles.subtitle, { color: colors.text.secondary[isDark ? "dark" : "light"] }, textDirectionStyle(isRtl)]}>
+            {t("Violations.pendingBalance", { count: data.length })}
           </Text>
         </View>
       }
-      ListEmptyComponent={<EmptyState />}
-      renderItem={({ item }) => <ViolationRow violation={item} isDark={isDark} />}
+      ListEmptyComponent={<EmptyState t={t} isRtl={isRtl} />}
+      renderItem={({ item }) => <ViolationRow violation={item} isDark={isDark} t={t} isRtl={isRtl} />}
     />
   );
 }
 
-function ViolationRow({ violation, isDark }: { violation: ApartmentViolation; isDark: boolean }) {
+function ViolationRow({ violation, isDark, t, isRtl }: { violation: ApartmentViolation; isDark: boolean; t: any; isRtl: boolean }) {
   const surface = colors.surface[isDark ? "dark" : "light"];
   const border = colors.border[isDark ? "dark" : "light"];
   const text = colors.text.primary[isDark ? "dark" : "light"];
@@ -49,38 +53,38 @@ function ViolationRow({ violation, isDark }: { violation: ApartmentViolation; is
   const badgeColor = violation.status === "paid" ? colors.success : violation.status === "waived" ? colors.info : colors.warning;
 
   return (
-    <View style={[styles.row, { backgroundColor: surface, borderColor: border }]}>
-      <View style={styles.rowTop}>
-        <Text style={[styles.ruleName, { color: text }]}>{violation.rule?.name ?? "Violation"}</Text>
-        <Text style={[styles.fee, { color: text }]}>{Number(violation.fee).toFixed(2)}</Text>
+    <View style={[styles.row, { backgroundColor: surface, borderColor: border }, textDirectionStyle(isRtl)]}>
+      <View style={[styles.rowTop, rowDirectionStyle(isRtl)]}>
+        <Text style={[styles.ruleName, { color: text }, textDirectionStyle(isRtl)]}>{violation.rule?.name ?? t("Violations.violation")}</Text>
+        <Text style={[styles.fee, { color: text }, textDirectionStyle(isRtl)]}>{Number(violation.fee).toFixed(2)}</Text>
       </View>
-      <View style={styles.rowMeta}>
-        <Text style={[styles.badge, { backgroundColor: badgeColor }]}>{violation.status}</Text>
-        <Text style={[styles.date, { color: secondary }]}>{formatDate(violation.createdAt)}</Text>
+      <View style={[styles.rowMeta, rowDirectionStyle(isRtl)]}>
+        <Text style={[styles.badge, { backgroundColor: badgeColor }, textDirectionStyle(isRtl)]}>{t(`Common.statuses.${violation.status}`, { defaultValue: violation.status })}</Text>
+        <Text style={[styles.date, { color: secondary }, textDirectionStyle(isRtl)]}>{formatDate(violation.createdAt, t)}</Text>
       </View>
-      {violation.notes ? <Text style={[styles.notes, { color: secondary }]}>{violation.notes}</Text> : null}
+      {violation.notes ? <Text style={[styles.notes, { color: secondary }, textDirectionStyle(isRtl)]}>{violation.notes}</Text> : null}
     </View>
   );
 }
 
-function EmptyState() {
+function EmptyState({ t, isRtl }: { t: any, isRtl: boolean }) {
   const isDark = useColorScheme() === "dark";
 
   return (
-    <View style={[styles.empty, { backgroundColor: colors.surface[isDark ? "dark" : "light"] }]}>
-      <Text style={[styles.emptyTitle, { color: colors.text.primary[isDark ? "dark" : "light"] }]}>
-        No violations
+    <View style={[styles.empty, { backgroundColor: colors.surface[isDark ? "dark" : "light"] }, textDirectionStyle(isRtl)]}>
+      <Text style={[styles.emptyTitle, { color: colors.text.primary[isDark ? "dark" : "light"] }, textDirectionStyle(isRtl)]}>
+        {t("Violations.noViolations")}
       </Text>
-      <Text style={[styles.emptyBody, { color: colors.text.secondary[isDark ? "dark" : "light"] }]}>
-        This unit has no violation records yet.
+      <Text style={[styles.emptyBody, { color: colors.text.secondary[isDark ? "dark" : "light"] }, textDirectionStyle(isRtl)]}>
+        {t("Violations.noViolationsHint")}
       </Text>
     </View>
   );
 }
 
-function formatDate(value: string | null): string {
+function formatDate(value: string | null, t: any): string {
   if (!value) {
-    return "No date";
+    return t("Violations.noDate");
   }
 
   return new Date(value).toLocaleDateString();

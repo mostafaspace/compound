@@ -61,6 +61,7 @@ export default async function SecurityPage() {
     { href: "/security/incidents", key: "incidents" },
     { href: "/security/manual-entries", key: "manualEntries" },
     { href: "/security/admin", key: "adminAudit" },
+    { href: "/security/admin-activity", key: "adminActivity" },
   ];
 
   return (

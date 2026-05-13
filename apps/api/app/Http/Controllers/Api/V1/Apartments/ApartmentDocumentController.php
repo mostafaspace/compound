@@ -20,6 +20,12 @@ class ApartmentDocumentController extends Controller
 {
     public function __construct(private readonly ApartmentDocumentService $service) {}
 
+    private const OWNER_REGISTRATION_DOCUMENT_TYPES = [
+        ApartmentDocumentType::OwnershipProof,
+        ApartmentDocumentType::Lease,
+        ApartmentDocumentType::IdCopy,
+    ];
+
     public function index(Request $request, Unit $unit)
     {
         $this->authorize('view', $unit);
@@ -36,10 +42,21 @@ class ApartmentDocumentController extends Controller
     {
         $this->authorize('manage', $unit);
 
+        $type = ApartmentDocumentType::from($request->string('document_type')->toString());
+
+        if ($this->isOwnerRegistrationDocumentType($type)) {
+            $exists = $unit->apartmentDocuments()
+                ->where('document_type', $type->value)
+                ->where('status', ApartmentDocumentStatus::Active->value)
+                ->exists();
+
+            abort_if($exists, 422, 'Registration document already exists for this unit.');
+        }
+
         $document = $this->service->upload(
             $unit,
             $request->user(),
-            ApartmentDocumentType::from($request->string('document_type')->toString()),
+            $type,
             $request->file('file')
         );
 
@@ -51,6 +68,12 @@ class ApartmentDocumentController extends Controller
         abort_if($document->unit_id !== $unit->id, 404);
 
         $this->authorize('manage', $unit);
+
+        abort_if(
+            $this->isOwnerRegistrationDocumentType($document->document_type),
+            422,
+            'Registration documents cannot be replaced from the app.'
+        );
 
         $version = $this->service->replace($document, $request->user(), $request->file('file'));
 
@@ -105,5 +128,10 @@ class ApartmentDocumentController extends Controller
             ['Content-Type' => $document->mime_type ?? 'application/pdf'],
             'inline',
         );
+    }
+
+    private function isOwnerRegistrationDocumentType(ApartmentDocumentType $type): bool
+    {
+        return in_array($type, self::OWNER_REGISTRATION_DOCUMENT_TYPES, true);
     }
 }

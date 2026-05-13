@@ -8,6 +8,11 @@ import { reviewDocument, uploadDocument } from "@/lib/api";
 
 export async function uploadDocumentAction(formData: FormData) {
   try {
+    const userId = Number(formData.get("userId"));
+    if (!Number.isInteger(userId) || userId <= 0) {
+      redirect("/documents?error=upload_failed");
+    }
+
     await uploadDocument(formData);
 
     revalidatePath("/documents");

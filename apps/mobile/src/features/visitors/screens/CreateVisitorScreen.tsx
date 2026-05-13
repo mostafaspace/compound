@@ -75,22 +75,22 @@ export const CreateVisitorScreen = () => {
 
   const handlePickImage = () => {
     Alert.alert(
-      t("Visitors.photoSource", "Visitor Photo"),
-      t("Visitors.photoSourceDesc", "Choose how to add a photo of the visitor"),
+      t("Visitors.photoSource"),
+      t("Visitors.photoSourceDesc"),
       [
         {
-          text: t("Common.camera", "Camera"),
+          text: t("Common.camera"),
           onPress: () => launchCamera({ mediaType: 'photo', quality: 0.7 }, (res) => {
             if (res.assets && res.assets[0]) setPhoto(res.assets[0]);
           }),
         },
         {
-          text: t("Common.gallery", "Gallery"),
+          text: t("Common.gallery"),
           onPress: () => launchImageLibrary({ mediaType: 'photo', quality: 0.7 }, (res) => {
             if (res.assets && res.assets[0]) setPhoto(res.assets[0]);
           }),
         },
-        { text: t("Common.cancel", "Cancel"), style: 'cancel' }
+        { text: t("Common.cancel"), style: 'cancel' }
       ]
     );
   };
@@ -100,8 +100,8 @@ export const CreateVisitorScreen = () => {
 
     if (!unitId) {
       Alert.alert(
-        "Error", 
-        "No unit found to associate this visitor with. Please contact management."
+        t("Common.error"), 
+        t("Visitors.noUnitError")
       );
       return;
     }
@@ -131,7 +131,7 @@ export const CreateVisitorScreen = () => {
       navigation.navigate('ShareVisitorPass', { visitorId: result.id });
     } catch (err) {
       console.error("Failed to create visitor", err);
-      Alert.alert("Error", "Could not create visitor request. Please try again.");
+      Alert.alert(t("Common.error"), t("Visitors.createFailedError"));
     }
   };
 
@@ -144,7 +144,7 @@ export const CreateVisitorScreen = () => {
 
         <View style={[styles.card, { backgroundColor: isDark ? colors.surface.dark : colors.surface.light }]}>
           <Typography variant="label" style={[styles.cardHeader, textDirectionStyle(isRtl)]}>
-            {t("Visitors.visitorDetails", "Visitor Information")}
+            {t("Visitors.visitorDetails")}
           </Typography>
           
           <Controller
@@ -152,8 +152,8 @@ export const CreateVisitorScreen = () => {
             name="visitorName"
             render={({ field: { onChange, value } }) => (
               <Input
-                label={t("Visitors.name", "Full Name")}
-                placeholder={t("Visitors.namePlaceholder", "Enter name...")}
+                label={t("Visitors.name")}
+                placeholder={t("Visitors.namePlaceholder")}
                 value={value}
                 onChangeText={onChange}
                 error={errors.visitorName?.message}
@@ -167,7 +167,7 @@ export const CreateVisitorScreen = () => {
             name="visitorPhone"
             render={({ field: { onChange, value } }) => (
               <Input
-                label={t("Visitors.phone", "Phone Number")}
+                label={t("Visitors.phone")}
                 placeholder="+20 123 456 7890"
                 keyboardType="phone-pad"
                 value={value}
@@ -179,13 +179,13 @@ export const CreateVisitorScreen = () => {
           />
 
           <View style={[styles.row, rowDirectionStyle(isRtl)]}>
-            <View style={{ flex: 1.5, marginEnd: spacing.md }}>
+            <View style={[{ flex: 1.5 }, isRtl ? { marginStart: spacing.md } : { marginEnd: spacing.md }]}>
               <Controller
                 control={control}
                 name="vehiclePlate"
                 render={({ field: { onChange, value } }) => (
                   <Input
-                    label={t("Visitors.vehiclePlate", "Vehicle Plate")}
+                    label={t("Visitors.vehiclePlate")}
                     placeholder="ABC 123"
                     value={value}
                     onChangeText={onChange}
@@ -201,7 +201,7 @@ export const CreateVisitorScreen = () => {
                 name="numberOfVisitors"
                 render={({ field: { onChange, value } }) => (
                   <Input
-                    label={t("Visitors.guests", "Guests")}
+                    label={t("Visitors.guests")}
                     keyboardType="number-pad"
                     value={value?.toString()}
                     onChangeText={onChange}
@@ -216,7 +216,7 @@ export const CreateVisitorScreen = () => {
 
         <View style={[styles.card, { backgroundColor: isDark ? colors.surface.dark : colors.surface.light }]}>
           <Typography variant="label" style={[styles.cardHeader, textDirectionStyle(isRtl)]}>
-            {t("Visitors.photo", "Visitor Photo (Optional)")}
+            {t("Visitors.photo")}
           </Typography>
           
           <TouchableOpacity 
@@ -238,10 +238,10 @@ export const CreateVisitorScreen = () => {
                   <Icon name="camera" color={colors.primary.light} size={24} />
                 </View>
                 <Typography variant="body" style={[{ fontWeight: '600', color: colors.primary.light }, textDirectionStyle(isRtl)]}>
-                  {t("Visitors.addPhoto", "Capture or Upload")}
+                  {t("Visitors.addPhoto")}
                 </Typography>
-                <Typography variant="caption" style={styles.photoHint}>
-                  {t("Visitors.photoHint", "Helps security identify your guest faster")}
+                <Typography variant="caption" style={[styles.photoHint, textDirectionStyle(isRtl)]}>
+                  {t("Visitors.photoHint")}
                 </Typography>
               </View>
             )}
@@ -249,7 +249,7 @@ export const CreateVisitorScreen = () => {
           {photo && (
             <TouchableOpacity onPress={() => setPhoto(null)} style={styles.removePhoto}>
               <Typography variant="caption" style={{ color: colors.error, fontWeight: '600' }}>
-                {t("Common.remove", "Change Photo")}
+                {t("Common.remove")}
               </Typography>
             </TouchableOpacity>
           )}
@@ -261,11 +261,11 @@ export const CreateVisitorScreen = () => {
             name="notes"
             render={({ field: { onChange, value } }) => (
               <Input
-                label={t("Visitors.notes", "Security Notes")}
-                placeholder={t("Visitors.notesPlaceholder", "Any special instructions...")}
+                label={t("Visitors.notes")}
+                placeholder={t("Visitors.notesPlaceholder")}
                 multiline
                 numberOfLines={3}
-                style={{ height: 80, textAlignVertical: 'top' }}
+                style={[{ height: 80, textAlignVertical: 'top' }, textDirectionStyle(isRtl)]}
                 value={value}
                 onChangeText={onChange}
                 error={errors.notes?.message}
@@ -276,7 +276,7 @@ export const CreateVisitorScreen = () => {
 
         <View style={styles.footer}>
           <Button 
-            title={t("Common.saveAndShare", "Generate & Share QR Pass")}
+            title={t("Common.saveAndShare")}
             onPress={handleSubmit(onSubmit)}
             loading={isCreating}
             style={styles.mainButton}
@@ -286,7 +286,7 @@ export const CreateVisitorScreen = () => {
             style={styles.cancelLink}
           >
             <Typography variant="body" style={styles.cancelText}>
-              {t("Common.cancel", "Cancel")}
+              {t("Common.cancel")}
             </Typography>
           </TouchableOpacity>
         </View>

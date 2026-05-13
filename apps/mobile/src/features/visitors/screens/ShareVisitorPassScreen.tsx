@@ -12,12 +12,14 @@ import { Button } from '../../../components/ui/Button';
 import { colors, layout, spacing, shadows } from '../../../theme';
 import { formatDate } from '../../../utils/formatters';
 import { Icon } from '../../../components/ui/Icon';
+import { isRtlLanguage, rowDirectionStyle, textDirectionStyle } from '../../../i18n/direction';
 
 type ShareVisitorPassRouteProp = RouteProp<RootStackParamList, 'ShareVisitorPass'>;
 
 export const ShareVisitorPassScreen = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const isDark = useColorScheme() === 'dark';
+  const isRtl = isRtlLanguage(i18n.language);
   const route = useRoute<ShareVisitorPassRouteProp>();
   const navigation = useNavigation<any>();
   const { visitorId } = route.params;
@@ -40,44 +42,42 @@ export const ShareVisitorPassScreen = () => {
 
   if (isLoading) {
     return (
-      <ScreenContainer style={styles.center} edges={['left', 'right', 'bottom']}>
-        <Typography>Loading pass details...</Typography>
+      <ScreenContainer style={[styles.center, textDirectionStyle(isRtl)]} edges={['left', 'right', 'bottom']}>
+        <Typography style={textDirectionStyle(isRtl)}>{t("Visitors.loadingDetails")}</Typography>
       </ScreenContainer>
     );
   }
 
   if (error || !visitor) {
     return (
-      <ScreenContainer style={styles.center} edges={['left', 'right', 'bottom']}>
-        <Typography variant="h3" style={{ marginBottom: spacing.md }}>Could not load pass</Typography>
-        <Typography style={{ marginBottom: spacing.sm }}>There was an error retrieving the visitor pass details.</Typography>
-        <Typography variant="caption" style={{ color: colors.error, marginBottom: layout.sectionGap, textAlign: 'center' }}>
-          {error ? JSON.stringify(error) : 'Visitor not found'}
+      <ScreenContainer style={[styles.center, textDirectionStyle(isRtl)]} edges={['left', 'right', 'bottom']}>
+        <Typography variant="h3" style={[{ marginBottom: spacing.md }, textDirectionStyle(isRtl)]}>{t("Visitors.couldNotLoad")}</Typography>
+        <Typography style={[{ marginBottom: spacing.sm }, textDirectionStyle(isRtl)]}>{t("Visitors.loadError")}</Typography>
+        <Typography variant="caption" style={[{ color: colors.error, marginBottom: layout.sectionGap, textAlign: isRtl ? 'right' : 'center' }, textDirectionStyle(isRtl)]}>
+          {error ? JSON.stringify(error) : t("Visitors.visitorNotFound")}
         </Typography>
-        <Button title="Back to Dashboard" onPress={() => navigation.popToTop()} />
+        <Button title={t("Common.backToDashboard")} onPress={() => navigation.popToTop()} />
       </ScreenContainer>
     );
   }
 
   if (!qrToken) {
     return (
-      <ScreenContainer style={styles.center} edges={['left', 'right', 'bottom']}>
-        <Typography variant="h3" style={{ marginBottom: spacing.md }}>
-          {t("Visitors.passUnavailable", { defaultValue: "Pass unavailable" })}
+      <ScreenContainer style={[styles.center, textDirectionStyle(isRtl)]} edges={['left', 'right', 'bottom']}>
+        <Typography variant="h3" style={[{ marginBottom: spacing.md }, textDirectionStyle(isRtl)]}>
+          {t("Visitors.passUnavailable")}
         </Typography>
-        <Typography style={{ marginBottom: layout.sectionGap, textAlign: 'center' }}>
-          {t("Visitors.passUnavailableBody", {
-            defaultValue: "This visitor pass does not have a QR token yet. Please refresh or regenerate the pass before sharing it.",
-          })}
+        <Typography style={[{ marginBottom: layout.sectionGap, textAlign: isRtl ? 'right' : 'center' }, textDirectionStyle(isRtl)]}>
+          {t("Visitors.passUnavailableBody")}
         </Typography>
         <Button
-          title={t("Common.retry", { defaultValue: "Retry" })}
+          title={t("Common.retry")}
           onPress={() => refetch()}
           style={{ marginBottom: spacing.md }}
         />
         <Button
           variant="outline"
-          title={t("Common.backToDashboard", "Back to Dashboard")}
+          title={t("Common.backToDashboard")}
           onPress={() => navigation.popToTop()}
         />
       </ScreenContainer>
@@ -96,8 +96,11 @@ export const ShareVisitorPassScreen = () => {
         });
         await Share.open({
           url: Platform.OS === 'android' ? 'file://' + uri : uri,
-          title: 'Visitor Pass',
-          message: `Here is your visitor pass for ${visitor.unit?.compoundName || 'our compound'}.`,
+          title: t("Visitors.visitorPass"),
+          message: t("Visitors.shareMessage", { 
+            compound: visitor.unit?.compoundName || t("Property.compound"),
+            defaultValue: `Here is your visitor pass for ${visitor.unit?.compoundName || 'our compound'}.`
+          }),
         });
         // Mark as shared after successful share
         await markAsShared(visitorId).unwrap();
@@ -128,13 +131,13 @@ export const ShareVisitorPassScreen = () => {
         >
           <View style={cardStyle}>
             {/* Header / Accent */}
-            <View style={[styles.cardHeader, { backgroundColor: isDark ? colors.primary.dark : colors.primary.light }]}>
-              <Typography variant="h3" style={{ color: isDark ? colors.text.primary.dark : '#FFF', fontSize: 22 }}>
-                {visitor.unit?.compoundName || 'Compound Pass'}
+            <View style={[styles.cardHeader, rowDirectionStyle(isRtl), { backgroundColor: isDark ? colors.primary.dark : colors.primary.light }]}>
+              <Typography variant="h3" style={[{ color: isDark ? colors.text.primary.dark : '#FFF', fontSize: 22 }, textDirectionStyle(isRtl)]}>
+                {visitor.unit?.compoundName || t("Visitors.compoundPass")}
               </Typography>
               <View style={[styles.vipBadge, { backgroundColor: colors.cta.light }]}>
-                <Typography variant="caption" style={{ color: '#FFF', fontWeight: '800', letterSpacing: 0.5 }}>
-                  VISITOR PASS
+                <Typography variant="caption" style={[{ color: '#FFF', fontWeight: '800', letterSpacing: 0.5 }, textDirectionStyle(isRtl)]}>
+                  {t("Visitors.visitorPass")}
                 </Typography>
               </View>
             </View>
@@ -154,9 +157,9 @@ export const ShareVisitorPassScreen = () => {
               </View>
 
               {/* Name Display */}
-              <View style={styles.nameHeader}>
-                <Typography variant="h2" style={[valueStyle, { fontSize: 26 }]}>{visitor.visitorName}</Typography>
-                <Typography variant="caption" style={labelStyle}>{t("Visitors.authorizedGuest", "Authorized Guest")}</Typography>
+              <View style={[styles.nameHeader, textDirectionStyle(isRtl)]}>
+                <Typography variant="h2" style={[valueStyle, { fontSize: 26 }, textDirectionStyle(isRtl)]}>{visitor.visitorName}</Typography>
+                <Typography variant="caption" style={[labelStyle, textDirectionStyle(isRtl)]}>{t("Visitors.authorizedGuest")}</Typography>
               </View>
 
               {/* QR Code */}
@@ -169,42 +172,42 @@ export const ShareVisitorPassScreen = () => {
                 />
               </View>
 
-              <View style={styles.divider}>
+              <View style={[styles.divider, rowDirectionStyle(isRtl)]}>
                 <View style={styles.dot} />
                 <View style={styles.dashLine} />
                 <View style={styles.dot} />
               </View>
 
               {/* Details Grid */}
-              <View style={styles.detailsGrid}>
-                <View style={styles.detailRow}>
-                  <View style={styles.detailCol}>
-                    <Typography variant="caption" style={labelStyle}>{t("Visitors.unit", "Unit")}</Typography>
-                    <Typography variant="body" style={[styles.bold, valueStyle]}>
+              <View style={[styles.detailsGrid, textDirectionStyle(isRtl)]}>
+                <View style={[styles.detailRow, rowDirectionStyle(isRtl)]}>
+                  <View style={[styles.detailCol, textDirectionStyle(isRtl)]}>
+                    <Typography variant="caption" style={[labelStyle, textDirectionStyle(isRtl)]}>{t("Visitors.unit")}</Typography>
+                    <Typography variant="body" style={[styles.bold, valueStyle, textDirectionStyle(isRtl)]}>
                       {visitor.unit?.buildingName ? `${visitor.unit.buildingName} - ` : ''}{visitor.unit?.unitNumber}
                     </Typography>
                   </View>
-                  <View style={styles.detailCol}>
-                    <Typography variant="caption" style={labelStyle}>{t("Visitors.host", "Host")}</Typography>
-                    <Typography variant="body" style={[styles.bold, valueStyle]}>{visitor.host?.name || 'Resident'}</Typography>
+                  <View style={[styles.detailCol, textDirectionStyle(isRtl)]}>
+                    <Typography variant="caption" style={[labelStyle, textDirectionStyle(isRtl)]}>{t("Visitors.host")}</Typography>
+                    <Typography variant="body" style={[styles.bold, valueStyle, textDirectionStyle(isRtl)]}>{visitor.host?.name || t("Common.resident")}</Typography>
                   </View>
                 </View>
 
-                <View style={styles.detailRow}>
-                  <View style={styles.detailCol}>
-                    <Typography variant="caption" style={labelStyle}>{t("Visitors.guestsCount", "Guests")}</Typography>
-                    <Typography variant="body" style={[styles.bold, valueStyle]}>{visitor.numberOfVisitors || 1}</Typography>
+                <View style={[styles.detailRow, rowDirectionStyle(isRtl)]}>
+                  <View style={[styles.detailCol, textDirectionStyle(isRtl)]}>
+                    <Typography variant="caption" style={[labelStyle, textDirectionStyle(isRtl)]}>{t("Visitors.guestsCount")}</Typography>
+                    <Typography variant="body" style={[styles.bold, valueStyle, textDirectionStyle(isRtl)]}>{visitor.numberOfVisitors || 1}</Typography>
                   </View>
-                  <View style={styles.detailCol}>
-                    <Typography variant="caption" style={labelStyle}>{t("Visitors.validUntil", "Valid Until")}</Typography>
-                    <Typography variant="body" style={[styles.bold, valueStyle]}>{formatDate(visitor.visitEndsAt)}</Typography>
+                  <View style={[styles.detailCol, textDirectionStyle(isRtl)]}>
+                    <Typography variant="caption" style={[labelStyle, textDirectionStyle(isRtl)]}>{t("Visitors.validUntil")}</Typography>
+                    <Typography variant="body" style={[styles.bold, valueStyle, textDirectionStyle(isRtl)]}>{formatDate(visitor.visitEndsAt, i18n.language === 'ar' ? 'ar-EG' : 'en-US')}</Typography>
                   </View>
                 </View>
               </View>
 
               <View style={styles.footerNote}>
                 <Typography variant="caption" style={{ color: colors.primary.light, textAlign: 'center', fontWeight: '600' }}>
-                  Please present this QR code at the gate for entry.
+                  {t("Visitors.presentAtGate")}
                 </Typography>
               </View>
             </View>
@@ -213,13 +216,13 @@ export const ShareVisitorPassScreen = () => {
 
         <View style={styles.actions}>
           <Button
-            title={t("Common.share", "Share Invitation")}
+            title={t("Common.shareInvitation")}
             onPress={handleShare}
             style={styles.shareButton}
           />
           <Button
             variant="outline"
-            title={t("Common.backToDashboard", "Back to Dashboard")}
+            title={t("Common.backToDashboard")}
             onPress={() => navigation.popToTop()}
             style={styles.doneButton}
           />
@@ -263,8 +266,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xl,
     paddingHorizontal: spacing.xl,
     alignItems: 'center',
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
+    borderBottomStartRadius: 32,
+    borderBottomEndRadius: 32,
   },
   vipBadge: {
     backgroundColor: '#FFF',

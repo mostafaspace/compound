@@ -6,23 +6,24 @@ import {
   ActivityIndicator,
   useColorScheme,
   Pressable,
-  ScrollView,
-  Modal,
   Text
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useGetUnitAccountsQuery, useGetAccountDetailQuery, useSubmitPaymentMutation } from '../../../services/finance';
 import { colors, layout, radii, shadows, spacing } from '../../../theme';
 import { Button } from '../../../components/ui/Button';
+import { BottomSheet } from '../../../components/ui/BottomSheet';
 import { Input } from '../../../components/ui/Input';
 import { Typography } from '../../../components/ui/Typography';
 import { ScreenContainer } from '../../../components/layout/ScreenContainer';
 import { formatDate } from '../../../utils/formatters';
 import { Icon } from '../../../components/ui/Icon';
+import { isRtlLanguage, rowDirectionStyle, textDirectionStyle } from '../../../i18n/direction';
 
 export const AccountsScreen = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const isDark = useColorScheme() === 'dark';
+  const isRtl = isRtlLanguage(i18n.language);
   
   const { data: accounts = [], isLoading: isLoadingAccounts, refetch: refetchAccounts } = useGetUnitAccountsQuery();
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
@@ -40,6 +41,7 @@ export const AccountsScreen = () => {
   });
   
   const [submitPayment, { isLoading: isSubmitting }] = useSubmitPaymentMutation();
+  const paymentMethods = ["bank_transfer", "cash", "check"];
 
   const handlePayment = async () => {
     if (!selectedAccountId || !paymentAmount.trim()) return;
@@ -69,6 +71,27 @@ export const AccountsScreen = () => {
     }
   };
 
+  const renderLedgerEntry = ({ item: entry }: { item: any }) => (
+    <View style={[styles.transactionItem, textDirectionStyle(isRtl)]}>
+      <View style={[styles.rowBetween, rowDirectionStyle(isRtl)]}>
+        <Typography style={[styles.transactionText, textDirectionStyle(isRtl)]}>{entry.description || entry.type}</Typography>
+        <Typography style={[styles.transactionAmount, { color: entry.type === 'charge' ? colors.error : colors.success }, textDirectionStyle(isRtl)] as any}>
+          {entry.amount}
+        </Typography>
+      </View>
+      <Typography variant="caption" style={textDirectionStyle(isRtl)}>{formatDate(entry.createdAt, i18n.language === 'ar' ? 'ar-EG' : 'en-US')}</Typography>
+    </View>
+  );
+
+  const renderPaymentMethod = ({ item: method }: { item: string }) => (
+    <Pressable
+      onPress={() => setPaymentMethod(method)}
+      style={[styles.methodChip, paymentMethod === method && styles.methodChipSelected]}
+    >
+      <Text style={[styles.methodText, paymentMethod === method && styles.methodTextSelected, textDirectionStyle(isRtl)]}>{t(`Finance.methods.${method}`)}</Text>
+    </Pressable>
+  );
+
   const renderAccountItem = ({ item }: { item: any }) => (
     <View style={[
       styles.card, 
@@ -76,14 +99,15 @@ export const AccountsScreen = () => {
         backgroundColor: isDark ? colors.surface.dark : colors.surface.light,
         borderColor: isDark ? colors.border.dark : colors.border.light,
       },
+      textDirectionStyle(isRtl)
     ]}>
-      <View style={styles.cardTop}>
+      <View style={[styles.cardTop, rowDirectionStyle(isRtl)]}>
         <View style={styles.iconBadge}>
           <Icon name="finance" color={colors.primary.light} size={22} />
         </View>
-        <View style={styles.balanceBlock}>
-          <Typography variant="label">{t("Finance.balance")}</Typography>
-          <Typography variant="h2" style={{ color: parseFloat(item.balance) < 0 ? colors.error : colors.success }}>
+        <View style={[styles.balanceBlock, textDirectionStyle(isRtl)]}>
+          <Typography variant="label" style={textDirectionStyle(isRtl)}>{t("Finance.balance")}</Typography>
+          <Typography variant="h2" style={[{ color: parseFloat(item.balance) < 0 ? colors.error : colors.success }, textDirectionStyle(isRtl)]}>
             {item.balance} {item.currency}
           </Typography>
         </View>
@@ -98,23 +122,18 @@ export const AccountsScreen = () => {
       />
 
       {selectedAccountId === item.id && (
-        <View style={styles.detailSection}>
+        <View style={[styles.detailSection, textDirectionStyle(isRtl)]}>
           {isFetchingDetail ? (
             <ActivityIndicator color={colors.primary.dark} />
           ) : (
             <>
-              <Typography variant="h3" style={styles.subTitle}>{t("Finance.recentTransactions")}</Typography>
-              {(accountDetail?.ledgerEntries ?? []).slice(0, 5).map((entry: any) => (
-                <View key={entry.id} style={styles.transactionItem}>
-                  <View style={styles.rowBetween}>
-                    <Typography style={styles.transactionText}>{entry.description || entry.type}</Typography>
-                    <Typography style={[styles.transactionAmount, { color: entry.type === 'charge' ? colors.error : colors.success }] as any}>
-                      {entry.amount}
-                    </Typography>
-                  </View>
-                  <Typography variant="caption">{formatDate(entry.createdAt)}</Typography>
-                </View>
-              ))}
+              <Typography variant="h3" style={[styles.subTitle, textDirectionStyle(isRtl)]}>{t("Finance.recentPayments")}</Typography>
+              <FlatList
+                data={(accountDetail?.ledgerEntries ?? []).slice(0, 5)}
+                keyExtractor={(entry) => String(entry.id)}
+                renderItem={renderLedgerEntry}
+                scrollEnabled={false}
+              />
               
               <Button 
                 title={t("Finance.submitPayment")} 
@@ -147,54 +166,58 @@ export const AccountsScreen = () => {
         contentContainerStyle={styles.listContent}
       />
 
-      <Modal visible={showPaymentModal} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: isDark ? colors.surface.dark : colors.surface.light }]}>
-            <Typography variant="h2" style={styles.modalTitle}>{t("Finance.submitPayment")}</Typography>
-            
-            <ScrollView style={styles.modalScroll}>
-              <Input
-                label={t("Finance.amount")}
-                keyboardType="decimal-pad"
-                onChangeText={setPaymentAmount}
-                placeholder="0.00"
-                value={paymentAmount}
-              />
-
-              <Typography variant="label" style={styles.inputLabel}>{t("Finance.method")}</Typography>
-              <View style={styles.methodRow}>
-                {["bank_transfer", "cash", "check"].map((m) => (
-                  <Pressable 
-                    key={m} 
-                    onPress={() => setPaymentMethod(m)}
-                    style={[styles.methodChip, paymentMethod === m && styles.methodChipSelected]}
-                  >
-                    <Text style={[styles.methodText, paymentMethod === m && styles.methodTextSelected]}>{t(`Finance.methods.${m}`)}</Text>
-                  </Pressable>
-                ))}
-              </View>
-
-              <Input
-                label={t("Finance.reference")}
-                onChangeText={setPaymentReference}
-                placeholder={t("Finance.referencePlaceholder")}
-                value={paymentReference}
-              />
-
-              {paymentMessage && (
-                <Typography variant={paymentMessage.includes("success") ? "body" : "error"} style={styles.message}>
-                  {paymentMessage}
-                </Typography>
-              )}
-            </ScrollView>
-
-            <View style={styles.modalFooter}>
-              <Button title={t("Common.cancel")} variant="ghost" onPress={() => setShowPaymentModal(false)} />
-              <Button title={t("Common.submit")} onPress={handlePayment} loading={isSubmitting} />
-            </View>
+      <BottomSheet
+        visible={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        maxHeight="80%"
+        header={
+          <Typography variant="h2" style={textDirectionStyle(isRtl)}>
+            {t("Finance.submitPayment")}
+          </Typography>
+        }
+        footer={
+          <View style={[styles.modalFooter, rowDirectionStyle(isRtl)]}>
+            <Button title={t("Common.cancel")} variant="ghost" onPress={() => setShowPaymentModal(false)} style={styles.modalFooterButton} />
+            <Button title={t("Common.submit")} onPress={handlePayment} loading={isSubmitting} style={styles.modalFooterButton} />
           </View>
+        }
+      >
+        <View>
+          <Input
+            label={t("Finance.amount")}
+            keyboardType="decimal-pad"
+            onChangeText={setPaymentAmount}
+            placeholder="0.00"
+            value={paymentAmount}
+            textAlign={isRtl ? 'right' : 'left'}
+          />
+
+          <Typography variant="label" style={[styles.inputLabel, textDirectionStyle(isRtl)]}>{t("Finance.method")}</Typography>
+          <FlatList
+            data={paymentMethods}
+            keyExtractor={(method) => method}
+            renderItem={renderPaymentMethod}
+            horizontal
+            inverted={isRtl}
+            scrollEnabled={false}
+            contentContainerStyle={[styles.methodRow, rowDirectionStyle(isRtl)]}
+          />
+
+          <Input
+            label={t("Finance.reference")}
+            onChangeText={setPaymentReference}
+            placeholder={t("Finance.referencePlaceholder")}
+            value={paymentReference}
+            textAlign={isRtl ? 'right' : 'left'}
+          />
+
+          {paymentMessage && (
+            <Typography variant={paymentMessage.includes("success") ? "body" : "error"} style={[styles.message, textDirectionStyle(isRtl)]}>
+              {paymentMessage}
+            </Typography>
+          )}
         </View>
-      </Modal>
+      </BottomSheet>
     </ScreenContainer>
   );
 };
@@ -268,23 +291,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: spacing.xl,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(7, 17, 31, 0.58)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    borderTopLeftRadius: radii.xl,
-    borderTopRightRadius: radii.xl,
-    padding: spacing.xl,
-    maxHeight: '80%',
-  },
-  modalTitle: {
-    marginBottom: spacing.lg,
-  },
-  modalScroll: {
-    marginBottom: spacing.lg,
-  },
   inputLabel: {
     marginBottom: spacing.xs,
     marginTop: spacing.md,
@@ -320,7 +326,9 @@ const styles = StyleSheet.create({
   },
   modalFooter: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
     gap: spacing.md,
+  },
+  modalFooterButton: {
+    flex: 1,
   }
 });

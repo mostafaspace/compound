@@ -2,7 +2,7 @@ import { ThemeProvider } from "next-themes";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Cairo } from "next/font/google";
 import "./globals.css";
 import { PermissionProviderWrapper } from "@/components/permission-provider-wrapper";
 import { ToastProvider } from "@/components/ui/toast";
@@ -10,6 +10,11 @@ import { ToastProvider } from "@/components/ui/toast";
 const geistSans = Geist({
   variable: "--font-sans",
   subsets: ["latin"],
+});
+
+const cairo = Cairo({
+  variable: "--font-sans",
+  subsets: ["arabic"],
 });
 
 const geistMono = Geist_Mono({
@@ -29,9 +34,11 @@ export default async function RootLayout({
 }>) {
   const locale = await getLocale();
   const messages = await getMessages();
+  
+  const sansFont = locale === "ar" ? cairo.variable : geistSans.variable;
 
   return (
-    <html lang={locale} dir={locale === "ar" ? "rtl" : "ltr"} className={`${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
+    <html lang={locale} dir={locale === "ar" ? "rtl" : "ltr"} className={`${sansFont} ${geistMono.variable}`} suppressHydrationWarning>
       <body>
         <NextIntlClientProvider messages={messages}>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>

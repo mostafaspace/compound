@@ -2,7 +2,6 @@ import type { AccountMerge } from "@compound/contracts";
 import { getLocale, getTranslations } from "next-intl/server";
 import Link from "next/link";
 
-import { LogoutButton } from "@/components/logout-button";
 import { getCurrentUser, getAccountMerges } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
 
@@ -42,7 +41,6 @@ export default async function AccountMergesPage() {
             <h1 className="mt-2 text-3xl font-semibold">{t("title")}</h1>
             <p className="mt-2 max-w-2xl text-sm text-muted">{t("subtitle")}</p>
           </div>
-          <LogoutButton />
         </div>
       </header>
 
@@ -53,7 +51,7 @@ export default async function AccountMergesPage() {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[700px] border-collapse text-left text-sm">
+            <table className="w-full min-w-[700px] border-collapse text-start text-sm">
               <thead className="bg-background text-muted">
                 <tr>
                   <th className="px-4 py-3 font-semibold">{t("colId")}</th>

@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 
-import { LogoutButton } from "@/components/logout-button";
 import { getCurrentUser, getChargeType } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
 
@@ -34,7 +33,6 @@ export default async function EditChargeTypePage({ params }: EditChargeTypePageP
             </Link>
             <h1 className="mt-2 text-3xl font-semibold">{t("chargeTypes")}</h1>
           </div>
-          <LogoutButton />
         </div>
       </header>
 

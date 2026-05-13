@@ -108,13 +108,19 @@ export async function recoverUserAction(userId: number, formData: FormData) {
 
 export async function initiateMergeAction(formData: FormData) {
   const headers = await supportHeaders();
+  const sourceUserId = Number(formData.get("source_user_id"));
+  const targetUserId = Number(formData.get("target_user_id"));
+
+  if (!Number.isInteger(sourceUserId) || !Number.isInteger(targetUserId) || targetUserId <= 0) {
+    throw new Error("Choose a merge target before submitting.");
+  }
 
   const response = await fetch(`${config.apiBaseUrl}/account-merges`, {
     method: "POST",
     headers,
     body: JSON.stringify({
-      source_user_id: Number(formData.get("source_user_id")),
-      target_user_id: Number(formData.get("target_user_id")),
+      source_user_id: sourceUserId,
+      target_user_id: targetUserId,
       notes: String(formData.get("notes") ?? "").trim() || null,
     }),
   });

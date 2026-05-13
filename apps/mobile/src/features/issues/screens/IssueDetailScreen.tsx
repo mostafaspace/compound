@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ScrollView, StyleSheet, View, useColorScheme, TextInput, Image, ActivityIndicator, TouchableOpacity } from "react-native";
+import { FlatList, ScrollView, StyleSheet, View, useColorScheme, TextInput, Image, ActivityIndicator, TouchableOpacity } from "react-native";
 import { RouteProp, useRoute, useNavigation } from "@react-navigation/native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { useTranslation } from "react-i18next";
@@ -20,11 +20,13 @@ import { canEscalateIssueFromMobile } from "../issue-flow-utils";
 import { formatDate } from "../../../utils/formatters";
 import { defaultApiBaseUrl } from "../../../services/api";
 import { Icon } from "../../../components/ui/Icon";
+import { isRtlLanguage, rowDirectionStyle, textDirectionStyle } from "../../../i18n/direction";
 
 export const IssueDetailScreen = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const isDark = useColorScheme() === "dark";
+  const isRtl = isRtlLanguage(i18n.language);
   const route = useRoute<RouteProp<RootStackParamList, "IssueDetail">>();
   const { issue } = route.params;
 
@@ -49,6 +51,28 @@ export const IssueDetailScreen = () => {
   const [escalateIssue, { isLoading: isEscalating }] = useEscalateIssueMutation();
   const [escalationReason, setEscalationReason] = useState("");
   const [viewerImage, setViewerImage] = useState<string | null>(null);
+  const renderAttachment = ({ item: att }: { item: any }) => {
+    const imageUri = att.url.startsWith('http') ? att.url : `${defaultApiBaseUrl}${att.url}`;
+    const authHeaders = token ? { Authorization: `Bearer ${token}` } : undefined;
+
+    return (
+      <View style={[styles.attachmentCard, isRtl ? { marginStart: spacing.xs } : { marginEnd: spacing.xs }]}>
+        {att.mimeType?.startsWith('image/') ? (
+          <TouchableOpacity activeOpacity={0.8} onPress={() => setViewerImage(imageUri)}>
+            <Image
+              source={{ uri: imageUri, headers: authHeaders }}
+              style={styles.attachmentImage}
+              resizeMode="cover"
+            />
+          </TouchableOpacity>
+        ) : (
+          <View style={[styles.attachmentImage, styles.attachmentFallback]}>
+            <Icon name="camera" color={colors.primary.light} size={24} />
+          </View>
+        )}
+      </View>
+    );
+  };
 
   const handleUpdateStatus = async (status: string) => {
     try {
@@ -94,7 +118,7 @@ export const IssueDetailScreen = () => {
     <ScreenContainer withKeyboard={false} style={styles.container} edges={['left', 'right', 'bottom']}>
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={[styles.card, { backgroundColor: surface, borderColor: border }]}>
-          <View style={styles.headerRow}>
+          <View style={[styles.headerRow, rowDirectionStyle(isRtl)]}>
             <StatusBadge
               label={t(`Issues.statuses.${currentIssue.status}`, { defaultValue: currentIssue.status })}
               backgroundColor={statusPalette.background}
@@ -106,43 +130,28 @@ export const IssueDetailScreen = () => {
               textColor={priorityPalette.text}
             />
           </View>
-          <Typography variant="h2" style={[styles.title, { color: text }]}>
+          <Typography variant="h2" style={[styles.title, { color: text }, textDirectionStyle(isRtl)]}>
             {currentIssue.title}
           </Typography>
-          <Typography variant="caption" style={{ color: subtext, marginBottom: spacing.sm }}>
+          <Typography variant="caption" style={[{ color: subtext, marginBottom: spacing.sm }, textDirectionStyle(isRtl)]}>
             {t(`Issues.categories.${currentIssue.category}`, { defaultValue: currentIssue.category })} {"\u2022"}{" "}
-            {formatDate(currentIssue.createdAt)}
+            {formatDate(currentIssue.createdAt, i18n.language)}
           </Typography>
-          <Typography style={{ color: text, lineHeight: 22 }}>{currentIssue.description}</Typography>
+          <Typography style={[{ color: text, lineHeight: 22 }, textDirectionStyle(isRtl)]}>{currentIssue.description}</Typography>
           
           {currentIssue.attachments && currentIssue.attachments.length > 0 && (
             <View style={styles.attachmentsSection}>
-              <Typography variant="label" style={{ marginBottom: spacing.xs }}>
-                {t('Issues.attachments', 'Attachments')}
+              <Typography variant="label" style={[{ marginBottom: spacing.xs }, textDirectionStyle(isRtl)]}>
+                {t('Issues.attachments')}
               </Typography>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                {currentIssue.attachments.map((att: any) => {
-                  const imageUri = att.url.startsWith('http') ? att.url : `${defaultApiBaseUrl}${att.url}`;
-                  const authHeaders = token ? { Authorization: `Bearer ${token}` } : undefined;
-                  return (
-                    <View key={att.id} style={styles.attachmentCard}>
-                      {att.mimeType?.startsWith('image/') ? (
-                        <TouchableOpacity activeOpacity={0.8} onPress={() => setViewerImage(imageUri)}>
-                          <Image
-                            source={{ uri: imageUri, headers: authHeaders }}
-                            style={styles.attachmentImage}
-                            resizeMode="cover"
-                          />
-                        </TouchableOpacity>
-                      ) : (
-                        <View style={[styles.attachmentImage, styles.attachmentFallback]}>
-                          <Icon name="camera" color={colors.primary.light} size={24} />
-                        </View>
-                      )}
-                    </View>
-                  );
-                })}
-              </ScrollView>
+              <FlatList
+                data={currentIssue.attachments}
+                keyExtractor={(att: any) => String(att.id)}
+                renderItem={renderAttachment}
+                horizontal
+                inverted={isRtl}
+                showsHorizontalScrollIndicator={false}
+              />
             </View>
           )}
 
@@ -154,10 +163,9 @@ export const IssueDetailScreen = () => {
           />
 
           {currentIssue.resolvedAt ? (
-            <Typography variant="caption" style={{ color: colors.success, marginTop: spacing.md }}>
+            <Typography variant="caption" style={[{ color: colors.success, marginTop: spacing.md }, textDirectionStyle(isRtl)]}>
               {t("Issues.resolvedAt", {
-                defaultValue: "Resolved: {{date}}",
-                date: formatDate(currentIssue.resolvedAt),
+                date: formatDate(currentIssue.resolvedAt, i18n.language),
               })}
             </Typography>
           ) : null}
@@ -178,8 +186,8 @@ export const IssueDetailScreen = () => {
 
         {canManageStatus && currentIssue.status !== 'resolved' && currentIssue.status !== 'closed' && (
           <View style={[styles.adminSection, { backgroundColor: surface, borderColor: border }]}>
-            <Typography variant="h3" style={styles.adminTitle}>
-              {t('Admin.manageIssue', 'Manage Issue')}
+            <Typography variant="h3" style={[styles.adminTitle, textDirectionStyle(isRtl)]}>
+              {t('Admin.manageIssue')}
             </Typography>
             <View style={styles.actionGrid}>
               {currentIssue.status !== 'in_progress' && (
@@ -204,25 +212,25 @@ export const IssueDetailScreen = () => {
 
         {canEscalate && currentIssue.status !== 'resolved' && currentIssue.status !== 'closed' && currentIssue.status !== 'escalated' && (
           <View style={[styles.adminSection, { backgroundColor: surface, borderColor: border }]}>
-            <Typography variant="h3" style={styles.adminTitle}>
-              {t('Issues.statuses.escalated', 'Escalate')}
+            <Typography variant="h3" style={[styles.adminTitle, textDirectionStyle(isRtl)]}>
+              {t('Issues.statuses.escalated')}
             </Typography>
             <TextInput
-              style={[styles.reasonInput, { backgroundColor: surface, borderColor: border, color: text }]}
+              style={[styles.reasonInput, { backgroundColor: surface, borderColor: border, color: text }, textDirectionStyle(isRtl)]}
               value={escalationReason}
               onChangeText={setEscalationReason}
-              placeholder={t('Issues.escalationReasonPlaceholder', { defaultValue: 'Explain why this issue needs escalation...' })}
+              placeholder={t('Issues.escalationReasonPlaceholder')}
               placeholderTextColor={colors.text.secondary.light}
               multiline
               textAlignVertical="top"
             />
             <Button
-              title={t('Issues.escalateNow', { defaultValue: 'Escalate to President' })}
+              title={t('Issues.escalateNow')}
               onPress={handleEscalate}
               loading={isUpdating || isEscalating}
               variant="ghost"
               style={[styles.actionBtn, { borderColor: colors.error }]}
-              textStyle={{ color: colors.error }}
+              textStyle={[{ color: colors.error }, textDirectionStyle(isRtl)]}
             />
           </View>
         )}

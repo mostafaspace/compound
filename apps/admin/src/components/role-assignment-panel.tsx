@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import type { AdminScopeAssignment, RoleRecord } from "@/lib/api";
 import {
   getUserRoleAssignments, assignUserRole, revokeUserRole,
@@ -14,6 +15,8 @@ interface Props {
 }
 
 export function RoleAssignmentPanel({ userId, userName, onClose }: Props) {
+  const t = useTranslations("RoleAssignments");
+  const commonT = useTranslations("Common");
   const [assignments, setAssignments] = useState<AdminScopeAssignment[]>([]);
   const [roles, setRoles] = useState<RoleRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,7 +35,7 @@ export function RoleAssignmentPanel({ userId, userName, onClose }: Props) {
         setRoles(rolesData);
       })
       .catch((e: unknown) => {
-        setError(e instanceof Error ? e.message : "Failed to load role assignments.");
+        setError(e instanceof Error ? e.message : t("error"));
       })
       .finally(() => setLoading(false));
   }, [userId]);
@@ -53,7 +56,7 @@ export function RoleAssignmentPanel({ userId, userName, onClose }: Props) {
         setScopeId("");
         setError(null);
       } catch (e: unknown) {
-        setError(e instanceof Error ? e.message : "Failed to assign role.");
+        setError(e instanceof Error ? e.message : t("assignError"));
       }
     });
   };
@@ -65,7 +68,7 @@ export function RoleAssignmentPanel({ userId, userName, onClose }: Props) {
         setAssignments((prev) => prev.filter((a) => a.id !== assignmentId));
         setError(null);
       } catch (e: unknown) {
-        setError(e instanceof Error ? e.message : "Failed to revoke role.");
+        setError(e instanceof Error ? e.message : t("revokeError"));
       }
     });
   };
@@ -79,11 +82,11 @@ export function RoleAssignmentPanel({ userId, userName, onClose }: Props) {
       />
 
       {/* Panel */}
-      <div className="fixed inset-y-0 right-0 z-40 flex w-full max-w-md flex-col border-l border-line bg-panel shadow-2xl">
+      <div className="fixed inset-y-0 end-0 z-40 flex w-full max-w-md flex-col border-s border-line bg-panel shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-line px-5 py-4">
           <div>
-            <h2 className="font-semibold">Role Assignments</h2>
+            <h2 className="font-semibold">{t("title")}</h2>
             <p className="text-sm text-muted">{userName}</p>
           </div>
           <button
@@ -104,11 +107,11 @@ export function RoleAssignmentPanel({ userId, userName, onClose }: Props) {
           {/* Current assignments */}
           <div>
             <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
-              Current Roles
+              {t("currentRoles")}
             </h3>
-            {loading && <p className="text-sm text-muted">Loading…</p>}
+            {loading && <p className="text-sm text-muted">{t("loading")}</p>}
             {!loading && assignments.length === 0 && (
-              <p className="text-sm text-muted">No roles assigned.</p>
+              <p className="text-sm text-muted">{t("noRoles")}</p>
             )}
             <div className="space-y-2">
               {assignments.map((a) => (
@@ -118,16 +121,16 @@ export function RoleAssignmentPanel({ userId, userName, onClose }: Props) {
                 >
                   <div className="min-w-0">
                     <span className="text-sm font-semibold">{a.role_name}</span>
-                    <span className="ml-2 inline-block rounded border border-line bg-background px-1.5 py-0.5 text-xs text-muted">
+                    <span className="ms-2 inline-block rounded border border-line bg-background px-1.5 py-0.5 text-xs text-muted">
                       {a.scope_type}{a.scope_id ? ` · ${a.scope_id}` : ""}
                     </span>
                   </div>
                   <button
                     onClick={() => handleRevoke(a.id)}
                     disabled={isPending}
-                    className="ml-3 shrink-0 text-xs text-danger hover:underline disabled:opacity-50"
+                    className="ms-3 shrink-0 text-xs text-danger hover:underline disabled:opacity-50"
                   >
-                    Revoke
+                    {t("revoke")}
                   </button>
                 </div>
               ))}
@@ -137,7 +140,7 @@ export function RoleAssignmentPanel({ userId, userName, onClose }: Props) {
           {/* Assign new role */}
           <div className="rounded-lg border border-line bg-background p-4 space-y-3">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
-              Assign Role
+              {t("assignRole")}
             </h3>
 
             <select
@@ -145,7 +148,7 @@ export function RoleAssignmentPanel({ userId, userName, onClose }: Props) {
               onChange={(e) => setSelectedRole(e.target.value)}
               className="h-10 w-full rounded-lg border border-line bg-panel px-3 text-sm focus:border-brand focus:outline-none"
             >
-              <option value="">Select role…</option>
+              <option value="">{t("selectRole")}</option>
               {roles.map((r) => (
                 <option key={r.id} value={r.name}>{r.name}</option>
               ))}
@@ -156,11 +159,11 @@ export function RoleAssignmentPanel({ userId, userName, onClose }: Props) {
               onChange={(e) => { setScopeType(e.target.value); setScopeId(""); }}
               className="h-10 w-full rounded-lg border border-line bg-panel px-3 text-sm focus:border-brand focus:outline-none"
             >
-              <option value="global">Global (no restriction)</option>
-              <option value="compound">Compound</option>
-              <option value="building">Building</option>
-              <option value="floor">Floor</option>
-              <option value="unit">Unit</option>
+              <option value="global">{t("global")}</option>
+              <option value="compound">{commonT("compound")}</option>
+              <option value="building">{commonT("building")}</option>
+              <option value="floor">{commonT("floor")}</option>
+              <option value="unit">{commonT("unit")}</option>
             </select>
 
             {scopeType !== "global" && (
@@ -168,7 +171,7 @@ export function RoleAssignmentPanel({ userId, userName, onClose }: Props) {
                 type="text"
                 value={scopeId}
                 onChange={(e) => setScopeId(e.target.value)}
-                placeholder={`${scopeType.charAt(0).toUpperCase() + scopeType.slice(1)} ID (ULID)`}
+                placeholder={t("scopeIdPlaceholder", { type: commonT(scopeType) })}
                 className="h-10 w-full rounded-lg border border-line bg-panel px-3 text-sm font-mono focus:border-brand focus:outline-none"
               />
             )}
@@ -178,7 +181,7 @@ export function RoleAssignmentPanel({ userId, userName, onClose }: Props) {
               disabled={isPending || !selectedRole || (scopeType !== "global" && !scopeId.trim())}
               className="h-10 w-full rounded-lg bg-brand text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
             >
-              Assign Role
+              {t("assignRole")}
             </button>
           </div>
         </div>

@@ -2100,6 +2100,28 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
+  - RNCAsyncStorage (2.2.0):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
   - RNDateTimePicker (9.1.0):
     - hermes-engine
     - RCTRequired
@@ -2464,6 +2486,7 @@ DEPENDENCIES:
   - ReactNativeDependencies (from `../../../node_modules/react-native/third-party-podspecs/ReactNativeDependencies.podspec`)
   - "ReactNativeScanner (from `../../../node_modules/@pushpendersingh/react-native-scanner`)"
   - RNBootSplash (from `../../../node_modules/react-native-bootsplash`)
+  - "RNCAsyncStorage (from `../../../node_modules/@react-native-async-storage/async-storage`)"
   - "RNDateTimePicker (from `../node_modules/@react-native-community/datetimepicker`)"
   - "RNFBApp (from `../../../node_modules/@react-native-firebase/app`)"
   - "RNFBMessaging (from `../../../node_modules/@react-native-firebase/messaging`)"
@@ -2658,6 +2681,8 @@ EXTERNAL SOURCES:
     :path: "../../../node_modules/@pushpendersingh/react-native-scanner"
   RNBootSplash:
     :path: "../../../node_modules/react-native-bootsplash"
+  RNCAsyncStorage:
+    :path: "../../../node_modules/@react-native-async-storage/async-storage"
   RNDateTimePicker:
     :path: "../node_modules/@react-native-community/datetimepicker"
   RNFBApp:
@@ -2775,6 +2800,7 @@ SPEC CHECKSUMS:
   ReactNativeDependencies: 5881726994959c459015326e2d83e76809862dd0
   ReactNativeScanner: 3ee8a33144514b895c18386e074d86ead124d3b8
   RNBootSplash: c77afd8af7ab66024d329e83aabb98e21692fe18
+  RNCAsyncStorage: d90e523830fa7705f8c61632479abde871bc792f
   RNDateTimePicker: afe0288e6c7855994f7f2617b7b2c05799fea7f3
   RNFBApp: 3b942e786ca88524ba17df665a1a360fb3eee525
   RNFBMessaging: b82ba0933288d710f5371f57d3115092abf64903

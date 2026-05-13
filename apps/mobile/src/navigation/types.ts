@@ -23,7 +23,7 @@ export type RootStackParamList = {
   VehicleNotifySearch: undefined;
   VehicleNotifyInbox: undefined;
   NotificationsCenter: undefined;
-  DocumentViewer: { url: string; title?: string };
+  DocumentViewer: { url: string; title?: string; mimeType?: string | null };
 };
 
 export type AuthStackParamList = {
@@ -67,4 +67,5 @@ export type GuardStackParamList = {
   Gate: undefined;
   Scanner: undefined;
   Invitations: undefined;
+  Settings: undefined;
 };

@@ -10,10 +10,13 @@ import { colors, spacing, shadows } from '../../../theme';
 import { visitorStatusPalette } from '../../../theme/semantics';
 import { formatDate } from '../../../utils/formatters';
 import { Icon } from '../../../components/ui/Icon';
+import { Card } from '../../../components/ui/Card';
+import { isRtlLanguage, rowDirectionStyle, textDirectionStyle } from '../../../i18n/direction';
 
 export const InvitationsScreen = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const isDark = useColorScheme() === 'dark';
+  const isRtl = isRtlLanguage(i18n.language);
 
   const { data: visitors = [], isLoading, refetch } = useGetPendingVisitorRequestsQuery();
   const [performAction, { isLoading: isPerforming }] = usePerformVisitorActionMutation();
@@ -30,11 +33,12 @@ export const InvitationsScreen = () => {
   const renderActions = (item: any) => {
     if (item.status === 'allowed') {
       return (
-        <View style={styles.actionRow}>
+        <View style={[styles.actionRow, rowDirectionStyle(isRtl)]}>
           <Button
-            title={t('Security.complete', 'Complete')}
+            title={t('Security.complete')}
             onPress={() => handleAction(item.id, 'complete')}
-            style={[styles.actionBtn, styles.completeBtn, { flex: 1 }]}
+            variant="primary"
+            style={[styles.actionButton, { flex: 1 }]}
             loading={isPerforming}
           />
         </View>
@@ -42,26 +46,28 @@ export const InvitationsScreen = () => {
     }
 
     return (
-      <View style={styles.actionRow}>
+      <View style={[styles.actionRow, rowDirectionStyle(isRtl)]}>
         {item.status !== 'arrived' ? (
           <Button
-            title={t('Security.markArrived', 'Mark Arrived')}
+            title={t('Security.markArrived')}
             onPress={() => handleAction(item.id, 'arrive')}
-            style={[styles.actionBtn, { flex: 1 }]}
+            variant="outline"
+            style={[styles.actionButton, { flex: 1 }]}
             loading={isPerforming}
           />
         ) : null}
         <Button
-          title={t('Security.allow', 'Allow')}
+          title={t('Security.allow')}
           onPress={() => handleAction(item.id, 'allow')}
-          style={[styles.actionBtn, styles.allowBtn, { flex: 1 }]}
+          variant="success"
+          style={[styles.actionButton, { flex: 1 }]}
           loading={isPerforming}
         />
         <Button
           variant="outline"
-          title={t('Security.deny', 'Deny')}
+          title={t('Security.deny')}
           onPress={() => handleAction(item.id, 'deny')}
-          style={[styles.actionBtn, styles.denyBtn, { flex: 1 }]}
+          style={[styles.actionButton, { flex: 1, borderColor: colors.error }]}
           textStyle={{ color: colors.error }}
           loading={isPerforming}
         />
@@ -70,65 +76,57 @@ export const InvitationsScreen = () => {
   };
 
   const renderItem = ({ item }: { item: any }) => (
-    <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: isDark ? colors.surface.dark : colors.surface.light,
-          borderColor: isDark ? colors.border.dark : colors.border.light,
-        },
-      ]}
-    >
-      <View style={styles.cardHeader}>
-        <View style={styles.visitorInfo}>
-          <Typography variant="h3">{item.visitorName}</Typography>
-          <Typography variant="caption" style={styles.unitText}>
-            {item.unit?.unitNumber && `Unit ${item.unit.unitNumber}`}
+    <Card style={{ marginBottom: spacing.md }}>
+      <View style={[styles.cardHeader, rowDirectionStyle(isRtl)]}>
+        <View style={[styles.visitorInfo, textDirectionStyle(isRtl)]}>
+          <Typography variant="h3" style={textDirectionStyle(isRtl)}>{item.visitorName}</Typography>
+          <Typography variant="caption" style={[styles.unitText, textDirectionStyle(isRtl)]}>
+            {item.unit?.unitNumber && t('Apartments.unitNumber', { number: item.unit.unitNumber })}
             {item.unit?.buildingName && ` • ${item.unit.buildingName}`}
           </Typography>
         </View>
         <StatusBadge
-          label={item.status.replace(/_/g, ' ')}
+          label={t(`Common.statuses.${item.status}`, { defaultValue: item.status.replace(/_/g, ' ') })}
           backgroundColor={visitorStatusPalette(item.status).background}
           textColor={visitorStatusPalette(item.status).text}
         />
       </View>
 
-      <View style={styles.detailsRow}>
-        <View style={styles.detailItem}>
-          <Typography variant="caption" style={styles.detailLabel}>
-            {t('Security.expected', 'Expected')}
+      <View style={[styles.detailsRow, rowDirectionStyle(isRtl)]}>
+        <View style={[styles.detailItem, textDirectionStyle(isRtl)]}>
+          <Typography variant="caption" style={[styles.detailLabel, textDirectionStyle(isRtl)]}>
+            {t('Security.expected')}
           </Typography>
-          <Typography variant="body" style={styles.detailValue}>
-            {formatDate(item.visitStartsAt)}
+          <Typography variant="body" style={[styles.detailValue, textDirectionStyle(isRtl)]}>
+            {formatDate(item.visitStartsAt, i18n.language === 'ar' ? 'ar-EG' : 'en-US')}
           </Typography>
         </View>
-        <View style={styles.detailItem}>
-          <Typography variant="caption" style={styles.detailLabel}>
-            {t('Security.guests', 'Guests')}
+        <View style={[styles.detailItem, textDirectionStyle(isRtl)]}>
+          <Typography variant="caption" style={[styles.detailLabel, textDirectionStyle(isRtl)]}>
+            {t('Security.guests')}
           </Typography>
-          <Typography variant="body" style={styles.detailValue}>
+          <Typography variant="body" style={[styles.detailValue, textDirectionStyle(isRtl)]}>
             {item.numberOfVisitors || 1}
           </Typography>
         </View>
         {item.sharedAt && (
-          <View style={styles.detailItem}>
-            <Typography variant="caption" style={styles.detailLabel}>
-              {t('Security.shared', 'Shared')}
+          <View style={[styles.detailItem, textDirectionStyle(isRtl)]}>
+            <Typography variant="caption" style={[styles.detailLabel, textDirectionStyle(isRtl)]}>
+              {t('Security.shared')}
             </Typography>
-            <Typography variant="body" style={[styles.detailValue, { color: colors.success }]}>
-              ✓ {formatDate(item.sharedAt)}
+            <Typography variant="body" style={[styles.detailValue, { color: colors.success }, textDirectionStyle(isRtl)]}>
+              ✓ {formatDate(item.sharedAt, i18n.language === 'ar' ? 'ar-EG' : 'en-US')}
             </Typography>
           </View>
         )}
       </View>
 
       {renderActions(item)}
-    </View>
+    </Card>
   );
 
   return (
-    <ScreenContainer withKeyboard={false} style={styles.container}>
+    <ScreenContainer withKeyboard={false}>
       <FlatList
         data={visitors}
         keyExtractor={(item) => item.id}
@@ -139,33 +137,19 @@ export const InvitationsScreen = () => {
           <View style={styles.emptyContainer}>
             <Icon name="visitors" color={colors.primary.light} size={40} />
             <Typography variant="h3" style={styles.emptyTitle}>
-              {t('Security.noPending', 'No Pending Invitations')}
+              {t('Security.noPending')}
             </Typography>
             <Typography variant="caption" style={styles.emptyText}>
-              {t('Security.noPendingDesc', 'All visitors have been processed')}
+              {t('Security.noPendingDesc')}
             </Typography>
           </View>
         }
-        contentContainerStyle={styles.listContent}
       />
     </ScreenContainer>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 0,
-  },
-  listContent: {
-    padding: spacing.md,
-  },
-  card: {
-    padding: spacing.md,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: spacing.md,
-    ...shadows.sm,
-  },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -194,19 +178,10 @@ const styles = StyleSheet.create({
   },
   actionRow: {
     flexDirection: 'row',
-    gap: spacing.sm,
+    gap: spacing.md,
   },
-  actionBtn: {
-    height: 40,
-  },
-  allowBtn: {
-    backgroundColor: colors.success,
-  },
-  completeBtn: {
-    backgroundColor: colors.info,
-  },
-  denyBtn: {
-    borderColor: colors.error,
+  actionButton: {
+    paddingHorizontal: spacing.sm,
   },
   emptyContainer: {
     flex: 1,

@@ -29,16 +29,21 @@ class ApartmentResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        $account = UnitAccount::query()->where('unit_id', $this->id)->first();
-        $outstandingEntries = $account
-            ? LedgerEntry::query()
+        $account = $this->relationLoaded('unitAccount') ? $this->unitAccount : UnitAccount::query()->where('unit_id', $this->id)->first();
+        $outstandingEntries = $account && $account->relationLoaded('ledgerEntries')
+            ? $account->ledgerEntries
+            : ($account ? LedgerEntry::query()
                 ->where('unit_account_id', $account->id)
                 ->whereIn('type', [LedgerEntryType::Charge->value, LedgerEntryType::Penalty->value])
                 ->where('amount', '>', 0)
+                ->whereDoesntHave('paymentAllocations', function ($q): void {
+                    $q->whereHas('paymentSubmission', function ($sq): void {
+                        $sq->whereIn('status', ['submitted', 'under_review', 'approved']);
+                    });
+                })
                 ->latest()
-                ->limit(10)
-                ->get()
-            : collect();
+                ->limit(50)
+                ->get() : collect());
 
         return [
             'id' => $this->id,

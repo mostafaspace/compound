@@ -1,20 +1,22 @@
 import React, { useState } from "react";
 import {
   ActivityIndicator,
-  Modal,
+  FlatList,
   Pressable,
-  ScrollView,
   StyleSheet,
-  Text,
   useColorScheme,
   View,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import { launchImageLibrary } from "react-native-image-picker";
+import { BottomSheet } from "../../../components/ui/BottomSheet";
 import { Button } from "../../../components/ui/Button";
 import { Input } from "../../../components/ui/Input";
-import { colors, radii, shadows, spacing, typography } from "../../../theme";
+import { Typography } from "../../../components/ui/Typography";
+import { colors, radii, spacing, typography } from "../../../theme";
 import { useCreateResidentMutation, useUpdateResidentMutation } from "../../../services/apartments/residentsApi";
 import type { ApartmentDetail, ApartmentResident, UploadFile } from "../../../services/apartments/types";
+import { isRtlLanguage, rowDirectionStyle, textDirectionStyle } from "../../../i18n/direction";
 
 const RELATION_TYPES = ["resident", "tenant", "owner", "representative"] as const;
 
@@ -27,7 +29,9 @@ export function ResidentSheet({
   resident?: ApartmentResident;
   onClose: () => void;
 }) {
+  const { t, i18n } = useTranslation();
   const isDark = useColorScheme() === "dark";
+  const isRtl = isRtlLanguage(i18n.language);
   const [name, setName] = useState(resident?.residentName ?? "");
   const [phone, setPhone] = useState(resident?.residentPhone ?? "");
   const [email, setEmail] = useState(resident?.residentEmail ?? "");
@@ -37,6 +41,29 @@ export function ResidentSheet({
   const [createResident, createState] = useCreateResidentMutation();
   const [updateResident, updateState] = useUpdateResidentMutation();
   const isSaving = createState.isLoading || updateState.isLoading;
+  const renderRelation = ({ item: option }: { item: (typeof RELATION_TYPES)[number] }) => {
+    const selected = option === relation;
+
+    return (
+      <Pressable
+        onPress={() => setRelation(option)}
+        style={[
+          styles.chip,
+          {
+            backgroundColor: selected ? colors.primary[isDark ? "dark" : "light"] : "transparent",
+            borderColor: selected ? colors.primary[isDark ? "dark" : "light"] : colors.border[isDark ? "dark" : "light"],
+          },
+        ]}
+      >
+        <Typography
+          variant="caption"
+          style={{ color: selected ? colors.text.inverse : colors.text.primary[isDark ? "dark" : "light"] }}
+        >
+          {t(`Common.relations.${option}`)}
+        </Typography>
+      </Pressable>
+    );
+  };
 
   const pickPhoto = async () => {
     const result = await launchImageLibrary({ mediaType: "photo", quality: 0.7, selectionLimit: 1 });
@@ -55,7 +82,7 @@ export function ResidentSheet({
 
   const submit = async () => {
     if (!relation) {
-      setError("Choose a relation type.");
+      setError(t("Residents.errors.relationRequired"));
       return;
     }
 
@@ -78,106 +105,75 @@ export function ResidentSheet({
 
       onClose();
     } catch {
-      setError("Could not save resident. Please try again.");
+      setError(t("Residents.errors.saveFailed"));
     }
   };
 
   return (
-    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.backdrop}>
-        <View style={[styles.sheet, { backgroundColor: colors.surface[isDark ? "dark" : "light"] }]}>
-          <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-            <View style={styles.handle} />
-            <Text style={[styles.title, { color: colors.text.primary[isDark ? "dark" : "light"] }]}>
-              {resident ? "Edit resident" : "Add resident"}
-            </Text>
-            <Text style={[styles.subtitle, { color: colors.text.secondary[isDark ? "dark" : "light"] }]}>
-              Non-user residents can be captured with contact details and an optional photo.
-            </Text>
-
-            <Input label="Name" value={name} onChangeText={setName} placeholder="Resident name" />
-            <Input label="Phone" value={phone} onChangeText={setPhone} placeholder="Phone number" keyboardType="phone-pad" />
-            <Input label="Email" value={email} onChangeText={setEmail} placeholder="Email address" keyboardType="email-address" autoCapitalize="none" />
-
-            <Text style={[styles.label, { color: colors.text.secondary[isDark ? "dark" : "light"] }]}>Relation</Text>
-            <View style={styles.chips}>
-              {RELATION_TYPES.map((option) => {
-                const selected = option === relation;
-
-                return (
-                  <Pressable
-                    key={option}
-                    onPress={() => setRelation(option)}
-                    style={[
-                      styles.chip,
-                      {
-                        backgroundColor: selected ? colors.primary[isDark ? "dark" : "light"] : "transparent",
-                        borderColor: selected ? colors.primary[isDark ? "dark" : "light"] : colors.border[isDark ? "dark" : "light"],
-                      },
-                    ]}
-                  >
-                    <Text style={[styles.chipText, { color: selected ? colors.text.inverse : colors.text.primary[isDark ? "dark" : "light"] }]}>
-                      {option}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-
+    <BottomSheet
+      onClose={onClose}
+      header={
+        <>
+          <Typography variant="h2" style={textDirectionStyle(isRtl)}>
+            {resident ? t("Residents.editResident") : t("Residents.addResident")}
+          </Typography>
+          <Typography variant="body" color="secondary" style={[styles.subtitle, textDirectionStyle(isRtl)]}>
+            {t("Residents.nonUserHint")}
+          </Typography>
+        </>
+      }
+      footer={
+        <View>
+          <View style={[styles.actions, rowDirectionStyle(isRtl)]}>
+            <Button title={t("Common.cancel")} variant="ghost" onPress={onClose} disabled={isSaving} style={styles.actionButton} />
             <Button
-              title={photo ? "Photo selected" : "Pick photo"}
-              variant="outline"
-              onPress={pickPhoto}
-              style={styles.photoButton}
+              title={isSaving ? t("Common.saving") : t("Common.save")}
+              onPress={submit}
+              disabled={isSaving}
+              style={styles.actionButton}
             />
+          </View>
 
-            {error ? <Text style={styles.error}>{error}</Text> : null}
-
-            <View style={styles.actions}>
-              <Button title="Cancel" variant="ghost" onPress={onClose} disabled={isSaving} style={styles.actionButton} />
-              <Button
-                title={isSaving ? "Saving..." : "Save"}
-                onPress={submit}
-                disabled={isSaving}
-                style={styles.actionButton}
-              />
-            </View>
-
-            {isSaving ? <ActivityIndicator color={colors.primary[isDark ? "dark" : "light"]} /> : null}
-          </ScrollView>
+          {isSaving ? <ActivityIndicator color={colors.primary[isDark ? "dark" : "light"]} style={styles.loader} /> : null}
         </View>
+      }
+    >
+      <View style={styles.form}>
+        <Input label={t("Residents.fields.name")} value={name} onChangeText={setName} placeholder={t("Residents.fields.namePlaceholder")} />
+        <Input label={t("Residents.fields.phone")} value={phone} onChangeText={setPhone} placeholder={t("Residents.fields.phonePlaceholder")} keyboardType="phone-pad" />
+        <Input label={t("Residents.fields.email")} value={email} onChangeText={setEmail} placeholder={t("Residents.fields.emailPlaceholder")} keyboardType="email-address" autoCapitalize="none" />
+
+        <Typography variant="label" color="secondary" style={[styles.label, textDirectionStyle(isRtl)]}>
+          {t("Residents.fields.relation")}
+        </Typography>
+        <FlatList
+          data={RELATION_TYPES}
+          keyExtractor={(option) => option}
+          renderItem={renderRelation}
+          horizontal
+          inverted={isRtl}
+          scrollEnabled={false}
+          contentContainerStyle={[styles.chips, rowDirectionStyle(isRtl)]}
+        />
+
+        <Button
+          title={photo ? t("Residents.actions.photoSelected") : t("Residents.actions.pickPhoto")}
+          variant="outline"
+          onPress={pickPhoto}
+          style={styles.photoButton}
+        />
+
+        {error ? <Typography variant="caption" style={styles.error}>{error}</Typography> : null}
       </View>
-    </Modal>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    backgroundColor: "rgba(7, 17, 31, 0.58)",
-    flex: 1,
-    justifyContent: "flex-end",
-  },
-  sheet: {
-    borderTopLeftRadius: radii.xl,
-    borderTopRightRadius: radii.xl,
-    maxHeight: "88%",
-    padding: spacing.lg,
-    ...shadows.lg,
-  },
-  handle: {
-    alignSelf: "center",
-    backgroundColor: colors.border.light,
-    borderRadius: radii.pill,
-    height: 4,
-    marginBottom: spacing.md,
-    width: 48,
-  },
-  title: {
-    ...typography.h2,
+  form: {
+    gap: spacing.sm,
   },
   subtitle: {
-    ...typography.body,
-    marginBottom: spacing.lg,
     marginTop: spacing.xs,
   },
   label: {
@@ -206,7 +202,6 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: "row",
     gap: spacing.sm,
-    marginTop: spacing.md,
   },
   actionButton: {
     flex: 1,
@@ -215,5 +210,8 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.error,
     marginTop: spacing.md,
+  },
+  loader: {
+    marginTop: spacing.sm,
   },
 });

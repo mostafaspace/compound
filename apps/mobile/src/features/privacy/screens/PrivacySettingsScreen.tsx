@@ -1,5 +1,5 @@
 import React from "react";
-import { ScrollView, StyleSheet, View, useColorScheme } from "react-native";
+import { FlatList, StyleSheet, View, useColorScheme } from "react-native";
 import { useTranslation } from "react-i18next";
 import type { UserPolicyConsent } from "@compound/contracts";
 import { ScreenContainer } from "../../../components/layout/ScreenContainer";
@@ -19,47 +19,52 @@ export const PrivacySettingsScreen = () => {
 
   const activeConsents = consents.filter((consent: UserPolicyConsent) => !consent.revokedAt);
 
+  const renderConsent = ({ item: consent }: { item: UserPolicyConsent }) => (
+    <View style={[styles.card, { backgroundColor: surface, borderColor: border }]}>
+      <View style={styles.row}>
+        <View style={styles.titleRow}>
+          <View style={styles.iconBadge}>
+            <Icon name="privacy" color={colors.primary.light} size={20} />
+          </View>
+          <Typography variant="h3" style={[styles.title, { color: text }]}>
+            {t(`Privacy.policies.${consent.policyType}`, {
+              defaultValue: consent.policyType.replace(/_/g, " "),
+            })}
+          </Typography>
+        </View>
+        <View style={styles.activeBadge}>
+          <Typography variant="caption" style={styles.activeBadgeText}>
+            {t("Common.active", { defaultValue: "Active" })}
+          </Typography>
+        </View>
+      </View>
+      <Typography variant="caption" style={styles.mutedText}>
+        {t("Privacy.version", { defaultValue: "Version {{v}}", v: consent.policyVersion })} {"\u2022"}{" "}
+        {new Date(consent.acceptedAt).toLocaleDateString()}
+      </Typography>
+    </View>
+  );
+
   return (
     <ScreenContainer withKeyboard={false}>
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <Typography variant="h2" style={[styles.heading, { color: text }]}>
-          {t("Privacy.consentsHeading", { defaultValue: "Your consents" })}
-        </Typography>
-
-        {isLoading ? (
+      <FlatList
+        data={activeConsents}
+        keyExtractor={(consent) => String(consent.id)}
+        renderItem={renderConsent}
+        contentContainerStyle={styles.scroll}
+        ListHeaderComponent={
+          <Typography variant="h2" style={[styles.heading, { color: text }]}>
+            {t("Privacy.consentsHeading", { defaultValue: "Your consents" })}
+          </Typography>
+        }
+        ListEmptyComponent={isLoading ? (
           <Typography variant="caption">{t("Common.loading")}</Typography>
-        ) : activeConsents.length === 0 ? (
+        ) : (
           <Typography variant="caption">
             {t("Privacy.noConsents", { defaultValue: "No active consents." })}
           </Typography>
-        ) : (
-          activeConsents.map((consent: UserPolicyConsent) => (
-            <View key={consent.id} style={[styles.card, { backgroundColor: surface, borderColor: border }]}>
-              <View style={styles.row}>
-                <View style={styles.titleRow}>
-                  <View style={styles.iconBadge}>
-                    <Icon name="privacy" color={colors.primary.light} size={20} />
-                  </View>
-                  <Typography variant="h3" style={[styles.title, { color: text }]}>
-                    {t(`Privacy.policies.${consent.policyType}`, {
-                      defaultValue: consent.policyType.replace(/_/g, " "),
-                    })}
-                  </Typography>
-                </View>
-                <View style={styles.activeBadge}>
-                  <Typography variant="caption" style={styles.activeBadgeText}>
-                    {t("Common.active", { defaultValue: "Active" })}
-                  </Typography>
-                </View>
-              </View>
-              <Typography variant="caption" style={styles.mutedText}>
-                {t("Privacy.version", { defaultValue: "Version {{v}}", v: consent.policyVersion })} {"\u2022"}{" "}
-                {new Date(consent.acceptedAt).toLocaleDateString()}
-              </Typography>
-            </View>
-          ))
         )}
-      </ScrollView>
+      />
     </ScreenContainer>
   );
 };

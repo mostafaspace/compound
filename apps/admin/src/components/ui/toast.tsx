@@ -37,7 +37,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={{ toast: addToast, success, error }}>
       {children}
-      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] flex flex-col gap-2 w-full max-w-md px-4">
+      <div className="fixed top-4 start-1/2 -translate-x-1/2 z-[9999] flex flex-col gap-2 w-full max-w-md px-4">
         {toasts.map((t) => (
           <div
             key={t.id}
@@ -60,7 +60,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               </svg>
             )}
             <span className="text-sm font-bold">{t.message}</span>
-            <button onClick={() => removeToast(t.id)} className="ml-auto opacity-70 hover:opacity-100 transition-opacity">
+            <button onClick={() => removeToast(t.id)} className="ms-auto opacity-70 hover:opacity-100 transition-opacity">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>

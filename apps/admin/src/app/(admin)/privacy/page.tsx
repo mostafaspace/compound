@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
-import { LogoutButton } from "@/components/logout-button";
 import { getCurrentUser, getDataExportRequests } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
 
@@ -58,7 +57,6 @@ export default async function PrivacyPage() {
             <h1 className="mt-2 text-3xl font-semibold">{t("title")}</h1>
             <p className="mt-2 max-w-2xl text-sm text-muted">{t("subtitle")}</p>
           </div>
-          <LogoutButton />
         </div>
       </header>
 

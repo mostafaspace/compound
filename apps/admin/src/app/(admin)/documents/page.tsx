@@ -1,7 +1,10 @@
+import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
+import { AdminUserPicker } from "@/components/admin-user-picker";
 import { SiteNav } from "@/components/site-nav";
-import { getCurrentUser, getDocuments, getDocumentTypes, getSystemStatus } from "@/lib/api";
+import { getCurrentUser, getDocuments, getDocumentTypes, getSystemStatus, getUsers } from "@/lib/api";
+import { toAdminUserOption } from "@/lib/admin-user-options";
 import { requireAdminUser } from "@/lib/session";
 
 import { reviewDocumentAction, uploadDocumentAction } from "./actions";
@@ -16,12 +19,14 @@ interface DocumentsPageProps {
 
 export default async function DocumentsPage({ searchParams }: DocumentsPageProps) {
   const t = await getTranslations("Documents");
+  const navT = await getTranslations("Navigation");
   await requireAdminUser(getCurrentUser);
   const params = searchParams ? await searchParams : {};
-  const [documentTypes, documents, systemStatus] = await Promise.all([
+  const [documentTypes, documents, systemStatus, users] = await Promise.all([
     getDocumentTypes(),
     getDocuments(),
     getSystemStatus(),
+    getUsers({ perPage: 100, status: "active" }),
   ]);
   const isDegraded = systemStatus?.status !== "ok";
   const uploadDisabled = documentTypes.length === 0;
@@ -53,6 +58,12 @@ export default async function DocumentsPage({ searchParams }: DocumentsPageProps
             <h1 className="text-3xl font-semibold">{t("title")}</h1>
             <p className="mt-2 max-w-2xl text-sm text-muted">{t("subtitle")}</p>
           </div>
+          <Link
+            href="/document-reviews"
+            className="inline-flex h-11 items-center justify-center rounded-lg border border-line bg-background px-4 text-sm font-semibold transition hover:border-brand hover:text-brand"
+          >
+            {navT("documentReviews")}
+          </Link>
         </div>
       </header>
 
@@ -92,10 +103,15 @@ export default async function DocumentsPage({ searchParams }: DocumentsPageProps
                 )}
               </select>
             </label>
-            <label className="text-sm font-medium">
-              {t("fields.userId")}
-              <input className="mt-2 h-11 w-full rounded-lg border border-line px-3" disabled={uploadDisabled} name="userId" type="number" min={1} required />
-            </label>
+            <AdminUserPicker
+              initialUsers={users.map(toAdminUserOption)}
+              label={t("fields.user")}
+              name="userId"
+              placeholder={t("fields.userSearchPlaceholder")}
+              required
+              searchStatus="active"
+              helperText={t("fields.userHelper")}
+            />
             <label className="text-sm font-medium">
               {t("fields.unitId")}
               <input className="mt-2 h-11 w-full rounded-lg border border-line px-3 font-mono text-xs" disabled={uploadDisabled} name="unitId" />
@@ -125,7 +141,7 @@ export default async function DocumentsPage({ searchParams }: DocumentsPageProps
           <div className="border-b border-line px-4 py-3">
             <h2 className="text-lg font-semibold">{t("reviewQueue.title")}</h2>
           </div>
-          <table className="w-full border-collapse text-left text-sm">
+          <table className="w-full border-collapse text-start text-sm">
             <thead className="bg-background text-muted">
               <tr>
                 <th className="px-4 py-3 font-semibold">{t("table.document")}</th>

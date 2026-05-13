@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
-import { LogoutButton } from "@/components/logout-button";
 import { getCurrentUser, getImportBatches, getImportTemplateUrl, getCompounds } from "@/lib/api";
 import { requireAdminUser, getCompoundContext, hasEffectiveRole } from "@/lib/session";
 import type { ImportBatchType } from "@compound/contracts";
@@ -52,7 +51,6 @@ export default async function ImportsPage() {
             <h1 className="mt-2 text-3xl font-semibold">{t("title")}</h1>
             <p className="mt-2 text-sm text-muted">{t("subtitle")}</p>
           </div>
-          <LogoutButton />
         </div>
       </header>
 
@@ -134,7 +132,7 @@ export default async function ImportsPage() {
               <p className="text-sm text-muted">{t("history.empty")}</p>
             ) : (
               <div className="overflow-hidden rounded-lg border border-line bg-panel">
-                <table className="w-full border-collapse text-left text-sm">
+                <table className="w-full border-collapse text-start text-sm">
                   <thead className="bg-background text-muted">
                     <tr>
                       <th className="px-4 py-3 font-semibold">{t("history.filename")}</th>

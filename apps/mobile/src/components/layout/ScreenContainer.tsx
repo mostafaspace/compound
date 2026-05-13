@@ -12,8 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
 import { colors, layout } from '../../theme';
-import { selectLanguagePreference } from '../../store/systemSlice';
-import { appDirectionStyle, isRtlLanguage } from '../../i18n/direction';
+import { appDirectionStyle, useIsRtl } from '../../i18n/direction';
 
 interface ScreenContainerProps {
   children: React.ReactNode;
@@ -33,8 +32,7 @@ export const ScreenContainer: React.FC<ScreenContainerProps> = ({
   edges = DEFAULT_EDGES,
 }) => {
   const isDark = useColorScheme() === 'dark';
-  const language = useSelector(selectLanguagePreference);
-  const isRtl = isRtlLanguage(language);
+  const isRtl = useIsRtl();
   
   const content = (
     <View style={[styles.inner, appDirectionStyle(isRtl), style]}>
@@ -53,7 +51,7 @@ export const ScreenContainer: React.FC<ScreenContainerProps> = ({
           style={styles.flex}
         >
           {scrollable ? (
-            <ScrollView contentContainerStyle={styles.scrollGrow}>
+            <ScrollView contentContainerStyle={[styles.scrollGrow, appDirectionStyle(isRtl)]}>
               {content}
             </ScrollView>
           ) : (
@@ -61,7 +59,7 @@ export const ScreenContainer: React.FC<ScreenContainerProps> = ({
           )}
         </KeyboardAvoidingView>
       ) : scrollable ? (
-        <ScrollView contentContainerStyle={styles.scrollGrow}>
+        <ScrollView contentContainerStyle={[styles.scrollGrow, appDirectionStyle(isRtl)]}>
           {content}
         </ScrollView>
       ) : (

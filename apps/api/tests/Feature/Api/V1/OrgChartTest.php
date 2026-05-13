@@ -300,6 +300,36 @@ class OrgChartTest extends TestCase
         );
     }
 
+    public function test_org_chart_handles_accountless_apartment_residents(): void
+    {
+        $compound = Compound::factory()->create();
+        $admin = User::factory()->create([
+            'role' => UserRole::CompoundAdmin->value,
+            'compound_id' => $compound->id,
+        ]);
+        Sanctum::actingAs($admin);
+
+        $building = Building::factory()->for($compound)->create();
+        $floor = Floor::factory()->for($building)->create();
+        $unit = Unit::factory()->create([
+            'compound_id' => $compound->id,
+            'building_id' => $building->id,
+            'floor_id' => $floor->id,
+        ]);
+
+        ApartmentResident::query()->create([
+            'unit_id' => $unit->id,
+            'user_id' => null,
+            'resident_name' => 'Pending Resident',
+            'relation_type' => UnitRelationType::Owner->value,
+            'verification_status' => VerificationStatus::Pending->value,
+        ]);
+
+        $this->getJson("/api/v1/compounds/{$compound->id}/org-chart")
+            ->assertOk()
+            ->assertJsonPath('data.buildings.0.floors.0.units.0.residents.0.name', 'Pending Resident');
+    }
+
     public function test_org_chart_excludes_admins_only_contacts_from_residents(): void
     {
         $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value]);

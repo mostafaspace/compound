@@ -66,6 +66,7 @@ export async function requireAdminUser(
   allowedRoles: UserRole[] = [
     "super_admin",
     "compound_admin",
+    "president",
     "board_member",
     "finance_reviewer",
     "security_guard",

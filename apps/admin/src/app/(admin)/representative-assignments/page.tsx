@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 
-import { LogoutButton } from "@/components/logout-button";
-import { getCurrentUser, getCompounds } from "@/lib/api";
+import { AdminUserPicker } from "@/components/admin-user-picker";
+import { getCurrentUser, getCompound, getCompounds, getUsers } from "@/lib/api";
+import { toAdminUserOption } from "@/lib/admin-user-options";
 import { hasEffectiveRole } from "@/lib/auth-access";
 import { listAllRepresentativeAssignments } from "@/lib/orgchart-actions";
 import { getCompoundContext, requireAdminUser } from "@/lib/session";
@@ -62,14 +63,16 @@ export default async function OrgChartPage({ searchParams }: OrgChartPageProps) 
   const params = searchParams ? await searchParams : {};
   const isSuperAdmin = hasEffectiveRole(currentUser, "super_admin");
 
-  const [assignments, compounds, activeCompoundId] = await Promise.all([
+  const [assignments, compounds, activeCompoundId, users] = await Promise.all([
     listAllRepresentativeAssignments(),
     getCompounds(),
     getCompoundContext(),
+    getUsers({ perPage: 100, status: "active" }),
   ]);
 
   const defaultCompoundId = activeCompoundId ?? compounds[0]?.id ?? "";
   const activeCompound = compounds.find((compound) => compound.id === defaultCompoundId) ?? compounds[0] ?? null;
+  const activeCompoundDetail = defaultCompoundId ? await getCompound(defaultCompoundId) : null;
   const scopeLabels: ScopeLabels = {
     compound: t("scope.compound"),
     building: (id) => t("scope.building", { id }),
@@ -87,7 +90,6 @@ export default async function OrgChartPage({ searchParams }: OrgChartPageProps) 
             <h1 className="mt-2 text-3xl font-semibold">{t("title")}</h1>
             <p className="mt-1 text-sm text-muted">{t("subtitle")}</p>
           </div>
-          <LogoutButton />
         </div>
       </header>
 
@@ -187,16 +189,15 @@ export default async function OrgChartPage({ searchParams }: OrgChartPageProps) 
             <h3 className="text-base font-semibold">{t("newAssignment")}</h3>
             <input name="compound_id" type="hidden" value={defaultCompoundId} />
             <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              <label className="text-xs font-semibold text-muted">
-                {t("form.userId")}
-                <input
-                  className="mt-1 h-10 w-full rounded-lg border border-line bg-background px-3 text-sm"
-                  name="user_id"
-                  placeholder={t("form.userIdPlaceholder")}
-                  required
-                  type="number"
-                />
-              </label>
+              <AdminUserPicker
+                initialUsers={users.map(toAdminUserOption)}
+                label={t("form.user")}
+                name="user_id"
+                placeholder={t("form.userSearchPlaceholder")}
+                required
+                searchStatus="active"
+                helperText={t("form.userHelper")}
+              />
 
               <label className="text-xs font-semibold text-muted">
                 {t("form.role")}
@@ -216,11 +217,17 @@ export default async function OrgChartPage({ searchParams }: OrgChartPageProps) 
 
               <label className="text-xs font-semibold text-muted">
                 {t("form.scopeId")}
-                <input
+                <select
                   className="mt-1 h-10 w-full rounded-lg border border-line bg-background px-3 text-sm"
                   name="building_id"
-                  placeholder={t("form.scopeIdPlaceholder")}
-                />
+                >
+                  <option value="">{t("form.scopeSelectPlaceholder")}</option>
+                  {(activeCompoundDetail?.buildings ?? []).map((building) => (
+                    <option key={building.id} value={building.id}>
+                      {building.name}
+                    </option>
+                  ))}
+                </select>
               </label>
 
               <label className="text-xs font-semibold text-muted">

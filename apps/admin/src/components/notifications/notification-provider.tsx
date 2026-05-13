@@ -10,6 +10,7 @@ export async function NotificationProvider({ children }: Readonly<{ children: Re
     !canAccessAdmin(user, [
       "super_admin",
       "compound_admin",
+      "president",
       "board_member",
       "finance_reviewer",
       "security_guard",

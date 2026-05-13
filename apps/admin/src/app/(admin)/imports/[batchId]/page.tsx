@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 
-import { LogoutButton } from "@/components/logout-button";
 import { getCurrentUser, getImportBatch } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
 
@@ -39,7 +38,6 @@ export default async function ImportBatchDetailPage({ params }: BatchDetailPageP
             <h1 className="mt-2 text-3xl font-semibold">{t("result.title")}</h1>
             <p className="mt-2 font-mono text-sm text-muted">{batch.originalFilename}</p>
           </div>
-          <LogoutButton />
         </div>
       </header>
 
@@ -101,7 +99,7 @@ export default async function ImportBatchDetailPage({ params }: BatchDetailPageP
             <p className="text-sm text-muted">{t("errors.none")}</p>
           ) : (
             <div className="overflow-hidden rounded-lg border border-line bg-panel">
-              <table className="w-full border-collapse text-left text-sm">
+              <table className="w-full border-collapse text-start text-sm">
                 <thead className="bg-background text-muted">
                   <tr>
                     <th className="px-4 py-3 font-semibold">{t("errors.row")}</th>

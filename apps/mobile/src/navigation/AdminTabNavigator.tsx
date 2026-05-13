@@ -13,6 +13,8 @@ import { ScreenHeader } from '../components/layout/ScreenHeader';
 import { MoreNavigator } from './MoreNavigator';
 import { Icon, type AppIconName } from '../components/ui/Icon';
 
+import { isRtlLanguage } from '../i18n/direction';
+
 const Tab = createBottomTabNavigator<AdminTabParamList>();
 
 const tabIcons: Record<keyof AdminTabParamList, AppIconName> = {
@@ -24,8 +26,9 @@ const tabIcons: Record<keyof AdminTabParamList, AppIconName> = {
 };
 
 export const AdminTabNavigator = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const isDark = useColorScheme() === 'dark';
+  const isRtl = isRtlLanguage(i18n.language);
 
   return (
     <Tab.Navigator
@@ -38,6 +41,8 @@ export const AdminTabNavigator = () => {
           paddingBottom: spacing.sm,
           paddingTop: spacing.xs,
           height: componentSize.tabBar,
+          flexDirection: isRtl ? 'row-reverse' : 'row',
+          direction: isRtl ? 'rtl' : 'ltr',
         },
         headerStyle: {
           backgroundColor: isDark ? colors.surface.dark : colors.surface.light,
@@ -50,8 +55,10 @@ export const AdminTabNavigator = () => {
           fontWeight: '700',
           fontSize: 18,
           color: isDark ? colors.text.primary.dark : colors.text.primary.light,
+          textAlign: 'auto',
         },
-        headerRight: () => <NotificationBell />,
+        headerRight: () => isRtl ? null : <NotificationBell />,
+        headerLeft: () => isRtl ? <NotificationBell /> : null,
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: '600',

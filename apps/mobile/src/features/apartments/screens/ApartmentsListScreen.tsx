@@ -4,14 +4,16 @@ import {
   FlatList,
   Pressable,
   StyleSheet,
-  Text,
   useColorScheme,
   View,
 } from "react-native";
+import { Typography } from "../../../components/ui/Typography";
+import { useTranslation } from "react-i18next";
 import { ScreenContainer } from "../../../components/layout/ScreenContainer";
 import { colors, radii, shadows, spacing, typography } from "../../../theme";
 import { useListApartmentsQuery } from "../../../services/apartments/apartmentsApi";
 import type { ApartmentSummary } from "../../../services/apartments/types";
+import { isRtlLanguage, rowDirectionStyle, textDirectionStyle } from "../../../i18n/direction";
 
 type ApartmentsListScreenProps = {
   navigation: {
@@ -21,7 +23,9 @@ type ApartmentsListScreenProps = {
 };
 
 export function ApartmentsListScreen({ navigation }: ApartmentsListScreenProps) {
+  const { t, i18n } = useTranslation();
   const isDark = useColorScheme() === "dark";
+  const isRtl = isRtlLanguage(i18n.language);
   const { data = [], isLoading, refetch } = useListApartmentsQuery();
 
   useEffect(() => {
@@ -40,16 +44,16 @@ export function ApartmentsListScreen({ navigation }: ApartmentsListScreenProps) 
 
   return (
     <ScreenContainer withKeyboard={false}>
-      <View style={styles.header}>
-        <Text style={[styles.eyebrow, { color: colors.primary[isDark ? "dark" : "light"] }]}>
-          My Apartment(s)
-        </Text>
-        <Text style={[styles.title, { color: colors.text.primary[isDark ? "dark" : "light"] }]}>
-          Choose a unit
-        </Text>
-        <Text style={[styles.subtitle, { color: colors.text.secondary[isDark ? "dark" : "light"] }]}>
-          Residents, vehicles, documents, notes, violations, and finance all live here now.
-        </Text>
+      <View style={[styles.header, textDirectionStyle(isRtl)]}>
+        <Typography variant="label" color="primary">
+          {t("Apartments.listLabel")}
+        </Typography>
+        <Typography variant="h1">
+          {t("Apartments.chooseUnit")}
+        </Typography>
+        <Typography variant="body" color="secondary" style={{ marginTop: spacing.xs }}>
+          {t("Apartments.listSubtitle")}
+        </Typography>
       </View>
 
       <FlatList
@@ -62,17 +66,19 @@ export function ApartmentsListScreen({ navigation }: ApartmentsListScreenProps) 
           <ApartmentCard
             apartment={item}
             isDark={isDark}
+            isRtl={isRtl}
             onPress={() => navigation.navigate("ApartmentDetail", { unitId: item.id })}
+            t={t}
           />
         )}
         ListEmptyComponent={
-          <View style={[styles.emptyCard, { backgroundColor: colors.surface[isDark ? "dark" : "light"] }]}>
-            <Text style={[styles.emptyTitle, { color: colors.text.primary[isDark ? "dark" : "light"] }]}>
-              No apartments yet
-            </Text>
-            <Text style={[styles.emptyText, { color: colors.text.secondary[isDark ? "dark" : "light"] }]}>
-              Verified units will appear here after registration is approved.
-            </Text>
+          <View style={[styles.emptyCard, { backgroundColor: colors.surface[isDark ? "dark" : "light"] }, textDirectionStyle(isRtl)]}>
+            <Typography variant="h3">
+              {t("Apartments.noApartments")}
+            </Typography>
+            <Typography variant="body" color="secondary" style={{ marginTop: spacing.xs }}>
+              {t("Apartments.noApartmentsHint")}
+            </Typography>
           </View>
         }
       />
@@ -83,11 +89,15 @@ export function ApartmentsListScreen({ navigation }: ApartmentsListScreenProps) 
 function ApartmentCard({
   apartment,
   isDark,
+  isRtl,
   onPress,
+  t,
 }: {
   apartment: ApartmentSummary;
   isDark: boolean;
+  isRtl: boolean;
   onPress: () => void;
+  t: any;
 }) {
   const surface = colors.surface[isDark ? "dark" : "light"];
   const text = colors.text.primary[isDark ? "dark" : "light"];
@@ -103,24 +113,28 @@ function ApartmentCard({
         { backgroundColor: surface, borderColor: border, opacity: pressed ? 0.86 : 1 },
       ]}
     >
-      <View style={styles.cardTop}>
-        <View>
-          <Text style={[styles.unitNumber, { color: text }]}>Unit {apartment.unit.unitNumber}</Text>
-          <Text style={[styles.meta, { color: secondary }]}>Status: {apartment.unit.status}</Text>
+      <View style={[styles.cardTop, rowDirectionStyle(isRtl)]}>
+        <View style={textDirectionStyle(isRtl)}>
+          <Typography variant="h2">{t("Apartments.unitNumber", { number: apartment.unit.unitNumber })}</Typography>
+          <Typography variant="caption" color="secondary" style={{ marginTop: spacing.xs }}>
+            {t("Apartments.status", { status: t(`Property.statuses.${apartment.unit.status}`, { defaultValue: apartment.unit.status }) })}
+          </Typography>
         </View>
-        <Text style={[styles.chevron, { color: colors.primary[isDark ? "dark" : "light"] }]}>Open</Text>
+        <Typography variant="label" color="primary" style={styles.chevron}>
+          {t("Apartments.open")}
+        </Typography>
       </View>
 
-      <View style={styles.badges}>
-        <Text style={[styles.badge, { borderColor: border, color: secondary }]}>
-          {apartment.unit.hasVehicle ? "Vehicles" : "No vehicles"}
-        </Text>
-        <Text style={[styles.badge, { borderColor: border, color: secondary }]}>
-          {apartment.unit.hasParking ? "Parking" : "No parking"}
-        </Text>
-        <Text style={[styles.badge, { borderColor: border, color: secondary }]}>
-          Pending violations: {pendingTotal}
-        </Text>
+      <View style={[styles.badges, rowDirectionStyle(isRtl)]}>
+        <Typography variant="caption" color="secondary" style={[styles.badge, { borderColor: border }]}>
+          {t("Apartments.vehicles")}
+        </Typography>
+        <Typography variant="caption" color="secondary" style={[styles.badge, { borderColor: border }]}>
+          {apartment.unit.hasParking ? t("Apartments.parking") : t("Apartments.noParking")}
+        </Typography>
+        <Typography variant="caption" color="secondary" style={[styles.badge, { borderColor: border }]}>
+          {t("Apartments.pendingViolations", { total: pendingTotal })}
+        </Typography>
       </View>
     </Pressable>
   );
@@ -135,15 +149,6 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     marginBottom: spacing.lg,
   },
-  eyebrow: {
-    ...typography.label,
-  },
-  title: {
-    ...typography.h1,
-  },
-  subtitle: {
-    ...typography.body,
-  },
   list: {
     gap: spacing.md,
     paddingBottom: spacing.xl,
@@ -155,20 +160,11 @@ const styles = StyleSheet.create({
     ...shadows.md,
   },
   cardTop: {
-    alignItems: "flex-start",
     flexDirection: "row",
     justifyContent: "space-between",
     gap: spacing.md,
   },
-  unitNumber: {
-    ...typography.h2,
-  },
-  meta: {
-    ...typography.caption,
-    marginTop: spacing.xs,
-  },
   chevron: {
-    ...typography.label,
     minHeight: 44,
     paddingTop: spacing.sm,
   },
@@ -179,7 +175,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   badge: {
-    ...typography.caption,
     borderRadius: radii.pill,
     borderWidth: 1,
     paddingHorizontal: spacing.ms,
@@ -188,12 +183,5 @@ const styles = StyleSheet.create({
   emptyCard: {
     borderRadius: radii.xl,
     padding: spacing.lg,
-  },
-  emptyTitle: {
-    ...typography.h3,
-  },
-  emptyText: {
-    ...typography.body,
-    marginTop: spacing.xs,
   },
 });

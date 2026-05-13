@@ -77,6 +77,8 @@ export interface UnitSummary {
   areaSqm?: string | number | null;
   bedrooms: number | null;
   status: UnitStatus;
+  residentName?: string | null;
+  residentsCount?: number;
   createdAt: string | null;
   updatedAt: string | null;
   memberships?: UnitMembership[];

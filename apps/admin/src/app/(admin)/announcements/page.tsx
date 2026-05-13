@@ -11,7 +11,6 @@ import {
   announcementPriorityValues,
   announcementStatusValues,
   announcementTargetTypeValues,
-  userRoleValues,
 } from "@compound/contracts";
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
@@ -21,9 +20,12 @@ import {
   getAnnouncement,
   getAnnouncementAcknowledgements,
   getAnnouncements,
+  getBuilding,
+  getCompound,
+  getCompounds,
   getCurrentUser,
 } from "@/lib/api";
-import { requireAdminUser } from "@/lib/session";
+import { getCompoundContext, requireAdminUser } from "@/lib/session";
 
 import {
   archiveAnnouncementAction,
@@ -31,6 +33,7 @@ import {
   publishAnnouncementAction,
   updateAnnouncementAction,
 } from "./actions";
+import { AnnouncementTargetSelector, type AnnouncementBuildingOption } from "./announcement-target-selector";
 
 interface AnnouncementsPageProps {
   searchParams?: Promise<{
@@ -100,12 +103,8 @@ function fieldId(prefix: string, name: string): string {
   return `${prefix}-${name}`;
 }
 
-function selectedText(announcement: Announcement | null, fallback: string): string {
-  return announcement ? announcement.targetIds.join(", ") : fallback;
-}
-
 export default async function AnnouncementsPage({ searchParams }: AnnouncementsPageProps) {
-  await requireAdminUser(getCurrentUser, [
+  const currentUser = await requireAdminUser(getCurrentUser, [
     "super_admin",
     "compound_admin",
     "board_member",
@@ -119,8 +118,9 @@ export default async function AnnouncementsPage({ searchParams }: AnnouncementsP
   const category = parseCategory(params.category);
   const targetType = parseTargetType(params.targetType);
   const authorId = params.authorId ? Number(params.authorId) : undefined;
+  const scopedCompoundId = (await getCompoundContext()) ?? currentUser.compoundId;
 
-  const [announcements, editingAnnouncement, acknowledgementDetails] = await Promise.all([
+  const [announcements, editingAnnouncement, acknowledgementDetails, compounds] = await Promise.all([
     getAnnouncements({
       authorId: Number.isFinite(authorId) ? authorId : undefined,
       category,
@@ -134,7 +134,25 @@ export default async function AnnouncementsPage({ searchParams }: AnnouncementsP
     }),
     params.edit ? getAnnouncement(params.edit) : Promise.resolve(null),
     params.ack ? getAnnouncementAcknowledgements(params.ack) : Promise.resolve(null),
+    scopedCompoundId ? Promise.resolve([]) : getCompounds(),
   ]);
+  const activeCompoundId = scopedCompoundId ?? compounds[0]?.id ?? "";
+  const activeCompound = activeCompoundId ? await getCompound(activeCompoundId) : null;
+  const buildingDetails = await Promise.all(
+    (activeCompound?.buildings ?? []).map((building) => getBuilding(building.id)),
+  );
+  const targetBuildings: AnnouncementBuildingOption[] = buildingDetails
+    .filter((building): building is NonNullable<typeof building> => building !== null)
+    .map((building) => ({
+      id: building.id,
+      name: building.name,
+      floors: (building.floors ?? []).map((floor) => ({
+        buildingId: building.id,
+        buildingName: building.name,
+        id: floor.id,
+        label: floor.label,
+      })),
+    }));
 
   const composerPrefix = editingAnnouncement ? "edit-announcement" : "new-announcement";
   const composerAction = editingAnnouncement
@@ -345,43 +363,32 @@ export default async function AnnouncementsPage({ searchParams }: AnnouncementsP
                     ))}
                   </select>
                 </label>
-                <label className="text-xs font-semibold text-muted" htmlFor={fieldId(composerPrefix, "target-type")}>
-                  {t("fields.targetType")}
-                  <select
-                    className="mt-1 h-10 w-full rounded-lg border border-line bg-background px-3 text-sm"
-                    defaultValue={editingAnnouncement?.targetType ?? "all"}
-                    id={fieldId(composerPrefix, "target-type")}
-                    name="targetType"
-                  >
-                    {announcementTargetTypeValues.map((value) => (
-                      <option key={value} value={value}>
-                        {t(`targetTypes.${value}`)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <TextInput
-                  defaultValue={selectedText(editingAnnouncement, "")}
-                  id={fieldId(composerPrefix, "target-ids")}
-                  label={t("fields.targetIds")}
-                  name="targetIds"
-                />
-                <label className="text-xs font-semibold text-muted" htmlFor={fieldId(composerPrefix, "target-role")}>
-                  {t("fields.targetRole")}
-                  <select
-                    className="mt-1 h-10 w-full rounded-lg border border-line bg-background px-3 text-sm"
-                    defaultValue={editingAnnouncement?.targetRole ?? ""}
-                    id={fieldId(composerPrefix, "target-role")}
-                    name="targetRole"
-                  >
-                    <option value="">{t("fields.noRole")}</option>
-                    {userRoleValues.map((value) => (
-                      <option key={value} value={value}>
-                        {t(`roles.${value}`)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <div className="md:col-span-2">
+                  <AnnouncementTargetSelector
+                    buildings={targetBuildings}
+                    compoundId={activeCompoundId}
+                    compoundName={activeCompound?.name ?? t("targeting.noCompound")}
+                    defaultTargetIds={editingAnnouncement?.targetIds ?? []}
+                    defaultTargetType={editingAnnouncement?.targetType ?? "compound"}
+                    labels={{
+                      buildings: t("targeting.buildings"),
+                      buildingsHelp: t("targeting.buildingsHelp"),
+                      compound: t("targeting.compound"),
+                      compoundHelp: t("targeting.compoundHelp"),
+                      description: t("targeting.description"),
+                      floors: t("targeting.floors"),
+                      floorsHelp: t("targeting.floorsHelp"),
+                      noBuildings: t("targeting.noBuildings"),
+                      noFloors: t("targeting.noFloors"),
+                      noMatches: t("targeting.noMatches"),
+                      none: t("targeting.none"),
+                      searchPlaceholder: t("targeting.searchPlaceholder"),
+                      selected: t("targeting.selected"),
+                      title: t("targeting.title"),
+                      unsupported: t("targeting.unsupported"),
+                    }}
+                  />
+                </div>
                 <TextInput
                   defaultValue={toDateTimeLocal(editingAnnouncement?.scheduledAt)}
                   id={fieldId(composerPrefix, "scheduled-at")}

@@ -39,7 +39,21 @@ class VehicleLookupController extends Controller
                     ->orWhere('plate_normalized', 'like', "%{$terms['normalized']}%")
                     ->orWhere('make', 'like', "%{$query}%")
                     ->orWhere('model', 'like', "%{$query}%")
-                    ->orWhere('color', 'like', "%{$query}%");
+                    ->orWhere('color', 'like', "%{$query}%")
+                    ->orWhereHas('unit', function ($unitQuery) use ($query) {
+                        $unitQuery->where('unit_number', 'like', "%{$query}%")
+                            ->orWhereHas('building', fn ($buildingQuery) => $buildingQuery->where('name', 'like', "%{$query}%"))
+                            ->orWhereHas('apartmentResidents', function ($residentQuery) use ($query) {
+                                $residentQuery->where('resident_name', 'like', "%{$query}%")
+                                    ->orWhere('resident_email', 'like', "%{$query}%")
+                                    ->orWhere('resident_phone', 'like', "%{$query}%")
+                                    ->orWhereHas('user', function ($userQuery) use ($query) {
+                                        $userQuery->where('name', 'like', "%{$query}%")
+                                            ->orWhere('email', 'like', "%{$query}%")
+                                            ->orWhere('phone', 'like', "%{$query}%");
+                                    });
+                            });
+                    });
                 if ($terms['lettersAr'] !== '') {
                     $q->orWhere('plate_letters_ar', 'like', "%{$terms['lettersAr']}%");
                 }
@@ -75,7 +89,19 @@ class VehicleLookupController extends Controller
         // 2. Search Recent Visitor Vehicles (last 30 days)
         $visitorVehicles = VisitorRequest::query()
             ->when($compoundId, fn ($q) => $q->whereHas('unit', fn ($u) => $u->where('compound_id', $compoundId)))
-            ->where('vehicle_plate', 'like', "%{$query}%")
+            ->whereNotNull('vehicle_plate')
+            ->where(function ($q) use ($query) {
+                $q->where('vehicle_plate', 'like', "%{$query}%")
+                    ->orWhereHas('unit', function ($unitQuery) use ($query) {
+                        $unitQuery->where('unit_number', 'like', "%{$query}%")
+                            ->orWhereHas('building', fn ($buildingQuery) => $buildingQuery->where('name', 'like', "%{$query}%"));
+                    })
+                    ->orWhereHas('host', function ($hostQuery) use ($query) {
+                        $hostQuery->where('name', 'like', "%{$query}%")
+                            ->orWhere('email', 'like', "%{$query}%")
+                            ->orWhere('phone', 'like', "%{$query}%");
+                    });
+            })
             ->where('created_at', '>', now()->subDays(30))
             ->with(['unit.building', 'host'])
             ->limit(10)

@@ -6,6 +6,11 @@
       "args": ["mcp-atlassian"],
       "envFile": "${workspaceFolder}/.vscode/mcp.env"
     },
+    "agent-device": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "agent-device@latest", "mcp"]
+    },
     "playwright": {
       "type": "stdio",
       "command": "npx",

@@ -2,8 +2,9 @@ import type { AuditLogEntry, AuditSeverity } from "@compound/contracts";
 import { getLocale, getTranslations } from "next-intl/server";
 import Link from "next/link";
 
+import { AdminPagination } from "@/components/admin-pagination";
 import { SiteNav } from "@/components/site-nav";
-import { getAuditLogs, getCurrentUser } from "@/lib/api";
+import { getAuditLogsPage, getCurrentUser } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
 
 interface AuditLogsPageProps {
@@ -13,6 +14,7 @@ interface AuditLogsPageProps {
     from?: string;
     method?: string;
     module?: string;
+    page?: string;
     q?: string;
     severity?: string;
     to?: string;
@@ -58,20 +60,23 @@ export default async function AuditLogsPage({ searchParams }: AuditLogsPageProps
   await requireAdminUser(getCurrentUser, ["super_admin", "compound_admin", "support_agent"]);
   const params = searchParams ? await searchParams : {};
   const actorId = params.actorId && Number.isInteger(Number(params.actorId)) ? Number(params.actorId) : undefined;
+  const page = params.page && Number.isInteger(Number(params.page)) ? Math.max(1, Number(params.page)) : 1;
   const validSeverities: AuditSeverity[] = ["info", "warning", "critical"];
   const severity = validSeverities.includes(params.severity as AuditSeverity) ? (params.severity as AuditSeverity) : undefined;
 
-  const auditLogs = await getAuditLogs({
+  const auditLogsPage = await getAuditLogsPage({
     action: params.action?.trim() || undefined,
     actorId,
     from: params.from || undefined,
     method: params.method || undefined,
     module: params.module?.trim() || undefined,
-    perPage: 50,
+    page,
+    perPage: 25,
     q: params.q?.trim() || undefined,
     severity,
     to: params.to || undefined,
   });
+  const auditLogs = auditLogsPage.data ?? [];
 
   const t = await getTranslations("AuditLogs");
   const locale = await getLocale();
@@ -159,7 +164,7 @@ export default async function AuditLogsPage({ searchParams }: AuditLogsPageProps
               className="mt-2 h-11 w-full rounded-lg border border-line bg-background px-3 text-sm outline-none focus:border-brand"
               defaultValue={params.q ?? ""}
               name="q"
-              placeholder="Action, path, subject, IP, reason"
+              placeholder={t("searchPlaceholder")}
             />
           </label>
           <label className="text-sm font-semibold">
@@ -168,7 +173,7 @@ export default async function AuditLogsPage({ searchParams }: AuditLogsPageProps
               className="mt-2 h-11 w-full rounded-lg border border-line bg-background px-3 text-sm outline-none focus:border-brand"
               defaultValue={params.action ?? ""}
               name="action"
-              placeholder="documents.user_document_reviewed"
+              placeholder={t("actionPlaceholder")}
             />
           </label>
           <label className="text-sm font-semibold">
@@ -177,7 +182,7 @@ export default async function AuditLogsPage({ searchParams }: AuditLogsPageProps
               className="mt-2 h-11 w-full rounded-lg border border-line bg-background px-3 text-sm outline-none focus:border-brand"
               defaultValue={params.module ?? ""}
               name="module"
-              placeholder="finance"
+              placeholder={t("modulePlaceholder")}
             />
           </label>
           <label className="text-sm font-semibold">
@@ -250,7 +255,13 @@ export default async function AuditLogsPage({ searchParams }: AuditLogsPageProps
           <div className="flex flex-col gap-2 border-b border-line p-4 md:flex-row md:items-center md:justify-between">
             <div>
               <h2 className="text-lg font-semibold">{t("recentActivity")}</h2>
-              <p className="mt-1 text-sm text-muted">{t("showingLatest", { count: auditLogs.length })}</p>
+              <p className="mt-1 text-sm text-muted">
+                {t("paginationSummary", {
+                  from: auditLogsPage.meta.from ?? 0,
+                  to: auditLogsPage.meta.to ?? 0,
+                  total: auditLogsPage.meta.total,
+                })}
+              </p>
             </div>
             <Link className="text-sm font-semibold text-brand hover:text-brand-strong" href="/audit-logs">
               {t("clearFilters")}
@@ -258,18 +269,18 @@ export default async function AuditLogsPage({ searchParams }: AuditLogsPageProps
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1100px] border-collapse text-left text-sm">
+            <table className="w-full min-w-[1500px] border-collapse text-start text-sm">
               <thead className="bg-background text-muted">
                 <tr>
-                  <th className="px-4 py-3 font-semibold">{t("colTime")}</th>
-                  <th className="px-4 py-3 font-semibold">{t("colActor")}</th>
-                  <th className="px-4 py-3 font-semibold">{t("action")}</th>
-                  <th className="px-4 py-3 font-semibold">{t("colSeverity")}</th>
-                  <th className="px-4 py-3 font-semibold">{t("colReason")}</th>
-                  <th className="px-4 py-3 font-semibold">{t("colRequest")}</th>
-                  <th className="px-4 py-3 font-semibold">{t("colSubject")}</th>
-                  <th className="px-4 py-3 font-semibold">{t("colStatus")}</th>
-                  <th className="px-4 py-3 font-semibold">{t("colMetadata")}</th>
+                  <th className="px-4 py-3 text-start font-semibold">{t("colTime")}</th>
+                  <th className="px-4 py-3 text-start font-semibold">{t("colActor")}</th>
+                  <th className="px-4 py-3 text-start font-semibold">{t("action")}</th>
+                  <th className="px-4 py-3 text-start font-semibold">{t("colSeverity")}</th>
+                  <th className="px-4 py-3 text-start font-semibold">{t("colReason")}</th>
+                  <th className="px-4 py-3 text-start font-semibold">{t("colRequest")}</th>
+                  <th className="px-4 py-3 text-start font-semibold">{t("colSubject")}</th>
+                  <th className="px-4 py-3 text-start font-semibold">{t("colStatus")}</th>
+                  <th className="px-4 py-3 text-start font-semibold">{t("colMetadata")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
@@ -282,30 +293,30 @@ export default async function AuditLogsPage({ searchParams }: AuditLogsPageProps
                 ) : (
                   auditLogs.map((entry) => (
                     <tr key={entry.id}>
-                      <td className="px-4 py-4 align-top text-muted">{formatDate(entry.createdAt)}</td>
-                      <td className="px-4 py-4 align-top">
+                      <td className="w-[180px] px-5 py-5 align-top text-muted">{formatDate(entry.createdAt)}</td>
+                      <td className="w-[210px] px-5 py-5 align-top">
                         <div className="font-semibold">{entry.actor?.name ?? t("system")}</div>
                         <div className="text-muted">
                           {entry.actorId ? t("userId", { id: entry.actorId }) : t("noActor")}
                         </div>
                       </td>
-                      <td className="px-4 py-4 align-top">
+                      <td className="w-[240px] px-5 py-5 align-top">
                         <code className="rounded-lg bg-background px-2 py-1 text-xs font-semibold">{entry.action}</code>
                       </td>
-                      <td className="px-4 py-4 align-top">
+                      <td className="w-[120px] px-5 py-5 align-top">
                         <span
                           className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${severityTone(entry.severity)}`}
                         >
                           {severityLabel(entry.severity)}
                         </span>
                       </td>
-                      <td className="px-4 py-4 align-top text-muted">{entry.reason ?? t("noReason")}</td>
-                      <td className="px-4 py-4 align-top">
+                      <td className="w-[180px] px-5 py-5 align-top text-muted">{entry.reason ?? t("noReason")}</td>
+                      <td className="w-[260px] px-5 py-5 align-top">
                         <div className="font-semibold">{entry.method ?? t("na")}</div>
-                        <div className="max-w-xs truncate text-muted">{entry.path ?? t("noPath")}</div>
+                        <div className="max-w-[220px] break-words text-muted">{entry.path ?? t("noPath")}</div>
                         <div className="text-muted">{entry.ipAddress ?? t("noIp")}</div>
                       </td>
-                      <td className="px-4 py-4 align-top">
+                      <td className="w-[190px] px-5 py-5 align-top">
                         {entry.auditableType && entry.auditableId ? (
                           <Link
                             className="text-xs font-semibold text-brand hover:text-brand-strong"
@@ -319,18 +330,43 @@ export default async function AuditLogsPage({ searchParams }: AuditLogsPageProps
                           <span className="text-muted">{t("noSubject")}</span>
                         )}
                       </td>
-                      <td className="px-4 py-4 align-top">
+                      <td className="w-[110px] px-5 py-5 align-top">
                         <span className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${statusTone(entry.statusCode)}`}>
                           {entry.statusCode ?? t("na")}
                         </span>
                       </td>
-                      <td className="px-4 py-4 align-top text-muted">{metadataSummary(entry)}</td>
+                      <td className="w-[180px] px-5 py-5 align-top text-muted">{metadataSummary(entry)}</td>
                     </tr>
                   ))
                 )}
               </tbody>
             </table>
           </div>
+          <AdminPagination
+            basePath="/audit-logs"
+            labels={{
+              first: t("firstPage"),
+              previous: t("previousPage"),
+              next: t("nextPage"),
+              last: t("lastPage"),
+              summary: t("paginationSummary", {
+                from: auditLogsPage.meta.from ?? 0,
+                to: auditLogsPage.meta.to ?? 0,
+                total: auditLogsPage.meta.total,
+              }),
+            }}
+            meta={auditLogsPage.meta}
+            params={{
+              action: params.action?.trim() || undefined,
+              actorId,
+              from: params.from || undefined,
+              method: params.method || undefined,
+              module: params.module?.trim() || undefined,
+              q: params.q?.trim() || undefined,
+              severity,
+              to: params.to || undefined,
+            }}
+          />
         </div>
       </section>
     </main>

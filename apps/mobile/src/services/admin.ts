@@ -39,6 +39,11 @@ export const adminApi = api.injectEndpoints({
       transformResponse: (response: any) => response.data,
       providesTags: ["Admin"],
     }),
+    getFloorsByBuilding: builder.query<any[], string>({
+      query: (buildingId) => `/buildings/${buildingId}/floors`,
+      transformResponse: (response: any) => response.data,
+      providesTags: ["Admin"],
+    }),
     getUnitsByBuilding: builder.query<any[], string>({
       query: (buildingId) => `/buildings/${buildingId}/units`,
       transformResponse: (response: any) => response.data,
@@ -138,6 +143,7 @@ export const adminApi = api.injectEndpoints({
 export const {
   useGetOperationalAnalyticsQuery,
   useGetBuildingsQuery,
+  useLazyGetFloorsByBuildingQuery,
   useGetUnitsByBuildingQuery,
   useGetUnitQuery,
   useGetResidentInvitationsQuery,

@@ -12,6 +12,7 @@ import { PrivacySettingsScreen } from '../features/privacy/screens/PrivacySettin
 import { PollsScreen } from '../features/polls/screens/PollsScreen';
 import { MoreStackParamList } from './types';
 import { ScreenHeader } from '../components/layout/ScreenHeader';
+import { NotificationBell } from '../components/ui/NotificationBell';
 
 const Stack = createStackNavigator<MoreStackParamList>();
 
@@ -32,6 +33,7 @@ export const MoreNavigator = () => {
             <ScreenHeader 
               title={title as string} 
               showBack={route.name !== 'MoreHome'} 
+              rightElement={route.name === 'MoreHome' ? <NotificationBell /> : undefined}
             />
           );
         }

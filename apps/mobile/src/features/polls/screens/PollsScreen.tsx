@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -9,6 +9,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import type { NavigationProp } from '@react-navigation/native';
 import { useGetPollsQuery } from '../../../services/polls';
+import { useTranslation } from 'react-i18next';
 import { colors, layout, radii, shadows, spacing } from '../../../theme';
 import { Typography } from '../../../components/ui/Typography';
 import { ScreenContainer } from '../../../components/layout/ScreenContainer';
@@ -17,21 +18,73 @@ import { pollStatusPalette } from '../../../theme/semantics';
 import type { RootStackParamList } from '../../../navigation/types';
 import type { Poll } from '@compound/contracts';
 import { Icon } from '../../../components/ui/Icon';
+import { isRtlLanguage, rowDirectionStyle, textDirectionStyle } from '../../../i18n/direction';
 
 type PollsNavProp = NavigationProp<RootStackParamList>;
 
 export const PollsScreen = () => {
+  const { t, i18n } = useTranslation();
   const isDark = useColorScheme() === 'dark';
+  const isRtl = isRtlLanguage(i18n.language);
   const navigation = useNavigation<PollsNavProp>();
+  const [page, setPage] = useState(1);
+  const [polls, setPolls] = useState<Poll[]>([]);
 
-  const { data: polls = [], isLoading, refetch } = useGetPollsQuery();
+  const { data: pollPage, isFetching, isLoading, refetch } = useGetPollsQuery({ page, perPage: 20 });
   const mutedText = isDark ? colors.text.secondary.dark : colors.text.secondary.light;
+  const hasMore = Boolean(pollPage && pollPage.meta.current_page < pollPage.meta.last_page);
+
+  useEffect(() => {
+    if (!pollPage) {
+      return;
+    }
+
+    setPolls((current) => {
+      if (pollPage.meta.current_page === 1) {
+        return pollPage.data;
+      }
+
+      const next = [...current];
+      const seenIds = new Set<string>();
+      for (let index = 0; index < current.length; index += 1) {
+        seenIds.add(current[index].id);
+      }
+      for (let index = 0; index < pollPage.data.length; index += 1) {
+        const poll = pollPage.data[index];
+        if (!seenIds.has(poll.id)) {
+          next.push(poll);
+        }
+      }
+
+      return next;
+    });
+  }, [pollPage]);
+
+  const refreshPolls = () => {
+    if (page === 1) {
+      void refetch();
+      return;
+    }
+
+    setPage(1);
+  };
+
+  const loadMorePolls = () => {
+    if (!hasMore || isFetching) {
+      return;
+    }
+
+    setPage((current) => current + 1);
+  };
 
   const renderPollItem = ({ item }: { item: Poll }) => {
     const statusColor = pollStatusPalette(item.status);
 
     return (
       <Pressable
+        accessibilityHint={t('Polls.openDetailHint', { defaultValue: 'Opens poll details and voting options.' })}
+        accessibilityLabel={t('Polls.openDetailLabel', { title: item.title, defaultValue: `Open poll ${item.title}` })}
+        accessibilityRole="button"
         onPress={() => navigation.navigate('PollDetail', { pollId: item.id })}
         style={({ pressed }) => [
           styles.card,
@@ -41,20 +94,21 @@ export const PollsScreen = () => {
             opacity: pressed ? 0.85 : 1,
           },
         ]}
+        testID={`poll-card-${item.id}`}
       >
         {/* Header row: status badge + poll type chip */}
-        <View style={styles.cardHeader}>
-          <View style={styles.titleRow}>
+        <View style={[styles.cardHeader, rowDirectionStyle(isRtl)]}>
+          <View style={[styles.titleRow, rowDirectionStyle(isRtl)]}>
             <View style={styles.iconBadge}>
               <Icon name="polls" color={colors.primary.light} size={20} />
             </View>
             <View style={styles.titleBlock}>
-              <Typography variant="h3" style={styles.title}>
+              <Typography variant="h3" style={[styles.title, textDirectionStyle(isRtl)]}>
                 {item.title}
               </Typography>
-              <View style={styles.badgeRow}>
+              <View style={[styles.badgeRow, rowDirectionStyle(isRtl)]}>
                 <StatusBadge
-                  label={item.status}
+                  label={t(`Common.statuses.${item.status}`)}
                   backgroundColor={statusColor.background}
                   textColor={statusColor.text}
                 />
@@ -62,6 +116,7 @@ export const PollsScreen = () => {
                   <View
                     style={[
                       styles.typeBadge,
+                      rowDirectionStyle(isRtl),
                       { backgroundColor: item.pollType.color + '22' },
                     ]}
                   >
@@ -89,6 +144,7 @@ export const PollsScreen = () => {
             variant="body"
             style={[
               styles.description,
+              textDirectionStyle(isRtl),
               { color: isDark ? colors.text.secondary.dark : colors.text.secondary.light },
             ]}
             numberOfLines={2}
@@ -98,18 +154,18 @@ export const PollsScreen = () => {
         ) : null}
 
         {/* Footer: eligibility + votes */}
-        <View style={styles.cardFooter}>
+        <View style={[styles.cardFooter, rowDirectionStyle(isRtl)]}>
           <Typography
             variant="caption"
-            style={{ color: mutedText }}
+            style={[{ color: mutedText }, textDirectionStyle(isRtl)]}
           >
-            {item.eligibility.replace(/_/g, ' ')}
+            {t(`Polls.eligibility_${item.eligibility}`, { defaultValue: item.eligibility.replace(/_/g, ' ') })}
           </Typography>
           <Typography
             variant="caption"
-            style={{ color: mutedText }}
+            style={[{ color: mutedText }, textDirectionStyle(isRtl)]}
           >
-            {item.votesCount ?? 0} votes
+            {t('Polls.votes', { count: item.votesCount ?? 0 })}
           </Typography>
         </View>
       </Pressable>
@@ -122,12 +178,14 @@ export const PollsScreen = () => {
         data={polls}
         keyExtractor={(item) => item.id}
         renderItem={renderPollItem}
-        refreshing={isLoading}
-        onRefresh={refetch}
+        refreshing={isLoading || (isFetching && page === 1)}
+        onRefresh={refreshPolls}
+        onEndReached={loadMorePolls}
+        onEndReachedThreshold={0.6}
         ListEmptyComponent={
           <View style={styles.center}>
-            <Typography variant="caption">
-              {isLoading ? 'Loading…' : 'No polls available.'}
+            <Typography variant="caption" style={textDirectionStyle(isRtl)}>
+              {isLoading ? t('Common.loading') : t('Polls.empty')}
             </Typography>
           </View>
         }
@@ -139,24 +197,26 @@ export const PollsScreen = () => {
 
 const styles = StyleSheet.create({
   container: {
-    padding: 0,
+    paddingHorizontal: 0,
+    paddingTop: 0,
   },
   listContent: {
-    padding: layout.screenGutter,
+    paddingHorizontal: layout.screenGutter,
+    paddingTop: spacing.sm,
     paddingBottom: layout.screenBottom,
     flexGrow: 1,
   },
   card: {
-    padding: layout.cardPadding,
-    borderRadius: radii.xl,
+    padding: spacing.ms,
+    borderRadius: radii.lg,
     borderWidth: 1,
-    marginBottom: layout.listGap,
+    marginBottom: spacing.sm,
     ...shadows.sm,
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
   titleRow: {
     flex: 1,
@@ -165,9 +225,9 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   iconBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: radii.md,
+    width: 36,
+    height: 36,
+    borderRadius: radii.sm,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surfaceMuted.light,
@@ -201,7 +261,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   description: {
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
     lineHeight: 20,
   },
   cardFooter: {

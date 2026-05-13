@@ -133,7 +133,7 @@ export const RootNavigator = () => {
               component={AdminInvitationsScreen}
               options={{
                 headerShown: true,
-                header: () => <ScreenHeader title={t("Admin.invitations", { defaultValue: "Invitations" })} />
+                header: () => <ScreenHeader title={t("Admin.invites", { defaultValue: "Invitations" })} />
               }}
             />
             <Stack.Screen
@@ -149,7 +149,7 @@ export const RootNavigator = () => {
               component={AuditLogScreen}
               options={{
                 headerShown: true,
-                header: () => <ScreenHeader title={t("Admin.auditLogs", { defaultValue: "Audit Logs" })} />
+                header: () => <ScreenHeader title={t("Admin.logs", { defaultValue: "Audit Logs" })} />
               }}
             />
             <Stack.Screen
@@ -157,7 +157,7 @@ export const RootNavigator = () => {
               component={AuditLogTimelineScreen}
               options={{
                 headerShown: true,
-                header: () => <ScreenHeader title={t("Admin.timeline", { defaultValue: "Timeline" })} />
+                header: () => <ScreenHeader title={t("Admin.investigationTimeline", { defaultValue: "Timeline" })} />
               }}
             />
             <Stack.Screen
@@ -181,7 +181,7 @@ export const RootNavigator = () => {
               component={VehicleNotifySearchScreen}
               options={{
                 headerShown: true,
-                header: () => <ScreenHeader title="Notify a vehicle" />
+                header: () => <ScreenHeader title={t("VehicleNotify.search", { defaultValue: "Notify a vehicle" })} />
               }}
             />
             <Stack.Screen
@@ -189,7 +189,7 @@ export const RootNavigator = () => {
               component={VehicleNotifyInboxScreen}
               options={{
                 headerShown: true,
-                header: () => <ScreenHeader title="Vehicle messages" />
+                header: () => <ScreenHeader title={t("VehicleNotify.inboxTitle", { defaultValue: "Vehicle messages" })} />
               }}
             />
             <Stack.Screen
@@ -205,7 +205,7 @@ export const RootNavigator = () => {
               component={DocumentViewerScreen}
               options={({ route }) => ({
                 headerShown: true,
-                header: () => <ScreenHeader title={route.params?.title ?? "Document"} />
+                header: () => <ScreenHeader title={route.params?.title ?? t("Documents.viewer", "Document")} />
               })}
             />
           </Stack.Group>

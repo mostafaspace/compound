@@ -7,10 +7,12 @@ import { Typography } from '../../../components/ui/Typography';
 import { colors, layout, spacing } from '../../../theme';
 import { useGetAuditLogTimelineQuery } from '../../../services/admin';
 import { RootStackParamList } from '../../../navigation/types';
+import { isRtlLanguage, rowDirectionStyle, textDirectionStyle } from '../../../i18n/direction';
 
 export const AuditLogTimelineScreen = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const isDark = useColorScheme() === 'dark';
+  const isRtl = isRtlLanguage(i18n.language);
   const route = useRoute<RouteProp<RootStackParamList, 'AuditLogTimeline'>>();
   const { entityType, entityId } = route.params;
 
@@ -20,25 +22,25 @@ export const AuditLogTimelineScreen = () => {
   });
 
   const renderTimelineItem = ({ item, index }: { item: any, index: number }) => (
-    <View style={styles.timelineItem}>
+    <View style={[styles.timelineItem, rowDirectionStyle(isRtl)]}>
       <View style={styles.leftColumn}>
         <View style={[styles.dot, index === 0 && styles.activeDot]} />
         {index < timeline.length - 1 && <View style={styles.line} />}
       </View>
-      <View style={styles.rightColumn}>
-        <Typography variant="body" style={styles.action}>
+      <View style={[styles.rightColumn, { paddingStart: spacing.md }]}>
+        <Typography variant="body" style={[styles.action, textDirectionStyle(isRtl)]}>
           {item.action}
         </Typography>
-        <Typography variant="caption" style={styles.actor}>
-          {item.actorName || t('Common.system', 'System')}
+        <Typography variant="caption" style={[styles.actor, textDirectionStyle(isRtl)]}>
+          {item.actorName || t('Common.roles.system', { defaultValue: 'System' })}
         </Typography>
         {item.reason && (
-          <Typography variant="caption" style={styles.reason}>
+          <Typography variant="caption" style={[styles.reason, textDirectionStyle(isRtl)]}>
             {item.reason}
           </Typography>
         )}
-        <Typography variant="caption" style={styles.timestamp}>
-          {new Date(item.createdAt).toLocaleString()}
+        <Typography variant="caption" style={[styles.timestamp, textDirectionStyle(isRtl)]}>
+          {new Date(item.createdAt).toLocaleString(i18n.language === 'ar' ? 'ar-EG' : 'en-US')}
         </Typography>
       </View>
     </View>
@@ -46,11 +48,11 @@ export const AuditLogTimelineScreen = () => {
 
   return (
     <ScreenContainer edges={['left', 'right', 'bottom']}>
-      <View style={styles.header}>
-        <Typography variant="h2">
-          {t('Admin.investigationTimeline', 'Timeline')}
+      <View style={[styles.header, textDirectionStyle(isRtl)]}>
+        <Typography variant="h2" style={textDirectionStyle(isRtl)}>
+          {t('Admin.investigationTimeline')}
         </Typography>
-        <Typography variant="caption" style={styles.subtitle}>
+        <Typography variant="caption" style={[styles.subtitle, textDirectionStyle(isRtl)]}>
           {entityType} #{entityId}
         </Typography>
       </View>
@@ -67,8 +69,8 @@ export const AuditLogTimelineScreen = () => {
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={
             <View style={styles.center}>
-              <Typography variant="body" style={styles.emptyText}>
-                {t('Admin.noTimelineEvents', 'No history found for this entity')}
+              <Typography variant="body" style={[styles.emptyText, textDirectionStyle(isRtl)]}>
+                {t('Admin.noTimelineEvents')}
               </Typography>
             </View>
           }
@@ -120,7 +122,6 @@ const styles = StyleSheet.create({
   },
   rightColumn: {
     flex: 1,
-    paddingStart: spacing.md,
     paddingBottom: spacing.xl,
   },
   action: {

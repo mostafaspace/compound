@@ -16,13 +16,16 @@ export const financeApi = api.injectEndpoints({
       transformResponse: (response: ApiEnvelope<UnitAccount>) => response.data,
       providesTags: (result, error, id) => [{ type: "UnitAccount", id }],
     }),
-    submitPayment: builder.mutation<void, { accountId: string; body: FormData }>({
+    submitPayment: builder.mutation<void, { accountId: string; body: FormData; unitId?: string }>({
       query: ({ accountId, body }) => ({
         url: `/finance/unit-accounts/${accountId}/payment-submissions`,
         method: "POST",
         body,
       }),
-      invalidatesTags: (result, error, { accountId }) => [{ type: "UnitAccount", id: accountId }],
+      invalidatesTags: (result, error, { accountId, unitId }) => [
+        { type: "UnitAccount", id: accountId },
+        ...(unitId ? [{ type: "ApartmentDetail" as const, id: unitId }] : [{ type: "ApartmentDetail" as const }]),
+      ],
     }),
   }),
 });

@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
-import { LogoutButton } from "@/components/logout-button";
 import { getCurrentUser, getSecurityShifts } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
 
@@ -48,7 +47,6 @@ export default async function SecurityShiftsPage({
             <h1 className="mt-2 text-3xl font-semibold">{t("shifts.title")}</h1>
             <p className="mt-1 text-sm text-muted">{t("shifts.subtitle")}</p>
           </div>
-          <LogoutButton />
         </div>
       </header>
 

@@ -22,13 +22,14 @@ function nullableDate(value: FormDataEntryValue | null): string | null {
   return date ? new Date(date).toISOString() : null;
 }
 
-function targetIdsFromForm(value: FormDataEntryValue | null): string[] | undefined {
-  const ids = String(value ?? "")
-    .split(",")
+function targetIdsFromForm(formData: FormData): string[] | undefined {
+  const ids = formData
+    .getAll("targetIds")
+    .flatMap((value) => String(value ?? "").split(","))
     .map((id) => id.trim())
     .filter(Boolean);
 
-  return ids.length > 0 ? ids : undefined;
+  return ids.length > 0 ? Array.from(new Set(ids)) : undefined;
 }
 
 function announcementPayload(formData: FormData) {
@@ -45,7 +46,7 @@ function announcementPayload(formData: FormData) {
     category: String(formData.get("category") ?? "general") as AnnouncementCategory,
     priority: String(formData.get("priority") ?? "normal") as AnnouncementPriority,
     targetType,
-    targetIds: targetType === "all" || targetType === "role" ? undefined : targetIdsFromForm(formData.get("targetIds")),
+    targetIds: targetType === "all" || targetType === "role" ? undefined : targetIdsFromForm(formData),
     targetRole: targetType === "role" && targetRole ? (targetRole as UserRole) : null,
     requiresVerifiedMembership: formData.get("requiresVerifiedMembership") === "1",
     requiresAcknowledgement: formData.get("requiresAcknowledgement") === "1",

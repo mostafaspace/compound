@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Cache;
 
 class OrgChartService
 {
-    private const CACHE_SCHEMA_VERSION = 2;
+    private const CACHE_SCHEMA_VERSION = 3;
 
     /**
      * @var list<UserRole>
@@ -78,10 +78,10 @@ class OrgChartService
                                     'id' => $u->id,
                                     'unitNumber' => $u->unit_number,
                                     'residents' => $u->apartmentResidents->map(fn ($m) => [
-                                        'id' => $m->user->id,
-                                        'name' => $m->user->name,
-                                        'photoUrl' => $m->user->photo_url,
-                                    ])->values()->all(),
+                                        'id' => $m->user?->id ?? $m->id,
+                                        'name' => $m->user?->name ?? $m->resident_name ?? "Resident #{$m->id}",
+                                        'photoUrl' => $m->user?->photo_url ?? $m->photo_path,
+                                    ])->filter(fn ($resident) => filled($resident['name']))->values()->all(),
                                 ])->values()->all(),
                             ];
                         })->values()->all();

@@ -8,16 +8,19 @@ import { Typography } from '../../../components/ui/Typography';
 import { colors, spacing, shadows } from '../../../theme';
 import { useGetAuditLogsQuery } from '../../../services/admin';
 import { RootStackParamList } from '../../../navigation/types';
+import { isRtlLanguage, rowDirectionStyle, textDirectionStyle } from '../../../i18n/direction';
 
 const SEVERITY_COLORS: Record<string, string> = {
   info: colors.info,
   warning: colors.warning,
   critical: colors.error,
 };
+const SEVERITY_FILTERS = ['info', 'warning', 'critical'] as const;
 
 export const AuditLogScreen = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const isDark = useColorScheme() === 'dark';
+  const isRtl = isRtlLanguage(i18n.language);
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   
   const [search, setSearch] = useState('');
@@ -40,36 +43,56 @@ export const AuditLogScreen = () => {
         }
       }}
     >
-      <View style={styles.cardHeader}>
-        <View style={[styles.severityDot, { backgroundColor: SEVERITY_COLORS[item.severity] ?? colors.text.secondary.light }]} />
-        <Typography variant="body" style={styles.action}>
+      <View style={[styles.cardHeader, rowDirectionStyle(isRtl)]}>
+        <View style={[styles.severityDot, { backgroundColor: SEVERITY_COLORS[item.severity] ?? colors.text.secondary.light }, { marginEnd: 8 }]} />
+        <Typography variant="body" style={[styles.action, textDirectionStyle(isRtl)]}>
           {item.action}
         </Typography>
-        <Typography variant="caption" style={styles.time}>
-          {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        <Typography variant="caption" style={[styles.time, textDirectionStyle(isRtl)]}>
+          {new Date(item.createdAt).toLocaleTimeString(i18n.language === 'ar' ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
         </Typography>
       </View>
       
-      <Typography variant="caption" style={styles.actor}>
-        {t('Admin.actor', 'Actor')}: {item.actorName || t('Common.system', 'System')}
+      <Typography variant="caption" style={[styles.actor, textDirectionStyle(isRtl)]}>
+        {t('Admin.actor')}: {item.actorName || t('Common.roles.system', { defaultValue: 'System' })}
       </Typography>
 
       {item.reason && (
-        <Typography variant="caption" style={styles.reason} numberOfLines={1}>
+        <Typography variant="caption" style={[styles.reason, textDirectionStyle(isRtl)]} numberOfLines={1}>
           "{item.reason}"
         </Typography>
       )}
 
-      <View style={styles.cardFooter}>
-        <Typography variant="caption" style={styles.date}>
-          {new Date(item.createdAt).toLocaleDateString()}
+      <View style={[styles.cardFooter, rowDirectionStyle(isRtl)]}>
+        <Typography variant="caption" style={[styles.date, textDirectionStyle(isRtl)]}>
+          {new Date(item.createdAt).toLocaleDateString(i18n.language === 'ar' ? 'ar-EG' : 'en-US')}
         </Typography>
         {item.auditableType && (
-          <Typography variant="caption" style={styles.entity}>
+          <Typography variant="caption" style={[styles.entity, textDirectionStyle(isRtl)]}>
             {item.auditableType} #{item.auditableId}
           </Typography>
         )}
       </View>
+    </TouchableOpacity>
+  );
+  const renderSeverityFilter = ({ item: sev }: { item: (typeof SEVERITY_FILTERS)[number] }) => (
+    <TouchableOpacity
+      style={[
+        styles.sevBtn,
+        severityFilter === sev && { backgroundColor: SEVERITY_COLORS[sev] + '20', borderColor: SEVERITY_COLORS[sev] }
+      ]}
+      onPress={() => setSeverityFilter(severityFilter === sev ? null : sev)}
+    >
+      <Typography
+        variant="label"
+        style={[
+          styles.sevBtnText,
+          { color: severityFilter === sev ? SEVERITY_COLORS[sev] : '#94a3b8' },
+          textDirectionStyle(isRtl)
+        ]}
+      >
+        {t(`Common.statuses.${sev}`, { defaultValue: sev.toUpperCase() })}
+      </Typography>
     </TouchableOpacity>
   );
 
@@ -80,34 +103,22 @@ export const AuditLogScreen = () => {
           style={[styles.searchInput, { 
             backgroundColor: isDark ? '#1e293b' : '#f1f5f9',
             color: isDark ? '#f8fafc' : '#0f172a'
-          }]}
-          placeholder={t('Admin.searchLogs', 'Search logs...')}
+          }, textDirectionStyle(isRtl)]}
+          placeholder={t('Admin.searchLogs')}
           placeholderTextColor="#94a3b8"
           value={search}
           onChangeText={setSearch}
+          textAlign={isRtl ? 'right' : 'left'}
         />
-        <View style={styles.severityFilters}>
-          {['info', 'warning', 'critical'].map((sev) => (
-            <TouchableOpacity
-              key={sev}
-              style={[
-                styles.sevBtn,
-                severityFilter === sev && { backgroundColor: SEVERITY_COLORS[sev] + '20', borderColor: SEVERITY_COLORS[sev] }
-              ]}
-              onPress={() => setSeverityFilter(severityFilter === sev ? null : sev)}
-            >
-              <Typography 
-                variant="label" 
-                style={[
-                  styles.sevBtnText, 
-                  { color: severityFilter === sev ? SEVERITY_COLORS[sev] : '#94a3b8' }
-                ]}
-              >
-                {sev.toUpperCase()}
-              </Typography>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <FlatList
+          data={SEVERITY_FILTERS}
+          keyExtractor={(sev) => sev}
+          renderItem={renderSeverityFilter}
+          horizontal
+          inverted={isRtl}
+          scrollEnabled={false}
+          contentContainerStyle={[styles.severityFilters, rowDirectionStyle(isRtl)]}
+        />
       </View>
 
       <FlatList
@@ -121,8 +132,8 @@ export const AuditLogScreen = () => {
             {isLoading ? (
               <ActivityIndicator color={colors.primary.light} size="large" />
             ) : (
-              <Typography variant="body" style={styles.emptyText}>
-                {t('Admin.noLogs', 'No audit logs found')}
+              <Typography variant="body" style={[styles.emptyText, textDirectionStyle(isRtl)]}>
+                {t('Admin.noLogs')}
               </Typography>
             )}
           </View>

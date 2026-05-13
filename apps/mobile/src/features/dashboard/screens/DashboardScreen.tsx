@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, useColorScheme, Pressable } from 'react-native';
+import { FlatList, View, StyleSheet, useColorScheme, Pressable } from 'react-native';
 import { formatRoleLabel, getPrimaryEffectiveRole } from '@compound/contracts';
 import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
@@ -11,7 +11,7 @@ import { ScreenContainer } from '../../../components/layout/ScreenContainer';
 import { useGetDashboardQuery } from '../../../services/dashboard';
 import { Card } from '../../../components/ui/Card';
 import { Icon, type AppIconName } from '../../../components/ui/Icon';
-import { isRtlLanguage, rowDirectionStyle, textDirectionStyle } from '../../../i18n/direction';
+import { useIsRtl, rowDirectionStyle, textDirectionStyle } from '../../../i18n/direction';
 
 const shortcutRouteMap: Record<string, { screen: string; params?: object }> = {
   '/units/assign': { screen: 'Admin', params: { screen: 'Units' } },
@@ -31,10 +31,18 @@ const shortcutRouteMap: Record<string, { screen: string; params?: object }> = {
   '/governance': { screen: 'Main', params: { screen: 'Polls' } },
 };
 
+type DashboardRow =
+  | { type: 'hero' }
+  | { type: 'attentionHeader' }
+  | { type: 'attentionItem'; item: NonNullable<ReturnType<typeof useGetDashboardQuery>['data']>['attentionItems'][number]; key: string }
+  | { type: 'quickHeader' }
+  | { type: 'shortcutRow'; items: NonNullable<ReturnType<typeof useGetDashboardQuery>['data']>['shortcuts']; key: string }
+  | { type: 'emptyShortcuts' };
+
 export const DashboardScreen = () => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const isDark = useColorScheme() === 'dark';
-  const isRtl = isRtlLanguage(i18n.language);
+  const isRtl = useIsRtl();
   const user = useSelector(selectCurrentUser);
   const navigation = useNavigation<any>();
   const { data: dashboard } = useGetDashboardQuery();
@@ -51,6 +59,14 @@ export const DashboardScreen = () => {
   const primaryRole = getPrimaryEffectiveRole(user);
   const attentionItems = dashboard?.attentionItems ?? [];
   const shortcuts = dashboard?.shortcuts ?? [];
+  const localizeLabel = (label: string) => {
+    if (label === 'Invite Guest') return t('QuickActions.inviteGuest');
+    if (label === 'Report Issue') return t('QuickActions.reportIssue');
+    if (label === 'Polls & Voting') return t('QuickActions.pollsAndVoting');
+    if (label === 'Org Chart') return t('QuickActions.orgChart');
+    return label;
+  };
+
   const shortcutIcon = (route: string): AppIconName => {
     if (route.includes('visitor')) return 'visitors';
     if (route.includes('apartment') || route.includes('property') || route.includes('finance') || route.includes('document')) return 'building';
@@ -62,71 +78,158 @@ export const DashboardScreen = () => {
     return 'dashboard';
   };
 
-  return (
-    <ScreenContainer scrollable>
-      <Card style={styles.hero}>
-        <View style={[styles.heroTop, rowDirectionStyle(isRtl)]}>
-          <View style={styles.heroIcon}>
-            <Icon name="building" color={colors.primary.light} size={26} />
+  const rows: DashboardRow[] = [{ type: 'hero' }];
+
+  if (attentionItems.length > 0) {
+    rows.push({ type: 'attentionHeader' });
+    for (let index = 0; index < attentionItems.length; index += 1) {
+      const item = attentionItems[index];
+      rows.push({ type: 'attentionItem', item, key: item.type + index });
+    }
+  }
+
+  rows.push({ type: 'quickHeader' });
+  if (shortcuts.length === 0) {
+    rows.push({ type: 'emptyShortcuts' });
+  } else {
+    for (let index = 0; index < shortcuts.length; index += 2) {
+      rows.push({
+        type: 'shortcutRow',
+        items: shortcuts.slice(index, index + 2),
+        key: `shortcut-row-${index}`,
+      });
+    }
+  }
+
+  const renderRow = ({ item }: { item: DashboardRow }) => {
+    if (item.type === 'hero') {
+      return (
+        <Card style={styles.hero}>
+          <View style={[styles.heroTop, rowDirectionStyle(isRtl)]}>
+            <View style={styles.heroIcon}>
+              <Icon name="building" color={colors.primary.light} size={26} />
+            </View>
+            <Typography variant="label" style={textDirectionStyle(isRtl)}>{t("Auth.signedIn")}</Typography>
           </View>
-          <Typography variant="label">{t("Auth.signedIn")}</Typography>
-        </View>
-        <Typography variant="h1" style={[styles.heroTitle, textDirectionStyle(isRtl)]}>{user.name}</Typography>
-        <Typography variant="body" style={[styles.heroSubtitle, textDirectionStyle(isRtl)]}>
-          {t(`Common.roles.${primaryRole}`, { defaultValue: formatRoleLabel(primaryRole) })}
-        </Typography>
-      </Card>
-
-      {attentionItems.length > 0 && (
-        <View style={styles.attentionSection}>
-          <Typography variant="h3" style={[styles.sectionTitle, textDirectionStyle(isRtl)]}>
-            {t("Dashboard.needsAttention", { defaultValue: "Needs Your Attention" })}
+          <Typography variant="h1" style={[styles.heroTitle, textDirectionStyle(isRtl)]}>{user.name}</Typography>
+          <Typography variant="body" style={[styles.heroSubtitle, textDirectionStyle(isRtl)]}>
+            {t(`Common.roles.${primaryRole}`)}
           </Typography>
-          {attentionItems.map((item, index) => (
-            <Pressable
-              key={item.type + index}
-              style={[styles.attentionItem, rowDirectionStyle(isRtl), { backgroundColor: isDark ? colors.surface.dark : colors.surface.light, borderColor: isDark ? colors.border.dark : colors.border.light }]}
-              onPress={() => navigateToRoute(item.route)}
-              accessibilityRole="button"
-            >
-              <View style={styles.attentionBadge}>
-                <Typography style={styles.attentionCount}>{item.count}</Typography>
-              </View>
-              <Typography style={[styles.attentionLabel, textDirectionStyle(isRtl)]}>{item.label}</Typography>
-              <Icon name={isRtl ? "chevron-left" : "chevron-right"} color={isDark ? colors.text.secondary.dark : colors.text.secondary.light} size={20} />
-            </Pressable>
-          ))}
-        </View>
-      )}
+        </Card>
+      );
+    }
 
-      <View style={styles.quickActions}>
-        <Typography variant="h3" style={[styles.sectionTitle, textDirectionStyle(isRtl)]}>{t("QuickActions.label")}</Typography>
-        <View style={styles.grid}>
-          {shortcuts.map((shortcut) => (
-            <Pressable
-              key={shortcut.key}
-              style={[styles.widget, { backgroundColor: isDark ? colors.surface.dark : colors.surface.light, borderColor: isDark ? colors.border.dark : colors.border.light }]}
-              onPress={() => navigateToRoute(shortcut.route)}
-              accessibilityRole="button"
-            >
-              <View style={styles.widgetIcon}>
-                <Icon name={shortcutIcon(shortcut.route)} color={colors.primary.light} size={22} />
-              </View>
-              <Typography variant="body" style={[styles.widgetLabel, textDirectionStyle(isRtl)]}>{shortcut.label}</Typography>
-            </Pressable>
-          ))}
-          {shortcuts.length === 0 && (
-            <Typography variant="caption">
-              {t("Dashboard.noShortcuts", { defaultValue: "No quick actions available" })}
-            </Typography>
-          )}
-        </View>
+    if (item.type === 'attentionHeader') {
+      return (
+        <Typography variant="h3" style={[styles.sectionTitle, textDirectionStyle(isRtl)]}>
+          {t("Dashboard.needsAttention")}
+        </Typography>
+      );
+    }
+
+    if (item.type === 'attentionItem') {
+      return (
+        <Pressable
+          style={[styles.attentionItem, rowDirectionStyle(isRtl), { backgroundColor: isDark ? colors.surface.dark : colors.surface.light, borderColor: isDark ? colors.border.dark : colors.border.light }]}
+          onPress={() => navigateToRoute(item.item.route)}
+          accessibilityRole="button"
+        >
+          <View style={[styles.attentionBadge, { marginEnd: spacing.md }]}>
+            <Typography style={styles.attentionCount}>{item.item.count}</Typography>
+          </View>
+          <Typography style={[styles.attentionLabel, textDirectionStyle(isRtl)]}>{item.item.label}</Typography>
+          <Icon name="chevron-right" color={isDark ? colors.text.secondary.dark : colors.text.secondary.light} size={20} />
+        </Pressable>
+      );
+    }
+
+    if (item.type === 'quickHeader') {
+      return (
+        <Typography variant="h3" style={[styles.sectionTitle, styles.quickHeader, textDirectionStyle(isRtl)]}>
+          {t("QuickActions.label")}
+        </Typography>
+      );
+    }
+
+    if (item.type === 'emptyShortcuts') {
+      return (
+        <Typography variant="caption" style={textDirectionStyle(isRtl)}>
+          {t("Dashboard.noShortcuts")}
+        </Typography>
+      );
+    }
+
+    const firstShortcut = item.items[0];
+    const secondShortcut = item.items[1];
+
+    return (
+      <View style={[styles.shortcutRow, rowDirectionStyle(isRtl)]}>
+        <ShortcutCard
+          icon={shortcutIcon(firstShortcut.route)}
+          label={localizeLabel(firstShortcut.label)}
+          onPress={() => navigateToRoute(firstShortcut.route)}
+          isDark={isDark}
+          isRtl={isRtl}
+        />
+        {secondShortcut ? (
+          <ShortcutCard
+            icon={shortcutIcon(secondShortcut.route)}
+            label={localizeLabel(secondShortcut.label)}
+            onPress={() => navigateToRoute(secondShortcut.route)}
+            isDark={isDark}
+            isRtl={isRtl}
+          />
+        ) : (
+          <View style={styles.widgetPlaceholder} />
+        )}
       </View>
+    );
+  };
+
+  return (
+    <ScreenContainer withKeyboard={false}>
+      <FlatList
+        data={rows}
+        keyExtractor={(item, index) => 'key' in item ? item.key : `${item.type}-${index}`}
+        renderItem={renderRow}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+      />
     </ScreenContainer>
   );
 };
 
+function ShortcutCard({
+  icon,
+  label,
+  onPress,
+  isDark,
+  isRtl,
+}: {
+  icon: AppIconName;
+  label: string;
+  onPress: () => void;
+  isDark: boolean;
+  isRtl: boolean;
+}) {
+  return (
+    <Pressable
+      style={[styles.widget, { backgroundColor: isDark ? colors.surface.dark : colors.surface.light, borderColor: isDark ? colors.border.dark : colors.border.light }]}
+      onPress={onPress}
+      accessibilityRole="button"
+    >
+      <View style={styles.widgetIcon}>
+        <Icon name={icon} color={colors.primary.light} size={22} />
+      </View>
+      <Typography variant="body" style={[styles.widgetLabel, textDirectionStyle(isRtl)]}>{label}</Typography>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
+  listContent: {
+    paddingBottom: layout.screenBottom,
+  },
   hero: {
     marginBottom: layout.sectionGap,
   },
@@ -154,9 +257,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     marginBottom: spacing.md,
   },
-  attentionSection: {
-    marginBottom: layout.sectionGap,
-  },
   attentionItem: {
     minHeight: 68,
     flexDirection: 'row',
@@ -174,7 +274,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.palette.red[50],
     alignItems: 'center',
     justifyContent: 'center',
-    marginEnd: spacing.md,
     paddingHorizontal: spacing.sm,
   },
   attentionCount: {
@@ -186,17 +285,16 @@ const styles = StyleSheet.create({
     flex: 1,
     fontWeight: '700',
   },
-  quickActions: {
-    marginBottom: layout.sectionGap,
+  quickHeader: {
+    marginTop: spacing.md,
   },
-  grid: {
+  shortcutRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: layout.cardGap,
+    marginBottom: layout.cardGap,
   },
   widget: {
-    flexGrow: 1,
-    flexBasis: '45%',
+    flex: 1,
     minHeight: 132,
     padding: layout.cardPadding,
     borderRadius: radii.xl,
@@ -212,8 +310,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.surfaceMuted.light,
     marginBottom: spacing.md,
+    alignSelf: 'flex-start',
   },
   widgetLabel: {
     fontWeight: '800',
+  },
+  widgetPlaceholder: {
+    flex: 1,
   },
 });

@@ -19,6 +19,7 @@ import {
   refreshNotificationsAction,
   updateNotificationPreferencesAction,
 } from "@/app/(admin)/notifications/actions";
+import { getNotificationDeepLink } from "@/lib/notification-links";
 import { subscribeToUserNotifications } from "@/lib/realtime-notifications";
 
 interface NotificationCenterProps {
@@ -39,47 +40,6 @@ const categoryIcons: Record<NotificationCategory, string> = {
   vehicles: "M5 4.5h10c.7 0 1.3.4 1.6 1l1.4 3v6.5c0 .3-.2.5-.5.5h-1c-.3 0-.5-.2-.5-.5V14H4v1c0 .3-.2.5-.5.5h-1c-.3 0-.5-.2-.5-.5V8.5l1.4-3c.3-.6.9-1 1.6-1ZM5 9.5a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm10 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2ZM4.5 8h11l-1-2.5h-9L4.5 8Z",
   onboarding: "M10 2a8 8 0 1 0 0 16 8 8 0 0 0 0-16Zm3.5 6.5-4 4-2-2",
 };
-
-function getDeepLinkWeb(
-  metadata: Record<string, unknown> | undefined | null,
-  category: NotificationCategory,
-): string | null {
-  if (!metadata) {
-    return categoryFallbackUrl(category);
-  }
-  const m = metadata as Record<string, unknown>;
-  const dl = m.deep_link as { web?: string } | undefined;
-  if (dl?.web) return dl.web;
-
-  // Infer from common metadata keys
-  const pollId = (m.poll_id ?? m.pollId) as string | number | undefined;
-  if (pollId) return `/polls/${pollId}`;
-  const issueId = (m.issue_id ?? m.issueId) as string | number | undefined;
-  if (issueId) return `/issues/${issueId}`;
-  const visitorRequestId = (m.visitor_request_id ?? m.visitorRequestId) as string | number | undefined;
-  if (visitorRequestId) return `/visitors`;
-  const announcementId = (m.announcement_id ?? m.announcementId) as string | number | undefined;
-  if (announcementId) return `/announcements`;
-  const documentId = (m.document_id ?? m.documentId) as string | number | undefined;
-  if (documentId) return `/documents`;
-  const plate = (m.plate ?? m.vehicle_plate) as string | undefined;
-  if (plate) return `/vehicles?q=${encodeURIComponent(plate)}`;
-
-  return categoryFallbackUrl(category);
-}
-
-function categoryFallbackUrl(category: NotificationCategory): string | null {
-  const map: Partial<Record<NotificationCategory, string>> = {
-    polls: "/polls",
-    issues: "/issues",
-    announcements: "/announcements",
-    documents: "/documents",
-    visitors: "/visitors",
-    finance: "/finance",
-    vehicles: "/vehicles",
-  };
-  return map[category] ?? null;
-}
 
 function BellIcon() {
   return (
@@ -185,17 +145,23 @@ export function NotificationCenter({
       return;
     }
 
-    const subscription = subscribeToUserNotifications(
-      userId,
-      (notification) => {
-        setConnectionState("live");
-        setNotifications((current) => [notification, ...current.filter((item) => item.id !== notification.id)].slice(0, 20));
-        setUnreadCount((current) => current + 1);
-      },
-      () => setConnectionState("polling"),
-    );
+    let subscription: ReturnType<typeof subscribeToUserNotifications> | null = null;
+    const subscriptionTimer = window.setTimeout(() => {
+      subscription = subscribeToUserNotifications(
+        userId,
+        (notification) => {
+          setConnectionState("live");
+          setNotifications((current) => [notification, ...current.filter((item) => item.id !== notification.id)].slice(0, 20));
+          setUnreadCount((current) => current + 1);
+        },
+        () => setConnectionState("polling"),
+      );
+    }, 250);
 
-    return () => subscription?.disconnect();
+    return () => {
+      window.clearTimeout(subscriptionTimer);
+      subscription?.disconnect();
+    };
   }, [isPublicPage, userId]);
 
   if (isPublicPage) {
@@ -222,7 +188,7 @@ export function NotificationCenter({
     if (!notification.readAt) {
       markRead(notification.id);
     }
-    const target = getDeepLinkWeb(notification.metadata, notification.category);
+    const target = getNotificationDeepLink(notification.metadata, notification.category);
     if (target) {
       setIsOpen(false);
       router.push(target);
@@ -344,7 +310,7 @@ export function NotificationCenter({
             {visibleNotifications.length > 0 ? (
               <ul className="divide-y divide-line">
                 {visibleNotifications.map((notification) => {
-                  const hasDeepLink = !!getDeepLinkWeb(notification.metadata, notification.category);
+                  const hasDeepLink = !!getNotificationDeepLink(notification.metadata, notification.category);
                   return (
                   <li key={notification.id}>
                     <div

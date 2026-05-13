@@ -60,7 +60,7 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
           <div className="border-b border-line px-4 py-3">
             <h2 className="text-lg font-semibold">{t("floors")}</h2>
           </div>
-          <table className="w-full border-collapse text-left text-sm">
+          <table className="w-full border-collapse text-start text-sm">
             <thead className="bg-background text-muted">
               <tr>
                 <th className="px-4 py-3 font-semibold">{t("label")}</th>
@@ -105,7 +105,7 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
           <div className="border-b border-line px-4 py-3">
             <h2 className="text-lg font-semibold">{t("units")}</h2>
           </div>
-          <table className="w-full border-collapse text-left text-sm">
+          <table className="w-full border-collapse text-start text-sm">
             <thead className="bg-background text-muted">
               <tr>
                 <th className="px-4 py-3 font-semibold">{t("unit")}</th>

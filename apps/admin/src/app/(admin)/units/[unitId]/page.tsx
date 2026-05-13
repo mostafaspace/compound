@@ -197,7 +197,7 @@ export default async function UnitDetailPage({ params, searchParams }: UnitDetai
             <h2 className="text-lg font-semibold">{t("unitMemberships")}</h2>
             <p className="mt-1 text-sm text-muted">{t("unitDetail.memberships.description")}</p>
           </div>
-          <table className="w-full border-collapse text-left text-sm">
+          <table className="w-full border-collapse text-start text-sm">
             <thead className="bg-background text-muted">
               <tr>
                 <th className="px-4 py-3 font-semibold">{t("user")}</th>
@@ -306,7 +306,7 @@ export default async function UnitDetailPage({ params, searchParams }: UnitDetai
                               <p className="font-medium text-foreground">{t("unitDetail.editor.operatorNoteTitle")}</p>
                               <p className="mt-1 text-muted">
                                 {t("unitDetail.editor.operatorNotePrefix")}{" "}
-                                <Link className="ml-1 font-semibold text-brand hover:text-brand-strong" href="/units/assign">
+                                <Link className="ms-1 font-semibold text-brand hover:text-brand-strong" href="/units/assign">
                                   {t("assignApartment.title")}
                                 </Link>
                                 {t("unitDetail.editor.operatorNoteSuffix")}
@@ -414,7 +414,7 @@ export default async function UnitDetailPage({ params, searchParams }: UnitDetai
             <p className="font-medium text-foreground">{t("unitDetail.invitePanel.title")}</p>
             <p className="mt-1 text-muted">
               {t("unitDetail.invitePanel.descriptionPrefix")}{" "}
-              <Link className="ml-1 font-semibold text-brand hover:text-brand-strong" href="/units/assign">
+              <Link className="ms-1 font-semibold text-brand hover:text-brand-strong" href="/units/assign">
                 {t("unitDetail.invitePanel.assignInstead")}
               </Link>
               {t("unitDetail.invitePanel.descriptionSuffix")}

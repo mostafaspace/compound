@@ -21,6 +21,11 @@ export async function createRepresentativeAssignmentAction(formData: FormData) {
   const endsAt = String(formData.get("ends_at") ?? "").trim();
   const notes = String(formData.get("notes") ?? "").trim();
   const resolvedCompoundId = compoundId || (await getCompoundContext());
+  const userId = Number(userIdRaw);
+
+  if (!Number.isInteger(userId) || userId <= 0) {
+    throw new Error("Choose a representative before saving.");
+  }
 
   if (!resolvedCompoundId) {
     const compounds = await getCompounds();
@@ -28,7 +33,7 @@ export async function createRepresentativeAssignmentAction(formData: FormData) {
       throw new Error("No compounds found.");
     }
     await createRepresentativeAssignment(compounds[0].id, {
-      userId: Number(userIdRaw),
+      userId,
       role,
       buildingId: buildingId || undefined,
       floorId: floorId || undefined,
@@ -38,7 +43,7 @@ export async function createRepresentativeAssignmentAction(formData: FormData) {
     });
   } else {
     await createRepresentativeAssignment(resolvedCompoundId, {
-      userId: Number(userIdRaw),
+      userId,
       role,
       buildingId: buildingId || undefined,
       floorId: floorId || undefined,

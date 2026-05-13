@@ -33,7 +33,7 @@ import { Icon } from '../../../components/ui/Icon';
 import { uatPersonaEmails, uatPersonaPassword } from '../login-personas';
 import { useGetOwnerRegistrationStatusQuery } from '../../../services/ownerRegistration';
 import type { RootStackParamList } from '../../../navigation/types';
-import { appDirectionStyle, applyNativeDirection, centerTextDirectionStyle, isRtlLanguage, textDirectionStyle } from '../../../i18n/direction';
+import { appDirectionStyle, applyNativeDirection, centerTextDirectionStyle, isRtlLanguage, rowDirectionStyle, textDirectionStyle } from '../../../i18n/direction';
 import { mobilePreferencesService, persistMobilePreferences } from '../../../i18n/preferences';
 
 const PersonaChip = ({
@@ -116,31 +116,8 @@ export const LoginScreen = () => {
     void hydrateOwnerStatus();
   }, []);
 
-  useEffect(() => {
-    const hydratePreferences = async () => {
-      const stored = await Keychain.getGenericPassword({ service: mobilePreferencesService });
-      if (!stored) {
-        return;
-      }
-
-      try {
-        const parsed = JSON.parse(stored.password) as { language?: "en" | "ar"; colorScheme?: "light" | "dark" };
-        if (parsed.language === "en" || parsed.language === "ar") {
-          applyNativeDirection(parsed.language);
-          dispatch(setLanguagePreference(parsed.language));
-          void i18n.changeLanguage(parsed.language);
-        }
-
-        if (parsed.colorScheme === "light" || parsed.colorScheme === "dark") {
-          dispatch(setColorSchemePreference(parsed.colorScheme));
-        }
-      } catch {
-        await Keychain.resetGenericPassword({ service: mobilePreferencesService });
-      }
-    };
-
-    void hydratePreferences();
-  }, [dispatch, i18n]);
+  // Preference hydration is now handled globally in useRestoreSession
+  // to prevent race conditions and ensure consistent behavior across screens.
 
   const persistPreferences = useCallback(async (nextLanguage: "en" | "ar", nextColorScheme: "light" | "dark") => {
     await persistMobilePreferences(nextLanguage, nextColorScheme);
@@ -323,7 +300,7 @@ export const LoginScreen = () => {
           bounces={false}
         >
           <View style={[styles.inner, appDirectionStyle(isArabic)]}>
-              <View style={[styles.loginToggles, isArabic && styles.loginTogglesRtl]}>
+              <View style={[styles.loginToggles, rowDirectionStyle(isArabic), { [isArabic ? 'alignSelf' : 'alignSelf']: isArabic ? 'flex-start' : 'flex-end' }]}>
                 <Pressable
                   onPress={handleToggleLanguage}
                   hitSlop={8}
@@ -481,7 +458,7 @@ export const LoginScreen = () => {
                   accessibilityRole="button"
                   style={[
                     styles.ownerStatusCard,
-                    isArabic && styles.rowReverse,
+                    rowDirectionStyle(isArabic),
                     ownerStatus.status === "approved" ? styles.ownerStatusApproved : ownerStatus.status === "denied" ? styles.ownerStatusDenied : styles.ownerStatusPending,
                   ]}
                 >
@@ -511,7 +488,7 @@ export const LoginScreen = () => {
                 </Pressable>
               ) : null}
 
-              <View style={[styles.footer, isArabic && styles.rowReverse]}>
+              <View style={[styles.footer, rowDirectionStyle(isArabic)]}>
                 <Typography variant="caption" style={styles.footerText}>
                   {t("Auth.noAccount", { defaultValue: "Don't have an account?" })}
                 </Typography>
@@ -552,8 +529,6 @@ const styles = StyleSheet.create({
   },
   loginToggles: {
     flexDirection: 'row',
-    alignSelf: 'flex-end',
-    justifyContent: 'flex-end',
     gap: spacing.xs,
     padding: 4,
     borderRadius: radii.pill,
@@ -561,10 +536,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
     marginBottom: spacing.lg,
-  },
-  loginTogglesRtl: {
-    alignSelf: 'flex-start',
-    flexDirection: 'row-reverse',
   },
   preferenceChip: {
     minHeight: 44,

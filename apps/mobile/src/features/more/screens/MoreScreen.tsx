@@ -1,5 +1,5 @@
 import React from "react";
-import { Pressable, StyleSheet, View, useColorScheme } from "react-native";
+import { FlatList, Pressable, StyleSheet, View, useColorScheme } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { useTranslation } from "react-i18next";
 import { ScreenContainer } from "../../../components/layout/ScreenContainer";
@@ -18,6 +18,13 @@ import { api } from "../../../services/api";
 const authTokenService = "compound.mobile.authToken";
 
 type MoreScreenNavigationProp = StackNavigationProp<MoreStackParamList, "MoreHome">;
+
+type MoreItem = { id: string; label: string; icon: AppIconName; screen: string; show: boolean; rootScreen?: boolean };
+type MoreRow =
+  | { type: "section"; id: string; title: string }
+  | { type: "item"; id: string; item: MoreItem; isFirst: boolean; isLast: boolean }
+  | { type: "logout" }
+  | { type: "spacer" };
 
 export const MoreScreen = ({ navigation }: { navigation: MoreScreenNavigationProp }) => {
   const { t, i18n } = useTranslation();
@@ -41,28 +48,28 @@ export const MoreScreen = ({ navigation }: { navigation: MoreScreenNavigationPro
 
   const sections: Array<{
     title: string;
-    items: Array<{ id: string; label: string; icon: AppIconName; screen: string; show: boolean; rootScreen?: boolean }>;
+    items: MoreItem[];
   }> = [
     {
-      title: t("More.sections.property", "Property & Community"),
+      title: t("More.sections.property"),
       items: [
         {
           id: "announcements",
-          label: t("Announcements.label", "Announcements"),
+          label: t("Announcements.label"),
           icon: "announcements",
           screen: "Announcements",
           show: canViewAnnouncements,
         },
         {
           id: "orgchart",
-          label: t("OrgChart.label", "Org Chart"),
+          label: t("OrgChart.label"),
           icon: "building",
           screen: "OrgChart",
           show: canViewOrgChart,
         },
         {
           id: "polls",
-          label: t("Polls.label", "Polls"),
+          label: t("Polls.label"),
           icon: "polls",
           screen: "Polls",
           show: canViewPolls && isAdmin,
@@ -70,11 +77,11 @@ export const MoreScreen = ({ navigation }: { navigation: MoreScreenNavigationPro
       ],
     },
     {
-      title: t("More.sections.vehicles", "Vehicles"),
+      title: t("More.sections.vehicles"),
       items: [
         {
           id: "notify-vehicle",
-          label: t("Vehicles.notifyOwner", "Notify a vehicle"),
+          label: t("Vehicles.notifyOwner"),
           icon: "visitors",
           screen: "VehicleNotifySearch",
           rootScreen: true,
@@ -82,7 +89,7 @@ export const MoreScreen = ({ navigation }: { navigation: MoreScreenNavigationPro
         },
         {
           id: "vehicle-messages",
-          label: t("Vehicles.inboxLabel", "Vehicle messages"),
+          label: t("Vehicles.inboxLabel"),
           icon: "notifications",
           screen: "VehicleNotifyInbox",
           rootScreen: true,
@@ -91,11 +98,11 @@ export const MoreScreen = ({ navigation }: { navigation: MoreScreenNavigationPro
       ],
     },
     {
-      title: t("More.sections.support", "Support & Feedback"),
+      title: t("More.sections.support"),
       items: [
         {
           id: "issues",
-          label: t("Issues.label", "Issues & Complaints"),
+          label: t("Issues.label"),
           icon: "issues",
           screen: "Issues",
           show: true,
@@ -103,32 +110,32 @@ export const MoreScreen = ({ navigation }: { navigation: MoreScreenNavigationPro
       ],
     },
     {
-      title: t("More.sections.account", "Account & Settings"),
+      title: t("More.sections.account"),
       items: [
         {
           id: "verification",
-          label: t("Verification.label", "Verification Status"),
+          label: t("Verification.label"),
           icon: "id",
           screen: "VerificationStatus",
           show: true,
         },
         {
           id: "notifications",
-          label: t("Notifications.label", "Notifications"),
+          label: t("Notifications.label"),
           icon: "notifications",
           screen: "Notifications",
-          show: true,
+          show: false,
         },
         {
           id: "privacy",
-          label: t("Privacy.label", "Privacy & Consents"),
+          label: t("Privacy.label"),
           icon: "privacy",
           screen: "PrivacySettings",
           show: true,
         },
         {
           id: "settings",
-          label: t("Common.settings", "Settings"),
+          label: t("Common.settings"),
           icon: "settings",
           screen: "Settings",
           show: true,
@@ -137,74 +144,119 @@ export const MoreScreen = ({ navigation }: { navigation: MoreScreenNavigationPro
     },
   ];
 
+  const rows: MoreRow[] = [];
+  for (let sectionIndex = 0; sectionIndex < sections.length; sectionIndex += 1) {
+    const section = sections[sectionIndex];
+    const visibleItems: MoreItem[] = [];
+
+    for (let itemIndex = 0; itemIndex < section.items.length; itemIndex += 1) {
+      const item = section.items[itemIndex];
+      if (item.show) {
+        visibleItems.push(item);
+      }
+    }
+
+    if (visibleItems.length === 0) {
+      continue;
+    }
+
+    rows.push({ type: "section", id: `section-${sectionIndex}`, title: section.title });
+    for (let itemIndex = 0; itemIndex < visibleItems.length; itemIndex += 1) {
+      const item = visibleItems[itemIndex];
+      rows.push({
+        type: "item",
+        id: item.id,
+        item,
+        isFirst: itemIndex === 0,
+        isLast: itemIndex === visibleItems.length - 1,
+      });
+    }
+  }
+  rows.push({ type: "logout" }, { type: "spacer" });
+
+  const renderRow = ({ item }: { item: MoreRow }) => {
+    if (item.type === "section") {
+      return (
+        <Typography variant="label" style={[styles.sectionTitle, textDirectionStyle(isRtl)]}>
+          {item.title}
+        </Typography>
+      );
+    }
+
+    if (item.type === "item") {
+      return (
+        <Pressable
+          onPress={() => {
+            if (item.item.rootScreen) {
+              // Navigate to a screen in the parent root stack
+              navigation.getParent()?.getParent()?.navigate(item.item.screen as never);
+            } else {
+              navigation.navigate(item.item.screen as never);
+            }
+          }}
+          style={({ pressed }) => [
+            styles.menuItem,
+            rowDirectionStyle(isRtl),
+            item.isFirst && styles.firstMenuItem,
+            !item.isLast && styles.borderBottom,
+            item.isLast && styles.lastMenuItem,
+            { borderBottomColor: isDark ? colors.border.dark : colors.border.light, backgroundColor: isDark ? colors.surface.dark : colors.surface.light },
+            pressed && styles.menuItemPressed,
+          ]}
+        >
+          <View style={[styles.row, rowDirectionStyle(isRtl)]}>
+            <View style={[styles.iconBadge, { backgroundColor: isDark ? colors.surfaceMuted.dark : colors.surfaceMuted.light }]}>
+              <Icon name={item.item.icon} color={colors.primary.light} size={22} />
+            </View>
+            <Typography variant="h3" style={[styles.label, textDirectionStyle(isRtl)]}>{item.item.label}</Typography>
+          </View>
+          <Icon name="chevron-right" color={isDark ? colors.text.secondary.dark : colors.text.secondary.light} size={20} />
+        </Pressable>
+      );
+    }
+
+    if (item.type === "logout") {
+      return (
+        <Pressable
+          onPress={handleLogout}
+          style={({ pressed }) => [
+            styles.logoutBtn,
+            rowDirectionStyle(isRtl),
+            { backgroundColor: isDark ? colors.surface.dark : colors.surface.light, borderColor: colors.error },
+            pressed && { opacity: 0.7 },
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel={t('Auth.logout')}
+        >
+          <Icon name="settings" color={colors.error} size={20} />
+          <Typography variant="h3" style={[styles.logoutText, textDirectionStyle(isRtl)]}>
+            {t('Auth.logout')}
+          </Typography>
+        </Pressable>
+      );
+    }
+
+    return <View style={{ height: spacing.xl }} />;
+  };
+
   return (
     <ScreenContainer 
-      scrollable 
       style={styles.container}
+      withKeyboard={false}
     >
-      {sections.map((section, idx) => {
-        const visibleItems = section.items.filter(item => item.show);
-        if (visibleItems.length === 0) return null;
+      <FlatList
+        data={rows}
+        keyExtractor={(item) => {
+          if (item.type === "spacer" || item.type === "logout") {
+            return item.type;
+          }
 
-        return (
-          <View key={idx} style={styles.section}>
-            <Typography variant="label" style={[styles.sectionTitle, textDirectionStyle(isRtl)]}>
-              {section.title}
-            </Typography>
-            <View style={[
-              styles.group,
-              { backgroundColor: isDark ? colors.surface.dark : colors.surface.light }
-            ]}>
-              {visibleItems.map((item, itemIdx) => (
-                <Pressable
-                  key={item.id}
-                  onPress={() => {
-                    if (item.rootScreen) {
-                      // Navigate to a screen in the parent root stack
-                      navigation.getParent()?.getParent()?.navigate(item.screen as never);
-                    } else {
-                      navigation.navigate(item.screen as never);
-                    }
-                  }}
-                  style={({ pressed }) => [
-                    styles.menuItem,
-                    rowDirectionStyle(isRtl),
-                    itemIdx < visibleItems.length - 1 && styles.borderBottom,
-                    { borderBottomColor: isDark ? colors.border.dark : colors.border.light },
-                    pressed && styles.menuItemPressed,
-                  ]}
-                >
-                  <View style={[styles.row, rowDirectionStyle(isRtl)]}>
-                    <View style={[styles.iconBadge, { backgroundColor: isDark ? colors.surfaceMuted.dark : colors.surfaceMuted.light }]}>
-                      <Icon name={item.icon} color={colors.primary.light} size={22} />
-                    </View>
-                    <Typography variant="h3" style={[styles.label, textDirectionStyle(isRtl)]}>{item.label}</Typography>
-                  </View>
-                  <Icon name={isRtl ? "chevron-left" : "chevron-right"} color={isDark ? colors.text.secondary.dark : colors.text.secondary.light} size={20} />
-                </Pressable>
-              ))}
-            </View>
-          </View>
-        );
-      })}
-
-      <Pressable
-        onPress={handleLogout}
-        style={({ pressed }) => [
-          styles.logoutBtn,
-          { backgroundColor: isDark ? colors.surface.dark : colors.surface.light, borderColor: colors.error },
-          pressed && { opacity: 0.7 },
-        ]}
-        accessibilityRole="button"
-        accessibilityLabel={t('Auth.logout', 'Sign out')}
-      >
-        <Icon name="settings" color={colors.error} size={20} />
-        <Typography variant="h3" style={styles.logoutText}>
-          {t('Auth.logout', 'Sign out')}
-        </Typography>
-      </Pressable>
-
-      <View style={{ height: spacing.xl }} />
+          return item.id;
+        }}
+        renderItem={renderRow}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+      />
     </ScreenContainer>
   );
 };
@@ -213,18 +265,12 @@ const styles = StyleSheet.create({
   container: {
     paddingTop: layout.screenTop,
   },
-  section: {
-    marginBottom: layout.sectionGap,
+  listContent: {
+    paddingBottom: layout.screenBottom,
   },
   sectionTitle: {
     marginBottom: spacing.sm,
-  },
-  group: {
-    borderRadius: radii.xl,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: colors.border.light,
-    ...shadows.sm,
+    marginTop: spacing.md,
   },
   menuItem: {
     flexDirection: "row",
@@ -232,9 +278,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: layout.cardPadding,
     minHeight: 72,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderTopWidth: 1,
+    borderColor: colors.border.light,
+    ...shadows.sm,
   },
   borderBottom: {
     borderBottomWidth: 1,
+  },
+  firstMenuItem: {
+    borderTopLeftRadius: radii.xl,
+    borderTopRightRadius: radii.xl,
+  },
+  lastMenuItem: {
+    borderBottomLeftRadius: radii.xl,
+    borderBottomRightRadius: radii.xl,
+    borderBottomWidth: 1,
+    marginBottom: layout.sectionGap,
   },
   menuItemPressed: {
     backgroundColor: 'rgba(0,0,0,0.02)',

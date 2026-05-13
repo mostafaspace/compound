@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
-import { LogoutButton } from "@/components/logout-button";
 import { getCurrentUser, getLaunchReadiness } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
 import type { LaunchCheck } from "@/lib/api";
@@ -179,7 +178,6 @@ export default async function LaunchPage() {
                 {isReady ? "✓ READY FOR LAUNCH" : "✗ NOT READY"}
               </span>
             )}
-            <LogoutButton />
           </div>
         </div>
       </header>

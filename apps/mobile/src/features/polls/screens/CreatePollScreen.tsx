@@ -3,6 +3,7 @@ import {
   View,
   StyleSheet,
   ScrollView,
+  FlatList,
   Platform,
   Alert,
   TouchableOpacity,
@@ -21,9 +22,13 @@ import { colors, spacing } from '../../../theme';
 import { useCreatePollMutation } from '../../../services/polls';
 import { selectCurrentUser } from '../../../store/authSlice';
 import { PollScope, PollEligibility } from '@compound/contracts';
+import { isRtlLanguage, rowDirectionStyle, textDirectionStyle } from '../../../i18n/direction';
+
+const ELIGIBILITY_OPTIONS: PollEligibility[] = ['owners_only', 'owners_and_residents', 'all_verified'];
 
 export const CreatePollScreen = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isRtl = isRtlLanguage(i18n.language);
   const navigation = useNavigation();
   const user = useSelector(selectCurrentUser);
   const [createPoll, { isLoading }] = useCreatePollMutation();
@@ -52,15 +57,53 @@ export const CreatePollScreen = () => {
     setOptions(newOptions);
   };
 
+  const renderOption = ({ item: option, index }: { item: { label: string }; index: number }) => (
+    <View style={[styles.optionRow, rowDirectionStyle(isRtl)]}>
+      <View style={styles.optionInputWrapper}>
+        <Input
+          placeholder={t('Polls.optionN', { n: index + 1, defaultValue: `Option ${index + 1}` })}
+          value={option.label}
+          onChangeText={(text) => updateOption(index, text)}
+        />
+      </View>
+      {options.length > 2 && (
+        <TouchableOpacity
+          onPress={() => removeOption(index)}
+          style={[styles.removeButton, isRtl ? { marginStart: 0, marginEnd: spacing.xs } : { marginStart: spacing.xs, marginEnd: 0 }]}
+        >
+          <Ionicons name="trash-outline" size={24} color={colors.error} />
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+
+  const renderEligibility = ({ item: val }: { item: PollEligibility }) => (
+    <TouchableOpacity
+      onPress={() => setEligibility(val)}
+      style={[
+        styles.chip,
+        eligibility === val && styles.chipActive
+      ]}
+    >
+      <Typography
+        variant="caption"
+        color={eligibility === val ? 'white' : 'primary'}
+        style={textDirectionStyle(isRtl)}
+      >
+        {t(`Polls.eligibility_${val}`, { defaultValue: val.replace('_', ' ') })}
+      </Typography>
+    </TouchableOpacity>
+  );
+
   const handleCreate = async () => {
     if (!title.trim()) {
-      Alert.alert(t('Common.error'), t('Polls.titleRequired', 'Title is required'));
+      Alert.alert(t('Common.error'), t('Polls.titleRequired'));
       return;
     }
 
     const validOptions = options.filter(o => o.label.trim() !== '');
     if (validOptions.length < 2) {
-      Alert.alert(t('Common.error'), t('Polls.optionsRequired', 'At least 2 options are required'));
+      Alert.alert(t('Common.error'), t('Polls.optionsRequired'));
       return;
     }
 
@@ -75,11 +118,11 @@ export const CreatePollScreen = () => {
         compoundId: user?.compoundId || '',
       }).unwrap();
 
-      Alert.alert(t('Common.success'), t('Polls.created', 'Poll created successfully'), [
+      Alert.alert(t('Common.success'), t('Polls.created'), [
         { text: t('Common.ok'), onPress: () => navigation.goBack() }
       ]);
     } catch (error) {
-      Alert.alert(t('Common.error'), t('Polls.createFailed', 'Failed to create poll'));
+      Alert.alert(t('Common.error'), t('Polls.createFailed'));
     }
   };
 
@@ -89,103 +132,80 @@ export const CreatePollScreen = () => {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
-        <Typography variant="h2" style={styles.sectionTitle}>
-          {t('Polls.basicInfo', 'Basic Information')}
+        <Typography variant="h2" style={[styles.sectionTitle, textDirectionStyle(isRtl)]}>
+          {t('Polls.basicInfo')}
         </Typography>
         
         <Card style={styles.card}>
           <Input
-            label={t('Polls.title', 'Poll Title')}
-            placeholder={t('Polls.titlePlaceholder', 'e.g., Annual Compound Meeting Date')}
+            label={t('Polls.title')}
+            placeholder={t('Polls.titlePlaceholder')}
             value={title}
             onChangeText={setTitle}
           />
           <Input
-            label={t('Polls.description', 'Description (Optional)')}
-            placeholder={t('Polls.descriptionPlaceholder', 'Provide details about this poll...')}
+            label={t('Polls.description')}
+            placeholder={t('Polls.descriptionPlaceholder')}
             value={description}
             onChangeText={setDescription}
             multiline
             numberOfLines={3}
-            style={styles.textArea}
+            style={[styles.textArea, textDirectionStyle(isRtl)]}
           />
         </Card>
 
-        <Typography variant="h2" style={styles.sectionTitle}>
-          {t('Polls.options', 'Poll Options')}
+        <Typography variant="h2" style={[styles.sectionTitle, textDirectionStyle(isRtl)]}>
+          {t('Polls.options')}
         </Typography>
 
         <Card style={styles.card}>
-          {options.map((option, index) => (
-            <View key={index} style={styles.optionRow}>
-              <View style={styles.optionInputWrapper}>
-                <Input
-                  placeholder={t('Polls.optionN', { n: index + 1, defaultValue: `Option ${index + 1}` })}
-                  value={option.label}
-                  onChangeText={(text) => updateOption(index, text)}
-                />
-              </View>
-              {options.length > 2 && (
-                <TouchableOpacity 
-                  onPress={() => removeOption(index)}
-                  style={styles.removeButton}
-                >
-                  <Ionicons name="trash-outline" size={24} color={colors.error} />
-                </TouchableOpacity>
-              )}
-            </View>
-          ))}
+          <FlatList
+            data={options}
+            keyExtractor={(_, index) => `poll-option-${index}`}
+            renderItem={renderOption}
+            scrollEnabled={false}
+          />
           
           {options.length < 10 && (
             <Button 
               variant="outline" 
               onPress={addOption}
-              title={t('Polls.addOption', 'Add Option')}
+              title={t('Polls.addOption')}
               style={styles.addOptionButton}
             />
           )}
         </Card>
 
-        <Typography variant="h2" style={styles.sectionTitle}>
-          {t('Polls.settings', 'Targeting & Settings')}
+        <Typography variant="h2" style={[styles.sectionTitle, textDirectionStyle(isRtl)]}>
+          {t('Polls.settings')}
         </Typography>
 
         <Card style={styles.card}>
-          <Typography variant="body" color="secondary" style={styles.label}>
-            {t('Polls.eligibility', 'Who can vote?')}
+          <Typography variant="body" color="secondary" style={[styles.label, textDirectionStyle(isRtl)]}>
+            {t('Polls.eligibility')}
           </Typography>
-          <View style={styles.chipContainer}>
-            {(['owners_only', 'owners_and_residents', 'all_verified'] as PollEligibility[]).map((val) => (
-              <TouchableOpacity
-                key={val}
-                onPress={() => setEligibility(val)}
-                style={[
-                  styles.chip,
-                  eligibility === val && styles.chipActive
-                ]}
-              >
-                <Typography 
-                  variant="caption" 
-                  color={eligibility === val ? 'white' : 'primary'}
-                >
-                  {t(`Polls.eligibility_${val}`, val.replace('_', ' '))}
-                </Typography>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <FlatList
+            data={ELIGIBILITY_OPTIONS}
+            keyExtractor={(val) => val}
+            renderItem={renderEligibility}
+            horizontal
+            inverted={isRtl}
+            scrollEnabled={false}
+            contentContainerStyle={[styles.chipContainer, rowDirectionStyle(isRtl)]}
+          />
 
           <View style={styles.divider} />
 
           <TouchableOpacity 
             onPress={() => setShowDatePicker(true)}
-            style={styles.datePickerToggle}
+            style={[styles.datePickerToggle, rowDirectionStyle(isRtl)]}
           >
-            <View>
-              <Typography variant="body" color="secondary">
-                {t('Polls.endDate', 'Closing Date')}
+            <View style={textDirectionStyle(isRtl)}>
+              <Typography variant="body" color="secondary" style={textDirectionStyle(isRtl)}>
+                {t('Polls.endDate')}
               </Typography>
-              <Typography variant="body">
-                {endsAt.toLocaleDateString()} {endsAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              <Typography variant="body" style={textDirectionStyle(isRtl)}>
+                {endsAt.toLocaleDateString(i18n.language === 'ar' ? 'ar-EG' : 'en-US')} {endsAt.toLocaleTimeString(i18n.language === 'ar' ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
               </Typography>
             </View>
             <Ionicons name="calendar-outline" size={24} color={colors.primary.main} />
@@ -209,7 +229,7 @@ export const CreatePollScreen = () => {
           variant="primary"
           onPress={handleCreate}
           loading={isLoading}
-          title={t('Polls.createPoll', 'Create Poll')}
+          title={t('Polls.createPoll')}
           style={styles.submitButton}
         />
       </ScrollView>
@@ -229,7 +249,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     marginTop: spacing.lg,
     marginBottom: spacing.sm,
-    marginLeft: spacing.xs,
+    marginStart: spacing.xs,
   },
   card: {
     padding: spacing.md,
@@ -248,7 +268,7 @@ const styles = StyleSheet.create({
   },
   removeButton: {
     padding: spacing.sm,
-    marginLeft: spacing.xs,
+    marginStart: spacing.xs,
   },
   addOptionButton: {
     marginTop: spacing.sm,

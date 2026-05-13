@@ -103,6 +103,7 @@ class UnitController extends Controller
         $this->compoundContext->ensureUserCanAccessBuilding($request->user(), $building->id);
 
         $units = $building->units()
+            ->with('apartmentResidents.user')
             ->orderBy('unit_number')
             ->paginate();
 

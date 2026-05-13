@@ -63,11 +63,11 @@ export function PenaltyPointsPanel({ unitId, initialEvents }: PenaltyPointsPanel
           <p className="text-xs text-muted">Tracking rule violations for this apartment.</p>
         </div>
         <div className="flex items-center gap-4">
-          <div className="text-right">
+          <div className="text-end">
             <span className={`text-xl font-bold ${activePoints > 5 ? 'text-danger' : activePoints > 0 ? 'text-warning' : 'text-success'}`}>
               {activePoints}
             </span>
-            <span className="ml-1 text-xs text-muted uppercase font-bold">Active Points</span>
+            <span className="ms-1 text-xs text-muted uppercase font-bold">Active Points</span>
           </div>
           <button 
             onClick={() => setShowModal(true)}

@@ -10,14 +10,16 @@ import { formatDate } from '../../../utils/formatters';
 import { useSelector } from 'react-redux';
 import { selectCurrentUser } from '../../../store/authSlice';
 import { getEffectiveRoleType } from '@compound/contracts';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../../../navigation/types';
 import { Icon } from '../../../components/ui/Icon';
+import { isRtlLanguage, rowDirectionStyle, textDirectionStyle } from '../../../i18n/direction';
 
 export const AnnouncementsScreen = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const isDark = useColorScheme() === 'dark';
+  const isRtl = isRtlLanguage(i18n.language);
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
 
   const user = useSelector(selectCurrentUser);
@@ -29,18 +31,18 @@ export const AnnouncementsScreen = () => {
 
   const renderItem = ({ item }: { item: any }) => (
     <View style={[styles.card, { backgroundColor: isDark ? colors.surface.dark : colors.surface.light, borderColor: isDark ? colors.border.dark : colors.border.light }]}>
-      <View style={styles.titleRow}>
+      <View style={[styles.titleRow, rowDirectionStyle(isRtl)]}>
         <View style={styles.iconBadge}>
           <Icon name="announcements" color={colors.primary.light} size={20} />
         </View>
-        <Typography variant="h3" style={styles.title}>{item.title}</Typography>
+        <Typography variant="h3" style={[styles.title, textDirectionStyle(isRtl)]}>{item.title}</Typography>
       </View>
-      <Typography variant="body" style={styles.content}>{item.content}</Typography>
-      <View style={styles.footer}>
-        <Typography variant="caption">{formatDate(item.createdAt)}</Typography>
+      <Typography variant="body" style={[styles.content, textDirectionStyle(isRtl)]}>{item.content}</Typography>
+      <View style={[styles.footer, rowDirectionStyle(isRtl)]}>
+        <Typography variant="caption" style={textDirectionStyle(isRtl)}>{formatDate(item.createdAt, i18n.language === 'ar' ? 'ar-EG' : 'en-US')}</Typography>
         {item.category && (
           <View style={styles.categoryBadge}>
-            <Typography variant="label" style={styles.categoryText}>{item.category}</Typography>
+            <Typography variant="label" style={[styles.categoryText, textDirectionStyle(isRtl)]}>{item.category}</Typography>
           </View>
         )}
       </View>
@@ -79,7 +81,7 @@ export const AnnouncementsScreen = () => {
       {isAdmin && (
         <View style={styles.fabContainer}>
           <Button
-            title={t("Announcements.create", "New Announcement")}
+            title={t("Announcements.create")}
             onPress={() => navigation.navigate('CreateAnnouncement' as any)}
             style={styles.fab}
             leftIcon="plus"

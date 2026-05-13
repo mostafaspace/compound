@@ -50,6 +50,10 @@ class VisitorRequestController extends Controller
 
     public function index(Request $request): AnonymousResourceCollection
     {
+        $validated = $request->validate([
+            'perPage' => ['nullable', 'integer', 'min:1', 'max:50'],
+        ]);
+
         /** @var User $user */
         $user = $request->user();
         $status = $request->string('status')->toString();
@@ -67,7 +71,7 @@ class VisitorRequestController extends Controller
             })
             ->tap(fn ($query) => $this->compoundContext->scopePropertyQuery($query, $user))
             ->latest('visit_starts_at')
-            ->paginate();
+            ->paginate($validated['perPage'] ?? 20);
 
         return VisitorRequestResource::collection($visitorRequests);
     }

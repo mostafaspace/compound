@@ -9,46 +9,48 @@ import { colors, layout, radii, shadows, spacing } from '../../../theme';
 import { useGetResidentInvitationsQuery } from '../../../services/admin';
 import { RootStackParamList } from '../../../navigation/types';
 import { Button } from '../../../components/ui/Button';
+import { isRtlLanguage, rowDirectionStyle, textDirectionStyle } from '../../../i18n/direction';
 
 export const AdminInvitationsScreen = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const isDark = useColorScheme() === 'dark';
+  const isRtl = isRtlLanguage(i18n.language);
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   
   const { data: invitations = [], isLoading, refetch } = useGetResidentInvitationsQuery();
 
   const renderInvitation = ({ item }: { item: any }) => (
     <View style={[styles.card, { backgroundColor: isDark ? colors.surface.dark : colors.surface.light }]}>
-      <View style={styles.cardHeader}>
-        <View>
-          <Typography variant="body" style={styles.residentName}>
+      <View style={[styles.cardHeader, rowDirectionStyle(isRtl)]}>
+        <View style={textDirectionStyle(isRtl)}>
+          <Typography variant="body" style={[styles.residentName, textDirectionStyle(isRtl)]}>
             {item.email}
           </Typography>
-          <Typography variant="caption" style={styles.roleLabel}>
-            {item.role.replace('_', ' ')}
+          <Typography variant="caption" style={[styles.roleLabel, textDirectionStyle(isRtl)]}>
+            {t(`Common.roles.${item.role}`, { defaultValue: item.role.replace('_', ' ') })}
           </Typography>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
           <Typography variant="caption" style={styles.statusText}>
-            {item.status.toUpperCase()}
+            {t(`Common.statuses.${item.status}`, { defaultValue: item.status.toUpperCase() })}
           </Typography>
         </View>
       </View>
       
       {item.unit && (
-        <View style={styles.unitInfo}>
-          <Typography variant="caption" style={styles.label}>
-            {t('Admin.unit', 'Unit')}:
+        <View style={[styles.unitInfo, rowDirectionStyle(isRtl)]}>
+          <Typography variant="caption" style={[styles.label, textDirectionStyle(isRtl)]}>
+            {t('Admin.unit')}:
           </Typography>
-          <Typography variant="body" style={styles.value}>
+          <Typography variant="body" style={[styles.value, textDirectionStyle(isRtl)]}>
              {item.unit.unitNumber}
           </Typography>
         </View>
       )}
 
-      <View style={styles.cardFooter}>
-        <Typography variant="caption" style={styles.date}>
-          {new Date(item.createdAt).toLocaleDateString()}
+      <View style={[styles.cardFooter, textDirectionStyle(isRtl)]}>
+        <Typography variant="caption" style={[styles.date, textDirectionStyle(isRtl)]}>
+          {new Date(item.createdAt).toLocaleDateString(i18n.language === 'ar' ? 'ar-EG' : 'en-US')}
         </Typography>
       </View>
     </View>
@@ -72,12 +74,12 @@ export const AdminInvitationsScreen = () => {
         onRefresh={refetch}
         refreshing={isLoading}
         ListHeaderComponent={
-          <View style={styles.header}>
-            <Typography variant="h2">
-              {t('Admin.activeInvitations', 'Resident Invitations')}
+          <View style={[styles.header, textDirectionStyle(isRtl)]}>
+            <Typography variant="h2" style={textDirectionStyle(isRtl)}>
+              {t('Admin.activeInvitations')}
             </Typography>
-            <Typography variant="caption">
-              {t('Admin.invitationsSubtitle', 'Manage pending and accepted resident invites')}
+            <Typography variant="caption" style={textDirectionStyle(isRtl)}>
+              {t('Admin.invitationsSubtitle')}
             </Typography>
           </View>
         }
@@ -86,17 +88,17 @@ export const AdminInvitationsScreen = () => {
             {isLoading ? (
               <ActivityIndicator color={colors.primary.light} size="large" />
             ) : (
-              <Typography variant="body" style={styles.emptyText}>
-                {t('Admin.noInvitations', 'No invitations found')}
+              <Typography variant="body" style={[styles.emptyText, textDirectionStyle(isRtl)]}>
+                {t('Admin.noInvitations')}
               </Typography>
             )}
           </View>
         }
         contentContainerStyle={styles.listContent}
       />
-      <View style={styles.fabContainer}>
+      <View style={[styles.fabContainer, { start: isRtl ? undefined : spacing.lg, end: isRtl ? spacing.lg : undefined }]}>
         <Button 
-          title={t('Admin.inviteResident', 'Invite Resident')} 
+          title={t('Admin.inviteResident')} 
           onPress={() => navigation.navigate('CreateInvitation' as any)}
           style={styles.fab}
         />
@@ -177,8 +179,8 @@ const styles = StyleSheet.create({
   fabContainer: {
     position: 'absolute',
     bottom: spacing.xl,
-    start: spacing.lg,
-    end: spacing.lg,
+    width: '100%',
+    paddingHorizontal: spacing.lg,
   },
   fab: {
     borderRadius: 30,

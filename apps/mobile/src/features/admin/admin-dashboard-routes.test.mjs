@@ -21,8 +21,21 @@ test("polls shortcut routes admins into the More stack poll screen", () => {
 });
 
 test("quick actions expose the production routes expected on the dashboard", () => {
+  const routes = [];
+  for (const action of getAdminDashboardQuickActions()) {
+    routes.push(action.route);
+  }
+
   assert.deepEqual(
-    getAdminDashboardQuickActions().map((action) => action.route),
-    ["Visitors", "Units", "Finance", "AuditLog", "AdminInvitations", "Polls"]
+    routes,
+    [
+      "Visitors",
+      "Units",
+      "Finance",
+      "AuditLog",
+      "AdminInvitations",
+      "Polls",
+      "CreatePoll",
+    ]
   );
 });

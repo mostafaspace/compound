@@ -64,7 +64,35 @@ body {
   letter-spacing: -0.01em;
 }
 
+:lang(ar) body {
+  letter-spacing: normal;
+}
+
 button,
 a {
   letter-spacing: 0;
+}
+
+main table {
+  font-size: 0.9375rem;
+}
+
+main table th,
+main table td {
+  line-height: 1.6;
+  vertical-align: top;
+}
+
+main table thead th {
+  padding-bottom: 1rem !important;
+  padding-top: 1rem !important;
+}
+
+main table tbody td {
+  padding-bottom: 1.125rem !important;
+  padding-top: 1.125rem !important;
+}
+
+main table tbody tr {
+  min-height: 4.5rem;
 }

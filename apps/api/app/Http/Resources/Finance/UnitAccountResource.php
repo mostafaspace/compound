@@ -22,6 +22,9 @@ class UnitAccountResource extends JsonResource
             'unitId' => $this->unit_id,
             'unit' => UnitResource::make($this->whenLoaded('unit')),
             'balance' => $this->balance,
+            'pendingBalance' => number_format((float) $this->balance - (float) $this->paymentSubmissions()
+                ->whereIn('status', ['submitted', 'under_review'])
+                ->sum('amount'), 2, '.', ''),
             'currency' => $this->currency,
             'ledgerEntries' => LedgerEntryResource::collection($this->whenLoaded('ledgerEntries')),
             'paymentSubmissions' => PaymentSubmissionResource::collection($this->whenLoaded('paymentSubmissions')),

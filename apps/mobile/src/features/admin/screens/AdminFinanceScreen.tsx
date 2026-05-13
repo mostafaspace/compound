@@ -11,10 +11,14 @@ import { Typography } from '../../../components/ui/Typography';
 import { ScreenContainer } from '../../../components/layout/ScreenContainer';
 import { Button } from '../../../components/ui/Button';
 import { formatDate } from '../../../utils/formatters';
+import { isRtlLanguage, rowDirectionStyle, textDirectionStyle } from '../../../i18n/direction';
+
+const FINANCE_FILTERS = ["pending", "approved", "rejected"] as const;
 
 export const AdminFinanceScreen = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const isDark = useColorScheme() === 'dark';
+  const isRtl = isRtlLanguage(i18n.language);
   
   const [filter, setFilter] = useState<string>("pending");
   const { data: submissions = [], isLoading, refetch } = useGetFinancePaymentSubmissionsQuery(filter);
@@ -67,34 +71,34 @@ export const AdminFinanceScreen = () => {
   };
 
   const renderItem = ({ item }: { item: any }) => (
-    <View style={[styles.card, { backgroundColor: isDark ? colors.surface.dark : colors.surface.light, borderColor: isDark ? colors.border.dark : colors.border.light }]}>
-      <View style={styles.cardHeader}>
-        <View>
-          <Typography variant="h3">{item.unit?.unitNumber || t("Common.unknown")}</Typography>
-          <Typography variant="caption">{item.user?.name}</Typography>
+    <View style={[styles.card, { backgroundColor: isDark ? colors.surface.dark : colors.surface.light, borderColor: isDark ? colors.border.dark : colors.border.light }, textDirectionStyle(isRtl)]}>
+      <View style={[styles.cardHeader, rowDirectionStyle(isRtl)]}>
+        <View style={textDirectionStyle(isRtl)}>
+          <Typography variant="h3" style={textDirectionStyle(isRtl)}>{item.unit?.unitNumber || t("Common.unknown")}</Typography>
+          <Typography variant="caption" style={textDirectionStyle(isRtl)}>{item.user?.name}</Typography>
         </View>
-        <Typography variant="h2" style={{ color: colors.primary.light }}>
+        <Typography variant="h2" style={[{ color: colors.primary.light }, textDirectionStyle(isRtl)]}>
           {item.amount} {item.currency}
         </Typography>
       </View>
       
-      <View style={styles.cardBody}>
-        <View style={styles.infoRow}>
-          <Typography variant="label">{t("Finance.method")}:</Typography>
-          <Typography variant="body" style={styles.infoValue}>{t(`Finance.methods.${item.method}`)}</Typography>
+      <View style={[styles.cardBody, textDirectionStyle(isRtl)]}>
+        <View style={[styles.infoRow, rowDirectionStyle(isRtl)]}>
+          <Typography variant="label" style={textDirectionStyle(isRtl)}>{t("Finance.method")}:</Typography>
+          <Typography variant="body" style={[styles.infoValue, textDirectionStyle(isRtl)]}>{t(`Finance.methods.${item.method}`)}</Typography>
         </View>
-        <View style={styles.infoRow}>
-          <Typography variant="label">{t("Finance.reference")}:</Typography>
-          <Typography variant="body" style={styles.infoValue}>{item.reference || "-"}</Typography>
+        <View style={[styles.infoRow, rowDirectionStyle(isRtl)]}>
+          <Typography variant="label" style={textDirectionStyle(isRtl)}>{t("Finance.reference")}:</Typography>
+          <Typography variant="body" style={[styles.infoValue, textDirectionStyle(isRtl)]}>{item.reference || "-"}</Typography>
         </View>
-        <View style={styles.infoRow}>
-          <Typography variant="label">{t("Common.date")}:</Typography>
-          <Typography variant="body" style={styles.infoValue}>{formatDate(item.createdAt)}</Typography>
+        <View style={[styles.infoRow, rowDirectionStyle(isRtl)]}>
+          <Typography variant="label" style={textDirectionStyle(isRtl)}>{t("Common.date")}:</Typography>
+          <Typography variant="body" style={[styles.infoValue, textDirectionStyle(isRtl)]}>{formatDate(item.createdAt, isRtl ? 'ar-EG' : 'en-US')}</Typography>
         </View>
       </View>
 
       {item.status === 'pending' && (
-        <View style={styles.actions}>
+        <View style={[styles.actions, rowDirectionStyle(isRtl)]}>
           <Button 
             title={t("Common.reject")} 
             variant="outline" 
@@ -111,44 +115,50 @@ export const AdminFinanceScreen = () => {
       )}
       
       {item.status !== 'pending' && (
-        <View style={[styles.statusBadge, { backgroundColor: item.status === 'approved' ? 'rgba(20, 184, 166, 0.1)' : 'rgba(239, 68, 68, 0.1)' }]}>
-          <Typography variant="label" style={{ color: item.status === 'approved' ? colors.success : colors.error, textTransform: 'uppercase' }}>
-            {item.status}
+        <View style={[styles.statusBadge, { backgroundColor: item.status === 'approved' ? 'rgba(20, 184, 166, 0.1)' : 'rgba(239, 68, 68, 0.1)', alignSelf: isRtl ? 'flex-end' : 'flex-start' }]}>
+          <Typography variant="label" style={[{ color: item.status === 'approved' ? colors.success : colors.error, textTransform: 'uppercase' }, textDirectionStyle(isRtl)]}>
+            {t(`Common.statuses.${item.status}`)}
           </Typography>
         </View>
       )}
     </View>
   );
+  const renderFilter = ({ item: f }: { item: (typeof FINANCE_FILTERS)[number] }) => (
+    <Pressable
+      onPress={() => setFilter(f)}
+      style={[
+        styles.filterChip,
+        { backgroundColor: filter === f ? colors.primary.light : (isDark ? colors.background.dark : "#f3f4f6") }
+      ]}
+    >
+      <Typography
+        variant="label"
+        style={[{
+          color: filter === f ? colors.text.inverse : (isDark ? colors.text.secondary.dark : colors.text.secondary.light),
+          textTransform: 'capitalize',
+        }, textDirectionStyle(isRtl)]}
+      >
+        {t(`Common.statuses.${f}`)}
+      </Typography>
+    </Pressable>
+  );
 
   return (
     <ScreenContainer withKeyboard={false} style={styles.container}>
-      <View style={styles.header}>
-        <Typography variant="h1">{t("Finance.label", "Finance")}</Typography>
-        <Typography variant="caption">{t("Admin.financeDescription", "Review and approve payment submissions")}</Typography>
+      <View style={[styles.header, textDirectionStyle(isRtl)]}>
+        <Typography variant="h1" style={textDirectionStyle(isRtl)}>{t("Finance.label")}</Typography>
+        <Typography variant="caption" style={textDirectionStyle(isRtl)}>{t("Admin.financeDescription")}</Typography>
       </View>
 
-      <View style={styles.filterRow}>
-        {["pending", "approved", "rejected"].map((f) => (
-          <Pressable 
-            key={f} 
-            onPress={() => setFilter(f)}
-            style={[
-              styles.filterChip, 
-              { backgroundColor: filter === f ? colors.primary.light : (isDark ? colors.background.dark : "#f3f4f6") }
-            ]}
-          >
-            <Typography
-              variant="label"
-              style={{
-                color: filter === f ? colors.text.inverse : (isDark ? colors.text.secondary.dark : colors.text.secondary.light),
-                textTransform: 'capitalize',
-              }}
-            >
-              {t(`Common.${f}`, f)}
-            </Typography>
-          </Pressable>
-        ))}
-      </View>
+      <FlatList
+        data={FINANCE_FILTERS}
+        keyExtractor={(f) => f}
+        renderItem={renderFilter}
+        horizontal
+        inverted={isRtl}
+        scrollEnabled={false}
+        contentContainerStyle={[styles.filterRow, rowDirectionStyle(isRtl)]}
+      />
 
       <FlatList
         data={submissions}

@@ -1,8 +1,8 @@
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
-import { LogoutButton } from "@/components/logout-button";
-import { getCurrentUser, getUsers } from "@/lib/api";
+import { AdminPagination } from "@/components/admin-pagination";
+import { getCurrentUser, getUsersPage } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
 import { UsersTableClient } from "./users-table-client";
 
@@ -11,6 +11,7 @@ interface SupportUsersPageProps {
     q?: string;
     status?: string;
     role?: string;
+    page?: string;
   }>;
 }
 
@@ -31,13 +32,16 @@ const roleOptions = [
 export default async function SupportUsersPage({ searchParams }: SupportUsersPageProps) {
   await requireAdminUser(getCurrentUser, ["super_admin", "compound_admin", "support_agent"]);
   const params = searchParams ? await searchParams : {};
+  const page = params.page && Number.isInteger(Number(params.page)) ? Math.max(1, Number(params.page)) : 1;
 
-  const users = await getUsers({
+  const usersPage = await getUsersPage({
     q: params.q?.trim() || undefined,
     status: params.status || undefined,
     role: params.role || undefined,
-    perPage: 50,
+    page,
+    perPage: 25,
   });
+  const users = usersPage.data ?? [];
 
   const t = await getTranslations("SupportConsole");
 
@@ -59,7 +63,6 @@ export default async function SupportUsersPage({ searchParams }: SupportUsersPag
             >
               {t("mergesLink")}
             </Link>
-            <LogoutButton />
           </div>
         </div>
       </header>
@@ -121,7 +124,13 @@ export default async function SupportUsersPage({ searchParams }: SupportUsersPag
 
         <div className="mt-5 overflow-hidden rounded-lg border border-line bg-panel">
           <div className="flex items-center justify-between border-b border-line p-4">
-            <p className="text-sm text-muted">{users.length} user(s) found</p>
+            <p className="text-sm text-muted">
+              {t("paginationSummary", {
+                from: usersPage.meta.from ?? 0,
+                to: usersPage.meta.to ?? 0,
+                total: usersPage.meta.total,
+              })}
+            </p>
           </div>
 
           <UsersTableClient
@@ -133,6 +142,26 @@ export default async function SupportUsersPage({ searchParams }: SupportUsersPag
             colActions={t("colActions")}
             empty={t("empty")}
             viewDetails={t("viewDetails")}
+          />
+          <AdminPagination
+            basePath="/support/users"
+            labels={{
+              first: t("firstPage"),
+              previous: t("previousPage"),
+              next: t("nextPage"),
+              last: t("lastPage"),
+              summary: t("paginationSummary", {
+                from: usersPage.meta.from ?? 0,
+                to: usersPage.meta.to ?? 0,
+                total: usersPage.meta.total,
+              }),
+            }}
+            meta={usersPage.meta}
+            params={{
+              q: params.q?.trim() || undefined,
+              status: params.status || undefined,
+              role: params.role || undefined,
+            }}
           />
         </div>
       </section>

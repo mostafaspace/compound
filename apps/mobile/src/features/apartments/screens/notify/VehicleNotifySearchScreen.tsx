@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, useColorScheme, View } from "react-native";
+import { useTranslation } from "react-i18next";
 import type { StackNavigationProp } from "@react-navigation/stack";
 import { Button } from "../../../../components/ui/Button";
 import { colors, radii, spacing, typography } from "../../../../theme";
@@ -8,13 +9,16 @@ import {
   useSendVehicleNotificationMutation,
 } from "../../../../services/apartments/vehicleNotificationsApi";
 import type { RootStackParamList } from "../../../../navigation/types";
+import { isRtlLanguage, rowDirectionStyle, textDirectionStyle } from "../../../../i18n/direction";
 
 type Props = {
   navigation: StackNavigationProp<RootStackParamList, "VehicleNotifySearch">;
 };
 
 export function VehicleNotifySearchScreen({ navigation }: Props) {
+  const { t, i18n } = useTranslation();
   const isDark = useColorScheme() === "dark";
+  const isRtl = isRtlLanguage(i18n.language);
   const text = colors.text.primary[isDark ? "dark" : "light"];
   const secondary = colors.text.secondary[isDark ? "dark" : "light"];
   const border = colors.border[isDark ? "dark" : "light"];
@@ -50,32 +54,32 @@ export function VehicleNotifySearchScreen({ navigation }: Props) {
 
   if (sent) {
     return (
-      <View style={[styles.container, styles.center]}>
-        <Text style={[styles.title, { color: text }]}>Sent!</Text>
-        <Text style={[styles.body, { color: secondary }]}>
-          Your message has been delivered to the vehicle&apos;s residents.
+      <View style={[styles.container, styles.center, textDirectionStyle(isRtl)]}>
+        <Text style={[styles.title, { color: text }, textDirectionStyle(isRtl)]}>{t("VehicleNotify.sent")}</Text>
+        <Text style={[styles.body, { color: secondary }, textDirectionStyle(isRtl)]}>
+          {t("VehicleNotify.sentBody")}
         </Text>
-        <Button title="Done" onPress={() => navigation.goBack()} />
+        <Button title={t("Common.done")} onPress={() => navigation.goBack()} />
       </View>
     );
   }
 
   return (
     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <Text style={[styles.label, { color: text }]}>Plate number</Text>
+      <Text style={[styles.label, { color: text }, textDirectionStyle(isRtl)]}>{t("VehicleNotify.plateNumber")}</Text>
       <TextInput
-        style={[styles.input, { borderColor: border, color: text }]}
+        style={[styles.input, { borderColor: border, color: text }, textDirectionStyle(isRtl)]}
         value={plate}
-        onChangeText={(t) => {
-          setPlate(t);
+        onChangeText={(v) => {
+          setPlate(v);
           setSearchResult(null);
         }}
-        placeholder="أ ب ج 1234"
+        placeholder={t("VehicleNotify.platePlaceholder")}
         placeholderTextColor={secondary}
-        textAlign="right"
+        textAlign={isRtl ? "right" : "left"}
       />
       <Button
-        title={searching ? "Searching..." : "Search"}
+        title={searching ? t("VehicleNotify.searching") : t("VehicleNotify.search")}
         onPress={onSearch}
         disabled={searching || plate.length < 2}
       />
@@ -84,26 +88,27 @@ export function VehicleNotifySearchScreen({ navigation }: Props) {
         <View style={styles.resultSection}>
           {searchResult.found ? (
             <>
-              <View style={[styles.resultCard, { backgroundColor: colors.surface[isDark ? "dark" : "light"] }]}>
-                <Text style={[styles.body, { color: text }]}>
-                  Found · {searchResult.recipientCount} recipient(s)
+              <View style={[styles.resultCard, { backgroundColor: colors.surface[isDark ? "dark" : "light"] }, textDirectionStyle(isRtl)]}>
+                <Text style={[styles.body, { color: text }, textDirectionStyle(isRtl)]}>
+                  {t("VehicleNotify.foundCount", { count: searchResult.recipientCount })}
                 </Text>
-                <Text style={[styles.caption, { color: secondary }]}>{searchResult.label}</Text>
+                <Text style={[styles.caption, { color: secondary }, textDirectionStyle(isRtl)]}>{searchResult.label}</Text>
               </View>
 
-              <Text style={[styles.label, { color: text, marginTop: spacing.lg }]}>Message</Text>
+              <Text style={[styles.label, { color: text, marginTop: spacing.lg }, textDirectionStyle(isRtl)]}>{t("VehicleNotify.messageLabel")}</Text>
               <TextInput
-                style={[styles.input, styles.multiline, { borderColor: border, color: text }]}
+                style={[styles.input, styles.multiline, { borderColor: border, color: text }, textDirectionStyle(isRtl)]}
                 value={message}
                 onChangeText={setMessage}
-                placeholder="Hey, your car is..."
+                placeholder={t("VehicleNotify.messagePlaceholder")}
                 placeholderTextColor={secondary}
                 multiline
                 maxLength={1000}
+                textAlign={isRtl ? "right" : "left"}
               />
 
-              <Text style={[styles.label, { color: text, marginTop: spacing.md }]}>Send as</Text>
-              <View style={styles.modeRow}>
+              <Text style={[styles.label, { color: text, marginTop: spacing.md }, textDirectionStyle(isRtl)]}>{t("VehicleNotify.sendAs")}</Text>
+              <View style={[styles.modeRow, rowDirectionStyle(isRtl)]}>
                 <Pressable
                   onPress={() => setMode("identified")}
                   style={[
@@ -114,7 +119,7 @@ export function VehicleNotifySearchScreen({ navigation }: Props) {
                     },
                   ]}
                 >
-                  <Text style={{ color: mode === "identified" ? "#fff" : text }}>My identity</Text>
+                  <Text style={[{ color: mode === "identified" ? "#fff" : text }, textDirectionStyle(isRtl)]}>{t("VehicleNotify.myIdentity")}</Text>
                 </Pressable>
                 <Pressable
                   onPress={() => setMode("anonymous")}
@@ -126,30 +131,31 @@ export function VehicleNotifySearchScreen({ navigation }: Props) {
                     },
                   ]}
                 >
-                  <Text style={{ color: mode === "anonymous" ? "#fff" : text }}>Anonymous</Text>
+                  <Text style={[{ color: mode === "anonymous" ? "#fff" : text }, textDirectionStyle(isRtl)]}>{t("VehicleNotify.anonymous")}</Text>
                 </Pressable>
               </View>
 
               {mode === "anonymous" ? (
                 <TextInput
-                  style={[styles.input, { borderColor: border, color: text, marginTop: spacing.sm }]}
+                  style={[styles.input, { borderColor: border, color: text, marginTop: spacing.sm }, textDirectionStyle(isRtl)]}
                   value={alias}
                   onChangeText={setAlias}
-                  placeholder="Your alias (optional)"
+                  placeholder={t("VehicleNotify.aliasPlaceholder")}
                   placeholderTextColor={secondary}
                   maxLength={50}
+                  textAlign={isRtl ? "right" : "left"}
                 />
               ) : null}
 
               <Button
-                title={sending ? "Sending..." : "Send message"}
+                title={sending ? t("VehicleNotify.sending") : t("VehicleNotify.sendMessage")}
                 onPress={onSend}
                 disabled={sending || !message.trim()}
               />
             </>
           ) : (
-            <View style={[styles.resultCard, { backgroundColor: colors.surface[isDark ? "dark" : "light"] }]}>
-              <Text style={[styles.body, { color: text }]}>No vehicle matches that plate in this compound.</Text>
+            <View style={[styles.resultCard, { backgroundColor: colors.surface[isDark ? "dark" : "light"] }, textDirectionStyle(isRtl)]}>
+              <Text style={[styles.body, { color: text }, textDirectionStyle(isRtl)]}>{t("VehicleNotify.noMatch")}</Text>
             </View>
           )}
         </View>

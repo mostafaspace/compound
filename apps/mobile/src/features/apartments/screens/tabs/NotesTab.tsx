@@ -3,7 +3,6 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  Modal,
   Pressable,
   StyleSheet,
   Text,
@@ -11,8 +10,12 @@ import {
   useColorScheme,
   View,
 } from "react-native";
+import { useTranslation } from "react-i18next";
+import { BottomSheet } from "../../../../components/ui/BottomSheet";
+import { Typography } from "../../../../components/ui/Typography";
 import { Button } from "../../../../components/ui/Button";
 import { colors, radii, shadows, spacing, typography } from "../../../../theme";
+import { isRtlLanguage, rowDirectionStyle, textDirectionStyle } from "../../../../i18n/direction";
 import {
   useAppendNoteMutation,
   useDeleteNoteMutation,
@@ -22,8 +25,11 @@ import {
 import type { ApartmentDetail, ApartmentNote } from "../../../../services/apartments/types";
 
 export function NotesTab({ apartment }: { apartment: ApartmentDetail }) {
+  const { t, i18n } = useTranslation();
   const isDark = useColorScheme() === "dark";
+  const isRtl = isRtlLanguage(i18n.language);
   const [body, setBody] = useState("");
+  const [showAddSheet, setShowAddSheet] = useState(false);
   const [composerError, setComposerError] = useState<string | null>(null);
   const [listError, setListError] = useState<string | null>(null);
   const [editingNote, setEditingNote] = useState<ApartmentNote | null>(null);
@@ -39,6 +45,7 @@ export function NotesTab({ apartment }: { apartment: ApartmentDetail }) {
     const trimmed = body.trim();
 
     if (!trimmed) {
+      setComposerError(t("Notes.bodyRequired"));
       return;
     }
 
@@ -47,9 +54,20 @@ export function NotesTab({ apartment }: { apartment: ApartmentDetail }) {
     try {
       await appendNote({ unitId: apartment.id, body: trimmed }).unwrap();
       setBody("");
+      setShowAddSheet(false);
     } catch {
-      setComposerError("Could not add note. Please try again.");
+      setComposerError(t("Notes.addNoteError"));
     }
+  };
+
+  const openAddSheet = () => {
+    setComposerError(null);
+    setShowAddSheet(true);
+  };
+
+  const closeAddSheet = () => {
+    setShowAddSheet(false);
+    setComposerError(null);
   };
 
   const startEditing = (note: ApartmentNote) => {
@@ -73,7 +91,7 @@ export function NotesTab({ apartment }: { apartment: ApartmentDetail }) {
     const trimmed = editingBody.trim();
 
     if (!trimmed) {
-      setEditError("Note body is required.");
+      setEditError(t("Notes.bodyRequired"));
       return;
     }
 
@@ -83,7 +101,7 @@ export function NotesTab({ apartment }: { apartment: ApartmentDetail }) {
       await updateNote({ unitId: apartment.id, noteId: editingNote.id, body: trimmed }).unwrap();
       cancelEditing();
     } catch {
-      setEditError("Could not update note. Please try again.");
+      setEditError(t("Notes.updateNoteError"));
     }
   };
 
@@ -97,7 +115,7 @@ export function NotesTab({ apartment }: { apartment: ApartmentDetail }) {
         cancelEditing();
       }
     } catch {
-      setListError("Could not delete note. Please try again.");
+      setListError(t("Notes.deleteNoteError"));
     } finally {
       setDeletingNoteId(null);
     }
@@ -105,12 +123,12 @@ export function NotesTab({ apartment }: { apartment: ApartmentDetail }) {
 
   const confirmDelete = (note: ApartmentNote) => {
     Alert.alert(
-      "Delete note?",
-      "This removes the note from this apartment timeline.",
+      t("Notes.deleteConfirmTitle"),
+      t("Notes.deleteConfirmBody"),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("Common.cancel"), style: "cancel" },
         {
-          text: "Delete",
+          text: t("Common.remove"),
           style: "destructive",
           onPress: () => {
             void removeNote(note);
@@ -128,72 +146,156 @@ export function NotesTab({ apartment }: { apartment: ApartmentDetail }) {
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.list}
         ListHeaderComponent={
-          <View style={[styles.composer, { backgroundColor: colors.surface[isDark ? "dark" : "light"] }]}>
-            <Text style={[styles.eyebrow, { color: colors.primary[isDark ? "dark" : "light"] }]}>
-              Apartment notes
-            </Text>
-            <Text style={[styles.title, { color: colors.text.primary[isDark ? "dark" : "light"] }]}>
-              Add a timeline entry
-            </Text>
-            <Text style={[styles.helper, { color: colors.text.secondary[isDark ? "dark" : "light"] }]}>
-              Create a new note here. Existing notes have their own Edit and Delete actions below.
-            </Text>
-            <TextInput
-              multiline
-              accessibilityLabel="New apartment note"
-              placeholder="Add a dated note for this apartment..."
-              placeholderTextColor={colors.text.secondary[isDark ? "dark" : "light"]}
-              value={body}
-              onChangeText={setBody}
-              style={[
-                styles.input,
-                {
-                  backgroundColor: colors.surfaceMuted[isDark ? "dark" : "light"],
-                  borderColor: colors.border[isDark ? "dark" : "light"],
-                  color: colors.text.primary[isDark ? "dark" : "light"],
-                },
-              ]}
-              textAlignVertical="top"
-            />
-            {composerError ? <Text style={styles.error}>{composerError}</Text> : null}
-            <Button
-              title={appendState.isLoading ? "Adding..." : "Add note"}
-              onPress={() => {
-                void submit();
-              }}
-              disabled={!body.trim() || appendState.isLoading}
-              style={styles.submitButton}
-            />
+          <View style={[styles.timelineHeader, { backgroundColor: colors.surface[isDark ? "dark" : "light"] }, textDirectionStyle(isRtl)]}>
+            <View style={[styles.headerTop, rowDirectionStyle(isRtl)]}>
+              <View style={styles.headerCopy}>
+                <Typography variant="label" color="primary">
+                  {t("Notes.label")}
+                </Typography>
+                <Typography variant="h3" style={[styles.headerTitle, textDirectionStyle(isRtl)]}>
+                  {t("Notes.timelineTitle", { defaultValue: "Unit timeline" })}
+                </Typography>
+                <Typography variant="caption" color="secondary" style={textDirectionStyle(isRtl)}>
+                  {t("Notes.notesCount", { count: data.length, defaultValue: `${data.length} notes` })}
+                </Typography>
+              </View>
+              <Button
+                title={t("Notes.addNote")}
+                onPress={openAddSheet}
+                style={styles.headerButton}
+                leftIcon="plus"
+              />
+            </View>
             {isLoading ? <ActivityIndicator color={colors.primary[isDark ? "dark" : "light"]} style={styles.loader} /> : null}
-            {listError ? <Text style={styles.error}>{listError}</Text> : null}
+            {listError ? <Typography variant="error" style={styles.error}>{listError}</Typography> : null}
           </View>
         }
-        ListEmptyComponent={<EmptyState />}
+        ListEmptyComponent={<EmptyState t={t} isRtl={isRtl} />}
         renderItem={({ item }) => (
           <NoteRow
             note={item}
             isDark={isDark}
+            isRtl={isRtl}
             isDeleting={deletingNoteId === item.id}
             onEdit={() => startEditing(item)}
             onDelete={() => confirmDelete(item)}
+            t={t}
           />
         )}
       />
+
+      {showAddSheet ? (
+        <AddNoteSheet
+          body={body}
+          error={composerError}
+          isDark={isDark}
+          isRtl={isRtl}
+          isSaving={appendState.isLoading}
+          onBodyChange={(nextBody) => {
+            setBody(nextBody);
+            if (composerError) {
+              setComposerError(null);
+            }
+          }}
+          onCancel={closeAddSheet}
+          onSave={() => {
+            void submit();
+          }}
+          t={t}
+        />
+      ) : null}
 
       {editingNote ? (
         <EditNoteSheet
           body={editingBody}
           error={editError}
           isDark={isDark}
+          isRtl={isRtl}
           isSaving={updateState.isLoading}
           onBodyChange={setEditingBody}
           onCancel={cancelEditing}
           onSave={() => {
             void submitEdit();
           }}
+          t={t}
         />
       ) : null}
     </>
+  );
+}
+
+function AddNoteSheet({
+  body,
+  error,
+  isDark,
+  isRtl,
+  isSaving,
+  onBodyChange,
+  onCancel,
+  onSave,
+  t,
+}: {
+  body: string;
+  error: string | null;
+  isDark: boolean;
+  isRtl: boolean;
+  isSaving: boolean;
+  onBodyChange: (b: string) => void;
+  onCancel: () => void;
+  onSave: () => void;
+  t: any;
+}) {
+  return (
+    <BottomSheet
+      onClose={onCancel}
+      header={
+        <>
+          <Typography variant="label" color="primary">
+            {t("Notes.label")}
+          </Typography>
+          <Typography variant="h2" style={{ marginTop: spacing.xs }}>
+            {t("Notes.addTimelineEntry")}
+          </Typography>
+          <Typography variant="body" color="secondary" style={{ marginTop: spacing.xs }}>
+            {t("Notes.helper")}
+          </Typography>
+        </>
+      }
+      footer={
+        <View style={[styles.rowActions, rowDirectionStyle(isRtl)]}>
+          <Button title={t("Common.cancel")} variant="ghost" onPress={onCancel} disabled={isSaving} style={styles.rowActionButton} />
+          <Button
+            title={isSaving ? t("Notes.adding") : t("Notes.addNote")}
+            onPress={onSave}
+            disabled={!body.trim() || isSaving}
+            style={styles.rowActionButton}
+          />
+        </View>
+      }
+    >
+      <View>
+        <TextInput
+          multiline
+          accessibilityLabel={t("Notes.label")}
+          placeholder={t("Notes.placeholder")}
+          placeholderTextColor={colors.text.secondary[isDark ? "dark" : "light"]}
+          value={body}
+          onChangeText={onBodyChange}
+          style={[
+            styles.input,
+            styles.sheetInput,
+            {
+              backgroundColor: colors.surfaceMuted[isDark ? "dark" : "light"],
+              borderColor: colors.border[isDark ? "dark" : "light"],
+              color: colors.text.primary[isDark ? "dark" : "light"],
+              textAlign: isRtl ? "right" : "left",
+            },
+          ]}
+          textAlignVertical="top"
+        />
+        {error ? <Typography variant="error" style={styles.error}>{error}</Typography> : null}
+      </View>
+    </BottomSheet>
   );
 }
 
@@ -201,79 +303,93 @@ function EditNoteSheet({
   body,
   error,
   isDark,
+  isRtl,
   isSaving,
   onBodyChange,
   onCancel,
   onSave,
+  t,
 }: {
   body: string;
   error: string | null;
   isDark: boolean;
+  isRtl: boolean;
   isSaving: boolean;
-  onBodyChange: (value: string) => void;
+  onBodyChange: (b: string) => void;
   onCancel: () => void;
   onSave: () => void;
+  t: any;
 }) {
   return (
-    <Modal visible transparent animationType="slide" onRequestClose={onCancel}>
-      <View style={styles.sheetBackdrop}>
-        <View style={[styles.sheet, { backgroundColor: colors.surface[isDark ? "dark" : "light"] }]}>
-          <View style={styles.handle} />
-          <Text style={[styles.sheetEyebrow, { color: colors.primary[isDark ? "dark" : "light"] }]}>
-            Edit note
-          </Text>
-          <Text style={[styles.sheetTitle, { color: colors.text.primary[isDark ? "dark" : "light"] }]}>
-            Update timeline entry
-          </Text>
-          <Text style={[styles.sheetCopy, { color: colors.text.secondary[isDark ? "dark" : "light"] }]}>
-            Changes are saved back to this apartment note. Use Delete from the note card if you want to remove it.
-          </Text>
-          <TextInput
-            multiline
-            accessibilityLabel="Edit apartment note"
-            placeholder="Update this note..."
-            placeholderTextColor={colors.text.secondary[isDark ? "dark" : "light"]}
-            value={body}
-            onChangeText={onBodyChange}
-            style={[
-              styles.input,
-              styles.sheetInput,
-              {
-                backgroundColor: colors.surfaceMuted[isDark ? "dark" : "light"],
-                borderColor: colors.border[isDark ? "dark" : "light"],
-                color: colors.text.primary[isDark ? "dark" : "light"],
-              },
-            ]}
-            textAlignVertical="top"
-          />
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-          <View style={styles.rowActions}>
-            <Button title="Cancel" variant="ghost" onPress={onCancel} disabled={isSaving} style={styles.rowActionButton} />
+    <BottomSheet
+      onClose={onCancel}
+      header={
+        <>
+          <Typography variant="label" color="primary">
+            {t("Notes.editTitle")}
+          </Typography>
+          <Typography variant="h2" style={{ marginTop: spacing.xs }}>
+            {t("Notes.editSubtitle")}
+          </Typography>
+          <Typography variant="body" color="secondary" style={{ marginTop: spacing.xs }}>
+            {t("Notes.editHelper")}
+          </Typography>
+        </>
+      }
+      footer={
+          <View style={[styles.rowActions, rowDirectionStyle(isRtl)]}>
+            <Button title={t("Common.cancel")} variant="ghost" onPress={onCancel} disabled={isSaving} style={styles.rowActionButton} />
             <Button
-              title={isSaving ? "Saving..." : "Save changes"}
+              title={isSaving ? t("Notes.saving") : t("Notes.saveChanges")}
               onPress={onSave}
               disabled={!body.trim() || isSaving}
               style={styles.rowActionButton}
             />
           </View>
-        </View>
+      }
+    >
+      <View>
+        <TextInput
+          multiline
+          accessibilityLabel={t("Notes.editTitle")}
+          placeholder={t("Notes.updatePlaceholder")}
+          placeholderTextColor={colors.text.secondary[isDark ? "dark" : "light"]}
+          value={body}
+          onChangeText={onBodyChange}
+          style={[
+            styles.input,
+            styles.sheetInput,
+            {
+              backgroundColor: colors.surfaceMuted[isDark ? "dark" : "light"],
+              borderColor: colors.border[isDark ? "dark" : "light"],
+              color: colors.text.primary[isDark ? "dark" : "light"],
+              textAlign: isRtl ? "right" : "left",
+            },
+          ]}
+          textAlignVertical="top"
+        />
+        {error ? <Typography variant="error" style={styles.error}>{error}</Typography> : null}
       </View>
-    </Modal>
+    </BottomSheet>
   );
 }
 
 function NoteRow({
   note,
   isDark,
+  isRtl,
   isDeleting,
   onEdit,
   onDelete,
+  t,
 }: {
   note: ApartmentNote;
   isDark: boolean;
+  isRtl: boolean;
   isDeleting: boolean;
   onEdit: () => void;
   onDelete: () => void;
+  t: any;
 }) {
   const actionColor = colors.primary[isDark ? "dark" : "light"];
 
@@ -285,55 +401,54 @@ function NoteRow({
           backgroundColor: colors.surface[isDark ? "dark" : "light"],
           borderColor: colors.border[isDark ? "dark" : "light"],
         },
+        textDirectionStyle(isRtl)
       ]}
     >
-      <Text style={[styles.noteBody, { color: colors.text.primary[isDark ? "dark" : "light"] }]}>{note.body}</Text>
-      <Text style={[styles.noteMeta, { color: colors.text.secondary[isDark ? "dark" : "light"] }]}>
-        {note.author?.name ?? "Resident"} · {formatDate(note.createdAt)}
-      </Text>
-      <View style={styles.noteActions}>
+      <Typography variant="body">{note.body}</Typography>
+      <Typography variant="caption" color="secondary" style={{ marginTop: spacing.sm }}>
+        {note.author?.name ?? t("Common.relations.resident")} · {formatDate(note.createdAt, t)}
+      </Typography>
+      <View style={[styles.noteActions, rowDirectionStyle(isRtl)]}>
         <Pressable
-          accessibilityLabel={`Edit note from ${formatDate(note.createdAt)}`}
+          accessibilityLabel={t("Common.edit")}
           accessibilityRole="button"
           hitSlop={12}
           onPress={onEdit}
           style={({ pressed }) => [styles.actionChip, pressed && styles.pressedChip]}
         >
-          <Text style={[styles.noteActionText, { color: actionColor }]}>Edit</Text>
+          <Typography variant="bodyStrong" style={{ color: actionColor }}>{t("Common.edit")}</Typography>
         </Pressable>
         <Pressable
-          accessibilityLabel={`Delete note from ${formatDate(note.createdAt)}`}
+          accessibilityLabel={t("Common.remove")}
           accessibilityRole="button"
           disabled={isDeleting}
           hitSlop={12}
           onPress={onDelete}
           style={({ pressed }) => [styles.actionChip, pressed && styles.pressedChip, isDeleting && styles.disabledChip]}
         >
-          <Text style={[styles.noteActionText, { color: colors.error }]}>{isDeleting ? "Deleting..." : "Delete"}</Text>
+          <Typography variant="bodyStrong" style={{ color: colors.error }}>{isDeleting ? t("Notes.deleting") : t("Common.remove")}</Typography>
         </Pressable>
       </View>
     </View>
   );
 }
 
-function EmptyState() {
+function EmptyState({ t, isRtl }: { t: any, isRtl: boolean }) {
   const isDark = useColorScheme() === "dark";
 
   return (
-    <View style={[styles.empty, { backgroundColor: colors.surface[isDark ? "dark" : "light"] }]}>
-      <Text style={[styles.emptyTitle, { color: colors.text.primary[isDark ? "dark" : "light"] }]}>
-        No notes yet
-      </Text>
-      <Text style={[styles.emptyBody, { color: colors.text.secondary[isDark ? "dark" : "light"] }]}>
-        Add notes for resident, vehicle, parking, or document context. You can edit or delete entries later.
-      </Text>
+    <View style={[styles.empty, { backgroundColor: colors.surface[isDark ? "dark" : "light"] }, textDirectionStyle(isRtl)]}>
+      <Typography variant="h3">{t("Notes.noNotes")}</Typography>
+      <Typography variant="body" color="secondary" style={{ marginTop: spacing.xs }}>
+        {t("Notes.noNotesHint")}
+      </Typography>
     </View>
   );
 }
 
-function formatDate(value: string | null): string {
+function formatDate(value: string | null, t: any): string {
   if (!value) {
-    return "No date";
+    return t("Violations.noDate");
   }
 
   return new Date(value).toLocaleDateString();
@@ -344,21 +459,25 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     padding: spacing.md,
   },
-  composer: {
+  timelineHeader: {
     borderRadius: radii.xl,
-    padding: spacing.lg,
-    ...shadows.md,
+    padding: spacing.md,
+    ...shadows.sm,
   },
-  eyebrow: {
-    ...typography.label,
+  headerTop: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.md,
   },
-  title: {
-    ...typography.h2,
+  headerCopy: {
+    flex: 1,
+  },
+  headerTitle: {
     marginTop: spacing.xs,
   },
-  helper: {
-    ...typography.body,
-    marginTop: spacing.xs,
+  headerButton: {
+    minHeight: 44,
+    paddingHorizontal: spacing.md,
   },
   input: {
     ...typography.body,
@@ -383,40 +502,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   error: {
-    ...typography.caption,
-    color: colors.error,
     marginTop: spacing.sm,
-  },
-  sheetBackdrop: {
-    backgroundColor: "rgba(7, 17, 31, 0.58)",
-    flex: 1,
-    justifyContent: "flex-end",
-  },
-  sheet: {
-    borderTopLeftRadius: radii.xl,
-    borderTopRightRadius: radii.xl,
-    maxHeight: "88%",
-    padding: spacing.lg,
-    ...shadows.lg,
-  },
-  handle: {
-    alignSelf: "center",
-    backgroundColor: colors.border.light,
-    borderRadius: radii.pill,
-    height: 4,
-    marginBottom: spacing.md,
-    width: 48,
-  },
-  sheetEyebrow: {
-    ...typography.label,
-  },
-  sheetTitle: {
-    ...typography.h2,
-    marginTop: spacing.xs,
-  },
-  sheetCopy: {
-    ...typography.body,
-    marginTop: spacing.xs,
   },
   sheetInput: {
     minHeight: 156,
@@ -425,13 +511,6 @@ const styles = StyleSheet.create({
     borderRadius: radii.xl,
     borderWidth: 1,
     padding: spacing.md,
-  },
-  noteBody: {
-    ...typography.body,
-  },
-  noteMeta: {
-    ...typography.caption,
-    marginTop: spacing.sm,
   },
   noteActions: {
     flexDirection: "row",
@@ -452,18 +531,8 @@ const styles = StyleSheet.create({
   disabledChip: {
     opacity: 0.5,
   },
-  noteActionText: {
-    ...typography.bodyStrong,
-  },
   empty: {
     borderRadius: radii.xl,
     padding: spacing.lg,
-  },
-  emptyTitle: {
-    ...typography.h3,
-  },
-  emptyBody: {
-    ...typography.body,
-    marginTop: spacing.xs,
   },
 });

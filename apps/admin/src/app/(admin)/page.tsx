@@ -41,7 +41,7 @@ export default async function Home() {
   const apiOnline = status?.status === "ok";
   const role = formatRoleLabel(getPrimaryEffectiveRole(user));
   const isSuperAdmin = hasEffectiveRole(user, "super_admin");
-  const activeCompoundId = await getCompoundContext();
+  const activeCompoundId = (await getCompoundContext()) ?? user.compoundId;
 
   const attentionItems = sanitizeDashboardCollection(dashboard?.attentionItems ?? [], { activeCompoundId });
   const shortcuts = sanitizeDashboardCollection(dashboard?.shortcuts ?? [], { activeCompoundId });

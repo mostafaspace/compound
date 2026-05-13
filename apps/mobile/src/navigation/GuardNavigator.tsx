@@ -6,9 +6,12 @@ import { GuardStackParamList } from './types';
 import { GateScreen } from '../features/security/screens/GateScreen';
 import { ScannerScreen } from '../features/security/screens/ScannerScreen';
 import { InvitationsScreen } from '../features/security/screens/InvitationsScreen';
+import { SettingsScreen } from '../features/settings/screens/SettingsScreen';
 import { colors, componentSize, radii, spacing } from '../theme';
 import { NotificationBell } from '../components/ui/NotificationBell';
 import { Icon, type AppIconName } from '../components/ui/Icon';
+import { LogoutButton } from '../components/ui/LogoutButton';
+import { isRtlLanguage } from '../i18n/direction';
 
 const Tab = createBottomTabNavigator<GuardStackParamList>();
 
@@ -16,16 +19,18 @@ const tabIcons: Record<keyof GuardStackParamList, AppIconName> = {
   Gate: 'gate',
   Scanner: 'qr',
   Invitations: 'visitors',
+  Settings: 'settings',
 };
 
 export const GuardNavigator = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const isDark = useColorScheme() === 'dark';
+  const isRtl = isRtlLanguage(i18n.language);
 
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
-        tabBarActiveTintColor: isDark ? colors.cta.dark : colors.primary.light,
+        tabBarActiveTintColor: isDark ? colors.cta.dark : colors.cta.light,
         tabBarInactiveTintColor: isDark ? colors.text.secondary.dark : colors.text.secondary.light,
         tabBarStyle: {
           backgroundColor: isDark ? colors.surface.dark : colors.surface.light,
@@ -33,6 +38,8 @@ export const GuardNavigator = () => {
           paddingBottom: spacing.sm,
           paddingTop: spacing.xs,
           height: componentSize.tabBar,
+          flexDirection: isRtl ? 'row-reverse' : 'row',
+          direction: isRtl ? 'rtl' : 'ltr',
         },
         headerStyle: {
           backgroundColor: isDark ? colors.surface.dark : colors.surface.light,
@@ -42,11 +49,19 @@ export const GuardNavigator = () => {
           borderBottomColor: isDark ? colors.border.dark : colors.border.light,
         },
         headerTitleStyle: {
-          fontWeight: '700',
-          fontSize: 18,
           color: isDark ? colors.text.primary.dark : colors.text.primary.light,
+          textAlign: 'auto',
         },
-        headerRight: () => <NotificationBell />,
+        headerRight: () => isRtl ? (
+          <View style={{ paddingLeft: spacing.sm }}>
+            <LogoutButton />
+          </View>
+        ) : <NotificationBell />,
+        headerLeft: () => isRtl ? <NotificationBell /> : (
+          <View style={{ paddingLeft: spacing.sm }}>
+            <LogoutButton />
+          </View>
+        ),
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: '600',
@@ -74,6 +89,11 @@ export const GuardNavigator = () => {
         name="Invitations"
         component={InvitationsScreen}
         options={{ title: t('Security.invitations', 'Invitations') }}
+      />
+      <Tab.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{ title: t('Common.settings', 'Settings') }}
       />
     </Tab.Navigator>
   );

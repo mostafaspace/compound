@@ -48,7 +48,7 @@ export function AttachmentGallery({ attachments }: AttachmentGalleryProps) {
               className="max-h-[90vh] max-w-[90vw] rounded-lg object-contain shadow-2xl transition-transform animate-in zoom-in-95 duration-300"
             />
             <button
-              className="absolute -top-4 -right-4 flex h-10 w-10 items-center justify-center rounded-full bg-white text-black shadow-lg hover:bg-gray-100 focus:outline-none"
+              className="absolute -top-4 -end-4 flex h-10 w-10 items-center justify-center rounded-full bg-white text-black shadow-lg hover:bg-gray-100 focus:outline-none"
               onClick={(e) => {
                 e.stopPropagation();
                 setSelectedImage(null);

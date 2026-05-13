@@ -21,8 +21,8 @@ export function StatusBadge({
   const palette = semanticTonePalette[tone];
 
   return (
-    <View style={[styles.badge, { backgroundColor: backgroundColor ?? palette.background }]}>
-      <Typography variant="caption" style={[styles.text, { color: textColor ?? palette.text }]}>
+    <View style={[styles.badge, { backgroundColor: backgroundColor ?? palette.background, borderColor: textColor ?? palette.text }]}>
+      <Typography variant="label" style={[styles.text, { color: textColor ?? palette.text }]}>
         {label}
       </Typography>
     </View>
@@ -32,12 +32,12 @@ export function StatusBadge({
 const styles = StyleSheet.create({
   badge: {
     alignSelf: "flex-start",
-    borderRadius: 999,
-    paddingHorizontal: spacing.sm,
+    borderRadius: 8,
+    paddingHorizontal: spacing.ms,
     paddingVertical: 4,
+    borderWidth: 0.5,
   },
   text: {
-    fontSize: 11,
-    fontWeight: "700",
+    fontSize: 10,
   },
 });

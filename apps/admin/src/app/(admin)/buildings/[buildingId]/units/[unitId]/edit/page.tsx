@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 
-import { LogoutButton } from "@/components/logout-button";
 import { getBuilding, getCurrentUser, getUnit } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
 
@@ -29,7 +28,6 @@ export default async function EditUnitPage({ params }: EditUnitPageProps) {
             </Link>
             <h1 className="mt-2 text-3xl font-semibold">{t("editUnit")} {unit.unitNumber}</h1>
           </div>
-          <LogoutButton />
         </div>
       </header>
 

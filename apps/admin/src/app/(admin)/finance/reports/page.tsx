@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 
-import { LogoutButton } from "@/components/logout-button";
 import {
   getCurrentUser,
   getFinancePaymentMethodBreakdown,
@@ -71,7 +70,6 @@ export default async function FinanceReportsPage({ searchParams }: ReportsPagePr
             <h1 className="mt-2 text-3xl font-semibold">{t("reports.title")}</h1>
             <p className="mt-2 max-w-2xl text-sm text-muted">{t("reports.subtitle")}</p>
           </div>
-          <LogoutButton />
         </div>
       </header>
 
@@ -145,23 +143,23 @@ export default async function FinanceReportsPage({ searchParams }: ReportsPagePr
             <div className="mt-4 overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-line text-left">
-                    <th className="pb-2 pr-4 text-xs font-semibold text-muted">{t("reports.accounts.unit")}</th>
-                    <th className="pb-2 pr-4 text-xs font-semibold text-muted">{t("reports.accounts.building")}</th>
-                    <th className="pb-2 pr-4 text-right text-xs font-semibold text-muted">{t("reports.accounts.balance")}</th>
+                  <tr className="border-b border-line text-start">
+                    <th className="pb-2 pe-4 text-xs font-semibold text-muted">{t("reports.accounts.unit")}</th>
+                    <th className="pb-2 pe-4 text-xs font-semibold text-muted">{t("reports.accounts.building")}</th>
+                    <th className="pb-2 pe-4 text-end text-xs font-semibold text-muted">{t("reports.accounts.balance")}</th>
                     <th className="pb-2 text-xs font-semibold text-muted">{t("reports.accounts.currency")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-line">
                   {accounts.map((account) => (
                     <tr key={account.id}>
-                      <td className="py-2 pr-4 font-medium">
+                      <td className="py-2 pe-4 font-medium">
                         {(account as { unit?: { unitNumber?: string } }).unit?.unitNumber ?? account.unitId}
                       </td>
-                      <td className="py-2 pr-4 text-muted">
+                      <td className="py-2 pe-4 text-muted">
                         {(account as { unit?: { building?: { name?: string } } }).unit?.building?.name ?? "—"}
                       </td>
-                      <td className={`py-2 pr-4 text-right font-semibold tabular-nums ${balanceTone(account.balance)}`}>
+                      <td className={`py-2 pe-4 text-end font-semibold tabular-nums ${balanceTone(account.balance)}`}>
                         {formatMoney(account.balance, locale)}
                       </td>
                       <td className="py-2 text-muted">{account.currency}</td>
@@ -184,18 +182,18 @@ export default async function FinanceReportsPage({ searchParams }: ReportsPagePr
             <div className="mt-4 overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-line text-left">
-                    <th className="pb-2 pr-4 text-xs font-semibold text-muted">{t("reports.paymentMethods.method")}</th>
-                    <th className="pb-2 pr-4 text-right text-xs font-semibold text-muted">{t("reports.paymentMethods.count")}</th>
-                    <th className="pb-2 text-right text-xs font-semibold text-muted">{t("reports.paymentMethods.total")}</th>
+                  <tr className="border-b border-line text-start">
+                    <th className="pb-2 pe-4 text-xs font-semibold text-muted">{t("reports.paymentMethods.method")}</th>
+                    <th className="pb-2 pe-4 text-end text-xs font-semibold text-muted">{t("reports.paymentMethods.count")}</th>
+                    <th className="pb-2 text-end text-xs font-semibold text-muted">{t("reports.paymentMethods.total")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-line">
                   {paymentMethods.map((row) => (
                     <tr key={row.method}>
-                      <td className="py-2 pr-4 font-medium capitalize">{row.method.replace(/_/g, " ")}</td>
-                      <td className="py-2 pr-4 text-right tabular-nums">{row.count}</td>
-                      <td className="py-2 text-right font-semibold tabular-nums">{formatMoney(row.total, locale)}</td>
+                      <td className="py-2 pe-4 font-medium capitalize">{row.method.replace(/_/g, " ")}</td>
+                      <td className="py-2 pe-4 text-end tabular-nums">{row.count}</td>
+                      <td className="py-2 text-end font-semibold tabular-nums">{formatMoney(row.total, locale)}</td>
                     </tr>
                   ))}
                 </tbody>

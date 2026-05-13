@@ -13,6 +13,17 @@ import type {
   DocumentType,
 } from "@compound/contracts";
 
+export interface PagedMobileList<T> {
+  data: T[];
+  links: PaginatedEnvelope<T>["links"];
+  meta: PaginatedEnvelope<T>["meta"];
+}
+
+export interface PageQuery {
+  page?: number;
+  perPage?: number;
+}
+
 export const propertyApi = api.injectEndpoints({
   endpoints: (builder) => ({
     getUnits: builder.query<UnitMembership[], void>({
@@ -25,9 +36,18 @@ export const propertyApi = api.injectEndpoints({
       transformResponse: (response: ApiEnvelope<VerificationRequest[]>) => response.data,
       providesTags: ["VerificationRequest"],
     }),
-    getVisitorRequests: builder.query<VisitorRequest[], void>({
-      query: () => "/visitor-requests",
-      transformResponse: (response: PaginatedEnvelope<VisitorRequest>) => response.data,
+    getVisitorRequests: builder.query<PagedMobileList<VisitorRequest>, PageQuery | void>({
+      query: (params) => {
+        const page = params?.page ?? 1;
+        const perPage = params?.perPage ?? 20;
+
+        return `/visitor-requests?page=${page}&perPage=${perPage}`;
+      },
+      transformResponse: (response: PaginatedEnvelope<VisitorRequest>) => ({
+        data: response.data,
+        links: response.links,
+        meta: response.meta,
+      }),
       providesTags: ["VisitorRequest"],
     }),
     getVisitorRequest: builder.query<VisitorRequest, string>({
@@ -173,7 +193,18 @@ export const propertyApi = api.injectEndpoints({
       }),
       invalidatesTags: ["Notification"],
     }),
-    createAnnouncement: builder.mutation<void, { title: string; content: string; category?: string; mustAcknowledge?: boolean; targetType?: string; targetIds?: string[] }>({
+    createAnnouncement: builder.mutation<void, {
+      titleEn: string;
+      titleAr: string;
+      bodyEn: string;
+      bodyAr: string;
+      category?: string;
+      priority?: string;
+      requiresAcknowledgement?: boolean;
+      requiresVerifiedMembership?: boolean;
+      targetType: string;
+      targetIds?: string[];
+    }>({
       query: (body) => ({
         url: "/announcements",
         method: "POST",

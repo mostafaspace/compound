@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, View, useColorScheme } from "react-native";
+import { Alert, FlatList, Pressable, ScrollView, StyleSheet, useColorScheme } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { pick, types } from "@react-native-documents/picker";
 import { useTranslation } from "react-i18next";
@@ -83,6 +83,34 @@ export const UploadDocumentScreen = () => {
   };
 
   const activeDocumentTypes = documentTypes.filter((documentType: DocumentType) => documentType.isActive);
+  const renderDocumentType = ({ item: documentType }: { item: DocumentType }) => {
+    const selected = selectedTypeId === documentType.id;
+
+    return (
+      <Pressable
+        onPress={() => setSelectedTypeId(documentType.id)}
+        style={[
+          styles.typeChip,
+          {
+            backgroundColor:
+              selected
+                ? isDark
+                  ? colors.primary.dark
+                  : colors.primary.light
+                : surface,
+            borderColor: selected ? "transparent" : border,
+          },
+        ]}
+      >
+        <Typography
+          variant="caption"
+          style={{ color: selected ? colors.text.inverse : text, fontWeight: "600" }}
+        >
+          {documentType.name}
+        </Typography>
+      </Pressable>
+    );
+  };
 
   return (
     <ScreenContainer withKeyboard edges={['left', 'right', 'bottom']}>
@@ -91,33 +119,15 @@ export const UploadDocumentScreen = () => {
           {t("Documents.typeLabel", { defaultValue: "Document type" })}
         </Typography>
 
-        <View style={styles.typeList}>
-          {activeDocumentTypes.map((documentType: DocumentType) => (
-            <Pressable
-              key={documentType.id}
-              onPress={() => setSelectedTypeId(documentType.id)}
-              style={[
-                styles.typeChip,
-                {
-                  backgroundColor:
-                    selectedTypeId === documentType.id
-                      ? isDark
-                        ? colors.primary.dark
-                        : colors.primary.light
-                      : surface,
-                borderColor: selectedTypeId === documentType.id ? "transparent" : border,
-                },
-              ]}
-            >
-              <Typography
-                variant="caption"
-                style={{ color: selectedTypeId === documentType.id ? colors.text.inverse : text, fontWeight: "600" }}
-              >
-                {documentType.name}
-              </Typography>
-            </Pressable>
-          ))}
-        </View>
+        <FlatList
+          data={activeDocumentTypes}
+          keyExtractor={(documentType) => String(documentType.id)}
+          renderItem={renderDocumentType}
+          numColumns={2}
+          scrollEnabled={false}
+          columnWrapperStyle={styles.typeRow}
+          contentContainerStyle={styles.typeList}
+        />
 
         {!activeDocumentTypes.length ? (
           <Typography variant="caption" style={styles.helperText}>
@@ -151,7 +161,8 @@ export const UploadDocumentScreen = () => {
 const styles = StyleSheet.create({
   scroll: { paddingBottom: layout.screenBottom },
   label: { marginBottom: spacing.xs, marginTop: spacing.md, fontWeight: "600" },
-  typeList: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  typeList: { gap: spacing.sm },
+  typeRow: { gap: spacing.sm, marginBottom: spacing.sm },
   typeChip: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radii.pill, borderWidth: 1 },
   filePicker: { borderWidth: 1, borderRadius: radii.xl, padding: layout.heroPadding, borderStyle: "dashed", alignItems: "center", gap: spacing.sm },
   helperText: { marginTop: spacing.sm },

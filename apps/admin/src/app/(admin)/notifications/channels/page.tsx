@@ -10,7 +10,6 @@ import {
 import { getLocale, getTranslations } from "next-intl/server";
 
 import { CompoundContextBanner } from "@/components/compound-context-banner";
-import { LogoutButton } from "@/components/logout-button";
 import { retryDeliveryAction, toggleTemplateActiveAction, upsertNotificationTemplateAction } from "@/app/(admin)/notifications/channel-actions";
 import {
   getCurrentUser,
@@ -236,7 +235,6 @@ export default async function NotificationChannelsPage({ searchParams }: Notific
             <h1 className="mt-2 text-3xl font-semibold">{t("title")}</h1>
             <p className="mt-2 max-w-3xl text-sm text-muted">{t("subtitle")}</p>
           </div>
-          <LogoutButton />
         </div>
       </header>
 

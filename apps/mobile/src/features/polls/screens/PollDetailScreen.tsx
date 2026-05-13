@@ -3,11 +3,13 @@ import {
   View,
   StyleSheet,
   ScrollView,
+  FlatList,
   Animated,
   Pressable,
   useColorScheme,
   Text,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import type { RouteProp } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import {
@@ -31,6 +33,7 @@ import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { pollStatusPalette } from '../../../theme/semantics';
 import type { RootStackParamList } from '../../../navigation/types';
 import type { PollOption } from '@compound/contracts';
+import { isRtlLanguage, rowDirectionStyle, textDirectionStyle } from '../../../i18n/direction';
 
 type PollDetailRouteProp = RouteProp<RootStackParamList, 'PollDetail'>;
 type PollDetailNavProp = StackNavigationProp<RootStackParamList, 'PollDetail'>;
@@ -84,6 +87,8 @@ const AnimatedBar = ({
 };
 
 export const PollDetailScreen = ({ route, navigation }: Props) => {
+  const { t, i18n } = useTranslation();
+  const isRtl = isRtlLanguage(i18n.language);
   const { pollId } = route.params;
   const isDark = useColorScheme() === 'dark';
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
@@ -151,11 +156,11 @@ export const PollDetailScreen = ({ route, navigation }: Props) => {
     setSuccessMsg(null);
     try {
       await castVote({ pollId, optionIds: selectedOptionIds, unitId: selectedUnitId ?? undefined }).unwrap();
-      setSuccessMsg('Your vote has been recorded!');
+      setSuccessMsg(t('Polls.voteSuccess'));
       setSelectedOptionIds([]);
       refetch();
     } catch (err: any) {
-      setErrorMsg(err?.data?.message ?? 'Failed to cast vote. Please try again.');
+      setErrorMsg(err?.data?.message ?? t('Polls.voteError'));
     }
   };
 
@@ -164,31 +169,31 @@ export const PollDetailScreen = ({ route, navigation }: Props) => {
     setSuccessMsg(null);
     try {
       await removeVote({ pollId, unitId: selectedUnitId ?? undefined }).unwrap();
-      setSuccessMsg('Your vote has been removed.');
+      setSuccessMsg(t('Polls.voteSuccess'));
       setSelectedOptionIds([]);
       refetch();
     } catch (err: any) {
-      setErrorMsg(err?.data?.message ?? 'Failed to remove vote.');
+      setErrorMsg(err?.data?.message ?? t('Polls.voteError'));
     }
   };
 
   const handlePublish = async () => {
     try {
       await publishPoll(pollId).unwrap();
-      setSuccessMsg('Poll published successfully!');
+      setSuccessMsg(t('Polls.publishSuccess', { defaultValue: 'Poll published successfully.' }));
       refetch();
     } catch (err: any) {
-      setErrorMsg(err?.data?.message ?? 'Failed to publish poll.');
+      setErrorMsg(err?.data?.message ?? t('Polls.publishError', { defaultValue: 'Failed to publish poll.' }));
     }
   };
 
   const handleClose = async () => {
     try {
       await closePoll(pollId).unwrap();
-      setSuccessMsg('Poll closed.');
+      setSuccessMsg(t('Polls.closeSuccess', { defaultValue: 'Poll closed successfully.' }));
       refetch();
     } catch (err: any) {
-      setErrorMsg(err?.data?.message ?? 'Failed to close poll.');
+      setErrorMsg(err?.data?.message ?? t('Polls.closeError', { defaultValue: 'Failed to close poll.' }));
     }
   };
 
@@ -200,15 +205,15 @@ export const PollDetailScreen = ({ route, navigation }: Props) => {
   if (isLoading || !poll) {
     return (
       <ScreenContainer withKeyboard={false} edges={['left', 'right', 'bottom']}>
-        <View style={styles.center}>
+        <View style={[styles.center, textDirectionStyle(isRtl)]}>
           {isLoading ? (
-            <Typography variant="caption">Loading…</Typography>
+            <Typography variant="caption" style={textDirectionStyle(isRtl)}>{t('Common.loading')}</Typography>
           ) : (
-            <View style={{ alignItems: 'center', padding: spacing.xl }}>
-              <Typography variant="body" style={{ color: colors.error, marginBottom: spacing.md }}>
-                Failed to load poll details.
+            <View style={[{ alignItems: 'center', padding: spacing.xl }, textDirectionStyle(isRtl)]}>
+              <Typography variant="body" style={[{ color: colors.error, marginBottom: spacing.md }, textDirectionStyle(isRtl)]}>
+                {t('Polls.loadError')}
               </Typography>
-              <Button title="Retry" onPress={refetch} variant="outline" />
+              <Button title={t('Common.retry')} onPress={refetch} variant="outline" />
             </View>
           )}
         </View>
@@ -219,6 +224,169 @@ export const PollDetailScreen = ({ route, navigation }: Props) => {
   const showResults = !isDraft;
   const statusPalette = pollStatusPalette(poll.status);
   const mutedText = isDark ? colors.text.secondary.dark : colors.text.secondary.light;
+  const getOptionVoterNames = (optionLabel: string) => {
+    const names: string[] = [];
+    for (const voter of voters ?? []) {
+      if (voter.options.includes(optionLabel)) {
+        names.push(voter.userName ?? t('Polls.unknownResident'));
+      }
+    }
+
+    return names.join(', ');
+  };
+
+  const renderEligibleUnit = ({ item: unit }: { item: PollEligibleUnit }) => {
+    const active = unit.id === selectedUnitId;
+
+    return (
+      <Pressable
+        onPress={() => {
+          setSelectedUnitId(unit.id);
+          setSelectedOptionIds([]);
+          setErrorMsg(null);
+          setSuccessMsg(null);
+        }}
+        style={[
+          styles.unitChip,
+          {
+            borderColor: active ? colors.primary.dark : (isDark ? colors.border.dark : colors.border.light),
+            backgroundColor: active ? colors.palette.blue[50] : 'transparent',
+          },
+          isRtl && { marginEnd: 0, marginStart: spacing.sm }
+        ]}
+      >
+        <Typography
+          variant="caption"
+          style={[styles.unitChipText, active ? { color: colors.primary.dark, fontWeight: '700' } : null, textDirectionStyle(isRtl)]}
+        >
+          {unit.unitNumber ? t('Apartments.unitNumber', { number: unit.unitNumber }) : t('Apartments.types.apartment')}
+        </Typography>
+      </Pressable>
+    );
+  };
+
+  const renderOption = ({ item: opt }: { item: PollOption }) => {
+    const optPct = pct(opt.votesCount);
+    const isSelected = selectedOptionIds.includes(opt.id);
+    const userVoted = poll.userVoteOptionIds?.includes(opt.id) ?? false;
+    const optionVoterNames = getOptionVoterNames(opt.label);
+
+    return (
+      <Pressable
+        onPress={() => {
+          if (votingOpen && isEligible) {
+            toggleOption(opt.id);
+          }
+        }}
+        style={[
+          styles.optionRow,
+          isSelected && styles.optionRowSelected,
+          {
+            borderColor: isSelected
+              ? colors.primary.dark
+              : isDark
+                ? colors.border.dark
+                : colors.border.light,
+          },
+          textDirectionStyle(isRtl)
+        ]}
+      >
+        <View style={[styles.optionTop, rowDirectionStyle(isRtl)]}>
+          <View style={[styles.optionLabelRow, rowDirectionStyle(isRtl)]}>
+            <View
+              style={[
+                styles.optionIndicator,
+                allowMultiple ? styles.checkbox : styles.radio,
+                isSelected || userVoted
+                  ? { backgroundColor: colors.primary.dark, borderColor: colors.primary.dark }
+                  : {
+                      borderColor: isDark ? colors.border.dark : colors.border.light,
+                      backgroundColor: 'transparent',
+                    },
+                isRtl ? { marginStart: spacing.sm, marginEnd: 0 } : { marginEnd: spacing.sm, marginStart: 0 }
+              ]}
+            >
+              {(isSelected || userVoted) ? (
+                <Text style={styles.checkmark}>
+                  {allowMultiple ? '✓' : '•'}
+                </Text>
+              ) : null}
+            </View>
+            <Typography
+              variant="body"
+              style={[
+                styles.optionLabel,
+                (isSelected || userVoted) && { fontWeight: '700' },
+                textDirectionStyle(isRtl)
+              ]}
+            >
+              {opt.label}
+            </Typography>
+          </View>
+          {showResults ? (
+            <Typography
+              variant="caption"
+              style={[{ color: mutedText, minWidth: 50 }, isRtl ? { textAlign: 'left' } : { textAlign: 'right' }]}
+            >
+              {opt.votesCount} ({optPct}%)
+            </Typography>
+          ) : null}
+        </View>
+
+        {showResults ? (
+          <>
+            <AnimatedBar
+              pct={optPct}
+              isDark={isDark}
+              selected={userVoted}
+            />
+            {optionVoterNames ? (
+              <View style={[styles.optionVoters, rowDirectionStyle(isRtl)]}>
+                <Typography variant="caption" style={[styles.optionVoterName, textDirectionStyle(isRtl)]}>
+                  {optionVoterNames}
+                </Typography>
+              </View>
+            ) : null}
+          </>
+        ) : null}
+      </Pressable>
+    );
+  };
+
+  const renderVoter = ({ item: voter, index }: { item: any; index: number }) => (
+    <View style={[styles.voterRow, rowDirectionStyle(isRtl)]}>
+      <View style={[styles.voterInfo, textDirectionStyle(isRtl)]}>
+        <Typography variant="label" style={textDirectionStyle(isRtl)}>{voter.userName ?? t('Polls.unknownResident')}</Typography>
+        <Typography variant="caption" style={[styles.voterMeta, textDirectionStyle(isRtl)]}>
+          {voter.unitNumber ? t('Apartments.unitNumber', { number: voter.unitNumber }) : t('Polls.unitNotRecorded')}
+        </Typography>
+        <Typography variant="caption" style={[styles.voterMeta, textDirectionStyle(isRtl)]}>
+          {voter.options.join(', ') || t('Polls.noOptionRecorded')}
+        </Typography>
+      </View>
+      <Typography variant="caption" style={[styles.voterMeta, textDirectionStyle(isRtl)]}>
+        {voter.votedAt ? new Date(voter.votedAt).toLocaleString(i18n.language === 'ar' ? 'ar-EG' : 'en-US') : t('Polls.noTimestamp')}
+      </Typography>
+    </View>
+  );
+
+  const renderViewLog = ({ item: log }: { item: any }) => (
+    <View style={[styles.logRow, rowDirectionStyle(isRtl)]}>
+      <Typography variant="caption" style={textDirectionStyle(isRtl)}>{log.userName}</Typography>
+      <Typography variant="caption" style={[styles.logTime, textDirectionStyle(isRtl)]}>
+        {log.lastViewedAt ? new Date(log.lastViewedAt).toLocaleTimeString(i18n.language === 'ar' ? 'ar-EG' : 'en-US') : t('Polls.noTimestamp')}
+      </Typography>
+    </View>
+  );
+
+  const renderNotificationLog = ({ item: log }: { item: any }) => (
+    <View style={[styles.logRow, rowDirectionStyle(isRtl)]}>
+      <Typography variant="caption" style={textDirectionStyle(isRtl)}>{log.userName}</Typography>
+      <Typography variant="caption" style={[styles.logStatus, { color: log.delivered ? colors.success : colors.error }, textDirectionStyle(isRtl)]}>
+        {log.delivered ? t('Polls.delivered') : t('Polls.failed')}
+      </Typography>
+    </View>
+  );
 
   return (
     <ScreenContainer withKeyboard={false} style={styles.container} edges={['left', 'right', 'bottom']}>
@@ -227,28 +395,28 @@ export const PollDetailScreen = ({ route, navigation }: Props) => {
         showsVerticalScrollIndicator={false}
       >
         {/* Title + status */}
-        <Typography variant="h2" style={styles.title}>
+        <Typography variant="h2" style={[styles.title, textDirectionStyle(isRtl)]}>
           {poll.title}
         </Typography>
 
         {poll.description ? (
           <Typography
             variant="body"
-            style={[styles.description, { color: mutedText }]}
+            style={[styles.description, { color: mutedText }, textDirectionStyle(isRtl)]}
           >
             {poll.description}
           </Typography>
         ) : null}
 
-        <View style={styles.metaRow}>
+        <View style={[styles.metaRow, rowDirectionStyle(isRtl)]}>
           <StatusBadge
-            label={poll.status}
+            label={t(`Common.statuses.${poll.status}`, { defaultValue: poll.status })}
             backgroundColor={statusPalette.background}
             textColor={statusPalette.text}
           />
           {isAdmin && poll.status === 'draft' && (
             <Button
-              title="Publish Now"
+              title={t('Polls.publishNow')}
               variant="outline"
               onPress={handlePublish}
               loading={isPublishing}
@@ -258,7 +426,7 @@ export const PollDetailScreen = ({ route, navigation }: Props) => {
           )}
           {isAdmin && poll.status === 'active' && (
             <Button
-              title="Close Poll"
+              title={t('Polls.closePoll')}
               variant="outline"
               onPress={handleClose}
               loading={isClosing}
@@ -267,26 +435,26 @@ export const PollDetailScreen = ({ route, navigation }: Props) => {
             />
           )}
           {allowMultiple ? (
-            <Typography variant="caption" style={{ color: mutedText }}>
-              Multi-choice{maxChoices ? ` (max ${maxChoices})` : ''}
+            <Typography variant="caption" style={[{ color: mutedText }, textDirectionStyle(isRtl)]}>
+              {t('Polls.multiChoice')}{maxChoices ? ` ${t('Polls.maxChoices', { count: maxChoices })}` : ''}
             </Typography>
           ) : null}
-          <Typography variant="caption" style={{ color: mutedText }}>
-            {totalVotes} votes
+          <Typography variant="caption" style={[{ color: mutedText }, textDirectionStyle(isRtl)]}>
+            {t('Polls.votesCount', { count: totalVotes })}
           </Typography>
         </View>
 
         {/* Success / Error banners */}
         {successMsg ? (
-          <View style={styles.successBanner}>
-            <Typography variant="body" style={{ color: colors.palette.emerald[600], fontWeight: '600' }}>
+          <View style={[styles.successBanner, textDirectionStyle(isRtl)]}>
+            <Typography variant="body" style={[{ color: colors.palette.emerald[600], fontWeight: '600' }, textDirectionStyle(isRtl)]}>
               {successMsg}
             </Typography>
           </View>
         ) : null}
         {errorMsg ? (
-          <View style={styles.errorBanner}>
-            <Typography variant="body" style={{ color: colors.palette.red[600], fontWeight: '600' }}>
+          <View style={[styles.errorBanner, textDirectionStyle(isRtl)]}>
+            <Typography variant="body" style={[{ color: colors.palette.red[600], fontWeight: '600' }, textDirectionStyle(isRtl)]}>
               {errorMsg}
             </Typography>
           </View>
@@ -302,42 +470,21 @@ export const PollDetailScreen = ({ route, navigation }: Props) => {
               },
             ]}
           >
-            <Typography variant="h3" style={styles.optionsTitle}>
-              Voting Apartment
+            <Typography variant="h3" style={[styles.optionsTitle, textDirectionStyle(isRtl)]}>
+              {t('Polls.votingUnitTitle')}
             </Typography>
-            <Typography variant="caption" style={styles.votersHelper}>
-              Choose which apartment should cast this ballot. Each apartment can submit one ballot per poll.
+            <Typography variant="caption" style={[styles.votersHelper, textDirectionStyle(isRtl)]}>
+              {t('Polls.votersHelper')}
             </Typography>
-            <View style={styles.unitChipRow}>
-              {eligibleUnits.map((unit) => {
-                const active = unit.id === selectedUnitId;
-                return (
-                  <Pressable
-                    key={unit.id}
-                    onPress={() => {
-                      setSelectedUnitId(unit.id);
-                      setSelectedOptionIds([]);
-                      setErrorMsg(null);
-                      setSuccessMsg(null);
-                    }}
-                    style={[
-                      styles.unitChip,
-                      {
-                        borderColor: active ? colors.primary.dark : (isDark ? colors.border.dark : colors.border.light),
-                        backgroundColor: active ? colors.palette.blue[50] : 'transparent',
-                      },
-                    ]}
-                  >
-                    <Typography
-                      variant="caption"
-                      style={[styles.unitChipText, active ? { color: colors.primary.dark, fontWeight: '700' } : null]}
-                    >
-                      {unit.unitNumber ? `Unit ${unit.unitNumber}` : 'Apartment'}
-                    </Typography>
-                  </Pressable>
-                );
-              })}
-            </View>
+            <FlatList
+              data={eligibleUnits}
+              keyExtractor={(unit) => unit.id}
+              renderItem={renderEligibleUnit}
+              horizontal
+              inverted={isRtl}
+              scrollEnabled={false}
+              contentContainerStyle={[styles.unitChipRow, rowDirectionStyle(isRtl)]}
+            />
           </View>
         ) : null}
 
@@ -351,134 +498,50 @@ export const PollDetailScreen = ({ route, navigation }: Props) => {
             },
           ]}
         >
-          <Typography variant="h3" style={styles.optionsTitle}>
-            {showResults ? 'Results' : 'Options'}
+          <Typography variant="h3" style={[styles.optionsTitle, textDirectionStyle(isRtl)]}>
+            {showResults ? t('Polls.results') : t('Polls.options')}
           </Typography>
-          {options.length === 0 ? (
-            <Typography variant="caption">No options available.</Typography>
-          ) : (
-            options.map((opt) => {
-              const optPct = pct(opt.votesCount);
-              const isSelected = selectedOptionIds.includes(opt.id);
-              const userVoted = poll.userVoteOptionIds?.includes(opt.id) ?? false;
-              const optionVoters = (voters ?? []).filter((voter) => voter.options.includes(opt.label));
-
-              return (
-                <Pressable
-                  key={opt.id}
-                  onPress={() => {
-                    if (votingOpen && isEligible) {
-                      toggleOption(opt.id);
-                    }
-                  }}
-                  style={[
-                    styles.optionRow,
-                    isSelected && styles.optionRowSelected,
-                    {
-                      borderColor: isSelected
-                        ? colors.primary.dark
-                        : isDark
-                        ? colors.border.dark
-                        : colors.border.light,
-                    },
-                  ]}
-                >
-                  <View style={styles.optionTop}>
-                    <View style={styles.optionLabelRow}>
-                      {/* Selection indicator */}
-                      <View
-                        style={[
-                          styles.optionIndicator,
-                          allowMultiple ? styles.checkbox : styles.radio,
-                          isSelected || userVoted
-                            ? { backgroundColor: colors.primary.dark, borderColor: colors.primary.dark }
-                            : {
-                                borderColor: isDark ? colors.border.dark : colors.border.light,
-                                backgroundColor: 'transparent',
-                              },
-                        ]}
-                      >
-                        {(isSelected || userVoted) ? (
-                          <Text style={styles.checkmark}>
-                            {allowMultiple ? '✓' : '•'}
-                          </Text>
-                        ) : null}
-                      </View>
-                      <Typography
-                        variant="body"
-                        style={[
-                          styles.optionLabel,
-                          (isSelected || userVoted) && { fontWeight: '700' },
-                        ]}
-                      >
-                        {opt.label}
-                      </Typography>
-                    </View>
-                    {showResults ? (
-                      <Typography
-                        variant="caption"
-                        style={{ color: mutedText, minWidth: 50, textAlign: 'right' }}
-                      >
-                        {opt.votesCount} ({optPct}%)
-                      </Typography>
-                    ) : null}
-                  </View>
-
-                  {showResults ? (
-                    <>
-                      <AnimatedBar
-                        pct={optPct}
-                        isDark={isDark}
-                        selected={userVoted}
-                      />
-                      {/* Show names of people who voted for this option (WhatsApp style) */}
-                      {optionVoters.length > 0 && (
-                        <View style={styles.optionVoters}>
-                          {optionVoters.map((v, i) => (
-                              <Typography key={i} variant="caption" style={styles.optionVoterName}>
-                                {v.userName}{i < optionVoters.length - 1 ? ', ' : ''}
-                              </Typography>
-                            ))}
-                        </View>
-                      )}
-                    </>
-                  ) : null}
-                </Pressable>
-              );
-            })
-          )}
+          <FlatList
+            data={options}
+            keyExtractor={(opt) => String(opt.id)}
+            renderItem={renderOption}
+            scrollEnabled={false}
+            ListEmptyComponent={
+              <Typography variant="caption" style={textDirectionStyle(isRtl)}>{t('Polls.noActiveVotes')}</Typography>
+            }
+          />
         </View>
 
         {/* Vote action */}
         {!hasStarted && isActive ? (
-          <View style={styles.infoBox}>
-            <Typography variant="body" style={styles.infoText}>
-              Voting opens at {poll.startsAt ? new Date(poll.startsAt).toLocaleString() : 'the scheduled start time'}.
+          <View style={[styles.infoBox, textDirectionStyle(isRtl)]}>
+            <Typography variant="body" style={[styles.infoText, textDirectionStyle(isRtl)]}>
+              {t('Polls.endsAt', { date: poll.startsAt ? new Date(poll.startsAt).toLocaleString(i18n.language === 'ar' ? 'ar-EG' : 'en-US') : '' })}
             </Typography>
           </View>
-        ) : votingOpen && isEligible && (!hasVoted || selectedOptionIds.length > 0) ? (
+        ) : isActive && isEligible && (!hasVoted || selectedOptionIds.length > 0) ? (
           <Button
-            title={isCasting ? 'Submitting…' : (hasVoted ? 'Update Vote' : 'Submit Vote')}
+            title={isCasting ? t('Common.loading') : (hasVoted ? t('Polls.updateVote') : t('Polls.submitVote'))}
             onPress={handleVote}
             disabled={selectedOptionIds.length === 0 || isCasting || (requiresUnitSelection && !selectedUnitId)}
             loading={isCasting}
             style={styles.voteButton}
           />
-        ) : votingOpen && !hasVoted && eligibility && !isEligible ? (
-          <View style={styles.ineligibleBox}>
-            <Typography variant="body" style={styles.ineligibleText}>
-              You are not eligible to vote in this poll.
+        ) : isActive && !hasVoted && eligibility && !isEligible ? (
+          <View style={[styles.ineligibleBox, textDirectionStyle(isRtl)]}>
+            <Typography variant="body" style={[styles.ineligibleText, textDirectionStyle(isRtl)]}>
+              {t('Polls.ineligible', { reason: '' })}
             </Typography>
           </View>
-        ) : votingOpen && hasVoted && selectedOptionIds.length === 0 ? (
-          <View style={styles.votedBox}>
-            <Typography variant="body" style={styles.votedText}>
+        ) : isActive && hasVoted && selectedOptionIds.length === 0 ? (
+          <View style={[styles.votedBox, textDirectionStyle(isRtl)]}>
+            <Typography variant="body" style={[styles.votedText, textDirectionStyle(isRtl)]}>
               {selectedUnit?.unitNumber
-                ? `Unit ${selectedUnit.unitNumber} already has a ballot. Tap another option to replace it or remove it while the poll is open.`
-                : 'Your apartment already has a ballot. Tap another option to replace it or remove it while the poll is open.'}
+                ? t('Polls.alreadyVotedMessage', { unit: selectedUnit.unitNumber })
+                : t('Polls.noApartmentVoted')}
             </Typography>
             <Button
-              title={isRemoving ? 'Removing…' : 'Remove My Vote'}
+              title={isRemoving ? t('Common.loading') : t('Polls.removeVote')}
               variant="ghost"
               onPress={handleUnvote}
               disabled={isRemoving}
@@ -498,69 +561,54 @@ export const PollDetailScreen = ({ route, navigation }: Props) => {
             },
           ]}
         >
-          <Typography variant="h3" style={styles.optionsTitle}>
-            Named Ballots
+          <Typography variant="h3" style={[styles.optionsTitle, textDirectionStyle(isRtl)]}>
+            {t('Polls.namedBallots')}
           </Typography>
-          <Typography variant="caption" style={styles.votersHelper}>
-            Every ballot is visible with the resident, apartment, choice, and timestamp for full transparency.
+          <Typography variant="caption" style={[styles.votersHelper, textDirectionStyle(isRtl)]}>
+            {t('Polls.ballotsTransparency')}
           </Typography>
-          {(voters ?? []).length === 0 ? (
-            <Typography variant="caption" style={styles.emptyStateText}>
-              No ballots have been recorded yet.
-            </Typography>
-          ) : (
-            (voters ?? []).map((voter, index) => (
-              <View key={`${voter.userId}-${index}`} style={styles.voterRow}>
-                <View style={styles.voterInfo}>
-                  <Typography variant="label">{voter.userName ?? 'Unknown resident'}</Typography>
-                  <Typography variant="caption" style={styles.voterMeta}>
-                    {voter.unitNumber ? `Unit ${voter.unitNumber}` : 'Unit not recorded'}
-                  </Typography>
-                  <Typography variant="caption" style={styles.voterMeta}>
-                    {voter.options.join(', ') || 'No option recorded'}
-                  </Typography>
-                </View>
-                <Typography variant="caption" style={styles.voterMeta}>
-                  {voter.votedAt ? new Date(voter.votedAt).toLocaleString() : 'No timestamp'}
-                </Typography>
-              </View>
-            ))
-          )}
+          <FlatList
+            data={voters ?? []}
+            keyExtractor={(voter, index) => `${voter.userId}-${index}`}
+            renderItem={renderVoter}
+            scrollEnabled={false}
+            ListEmptyComponent={
+              <Typography variant="caption" style={[styles.emptyStateText, textDirectionStyle(isRtl)]}>
+                {t('Polls.noBallots')}
+              </Typography>
+            }
+          />
         </View>
 
         {/* Transparency Logs */}
         {isAdmin && (
-          <View style={styles.logsSection}>
-            <Typography variant="h3" style={styles.logsTitle}>
-              Transparency & Tracking
+          <View style={[styles.logsSection, textDirectionStyle(isRtl)]}>
+            <Typography variant="h3" style={[styles.logsTitle, textDirectionStyle(isRtl)]}>
+              {t('Polls.transparencyTitle')}
             </Typography>
             
-            <View style={styles.logCard}>
-              <Typography variant="label" style={styles.logLabel}>
-                Seen by ({poll.viewLogs?.length || 0})
+            <View style={[styles.logCard, textDirectionStyle(isRtl)]}>
+              <Typography variant="label" style={[styles.logLabel, textDirectionStyle(isRtl)]}>
+                {t('Polls.seenBy', { count: poll.viewLogs?.length || 0 })}
               </Typography>
-              {(poll.viewLogs || []).map((log, i) => (
-                <View key={i} style={styles.logRow}>
-                  <Typography variant="caption">{log.userName}</Typography>
-                  <Typography variant="caption" style={styles.logTime}>
-                    {log.lastViewedAt ? new Date(log.lastViewedAt).toLocaleTimeString() : 'Not recorded'}
-                  </Typography>
-                </View>
-              ))}
+              <FlatList
+                data={poll.viewLogs ?? []}
+                keyExtractor={(log, index) => `${log.userId ?? log.userName}-${index}`}
+                renderItem={renderViewLog}
+                scrollEnabled={false}
+              />
             </View>
 
-            <View style={styles.logCard}>
-              <Typography variant="label" style={styles.logLabel}>
-                Notified Residents ({poll.notificationLogs?.length || 0})
+            <View style={[styles.logCard, textDirectionStyle(isRtl)]}>
+              <Typography variant="label" style={[styles.logLabel, textDirectionStyle(isRtl)]}>
+                {t('Polls.notifiedResidents', { count: poll.notificationLogs?.length || 0 })}
               </Typography>
-              {(poll.notificationLogs || []).map((log, i) => (
-                <View key={i} style={styles.logRow}>
-                  <Typography variant="caption">{log.userName}</Typography>
-                  <Typography variant="caption" style={[styles.logStatus, { color: log.delivered ? colors.success : colors.error }]}>
-                    {log.delivered ? 'Delivered' : 'Failed'}
-                  </Typography>
-                </View>
-              ))}
+              <FlatList
+                data={poll.notificationLogs ?? []}
+                keyExtractor={(log, index) => `${log.userId ?? log.userName}-${index}`}
+                renderItem={renderNotificationLog}
+                scrollEnabled={false}
+              />
             </View>
           </View>
         )}

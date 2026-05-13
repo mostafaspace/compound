@@ -1,5 +1,6 @@
 import React from 'react';
 import Svg, { Circle, Line, Path, Polyline, Rect } from 'react-native-svg';
+import { useIsRtl } from '../../i18n/direction';
 
 export type AppIconName =
   | 'alert'
@@ -41,6 +42,7 @@ type IconProps = {
   color?: string;
   size?: number;
   strokeWidth?: number;
+  isRtl?: boolean; // Optional override
 };
 
 export function Icon({
@@ -48,6 +50,7 @@ export function Icon({
   color = 'currentColor',
   size = 24,
   strokeWidth = 2,
+  isRtl: isRtlProp,
 }: IconProps) {
   const strokeProps = {
     stroke: color,
@@ -57,8 +60,22 @@ export function Icon({
     fill: 'none',
   };
 
+  const isRtlHook = useIsRtl();
+  const isRtl = isRtlProp ?? isRtlHook;
+  const shouldMirror = ['arrow-left', 'arrow-right', 'chevron-left', 'chevron-right'].includes(name);
+  
+  // Use scaleX for horizontal mirroring in RTL
+  const transform = isRtl && shouldMirror ? [{ scaleX: -1 }] : [];
+
   return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" accessibilityElementsHidden importantForAccessibility="no">
+    <Svg 
+      width={size} 
+      height={size} 
+      viewBox="0 0 24 24" 
+      accessibilityElementsHidden 
+      importantForAccessibility="no"
+      style={{ transform }}
+    >
       {name === 'alert' ? (
         <>
           <Path {...strokeProps} d="M12 9v4" />

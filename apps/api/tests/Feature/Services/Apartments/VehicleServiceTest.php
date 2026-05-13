@@ -5,7 +5,6 @@ namespace Tests\Feature\Services\Apartments;
 use App\Models\Apartments\ApartmentVehicle;
 use App\Models\Property\Unit;
 use App\Models\User;
-use App\Services\Apartments\Exceptions\CapabilityDisabledException;
 use App\Services\Apartments\Exceptions\CapacityExceededException;
 use App\Services\Apartments\VehicleService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -30,17 +29,17 @@ class VehicleServiceTest extends TestCase
         $this->assertSame('abg1234', $vehicle->plate_normalized);
     }
 
-    public function test_rejects_when_capability_disabled(): void
+    public function test_creates_vehicle_even_when_unit_vehicle_capability_is_disabled(): void
     {
         $unit = Unit::factory()->create(['has_vehicle' => false]);
 
-        $this->expectException(CapabilityDisabledException::class);
-
-        app(VehicleService::class)->create($unit, User::factory()->create(), [
+        $vehicle = app(VehicleService::class)->create($unit, User::factory()->create(), [
             'plate_format' => 'letters_numbers',
             'plate_letters_input' => 'أ',
             'plate_digits_input' => '1',
         ]);
+
+        $this->assertSame($unit->id, $vehicle->unit_id);
     }
 
     public function test_rejects_over_capacity(): void

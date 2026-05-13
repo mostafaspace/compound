@@ -47,7 +47,7 @@ export function UsersTableClient({
   return (
     <>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[700px] border-collapse text-left text-sm">
+        <table className="w-full min-w-[700px] border-collapse text-start text-sm">
           <thead className="bg-background text-muted">
             <tr>
               <th className="px-4 py-3 font-semibold">{colName}</th>

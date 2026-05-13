@@ -195,7 +195,7 @@ export default async function PollDetailPage({ params, searchParams }: PollDetai
                     {`Admin-ready voter ledger from the backend /polls/${poll.id}/voters feed.`}
                   </p>
                 </div>
-                <div className="rounded-lg bg-background px-3 py-2 text-right text-sm">
+                <div className="rounded-lg bg-background px-3 py-2 text-end text-sm">
                   <div className="font-semibold">{voters.length} ballots captured</div>
                   <div className="text-muted">{transparency.uniqueUnitCount} represented units</div>
                 </div>
@@ -207,7 +207,7 @@ export default async function PollDetailPage({ params, searchParams }: PollDetai
                 <div className="mt-4 overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-line text-left text-xs font-semibold text-muted">
+                      <tr className="border-b border-line text-start text-xs font-semibold text-muted">
                         <th className="pb-2">Resident</th>
                         <th className="pb-2">Unit</th>
                         <th className="pb-2">Choice(s)</th>
@@ -280,7 +280,7 @@ export default async function PollDetailPage({ params, searchParams }: PollDetai
                   <div className="mt-4 overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="border-b border-line text-left text-xs font-semibold text-muted">
+                        <tr className="border-b border-line text-start text-xs font-semibold text-muted">
                           <th className="pb-2">Resident</th>
                           <th className="pb-2">Channel</th>
                           <th className="pb-2">Notified At</th>
@@ -324,7 +324,7 @@ export default async function PollDetailPage({ params, searchParams }: PollDetai
                   <div className="mt-4 overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="border-b border-line text-left text-xs font-semibold text-muted">
+                        <tr className="border-b border-line text-start text-xs font-semibold text-muted">
                           <th className="pb-2">Resident</th>
                           <th className="pb-2">First Viewed</th>
                           <th className="pb-2">Last Viewed</th>

@@ -17,7 +17,7 @@ export function PasswordInput({ name, placeholder, label }: PasswordInputProps) 
       <div className="relative">
         <input
           autoComplete="current-password"
-          className="h-11 w-full rounded-lg border border-line px-3 pr-10 text-sm outline-none focus:border-brand"
+          className="h-11 w-full rounded-lg border border-line px-3 pe-10 text-sm outline-none focus:border-brand"
           name={name}
           placeholder={placeholder}
           required
@@ -25,7 +25,7 @@ export function PasswordInput({ name, placeholder, label }: PasswordInputProps) 
         />
         <button
           type="button"
-          className="absolute inset-y-0 right-0 flex items-center px-3 text-muted hover:text-foreground"
+          className="absolute inset-y-0 end-0 flex items-center px-3 text-muted hover:text-foreground"
           onClick={() => setVisible((v) => !v)}
           aria-label={visible ? "Hide password" : "Show password"}
         >

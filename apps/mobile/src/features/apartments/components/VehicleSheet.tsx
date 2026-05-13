@@ -1,9 +1,10 @@
 import React, { useState } from "react";
-import { Modal, ScrollView, StyleSheet, Text, useColorScheme, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
+import { BottomSheet } from "../../../components/ui/BottomSheet";
 import { Button } from "../../../components/ui/Button";
 import { Input } from "../../../components/ui/Input";
-import { colors, radii, shadows, spacing, typography } from "../../../theme";
+import { colors, spacing, typography } from "../../../theme";
 import { useCreateVehicleMutation, useUpdateVehicleMutation } from "../../../services/apartments/vehiclesApi";
 import type { ApartmentDetail, ApartmentVehicle, PlateFormat } from "../../../services/apartments/types";
 import { PlateInput } from "./PlateInput";
@@ -17,7 +18,6 @@ export function VehicleSheet({
   vehicle?: ApartmentVehicle;
   onClose: () => void;
 }) {
-  const isDark = useColorScheme() === "dark";
   const { t } = useTranslation();
   const [plateFormat, setPlateFormat] = useState<PlateFormat>(vehicle?.plateFormat ?? "letters_numbers");
   const [plateLetters, setPlateLetters] = useState(vehicle?.plateLettersAr ?? "");
@@ -69,80 +69,47 @@ export function VehicleSheet({
   };
 
   return (
-    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.backdrop}>
-        <View style={[styles.sheet, { backgroundColor: colors.surface[isDark ? "dark" : "light"] }]}>
-          <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-            <View style={styles.handle} />
-            <Text style={[styles.title, { color: colors.text.primary[isDark ? "dark" : "light"] }]}>
-              {vehicle ? t("Vehicles.editVehicle") : t("Vehicles.addVehicle")}
-            </Text>
-            <Text style={[styles.subtitle, { color: colors.text.secondary[isDark ? "dark" : "light"] }]}>
-              {t("Vehicles.capacityNote")}
-            </Text>
-
-            <PlateInput
-              format={plateFormat}
-              letters={plateLetters}
-              digits={plateDigits}
-              onChange={({ format, letters, digits }) => {
-                setPlateFormat(format);
-                setPlateLetters(letters);
-                setPlateDigits(digits);
-              }}
-            />
-            <Input label={t("Vehicles.make")} value={make} onChangeText={setMake} placeholder={t("Vehicles.makePlaceholder")} />
-            <Input label={t("Vehicles.model")} value={model} onChangeText={setModel} placeholder={t("Vehicles.modelPlaceholder")} />
-            <Input label={t("Vehicles.color")} value={color} onChangeText={setColor} placeholder={t("Vehicles.colorPlaceholder")} />
-            <Input label={t("Vehicles.stickerCode")} value={stickerCode} onChangeText={setStickerCode} placeholder={t("Vehicles.optional")} />
-            <Input label={t("Vehicles.notes")} value={notes} onChangeText={setNotes} placeholder={t("Vehicles.optionalNotes")} multiline />
-
-            {error ? <Text style={styles.error}>{error}</Text> : null}
-
-            <View style={styles.actions}>
-              <Button title={t("Vehicles.cancel")} variant="ghost" onPress={onClose} disabled={isSaving} style={styles.actionButton} />
-              <Button title={isSaving ? t("Vehicles.saving") : t("Vehicles.save")} onPress={submit} disabled={isSaving} style={styles.actionButton} />
-            </View>
-          </ScrollView>
+    <BottomSheet
+      title={vehicle ? t("Vehicles.editVehicle") : t("Vehicles.addVehicle")}
+      subtitle={t("Vehicles.capacityNote")}
+      onClose={onClose}
+      footer={
+        <View style={styles.actions}>
+          <Button title={t("Vehicles.cancel")} variant="ghost" onPress={onClose} disabled={isSaving} style={styles.actionButton} />
+          <Button title={isSaving ? t("Vehicles.saving") : t("Vehicles.save")} onPress={submit} disabled={isSaving} style={styles.actionButton} />
         </View>
+      }
+    >
+      <View style={styles.form}>
+        <PlateInput
+          format={plateFormat}
+          letters={plateLetters}
+          digits={plateDigits}
+          onChange={({ format, letters, digits }) => {
+            setPlateFormat(format);
+            setPlateLetters(letters);
+            setPlateDigits(digits);
+          }}
+        />
+        <Input label={t("Vehicles.make")} value={make} onChangeText={setMake} placeholder={t("Vehicles.makePlaceholder")} />
+        <Input label={t("Vehicles.model")} value={model} onChangeText={setModel} placeholder={t("Vehicles.modelPlaceholder")} />
+        <Input label={t("Vehicles.color")} value={color} onChangeText={setColor} placeholder={t("Vehicles.colorPlaceholder")} />
+        <Input label={t("Vehicles.stickerCode")} value={stickerCode} onChangeText={setStickerCode} placeholder={t("Vehicles.optional")} />
+        <Input label={t("Vehicles.notes")} value={notes} onChangeText={setNotes} placeholder={t("Vehicles.optionalNotes")} multiline />
+
+        {error ? <Text style={styles.error}>{error}</Text> : null}
       </View>
-    </Modal>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    backgroundColor: "rgba(7, 17, 31, 0.58)",
-    flex: 1,
-    justifyContent: "flex-end",
-  },
-  sheet: {
-    borderTopLeftRadius: radii.xl,
-    borderTopRightRadius: radii.xl,
-    maxHeight: "88%",
-    padding: spacing.lg,
-    ...shadows.lg,
-  },
-  handle: {
-    alignSelf: "center",
-    backgroundColor: colors.border.light,
-    borderRadius: radii.pill,
-    height: 4,
-    marginBottom: spacing.md,
-    width: 48,
-  },
-  title: {
-    ...typography.h2,
-  },
-  subtitle: {
-    ...typography.body,
-    marginBottom: spacing.lg,
-    marginTop: spacing.xs,
+  form: {
+    gap: spacing.sm,
   },
   actions: {
     flexDirection: "row",
     gap: spacing.sm,
-    marginTop: spacing.md,
   },
   actionButton: {
     flex: 1,

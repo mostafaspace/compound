@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, View, useColorScheme } from "react-native";
+import { Alert, FlatList, Pressable, ScrollView, StyleSheet, View, useColorScheme } from "react-native";
 import { pick, types } from "@react-native-documents/picker";
 import { useNavigation } from "@react-navigation/native";
 import type { StackNavigationProp } from "@react-navigation/stack";
@@ -181,12 +181,11 @@ export const OwnerRegistrationScreen = () => {
     }
   };
 
-  const renderBuilding = (building: OwnerRegistrationBuilding) => {
+  const renderBuilding = ({ item: building }: { item: OwnerRegistrationBuilding }) => {
     const selected = building.id === buildingId;
 
     return (
       <Pressable
-        key={building.id}
         onPress={() => setBuildingId(building.id)}
         accessibilityRole="button"
         accessibilityState={{ selected }}
@@ -218,29 +217,41 @@ export const OwnerRegistrationScreen = () => {
             accessibilityRole="button"
             accessibilityLabel={t("Common.back", { defaultValue: "Back" })}
           >
-            <Icon name={isRtl ? "arrow-right" : "arrow-left"} color={text} size={20} />
+            <Icon name="arrow-left" color={text} size={20} />
           </Pressable>
           <View style={styles.headerCopy}>
             <Typography variant="h1" style={[styles.title, { color: text }, textDirectionStyle(isRtl)]}>
-              {t("OwnerRegistration.title", { defaultValue: "Contact Admin" })}
+              {t("OwnerRegistration.title")}
             </Typography>
             <Typography style={[styles.subtitle, { color: muted }, textDirectionStyle(isRtl)]}>
-              {t("OwnerRegistration.subtitle", { defaultValue: "Owner registration for Next Point. طلب تسجيل مالك في نكست بوينت." })}
+              {t("OwnerRegistration.subtitle")}
             </Typography>
           </View>
         </View>
+
+        <Card style={styles.heroCard}>
+          <Typography variant="label" style={[{ color: colors.primary.light }, textDirectionStyle(isRtl)]}>
+            {t("OwnerRegistration.ownersOnly")}
+          </Typography>
+          <Typography variant="h2" style={[styles.heroTitle, { color: text }, textDirectionStyle(isRtl)]}>
+            {t("OwnerRegistration.reviewTitle")}
+          </Typography>
+          <Typography style={[styles.heroBody, { color: muted }, textDirectionStyle(isRtl)]}>
+            {t("OwnerRegistration.reviewBody")}
+          </Typography>
+        </Card>
 
         <Card style={styles.card}>
           <View style={[styles.sectionHeader, rowDirectionStyle(isRtl)]}>
             <Icon name="user" color={colors.primary.light} size={22} />
             <Typography variant="h2" style={[styles.sectionTitle, { color: text }, textDirectionStyle(isRtl)]}>
-              {t("OwnerRegistration.ownerDetails", { defaultValue: "Owner Details" })}
+              {t("OwnerRegistration.ownerDetails")}
             </Typography>
           </View>
 
-          <Input label={t("OwnerRegistration.fullNameArabic", { defaultValue: "Full Name In Arabic / الاسم الرباعي" })} value={fullNameArabic} onChangeText={setFullNameArabic} />
-          <Input label={t("OwnerRegistration.phone", { defaultValue: "Phone number / رقم موبايل للتواصل" })} value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
-          <Input label={t("OwnerRegistration.email", { defaultValue: "Email Address / البريد الإلكتروني" })} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+          <Input label={t("OwnerRegistration.fullNameArabic")} value={fullNameArabic} onChangeText={setFullNameArabic} />
+          <Input label={t("OwnerRegistration.phone")} value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+          <Input label={t("OwnerRegistration.email")} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
 
           <Pressable
             onPress={() => setOwnerAcknowledged((value) => !value)}
@@ -252,7 +263,7 @@ export const OwnerRegistrationScreen = () => {
               {ownerAcknowledged ? <Icon name="check" color={colors.text.inverse} size={14} /> : null}
             </View>
             <Typography style={[{ color: text, flex: 1 }, textDirectionStyle(isRtl)]}>
-              {t("OwnerRegistration.ownerAcknowledgement", { defaultValue: "I confirm I am the apartment owner and the uploaded documents are mine. أقر أنني المالك وأن المستندات صحيحة." })}
+              {t("OwnerRegistration.ownerAcknowledgement")}
             </Typography>
           </Pressable>
         </Card>
@@ -261,30 +272,38 @@ export const OwnerRegistrationScreen = () => {
           <View style={[styles.sectionHeader, rowDirectionStyle(isRtl)]}>
             <Icon name="building" color={colors.primary.light} size={22} />
             <Typography variant="h2" style={[styles.sectionTitle, { color: text }, textDirectionStyle(isRtl)]}>
-              {t("OwnerRegistration.apartmentData", { defaultValue: "Apartment Data" })}
+              {t("OwnerRegistration.apartmentData")}
             </Typography>
           </View>
 
           <Input
-            label={t("OwnerRegistration.apartmentCode", { defaultValue: "Apartment Code / كود الوحدة (e.g. HR-F01-F02)" })}
+            label={t("OwnerRegistration.apartmentCode")}
             value={apartmentCode}
             onChangeText={setApartmentCode}
             autoCapitalize="characters"
           />
 
           <Typography variant="label" style={[{ color: text, marginBottom: spacing.sm }, textDirectionStyle(isRtl)]}>
-            {t("OwnerRegistration.buildingCharacter", { defaultValue: "Building Character / حرف المبنى" })}
+            {t("OwnerRegistration.buildingCharacter")}
           </Typography>
           <View style={[styles.buildingGrid, isRtl && styles.buildingGridRtl]}>
             {loadingBuildings ? (
-              <Typography variant="caption" style={[{ color: muted }, textDirectionStyle(isRtl)]}>{t("Common.loading", { defaultValue: "Loading..." })}</Typography>
+              <Typography variant="caption" style={[{ color: muted }, textDirectionStyle(isRtl)]}>{t("Common.loading")}</Typography>
             ) : (
-              buildings.map(renderBuilding)
+              <FlatList
+                data={buildings}
+                keyExtractor={(building) => building.id}
+                renderItem={renderBuilding}
+                horizontal
+                inverted={isRtl}
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.buildingList}
+              />
             )}
           </View>
           {selectedBuilding ? (
             <Typography variant="caption" style={[styles.selectedBuilding, { color: muted }, textDirectionStyle(isRtl)]}>
-              {t("OwnerRegistration.selectedBuilding", { defaultValue: "Selected: {{building}}", building: selectedBuilding.label })}
+              {t("OwnerRegistration.selectedBuilding", { building: selectedBuilding.label })}
             </Typography>
           ) : null}
         </Card>
@@ -293,38 +312,38 @@ export const OwnerRegistrationScreen = () => {
           <View style={[styles.sectionHeader, rowDirectionStyle(isRtl)]}>
             <Icon name="documents" color={colors.primary.light} size={22} />
             <Typography variant="h2" style={[styles.sectionTitle, { color: text }, textDirectionStyle(isRtl)]}>
-              {t("OwnerRegistration.requiredPdfs", { defaultValue: "Required PDFs" })}
+              {t("OwnerRegistration.requiredPdfs")}
             </Typography>
           </View>
           <Typography style={[styles.hint, { color: muted }, textDirectionStyle(isRtl)]}>
-            {t("OwnerRegistration.pdfHint", { defaultValue: "Please upload scanned PDF files.\nYou can use CamScanner or merge images into one PDF using https://jpg2pdf.com/\nبرجاء الرفع PDF (Scan)\nيمكن استخدام برنامج CamScanner\nأو هذه الخدمة لدمج الصور في ملف واحد https://jpg2pdf.com/" })}
+            {t("OwnerRegistration.pdfHint")}
           </Typography>
 
           <PdfPicker
             isRtl={isRtl}
-            label={t("OwnerRegistration.idCardPdf", { defaultValue: "ID card PDF / بطاقة الرقم القومي (الوجهين)" })}
-            hint={t("OwnerRegistration.idCardHint", { defaultValue: "Front and back in one PDF" })}
+            label={t("OwnerRegistration.idCardPdf")}
+            hint={t("OwnerRegistration.idCardHint")}
             file={idCardPdf}
             onPick={() => pickPdf(setIdCardPdf)}
           />
           <PdfPicker
             isRtl={isRtl}
-            label={t("OwnerRegistration.contractPdf", { defaultValue: "The full contract PDF / العقد الكامل" })}
-            hint={t("OwnerRegistration.contractHint", { defaultValue: "Upload the scanned full contract" })}
+            label={t("OwnerRegistration.contractPdf")}
+            hint={t("OwnerRegistration.contractHint")}
             file={contractPdf}
             onPick={() => pickPdf(setContractPdf)}
           />
           <PdfPicker
             isRtl={isRtl}
-            label={t("OwnerRegistration.handoverPdf", { defaultValue: "Handover minutes PDF / محضر الاستلام" })}
-            hint={t("OwnerRegistration.handoverHint", { defaultValue: "Upload handover proof as PDF" })}
+            label={t("OwnerRegistration.handoverPdf")}
+            hint={t("OwnerRegistration.handoverHint")}
             file={handoverPdf}
             onPick={() => pickPdf(setHandoverPdf)}
           />
         </Card>
 
         <Button
-          title={t("OwnerRegistration.submit", { defaultValue: "Submit for admin review" })}
+          title={t("OwnerRegistration.submit")}
           onPress={handleSubmit}
           disabled={!canSubmit || isSubmitting}
           loading={isSubmitting}
@@ -344,6 +363,9 @@ const styles = StyleSheet.create({
   headerCopy: { flex: 1 },
   title: { flexShrink: 1 },
   subtitle: { marginTop: spacing.xs, lineHeight: 22 },
+  heroCard: { marginBottom: layout.sectionGap, gap: spacing.sm },
+  heroTitle: { marginTop: spacing.xs },
+  heroBody: { lineHeight: 22 },
   card: { marginBottom: layout.sectionGap },
   sectionHeader: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing.lg },
   sectionTitle: { flex: 1 },
@@ -351,6 +373,7 @@ const styles = StyleSheet.create({
   checkBox: { width: 22, height: 22, borderRadius: 7, borderWidth: 1.5, alignItems: "center", justifyContent: "center", marginTop: 2 },
   buildingGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   buildingGridRtl: { justifyContent: "flex-end" },
+  buildingList: { gap: spacing.sm, paddingVertical: spacing.xs },
   buildingChip: { minWidth: 46, minHeight: 42, borderRadius: radii.lg, borderWidth: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: spacing.sm },
   selectedBuilding: { marginTop: spacing.sm },
   hint: { marginBottom: spacing.md, lineHeight: 22 },

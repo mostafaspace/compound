@@ -146,6 +146,111 @@ class FinanceTest extends TestCase
         ])->assertForbidden();
     }
 
+    public function test_resident_can_submit_payment_against_own_ledger_entries(): void
+    {
+        $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+        $ownUnit = $this->createUnit();
+        $ownAccount = UnitAccount::factory()->for($ownUnit)->create(['balance' => '500.00']);
+        $charge = LedgerEntry::query()->create([
+            'unit_account_id' => $ownAccount->id,
+            'type' => LedgerEntryType::Charge->value,
+            'amount' => '500.00',
+            'description' => 'Monthly maintenance',
+        ]);
+
+        $ownUnit->apartmentResidents()->create([
+            'user_id' => $resident->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'verification_status' => VerificationStatus::Verified->value,
+            'is_primary' => true,
+        ]);
+
+        Sanctum::actingAs($resident);
+
+        $this->postJson("/api/v1/finance/unit-accounts/{$ownAccount->id}/payment-submissions", [
+            'amount' => 500,
+            'method' => 'bank_transfer',
+            'ledger_entry_ids' => [$charge->id],
+        ])->assertCreated();
+
+        $payment = PaymentSubmission::query()->firstOrFail();
+
+        $this->assertDatabaseHas('payment_allocations', [
+            'payment_submission_id' => $payment->id,
+            'ledger_entry_id' => $charge->id,
+        ]);
+    }
+
+    public function test_resident_cannot_submit_payment_against_another_accounts_ledger_entry(): void
+    {
+        $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+        $ownUnit = $this->createUnit();
+        $otherUnit = $this->createUnit('B-202');
+        $ownAccount = UnitAccount::factory()->for($ownUnit)->create(['balance' => '500.00']);
+        $otherAccount = UnitAccount::factory()->for($otherUnit)->create(['balance' => '700.00']);
+        $otherCharge = LedgerEntry::query()->create([
+            'unit_account_id' => $otherAccount->id,
+            'type' => LedgerEntryType::Charge->value,
+            'amount' => '700.00',
+            'description' => 'Other unit charge',
+        ]);
+
+        $ownUnit->apartmentResidents()->create([
+            'user_id' => $resident->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'verification_status' => VerificationStatus::Verified->value,
+            'is_primary' => true,
+        ]);
+
+        Sanctum::actingAs($resident);
+
+        $this->postJson("/api/v1/finance/unit-accounts/{$ownAccount->id}/payment-submissions", [
+            'amount' => 500,
+            'method' => 'bank_transfer',
+            'ledger_entry_ids' => [$otherCharge->id],
+        ])->assertUnprocessable();
+
+        $this->assertDatabaseCount('payment_submissions', 0);
+        $this->assertDatabaseMissing('payment_allocations', [
+            'ledger_entry_id' => $otherCharge->id,
+        ]);
+    }
+
+    public function test_selected_ledger_entries_must_match_payment_amount(): void
+    {
+        $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+        $ownUnit = $this->createUnit();
+        $ownAccount = UnitAccount::factory()->for($ownUnit)->create(['balance' => '500.00']);
+        $charge = LedgerEntry::query()->create([
+            'unit_account_id' => $ownAccount->id,
+            'type' => LedgerEntryType::Charge->value,
+            'amount' => '500.00',
+            'description' => 'Monthly maintenance',
+        ]);
+
+        $ownUnit->apartmentResidents()->create([
+            'user_id' => $resident->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'verification_status' => VerificationStatus::Verified->value,
+            'is_primary' => true,
+        ]);
+
+        Sanctum::actingAs($resident);
+
+        $this->postJson("/api/v1/finance/unit-accounts/{$ownAccount->id}/payment-submissions", [
+            'amount' => 0.01,
+            'method' => 'bank_transfer',
+            'ledger_entry_ids' => [$charge->id],
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['amount']);
+
+        $this->assertDatabaseCount('payment_submissions', 0);
+        $this->assertDatabaseMissing('payment_allocations', [
+            'ledger_entry_id' => $charge->id,
+        ]);
+    }
+
     public function test_effective_resident_role_cannot_bypass_finance_account_access_when_legacy_role_is_stale(): void
     {
         $residentRole = SpatieRole::findOrCreate('resident_owner', 'sanctum');

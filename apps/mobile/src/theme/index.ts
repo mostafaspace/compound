@@ -13,22 +13,23 @@ const palette = {
     50: '#F8FAFC',
   },
   blue: {
-    700: '#1D4ED8',
-    600: '#2563EB',
-    500: '#3B82F6',
-    100: '#DBEAFE',
-    50: '#EFF6FF',
+    700: '#0369A1', // Sky 700
+    600: '#0284C7', // Sky 600
+    500: '#0EA5E9', // Sky 500
+    100: '#E0F2FE', // Sky 100
+    50: '#F0F9FF',  // Sky 50
   },
   teal: {
-    700: '#0F766E',
-    600: '#0D9488',
-    500: '#14B8A6',
+    700: '#0D9488',
+    600: '#14B8A6',
+    500: '#2DD4BF',
     100: '#CCFBF1',
     50: '#F0FDFA',
   },
   emerald: {
     600: '#059669',
     500: '#10B981',
+    400: '#34D399',
     100: '#D1FAE5',
     50: '#ECFDF5',
   },
@@ -66,7 +67,7 @@ export const colors = {
     main: palette.blue[600],
   },
   background: {
-    light: '#F6F8F7',
+    light: '#F8FAFC', // Sky 50 / Slate 50 feel
     dark: palette.ink[950],
   },
   surface: {
@@ -74,7 +75,7 @@ export const colors = {
     dark: palette.ink[800],
   },
   surfaceMuted: {
-    light: '#EEF4F2',
+    light: '#F1F5F9', // Slate 100
     dark: palette.ink[900],
   },
   text: {
@@ -89,7 +90,7 @@ export const colors = {
     inverse: palette.white,
   },
   border: {
-    light: '#DDE6E2',
+    light: '#E2E8F0', // Slate 200
     dark: palette.ink[700],
   },
   error: palette.red[500],
@@ -122,43 +123,55 @@ export const radii = {
   pill: 999,
 };
 
+const fonts = {
+  primary: 'Cairo',
+};
+
 export const typography = {
   display: {
+    fontFamily: fonts.primary,
     fontSize: 32,
     lineHeight: 40,
     fontWeight: '800' as const,
   },
   h1: {
+    fontFamily: fonts.primary,
     fontSize: 28,
     lineHeight: 36,
     fontWeight: '800' as const,
   },
   h2: {
+    fontFamily: fonts.primary,
     fontSize: 22,
     lineHeight: 30,
     fontWeight: '700' as const,
   },
   h3: {
+    fontFamily: fonts.primary,
     fontSize: 18,
     lineHeight: 26,
     fontWeight: '700' as const,
   },
   body: {
+    fontFamily: fonts.primary,
     fontSize: 16,
     lineHeight: 24,
     fontWeight: '400' as const,
   },
   bodyStrong: {
+    fontFamily: fonts.primary,
     fontSize: 16,
     lineHeight: 24,
     fontWeight: '700' as const,
   },
   caption: {
+    fontFamily: fonts.primary,
     fontSize: 13,
     lineHeight: 18,
     fontWeight: '500' as const,
   },
   label: {
+    fontFamily: fonts.primary,
     fontSize: 12,
     lineHeight: 16,
     fontWeight: '800' as const,

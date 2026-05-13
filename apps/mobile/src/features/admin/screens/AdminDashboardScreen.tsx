@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, useColorScheme, ActivityIndicator, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
+import { View, StyleSheet, useColorScheme, ActivityIndicator, TouchableOpacity, ScrollView, Dimensions, FlatList } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -10,8 +10,9 @@ import { Typography } from '../../../components/ui/Typography';
 import { colors, layout, spacing, shadows, radii } from '../../../theme';
 import { useGetOperationalAnalyticsQuery } from '../../../services/admin';
 import { Icon, type AppIconName } from '../../../components/ui/Icon';
+import { isRtlLanguage, rowDirectionStyle, textDirectionStyle } from '../../../i18n/direction';
 import {
-  type AdminDashboardActionRoute,
+  AdminDashboardActionRoute,
   getAdminDashboardNavigationTarget,
   getAdminDashboardQuickActions,
 } from '../admin-dashboard-routes';
@@ -22,8 +23,9 @@ const { width } = Dimensions.get('window');
  * Admin dashboard - shows compound overview, pending approvals, reports, etc.
  */
 export const AdminDashboardScreen = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const isDark = useColorScheme() === 'dark';
+  const isRtl = isRtlLanguage(i18n.language);
   const navigation = useNavigation<StackNavigationProp<any>>();
 
   const { data: analytics, isLoading } = useGetOperationalAnalyticsQuery();
@@ -76,21 +78,39 @@ export const AdminDashboardScreen = () => {
     }
   };
 
+  const renderQuickAction = ({ item: action }: { item: ReturnType<typeof getAdminDashboardQuickActions>[number] }) => (
+    <TouchableOpacity
+      style={[
+        styles.actionCard,
+        { backgroundColor: isDark ? colors.surface.dark : colors.surface.light, borderColor: isDark ? colors.border.dark : colors.border.light }
+      ]}
+      onPress={() => navigateToTarget(action.route)}
+      accessibilityRole="button"
+    >
+      <View style={styles.actionIconBg}>
+        <Icon name={getActionIcon(action.route)} color={colors.primary.light} size={24} />
+      </View>
+      <Typography variant="label" style={[styles.actionLabel, textDirectionStyle(isRtl)]}>
+        {getActionLabel(action.route)}
+      </Typography>
+    </TouchableOpacity>
+  );
+
   const renderStatCard = (label: string, value: number | string, color: string, icon: AppIconName, onPress?: () => void) => (
     <TouchableOpacity 
       disabled={!onPress}
       onPress={onPress}
-      style={[styles.statCard, { backgroundColor: isDark ? colors.surface.dark : colors.surface.light, borderColor: isDark ? colors.border.dark : colors.border.light }]}
+      style={[styles.statCard, { backgroundColor: isDark ? colors.surface.dark : colors.surface.light, borderColor: isDark ? colors.border.dark : colors.border.light }, rowDirectionStyle(isRtl)]}
       accessibilityRole={onPress ? 'button' : undefined}
     >
       <View style={[styles.statIconContainer, { backgroundColor: isDark ? colors.surfaceMuted.dark : colors.surfaceMuted.light }]}>
         <Icon name={icon} color={color} size={22} />
       </View>
-      <View>
-        <Typography variant="h2" style={{ color: color, fontSize: 24, fontWeight: '800' }}>
+      <View style={textDirectionStyle(isRtl)}>
+        <Typography variant="h2" style={[{ color: color, fontSize: 24, fontWeight: '800' }, textDirectionStyle(isRtl)]}>
           {value}
         </Typography>
-        <Typography variant="caption" style={styles.statLabel}>
+        <Typography variant="caption" style={[styles.statLabel, textDirectionStyle(isRtl)]}>
           {label}
         </Typography>
       </View>
@@ -103,13 +123,13 @@ export const AdminDashboardScreen = () => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <View>
-            <Typography variant="h1" style={styles.headerTitle}>
-              {t('Admin.dashboard', 'Operations')}
+        <View style={[styles.header, rowDirectionStyle(isRtl)]}>
+          <View style={textDirectionStyle(isRtl)}>
+            <Typography variant="h1" style={[styles.headerTitle, textDirectionStyle(isRtl)]}>
+              {t('Admin.dashboard')}
             </Typography>
-            <Typography variant="caption" style={styles.subtitle}>
-              {analytics?.generatedAt ? new Date(analytics.generatedAt).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' }) : 'Compound Management'}
+            <Typography variant="caption" style={[styles.subtitle, textDirectionStyle(isRtl)]}>
+              {analytics?.generatedAt ? new Date(analytics.generatedAt).toLocaleDateString(i18n.language === 'ar' ? 'ar-EG' : 'en-US', { weekday: 'long', month: 'long', day: 'numeric' }) : t('App.brand')}
             </Typography>
           </View>
           <TouchableOpacity
@@ -133,21 +153,21 @@ export const AdminDashboardScreen = () => {
             </Defs>
             <Rect x="0" y="0" width="100%" height="100%" rx="24" fill="url(#grad)" />
           </Svg>
-          <View style={styles.heroContent}>
-            <View>
-              <Typography variant="h2" style={styles.heroValue}>
+          <View style={[styles.heroContent, rowDirectionStyle(isRtl)]}>
+            <View style={textDirectionStyle(isRtl)}>
+              <Typography variant="h2" style={[styles.heroValue, textDirectionStyle(isRtl)]}>
                 {analytics?.users?.total ?? 0}
               </Typography>
-              <Typography variant="caption" style={styles.heroLabel}>
+              <Typography variant="caption" style={[styles.heroLabel, textDirectionStyle(isRtl)]}>
                 {t('Admin.totalResidents', 'Total Residents')}
               </Typography>
             </View>
             <View style={styles.heroDivider} />
-            <View>
-              <Typography variant="h2" style={styles.heroValue}>
+            <View style={textDirectionStyle(isRtl)}>
+              <Typography variant="h2" style={[styles.heroValue, textDirectionStyle(isRtl)]}>
                 {analytics?.visitors?.total ?? 0}
               </Typography>
-              <Typography variant="caption" style={styles.heroLabel}>
+              <Typography variant="caption" style={[styles.heroLabel, textDirectionStyle(isRtl)]}>
                 {t('Admin.monthlyVisitors', 'Monthly Visitors')}
               </Typography>
             </View>
@@ -161,10 +181,10 @@ export const AdminDashboardScreen = () => {
         ) : (
           <>
             <View style={styles.section}>
-              <Typography variant="h3" style={styles.sectionTitle}>
+              <Typography variant="h3" style={[styles.sectionTitle, textDirectionStyle(isRtl)]}>
                 {t('Admin.attentionNeeded', 'Attention Needed')}
               </Typography>
-              <View style={styles.statsGrid}>
+              <View style={[styles.statsGrid, rowDirectionStyle(isRtl)]}>
                 {renderStatCard(
                   t('Admin.pending', 'Pending'), 
                   analytics?.verifications?.pendingReview ?? 0, 
@@ -183,40 +203,28 @@ export const AdminDashboardScreen = () => {
             </View>
 
             <View style={styles.section}>
-              <Typography variant="h3" style={styles.sectionTitle}>
+              <Typography variant="h3" style={[styles.sectionTitle, textDirectionStyle(isRtl)]}>
                 {t('Admin.quickActions', 'Management Tools')}
               </Typography>
-              <View style={styles.quickActionsGrid}>
-                {quickActions.map((action, i) => (
-                  <TouchableOpacity
-                    key={i}
-                    style={[
-                      styles.actionCard,
-                      { backgroundColor: isDark ? colors.surface.dark : colors.surface.light, borderColor: isDark ? colors.border.dark : colors.border.light }
-                    ]}
-                    onPress={() => navigateToTarget(action.route)}
-                    accessibilityRole="button"
-                  >
-                    <View style={styles.actionIconBg}>
-                      <Icon name={getActionIcon(action.route)} color={colors.primary.light} size={24} />
-                    </View>
-                    <Typography variant="label" style={styles.actionLabel}>
-                      {getActionLabel(action.route)}
-                    </Typography>
-                  </TouchableOpacity>
-                ))}
-              </View>
+              <FlatList
+                data={quickActions}
+                keyExtractor={(action) => action.route}
+                renderItem={renderQuickAction}
+                numColumns={3}
+                scrollEnabled={false}
+                columnWrapperStyle={[styles.quickActionsGrid, rowDirectionStyle(isRtl)]}
+              />
             </View>
 
             {/* Health Indicators */}
             <View style={styles.section}>
-              <Typography variant="h3" style={styles.sectionTitle}>
-                {t('Admin.health', 'System Health')}
+              <Typography variant="h3" style={[styles.sectionTitle, textDirectionStyle(isRtl)]}>
+                {t('Admin.health')}
               </Typography>
-              <View style={[styles.healthCard, { backgroundColor: isDark ? colors.surface.dark : colors.surface.light, borderColor: isDark ? colors.border.dark : colors.border.light }]}>
-                <View style={styles.healthRow}>
-                  <Typography variant="body" style={styles.healthLabel}>Announcement Reach</Typography>
-                  <Typography variant="body" style={styles.healthValue}>
+              <View style={[styles.healthCard, { backgroundColor: isDark ? colors.surface.dark : colors.surface.light, borderColor: isDark ? colors.border.dark : colors.border.light }, textDirectionStyle(isRtl)]}>
+                <View style={[styles.healthRow, rowDirectionStyle(isRtl)]}>
+                  <Typography variant="body" style={[styles.healthLabel, textDirectionStyle(isRtl)]}>{t('Admin.announcementReach')}</Typography>
+                  <Typography variant="body" style={[styles.healthValue, textDirectionStyle(isRtl)]}>
                     {analytics?.announcements?.ackCount ?? 0} / {analytics?.announcements?.requiresAckCount ?? 0}
                   </Typography>
                 </View>
@@ -226,7 +234,8 @@ export const AdminDashboardScreen = () => {
                       styles.progressBarFill,
                       {
                         width: `${analytics?.announcements?.requiresAckCount ? (analytics.announcements.ackCount / analytics.announcements.requiresAckCount) * 100 : 0}%`,
-                        backgroundColor: colors.primary.light
+                        backgroundColor: colors.primary.light,
+                        alignSelf: isRtl ? 'flex-end' : 'flex-start'
                       }
                     ]}
                   />

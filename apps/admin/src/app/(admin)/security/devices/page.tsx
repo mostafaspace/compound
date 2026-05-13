@@ -2,7 +2,6 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
 import { SiteNav } from "@/components/site-nav";
-import { LogoutButton } from "@/components/logout-button";
 import { getCurrentUser, getSecurityDevices } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
 
@@ -32,7 +31,6 @@ export default async function SecurityDevicesPage() {
               {t("devices.subtitle", { active: activeCount, revoked: revokedCount })}
             </p>
           </div>
-          <LogoutButton />
         </div>
       </header>
 

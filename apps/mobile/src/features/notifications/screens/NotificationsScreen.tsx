@@ -16,6 +16,7 @@ import { ScreenContainer } from '../../../components/layout/ScreenContainer';
 import { formatDate } from '../../../utils/formatters';
 import { Icon } from '../../../components/ui/Icon';
 import type { RootStackParamList } from '../../../navigation/types';
+import { isRtlLanguage, rowDirectionStyle, textDirectionStyle } from '../../../i18n/direction';
 
 type DeepLink = {
   screen?: string;
@@ -48,8 +49,9 @@ function getDeepLink(
 }
 
 export const NotificationsScreen = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const isDark = useColorScheme() === 'dark';
+  const isRtl = isRtlLanguage(i18n.language);
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
 
   const { data: notifications = [], isLoading, refetch } = useGetNotificationsQuery();
@@ -73,26 +75,26 @@ export const NotificationsScreen = () => {
       { backgroundColor: isDark ? colors.surface.dark : colors.surface.light, borderColor: isDark ? colors.border.dark : colors.border.light },
       !item.readAt && styles.unreadCard
     ]}>
-      <View style={styles.header}>
-        <View style={styles.titleRow}>
+      <View style={[styles.header, rowDirectionStyle(isRtl)]}>
+        <View style={[styles.titleRow, rowDirectionStyle(isRtl)]}>
           <View style={styles.iconBadge}>
             <Icon name="notifications" color={colors.primary.light} size={20} />
           </View>
-          <Typography variant="h3" style={styles.title}>{item.title}</Typography>
+          <Typography variant="h3" style={[styles.title, textDirectionStyle(isRtl)]}>{item.title}</Typography>
         </View>
         {!item.readAt && <View style={styles.unreadDot} />}
       </View>
-      <Typography variant="body" style={styles.body}>{item.body}</Typography>
-      <Typography variant="caption">{formatDate(item.createdAt)}</Typography>
+      <Typography variant="body" style={[styles.body, textDirectionStyle(isRtl)]}>{item.body}</Typography>
+      <Typography variant="caption" style={textDirectionStyle(isRtl)}>{formatDate(item.createdAt, i18n.language === 'ar' ? 'ar-EG' : 'en-US')}</Typography>
 
-      <View style={styles.actions}>
+      <View style={[styles.actions, rowDirectionStyle(isRtl), { justifyContent: isRtl ? 'flex-start' : 'flex-end' }]}>
         {!item.readAt && (
           <Pressable onPress={() => markRead(item.id)}>
-            <Typography variant="label" style={styles.actionText}>{t("Notifications.markRead")}</Typography>
+            <Typography variant="label" style={[styles.actionText, textDirectionStyle(isRtl)]}>{t("Notifications.markRead")}</Typography>
           </Pressable>
         )}
         <Pressable onPress={() => archive(item.id)}>
-          <Typography variant="label" style={[styles.actionText, { color: colors.error }]}>{t("Notifications.archive")}</Typography>
+          <Typography variant="label" style={[styles.actionText, { color: colors.error }, textDirectionStyle(isRtl)]}>{t("Notifications.archive")}</Typography>
         </Pressable>
       </View>
     </Pressable>
@@ -135,8 +137,8 @@ const styles = StyleSheet.create({
     ...shadows.sm,
   },
   unreadCard: {
-    borderLeftWidth: 4,
-    borderLeftColor: colors.primary.dark,
+    borderStartWidth: 4,
+    borderStartColor: colors.primary.dark,
   },
   header: {
     flexDirection: 'row',

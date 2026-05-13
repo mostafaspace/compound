@@ -199,6 +199,14 @@ export async function getDashboard(): Promise<DashboardData | null> {
 }
 
 export async function getAuditLogs(input: AuditLogFilters = {}): Promise<AuditLogEntry[]> {
+  const page = await getAuditLogsPage(input);
+
+  return page.data;
+}
+
+export async function getAuditLogsPage(
+  input: AuditLogFilters & { page?: number } = {},
+): Promise<PaginatedEnvelope<AuditLogEntry>> {
   try {
     const params = new URLSearchParams();
 
@@ -209,6 +217,7 @@ export async function getAuditLogs(input: AuditLogFilters = {}): Promise<AuditLo
     if (input.from) params.set("from", input.from);
     if (input.method) params.set("method", input.method);
     if (input.module) params.set("module", input.module);
+    if (input.page) params.set("page", String(input.page));
     if (input.perPage) params.set("perPage", String(input.perPage));
     if (input.q) params.set("q", input.q);
     if (input.severity) params.set("severity", input.severity);
@@ -221,15 +230,35 @@ export async function getAuditLogs(input: AuditLogFilters = {}): Promise<AuditLo
     });
 
     if (!response.ok) {
-      return [];
+      return emptyPage<AuditLogEntry>();
     }
 
     const payload = (await response.json()) as PaginatedEnvelope<AuditLogEntry>;
 
-    return payload.data;
+    return payload;
   } catch {
-    return [];
+    return emptyPage<AuditLogEntry>();
   }
+}
+
+function emptyPage<T>(): PaginatedEnvelope<T> {
+  return {
+    data: [],
+    links: {
+      first: null,
+      last: null,
+      next: null,
+      prev: null,
+    },
+    meta: {
+      current_page: 1,
+      from: null,
+      last_page: 1,
+      per_page: 0,
+      to: null,
+      total: 0,
+    },
+  };
 }
 
 export async function getAuditTimeline(entityType: string, entityId: string): Promise<AuditLogEntry[]> {
@@ -2640,11 +2669,20 @@ export async function getNotificationDeliveryLogs(status?: string): Promise<Noti
 // ─── User support console (CM-79) ─────────────────────────────────────────────
 
 export async function getUsers(filters: UserListFilters = {}): Promise<AuthenticatedUser[]> {
+  const page = await getUsersPage(filters);
+
+  return page.data ?? [];
+}
+
+export async function getUsersPage(
+  filters: UserListFilters & { page?: number } = {},
+): Promise<PaginatedEnvelope<AuthenticatedUser>> {
   try {
     const params = new URLSearchParams();
     if (filters.q) params.set("q", filters.q);
     if (filters.status) params.set("status", filters.status);
     if (filters.role) params.set("role", filters.role);
+    if (filters.page) params.set("page", String(filters.page));
     if (filters.perPage) params.set("perPage", String(filters.perPage));
 
     const query = params.toString();
@@ -2652,11 +2690,11 @@ export async function getUsers(filters: UserListFilters = {}): Promise<Authentic
       cache: "no-store",
       headers: await apiHeaders(true),
     });
-    if (!response.ok) return [];
+    if (!response.ok) return emptyPage<AuthenticatedUser>();
     const payload = (await response.json()) as PaginatedEnvelope<AuthenticatedUser>;
-    return payload.data ?? [];
+    return payload;
   } catch {
-    return [];
+    return emptyPage<AuthenticatedUser>();
   }
 }
 

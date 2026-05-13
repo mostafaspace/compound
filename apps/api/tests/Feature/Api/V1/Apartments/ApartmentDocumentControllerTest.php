@@ -71,10 +71,27 @@ class ApartmentDocumentControllerTest extends TestCase
             ->assertJsonPath('data.status', ApartmentDocumentStatus::Active->value);
     }
 
+    public function test_member_cannot_upload_duplicate_registration_document(): void
+    {
+        ApartmentDocument::factory()->create([
+            'unit_id' => $this->unit->id,
+            'document_type' => ApartmentDocumentType::Lease,
+            'status' => ApartmentDocumentStatus::Active,
+        ]);
+
+        $this->postJson("/api/v1/apartments/{$this->unit->id}/documents", [
+            'document_type' => ApartmentDocumentType::Lease->value,
+            'file' => UploadedFile::fake()->create('lease.pdf', 100, 'application/pdf'),
+        ])
+            ->assertUnprocessable()
+            ->assertJsonPath('message', 'Registration document already exists for this unit.');
+    }
+
     public function test_member_can_replace_document_with_pending_version(): void
     {
         $document = ApartmentDocument::factory()->create([
             'unit_id' => $this->unit->id,
+            'document_type' => ApartmentDocumentType::UtilityBill,
             'status' => ApartmentDocumentStatus::Active,
         ]);
 
@@ -88,6 +105,21 @@ class ApartmentDocumentControllerTest extends TestCase
             'id' => $document->id,
             'status' => ApartmentDocumentStatus::Active->value,
         ]);
+    }
+
+    public function test_member_cannot_replace_registration_document(): void
+    {
+        $document = ApartmentDocument::factory()->create([
+            'unit_id' => $this->unit->id,
+            'document_type' => ApartmentDocumentType::OwnershipProof,
+            'status' => ApartmentDocumentStatus::Active,
+        ]);
+
+        $this->postJson("/api/v1/apartments/{$this->unit->id}/documents/{$document->id}/replace", [
+            'file' => UploadedFile::fake()->create('ownership-proof.pdf', 100, 'application/pdf'),
+        ])
+            ->assertUnprocessable()
+            ->assertJsonPath('message', 'Registration documents cannot be replaced from the app.');
     }
 
     public function test_member_can_download_document(): void

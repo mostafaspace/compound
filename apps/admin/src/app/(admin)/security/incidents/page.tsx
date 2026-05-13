@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
-import { LogoutButton } from "@/components/logout-button";
 import { getCurrentUser, getSecurityGates, getSecurityIncidents } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
 import type { SecurityIncidentType } from "@compound/contracts";
@@ -73,7 +72,6 @@ export default async function SecurityIncidentsPage({
             <h1 className="mt-2 text-3xl font-semibold">{t("incidents.title")}</h1>
             <p className="mt-1 text-sm text-muted">{t("incidents.subtitle")}</p>
           </div>
-          <LogoutButton />
         </div>
       </header>
 

@@ -13,6 +13,8 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { OrgChart } from "d3-org-chart";
 
+import { AdminUserPicker } from "@/components/admin-user-picker";
+import type { AdminUserOption } from "@/lib/admin-user-options";
 import type {
   OrgChartResponse,
   OrgChartRepresentative,
@@ -46,6 +48,7 @@ interface FlatNode {
 interface OrgChartViewProps {
   data: OrgChartResponse;
   compoundId: string;
+  assignableUsers?: AdminUserOption[];
   canManage?: boolean;
 }
 
@@ -98,7 +101,7 @@ function avatarColor(id: number) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export function OrgChartView({ data, canManage = false }: OrgChartViewProps) {
+export function OrgChartView({ data, assignableUsers = [], canManage = false }: OrgChartViewProps) {
   const router = useRouter();
   const t = useTranslations("OrgChart");
   const chartContainerRef = useRef<HTMLDivElement>(null);
@@ -126,7 +129,7 @@ export function OrgChartView({ data, canManage = false }: OrgChartViewProps) {
     list.push({
       id: data.compound.id,
       parentId: null,
-      name: rootRep?.user.name ?? "Vacant Position",
+      name: rootRep?.user.name ?? t("vacantPosition"),
       role: "president",
       type: "compound",
       label: data.compound.name,
@@ -144,7 +147,7 @@ export function OrgChartView({ data, canManage = false }: OrgChartViewProps) {
       list.push({
         id: b.id,
         parentId: data.compound.id,
-        name: bRep?.user.name ?? "Vacant Position",
+        name: bRep?.user.name ?? t("vacantPosition"),
         role: "building_representative",
         type: "building",
         label: b.name,
@@ -159,7 +162,7 @@ export function OrgChartView({ data, canManage = false }: OrgChartViewProps) {
         list.push({
           id: f.id,
           parentId: b.id,
-          name: fRep?.user.name ?? "Vacant Position",
+          name: fRep?.user.name ?? t("vacantPosition"),
           role: "floor_representative",
           type: "floor",
           label: f.label,
@@ -171,7 +174,7 @@ export function OrgChartView({ data, canManage = false }: OrgChartViewProps) {
     });
 
     return list;
-  }, [data, buildingFilter]);
+  }, [data, buildingFilter, t]);
 
   const handleSelectRepresentative = useCallback(async (rep: OrgChartRepresentative) => {
     setSelectedRep(rep);
@@ -185,11 +188,11 @@ export function OrgChartView({ data, canManage = false }: OrgChartViewProps) {
         return mergeRepresentativeWithPersonDetail(current, detail);
       });
     } catch {
-      setSelectedRepError("Could not load profile details.");
+      setSelectedRepError(t("errors.profileLoad"));
     } finally {
       setSelectedRepLoading(false);
     }
-  }, []);
+  }, [t]);
 
   // 2. Initialize / Update Chart
   useLayoutEffect(() => {
@@ -214,6 +217,8 @@ export function OrgChartView({ data, canManage = false }: OrgChartViewProps) {
       .onNodeClick((d) => {
         if (d.data.isVacant) {
           if (canManage) {
+            setAssignmentUserIdInput("");
+            setAssignmentError(null);
             setAssigningState({ id: d.data.id, type: d.data.type, label: d.data.label });
           }
         } else if (d.data.rep) {
@@ -248,7 +253,7 @@ export function OrgChartView({ data, canManage = false }: OrgChartViewProps) {
 
               ${d.data.isVacant ? `
                 <div class="mt-1">
-                  <span class="text-[9px] font-black bg-indigo-600 text-white px-3 py-1 rounded-full shadow-sm uppercase">Assign Rep</span>
+                  <span class="text-[9px] font-black bg-indigo-600 text-white px-3 py-1 rounded-full shadow-sm uppercase">${t("assignRep")}</span>
                 </div>
               ` : ''}
             </div>
@@ -284,7 +289,7 @@ export function OrgChartView({ data, canManage = false }: OrgChartViewProps) {
     if (!assigningState) return;
     const userId = parseAssignmentUserId(assignmentUserIdInput);
     if (userId === null) {
-      setAssignmentError("Enter a valid user ID.");
+      setAssignmentError(t("errors.validUserId"));
       return;
     }
 
@@ -301,14 +306,14 @@ export function OrgChartView({ data, canManage = false }: OrgChartViewProps) {
         setAssigningState(null);
         router.refresh();
       } else {
-        setAssignmentError("Request failed.");
+        setAssignmentError(t("errors.requestFailed"));
       }
     } catch {
-      setAssignmentError("Request failed.");
+      setAssignmentError(t("errors.requestFailed"));
     } finally {
       setAssignmentSubmitting(false);
     }
-  }, [assigningState, assignmentUserIdInput, router]);
+  }, [assigningState, assignmentUserIdInput, router, t]);
 
   // ─── Render ─────────────────────────────────────────────────────────────────
 
@@ -332,12 +337,12 @@ export function OrgChartView({ data, canManage = false }: OrgChartViewProps) {
           <div className="relative flex-1 max-w-sm">
             <input
               type="text"
-              placeholder="Search people or locations..."
+              placeholder={t("searchPlaceholder")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full h-12 pl-12 pr-4 rounded-2xl border-2 border-slate-100 bg-white focus:border-indigo-500 outline-none transition-all font-bold text-sm"
+              className="w-full h-12 ps-12 pe-4 rounded-2xl border-2 border-slate-100 bg-white focus:border-indigo-500 outline-none transition-all font-bold text-sm"
             />
-            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+            <div className="absolute start-4 top-1/2 -translate-y-1/2 text-slate-400">
               <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3" strokeLinecap="round"/></svg>
             </div>
           </div>
@@ -347,13 +352,13 @@ export function OrgChartView({ data, canManage = false }: OrgChartViewProps) {
             onChange={(e) => setBuildingFilter(e.target.value)}
             className="h-12 px-6 rounded-2xl border-2 border-slate-100 bg-white font-black text-xs uppercase tracking-widest outline-none focus:border-indigo-500 cursor-pointer"
           >
-            <option value="all">🏢 All Buildings</option>
+            <option value="all">{t("allBuildings")}</option>
             {data.buildings.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
           </select>
         </div>
 
         <div className="flex items-center gap-4">
-           <button onClick={() => chartRef.current?.exportImg()} className="h-12 px-6 rounded-2xl bg-slate-900 text-white font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg">Export Image</button>
+           <button onClick={() => chartRef.current?.exportImg()} className="h-12 px-6 rounded-2xl bg-slate-900 text-white font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg">{t("exportImage")}</button>
         </div>
       </div>
 
@@ -362,21 +367,21 @@ export function OrgChartView({ data, canManage = false }: OrgChartViewProps) {
         <div ref={chartContainerRef} className="w-full h-full" />
         
         {/* Floating Controls Hint */}
-        <div className="absolute bottom-8 left-8 flex items-center gap-4">
+        <div className="absolute bottom-8 start-8 flex items-center gap-4">
            <div className="bg-white/80 backdrop-blur-md px-4 py-2 rounded-full border border-slate-200 shadow-sm flex items-center gap-3">
               <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">D3 Powered Engine v2.0</span>
+              <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">{t("liveChart")}</span>
            </div>
         </div>
       </div>
 
       {/* Side Detail Panel (Same as V1 but polished) */}
       {selectedRep && (
-        <div className="absolute top-4 right-4 bottom-4 w-96 bg-white/98 backdrop-blur-2xl border-2 border-slate-100 rounded-[2.5rem] shadow-2xl z-[60] flex flex-col overflow-hidden animate-in slide-in-from-right duration-500">
+        <div className="absolute top-4 end-4 bottom-4 w-96 bg-white/98 backdrop-blur-2xl border-2 border-slate-100 rounded-[2.5rem] shadow-2xl z-[60] flex flex-col overflow-hidden animate-in slide-in-from-right duration-500">
            <div className="p-8 border-b border-slate-100 flex items-center justify-between">
               <div>
-                <h3 className="font-black text-xl text-slate-900">Member Profile</h3>
-                <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mt-1">Compound Administration</p>
+                <h3 className="font-black text-xl text-slate-900">{t("profile.title")}</h3>
+                <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mt-1">{t("profile.subtitle")}</p>
               </div>
               <button onClick={() => setSelectedRep(null)} className="w-10 h-10 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 transition-all">✕</button>
            </div>
@@ -395,7 +400,7 @@ export function OrgChartView({ data, canManage = false }: OrgChartViewProps) {
                 {t(`roles.${selectedRep.role}`)}
               </div>
               {selectedRepLoading ? (
-                <p className="mb-4 text-xs font-bold text-slate-500">Loading profile details...</p>
+                <p className="mb-4 text-xs font-bold text-slate-500">{t("profile.loading")}</p>
               ) : null}
               {selectedRepError ? (
                 <p className="mb-4 text-xs font-bold text-red-500">{selectedRepError}</p>
@@ -403,17 +408,17 @@ export function OrgChartView({ data, canManage = false }: OrgChartViewProps) {
 
               <div className="w-full space-y-6">
                  <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100">
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Email Address</p>
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">{t("profile.email")}</p>
                     <p className="font-bold text-slate-900">{selectedRep.user.email || "—"}</p>
                  </div>
                  <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100">
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Phone Number</p>
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">{t("profile.phone")}</p>
                     <p className="font-bold text-slate-900">{selectedRep.user.phone || "—"}</p>
                  </div>
               </div>
            </div>
            <div className="p-8 bg-slate-50 border-t border-slate-100 flex flex-col gap-3">
-              <Link href={`/users/${selectedRep.user.id}`} className="flex h-14 w-full items-center justify-center rounded-2xl bg-indigo-600 text-white font-black text-sm hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all">View Full Profile</Link>
+              <Link href={`/support/users/${selectedRep.user.id}`} className="flex h-14 w-full items-center justify-center rounded-2xl bg-indigo-600 text-white font-black text-sm hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all">{t("profile.viewFull")}</Link>
            </div>
         </div>
       )}
@@ -422,30 +427,39 @@ export function OrgChartView({ data, canManage = false }: OrgChartViewProps) {
       {assigningState && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-md">
            <div className="w-full max-w-lg bg-white rounded-[3rem] shadow-2xl overflow-hidden p-10">
-              <h3 className="text-2xl font-black text-slate-900 mb-2">Assign Representative</h3>
-              <p className="text-slate-500 font-medium mb-8">Assigning for <span className="text-indigo-600 font-black">${assigningState.label}</span></p>
+              <h3 className="text-2xl font-black text-slate-900 mb-2">{t("assignment.title")}</h3>
+              <p className="text-slate-500 font-medium mb-8">{t("assignment.for")} <span className="text-indigo-600 font-black">{assigningState.label}</span></p>
               
               <div className="space-y-6">
-                 <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">User ID</label>
-                    <input 
-                      type="text" 
-                      value={assignmentUserIdInput}
-                      onChange={(e) => setAssignmentUserIdInput(e.target.value)}
-                      placeholder="Enter numeric ID..." 
-                      className="w-full h-14 px-6 rounded-2xl border-2 border-slate-100 bg-slate-50 focus:bg-white focus:border-indigo-500 outline-none transition-all font-bold"
-                    />
-                 </div>
+                 <AdminUserPicker
+                    initialUsers={assignableUsers}
+                    label={t("assignment.user")}
+                    name="representative_user"
+                    onUserChange={(user) => setAssignmentUserIdInput(user ? String(user.id) : "")}
+                    placeholder={t("assignment.userSearchPlaceholder")}
+                    required
+                    searchStatus="active"
+                    helperText={t("assignment.userHelper")}
+                 />
                  {assignmentError && <p className="text-red-500 text-xs font-bold px-2">{assignmentError}</p>}
                  
                  <div className="flex gap-4 pt-4">
-                    <button onClick={() => setAssigningState(null)} className="flex-1 h-14 rounded-2xl bg-slate-100 text-slate-600 font-black text-sm hover:bg-slate-200 transition-all">Cancel</button>
+                    <button
+                      onClick={() => {
+                        setAssigningState(null);
+                        setAssignmentUserIdInput("");
+                        setAssignmentError(null);
+                      }}
+                      className="flex-1 h-14 rounded-2xl bg-slate-100 text-slate-600 font-black text-sm hover:bg-slate-200 transition-all"
+                    >
+                      {t("assignment.cancel")}
+                    </button>
                     <button 
                       onClick={submitAssignment} 
                       disabled={assignmentSubmitting}
                       className="flex-1 h-14 rounded-2xl bg-indigo-600 text-white font-black text-sm hover:bg-indigo-700 disabled:opacity-50 shadow-xl shadow-indigo-200 transition-all"
                     >
-                      {assignmentSubmitting ? "Processing..." : "Confirm Assignment"}
+                      {assignmentSubmitting ? t("assignment.processing") : t("assignment.confirm")}
                     </button>
                  </div>
               </div>

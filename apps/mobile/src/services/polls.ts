@@ -9,11 +9,31 @@ import type {
   CreatePollInput,
 } from "@compound/contracts";
 
+export interface PagedMobileList<T> {
+  data: T[];
+  links: PaginatedEnvelope<T>["links"];
+  meta: PaginatedEnvelope<T>["meta"];
+}
+
+export interface PageQuery {
+  page?: number;
+  perPage?: number;
+}
+
 export const pollsApi = api.injectEndpoints({
   endpoints: (builder) => ({
-    getPolls: builder.query<Poll[], void>({
-      query: () => "/polls",
-      transformResponse: (response: PaginatedEnvelope<Poll>) => response.data,
+    getPolls: builder.query<PagedMobileList<Poll>, PageQuery | void>({
+      query: (params) => {
+        const page = params?.page ?? 1;
+        const perPage = params?.perPage ?? 20;
+
+        return `/polls?page=${page}&perPage=${perPage}`;
+      },
+      transformResponse: (response: PaginatedEnvelope<Poll>) => ({
+        data: response.data,
+        links: response.links,
+        meta: response.meta,
+      }),
       providesTags: ["Poll"],
     }),
     getPoll: builder.query<Poll, { pollId: string; unitId?: string | null }>({

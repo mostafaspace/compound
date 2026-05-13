@@ -380,7 +380,7 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-4 border-b border-line pb-2 last:border-b-0 last:pb-0">
       <span className="text-muted">{label}</span>
-      <span className="text-right font-medium">{value}</span>
+      <span className="text-end font-medium">{value}</span>
     </div>
   );
 }

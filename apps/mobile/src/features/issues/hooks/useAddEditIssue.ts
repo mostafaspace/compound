@@ -17,8 +17,8 @@ export const MAX_ATTACHMENTS = 4;
 interface ExistingAttachment {
   id: string;
   url: string;
-  mimeType: string;
-  originalName: string;
+  mimeType: string | null;
+  originalName: string | null;
 }
 
 export const useAddEditIssue = (issue?: Issue) => {
@@ -34,12 +34,17 @@ export const useAddEditIssue = (issue?: Issue) => {
 
   const [existingAttachments, setExistingAttachments] = useState<ExistingAttachment[]>(() => {
     if (isEdit && issue?.attachments && issue.attachments.length > 0) {
-      return issue.attachments.map((att: any) => ({
-        id: att.id,
-        url: att.url,
-        mimeType: att.mimeType,
-        originalName: att.originalName,
-      }));
+      const attachments: ExistingAttachment[] = [];
+      for (const att of issue.attachments) {
+        attachments.push({
+          id: att.id,
+          url: att.url,
+          mimeType: att.mimeType,
+          originalName: att.originalName,
+        });
+      }
+
+      return attachments;
     }
     return [];
   });
@@ -112,12 +117,15 @@ export const useAddEditIssue = (issue?: Issue) => {
       const issueId = savedIssue?.id ?? issue?.id!;
 
       if (isEdit && removedAttachmentIds.length > 0) {
-        await Promise.all(
-          removedAttachmentIds.map(attachmentId =>
+        const deletePromises = [];
+        for (const attachmentId of removedAttachmentIds) {
+          deletePromises.push(
             deleteIssueAttachment({ issueId: issue!.id, attachmentId }).unwrap()
               .catch(err => console.error('Failed to delete attachment', attachmentId, err))
-          )
-        );
+          );
+        }
+
+        await Promise.all(deletePromises);
       }
 
       if (newAttachments.length > 0) {

@@ -25,17 +25,19 @@
     "format": "npm run format --workspaces --if-present",
     "infra:up": "docker compose -f infra/docker-compose.yml up -d",
     "infra:down": "docker compose -f infra/docker-compose.yml down",
-    "prepare": "husky"
+    "prepare": "husky",
+    "postinstall": "patch-package"
   },
   "overrides": {
-    "react": "19.2.4",
-    "@types/react": "19.2.4"
+    "react": "19.2.3",
+    "@types/react": "19.2.3"
   },
   "devDependencies": {
-    "husky": "^9.1.7"
+    "husky": "^9.1.7",
+    "patch-package": "^8.0.1"
   },
   "dependencies": {
-    "react": "19.2.4",
+    "react": "19.2.3",
     "react-native": "0.85.2"
   }
 }

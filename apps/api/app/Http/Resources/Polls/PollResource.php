@@ -35,7 +35,7 @@ class PollResource extends JsonResource
             'createdAt' => $this->created_at?->toJSON(),
             'updatedAt' => $this->updated_at?->toJSON(),
             'options' => PollOptionResource::collection($this->whenLoaded('options')),
-            'votesCount' => $this->whenLoaded('votes', fn () => $this->votes->count(), 0),
+            'votesCount' => (int) ($this->votes_count ?? ($this->relationLoaded('votes') ? $this->votes->count() : 0)),
             'selectedUnitId' => $this->selected_unit_id ?? null,
             'hasVoted' => $this->has_voted ?? null,
             'userVoteOptionIds' => $this->user_vote_option_ids ?? null,

@@ -1,6 +1,6 @@
 import React, { useRef, useMemo, useEffect } from 'react';
 import {
-  View, StyleSheet, ScrollView, useColorScheme, Alert, TextInput, TouchableOpacity, Image
+  View, StyleSheet, ScrollView, useColorScheme, Alert, TextInput, TouchableOpacity, Image, FlatList
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { RouteProp, useRoute } from '@react-navigation/native';
@@ -42,6 +42,9 @@ const schema = z.object({
 });
 
 type FormData = z.infer<typeof schema>;
+type AttachmentPreviewItem =
+  | { kind: 'existing'; id: string | number; attachment: any }
+  | { kind: 'new'; id: string; index: number; attachment: any };
 
 export const AddEditIssueScreen = () => {
   const { t, i18n } = useTranslation();
@@ -93,6 +96,17 @@ export const AddEditIssueScreen = () => {
   }, [availableTargetRoles, selectedTargetRole, setValue, isEdit]);
 
   const remainingSlots = MAX_ATTACHMENTS - totalCount;
+  const attachmentItems = useMemo<AttachmentPreviewItem[]>(() => {
+    const items: AttachmentPreviewItem[] = [];
+    for (const attachment of existingAttachments) {
+      items.push({ kind: 'existing', id: attachment.id, attachment });
+    }
+    for (let index = 0; index < newAttachments.length; index += 1) {
+      items.push({ kind: 'new', id: `new-${index}`, index, attachment: newAttachments[index] });
+    }
+
+    return items;
+  }, [existingAttachments, newAttachments]);
 
   const handlePickerResult = (result: ImagePickerResponse) => {
     if (!result.assets || result.assets.length === 0) return;
@@ -141,7 +155,7 @@ export const AddEditIssueScreen = () => {
             }
           },
         },
-        { text: t('Common.cancel', { defaultValue: 'Cancel' }), style: 'cancel' },
+        { text: t('Common.cancel'), style: 'cancel' },
       ]
     );
   };
@@ -156,10 +170,10 @@ export const AddEditIssueScreen = () => {
     : t(isEdit ? 'Common.save' : 'Issues.submit', { defaultValue: isEdit ? 'Save Changes' : 'Submit Issue' });
 
   const targetLabels: Record<(typeof TARGETS)[number], string> = {
-    floor_representative: t('Issues.targetRoles.floor_representative', { defaultValue: 'Floor Rep' }),
-    building_representative: t('Issues.targetRoles.building_representative', { defaultValue: 'Building Rep' }),
-    president: t('Issues.targetRoles.president', { defaultValue: 'President' }),
-    compound_admin: t('Issues.targetRoles.compound_admin', { defaultValue: 'Admin' }),
+    floor_representative: t('Issues.targetRoles.floor_representative'),
+    building_representative: t('Issues.targetRoles.building_representative'),
+    president: t('Issues.targetRoles.president'),
+    compound_admin: t('Issues.targetRoles.compound_admin'),
   };
 
   const renderChips = <T extends string>(
@@ -168,10 +182,15 @@ export const AddEditIssueScreen = () => {
     value: T,
     onChange: (v: T) => void,
   ) => (
-    <View style={[styles.chips, rowDirectionStyle(isRtl)]}>
-      {options.map((opt) => (
+    <FlatList
+      data={options}
+      keyExtractor={(opt) => opt}
+      horizontal
+      inverted={isRtl}
+      scrollEnabled={false}
+      contentContainerStyle={[styles.chips, rowDirectionStyle(isRtl)]}
+      renderItem={({ item: opt }) => (
         <Button
-          key={opt}
           title={fieldName === 'targetRole'
             ? targetLabels[opt as (typeof TARGETS)[number]]
             : t(`Issues.${fieldName}s.${opt}`, { defaultValue: opt })}
@@ -180,9 +199,56 @@ export const AddEditIssueScreen = () => {
           style={styles.chip}
           textStyle={{ fontSize: 13 }}
         />
-      ))}
-    </View>
+      )}
+    />
   );
+
+  const renderAttachmentPreview = ({ item }: { item: AttachmentPreviewItem }) => {
+    if (item.kind === 'existing') {
+      const att = item.attachment;
+
+      return (
+        <View style={styles.attachmentPreviewContainer}>
+          {att.mimeType?.startsWith('image/') ? (
+            <Image
+              source={{
+                uri: att.url.startsWith('http') ? att.url : `${defaultApiBaseUrl}${att.url}`,
+                headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+              }}
+              style={styles.attachmentPreview}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={[styles.attachmentPreview, styles.attachmentFallback]}>
+              <Icon name="issues" color={colors.primary.light} size={24} />
+            </View>
+          )}
+          <TouchableOpacity
+            style={styles.removeAttachmentBtn}
+            onPress={() => removeExistingAttachment(att.id)}
+          >
+            <Typography style={styles.removeAttachmentText}>✕</Typography>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.attachmentPreviewContainer}>
+        <Image
+          source={{ uri: item.attachment.uri }}
+          style={styles.attachmentPreview}
+          resizeMode="cover"
+        />
+        <TouchableOpacity
+          style={styles.removeAttachmentBtn}
+          onPress={() => removeNewAttachment(item.index)}
+        >
+          <Typography style={styles.removeAttachmentText}>✕</Typography>
+        </TouchableOpacity>
+      </View>
+    );
+  };
 
   return (
     <ScreenContainer withKeyboard style={styles.container} edges={['left', 'right', 'bottom']}>
@@ -190,7 +256,7 @@ export const AddEditIssueScreen = () => {
         {!isEdit && (
           <>
             <Typography variant="label" style={[styles.label, { color: text, marginTop: 0 }, textDirectionStyle(isRtl)]}>
-              {t('Issues.routeToLabel', { defaultValue: 'Route complaint to' })}
+              {t('Issues.routeToLabel')}
             </Typography>
             <Controller
               control={control}
@@ -210,7 +276,7 @@ export const AddEditIssueScreen = () => {
         )}
 
         <Typography variant="label" style={[styles.label, { color: text, marginTop: isEdit ? 0 : spacing.sm }, textDirectionStyle(isRtl)]}>
-          {t('Issues.categoryLabel', { defaultValue: 'Category' })}
+          {t('Issues.categoryLabel')}
         </Typography>
         <Controller
           control={control}
@@ -219,7 +285,7 @@ export const AddEditIssueScreen = () => {
         />
 
         <Typography variant="label" style={[styles.label, { color: text }, textDirectionStyle(isRtl)]}>
-          {t('Issues.priorityLabel', { defaultValue: 'Priority' })}
+          {t('Issues.priorityLabel')}
         </Typography>
         <Controller
           control={control}
@@ -228,7 +294,7 @@ export const AddEditIssueScreen = () => {
         />
 
         <Typography variant="label" style={[styles.label, { color: text }, textDirectionStyle(isRtl)]}>
-          {t('Issues.titleLabel', { defaultValue: 'Title' })}
+          {t('Issues.titleLabel')}
         </Typography>
         <Controller
           control={control}
@@ -255,7 +321,7 @@ export const AddEditIssueScreen = () => {
         )}
 
         <Typography variant="label" style={[styles.label, { color: text }, textDirectionStyle(isRtl)]}>
-          {t('Issues.descriptionLabel', { defaultValue: 'Description' })}
+          {t('Issues.descriptionLabel')}
         </Typography>
         <Controller
           control={control}
@@ -287,55 +353,22 @@ export const AddEditIssueScreen = () => {
 
         <View style={[styles.attachmentHeader, rowDirectionStyle(isRtl)]}>
           <Typography variant="label" style={[styles.label, { color: text, marginTop: 0, marginBottom: 0 }, textDirectionStyle(isRtl)]}>
-            {t('Issues.attachmentLabel', { defaultValue: 'Attachments (Optional)' })}
+            {t('Issues.attachmentLabel')}
           </Typography>
           <Typography variant="caption" style={styles.helperText}>
             {totalCount}/{MAX_ATTACHMENTS}
           </Typography>
         </View>
 
-        {(existingAttachments.length > 0 || newAttachments.length > 0) && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: spacing.xs }}>
-            {existingAttachments.map((att: any) => (
-              <View key={att.id} style={styles.attachmentPreviewContainer}>
-                {att.mimeType?.startsWith('image/') ? (
-                  <Image
-                    source={{
-                      uri: att.url.startsWith('http') ? att.url : `${defaultApiBaseUrl}${att.url}`,
-                      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-                    }}
-                    style={styles.attachmentPreview}
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <View style={[styles.attachmentPreview, styles.attachmentFallback]}>
-                    <Icon name="issues" color={colors.primary.light} size={24} />
-                  </View>
-                )}
-                <TouchableOpacity
-                  style={styles.removeAttachmentBtn}
-                  onPress={() => removeExistingAttachment(att.id)}
-                >
-                  <Typography style={styles.removeAttachmentText}>✕</Typography>
-                </TouchableOpacity>
-              </View>
-            ))}
-            {newAttachments.map((att: any, index: number) => (
-              <View key={`new-${index}`} style={styles.attachmentPreviewContainer}>
-                <Image
-                  source={{ uri: att.uri }}
-                  style={styles.attachmentPreview}
-                  resizeMode="cover"
-                />
-                <TouchableOpacity
-                  style={styles.removeAttachmentBtn}
-                  onPress={() => removeNewAttachment(index)}
-                >
-                  <Typography style={styles.removeAttachmentText}>✕</Typography>
-                </TouchableOpacity>
-              </View>
-            ))}
-          </ScrollView>
+        {attachmentItems.length > 0 && (
+          <FlatList
+            data={attachmentItems}
+            keyExtractor={(item) => String(item.id)}
+            renderItem={renderAttachmentPreview}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={{ marginTop: spacing.xs }}
+          />
         )}
 
         {canAddMore && (

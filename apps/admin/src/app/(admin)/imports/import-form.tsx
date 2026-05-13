@@ -115,7 +115,7 @@ export function ImportForm({ compounds, defaultCompoundId, isSuperAdmin, t }: Im
             type="file"
             required
             accept=".csv,text/csv"
-            className="block w-full text-sm text-muted file:mr-4 file:rounded-lg file:border file:border-line file:bg-panel file:px-3 file:py-1.5 file:text-sm file:font-semibold hover:file:border-brand"
+            className="block w-full text-sm text-muted file:me-4 file:rounded-lg file:border file:border-line file:bg-panel file:px-3 file:py-1.5 file:text-sm file:font-semibold hover:file:border-brand"
           />
         </div>
 

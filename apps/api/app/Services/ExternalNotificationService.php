@@ -13,10 +13,11 @@ use App\Models\User;
 use App\Services\Channels\MockEmailChannel;
 use App\Services\Channels\FcmPushChannel;
 use App\Services\Channels\MockSmsChannel;
+use RuntimeException;
 
 class ExternalNotificationService
 {
-    /** @var NotificationChannelInterface[] */
+    /** @var array<string, class-string<NotificationChannelInterface>> */
     private array $channels;
 
     public function __construct(
@@ -24,9 +25,9 @@ class ExternalNotificationService
         private readonly CompoundContextService $compoundContext,
     ) {
         $this->channels = [
-            NotificationChannel::Push->value => app(FcmPushChannel::class),
-            NotificationChannel::Email->value => app(MockEmailChannel::class),
-            NotificationChannel::Sms->value => app(MockSmsChannel::class),
+            NotificationChannel::Push->value => FcmPushChannel::class,
+            NotificationChannel::Email->value => MockEmailChannel::class,
+            NotificationChannel::Sms->value => MockSmsChannel::class,
         ];
     }
 
@@ -110,15 +111,8 @@ class ExternalNotificationService
             'subject' => $template->subject ? $template->render($template->subject, $context) : null,
         ];
 
-        $adapter = $this->channels[$channel->value] ?? null;
-
-        if (! $adapter) {
-            $this->logDelivery($notification, $channel, DeliveryStatus::Skipped, null, 'mock', null, 'no_adapter');
-
-            return;
-        }
-
         try {
+            $adapter = $this->resolveChannelAdapter($channel);
             $result = $adapter->dispatch($user, $payload);
             $provider = $result['provider'] ?? 'mock';
             $response = $result['response'] ?? [];
@@ -167,11 +161,11 @@ class ExternalNotificationService
             'body' => $notification->body,
         ];
 
-        $adapter = $this->channels[$channel->value] ?? null;
         $attemptNumber = $log->attempt_number + 1;
 
         try {
-            $result = $adapter?->dispatch($user, $payload) ?? throw new \RuntimeException('No adapter for channel');
+            $adapter = $this->resolveChannelAdapter($channel);
+            $result = $adapter->dispatch($user, $payload);
             $newLog = $this->logDelivery($notification, $channel, DeliveryStatus::Sent, $this->obfuscateRecipient($channel, $user), $result['provider'] ?? 'mock', $result['response'] ?? [], null, $attemptNumber);
             $log->update(['status' => DeliveryStatus::Retried]);
 
@@ -179,6 +173,17 @@ class ExternalNotificationService
         } catch (\Throwable $e) {
             return $this->logDelivery($notification, $channel, DeliveryStatus::Failed, null, 'mock', null, $e->getMessage(), $attemptNumber);
         }
+    }
+
+    private function resolveChannelAdapter(NotificationChannel $channel): NotificationChannelInterface
+    {
+        $adapterClass = $this->channels[$channel->value] ?? null;
+
+        if (! $adapterClass) {
+            throw new RuntimeException('No adapter for channel');
+        }
+
+        return app($adapterClass);
     }
 
     private function logSkipped(Notification $notification, ?string $recipient, string $reason): void

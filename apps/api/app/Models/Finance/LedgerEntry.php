@@ -54,4 +54,12 @@ class LedgerEntry extends Model
     {
         return $this->morphTo();
     }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<PaymentAllocation, $this>
+     */
+    public function paymentAllocations(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(PaymentAllocation::class);
+    }
 }

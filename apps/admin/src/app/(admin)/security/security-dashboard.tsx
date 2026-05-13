@@ -114,7 +114,7 @@ export function SecurityDashboard() {
           </div>
 
           <div className="rounded-xl border border-line bg-panel overflow-hidden">
-            <table className="w-full text-left text-sm">
+            <table className="w-full text-start text-sm">
               <thead className="bg-background text-muted uppercase text-[10px] font-bold tracking-wider border-b border-line">
                 <tr>
                   <th className="px-4 py-3">IP Address</th>

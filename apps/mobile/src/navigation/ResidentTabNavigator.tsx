@@ -15,6 +15,7 @@ import { usePermission } from '../hooks/usePermission';
 import { NotificationBell } from '../components/ui/NotificationBell';
 import { ScreenHeader } from '../components/layout/ScreenHeader';
 import { Icon, type AppIconName } from '../components/ui/Icon';
+import { isRtlLanguage } from '../i18n/direction';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const ApartmentsStack = createStackNavigator<ApartmentsStackParamList>();
@@ -31,11 +32,20 @@ function ApartmentsStackNavigator() {
   const { t } = useTranslation();
 
   return (
-    <ApartmentsStack.Navigator>
+    <ApartmentsStack.Navigator
+      screenOptions={{
+        header: ({ options, route }) => (
+          <ScreenHeader 
+            title={(options.title ?? route.name) as string} 
+            showBack={route.name !== 'ApartmentsList'} 
+          />
+        )
+      }}
+    >
       <ApartmentsStack.Screen
         name="ApartmentsList"
         component={ApartmentsListScreen}
-        options={{ title: t('Apartments.label', { defaultValue: 'My Apartment(s)' }) }}
+        options={{ title: t('Navigation.units', { defaultValue: 'Units' }) }}
       />
       <ApartmentsStack.Screen
         name="ApartmentDetail"
@@ -47,8 +57,9 @@ function ApartmentsStackNavigator() {
 }
 
 export const ResidentTabNavigator = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const isDark = useColorScheme() === 'dark';
+  const isRtl = isRtlLanguage(i18n.language);
   const canViewPolls = usePermission('view_governance');
 
   return (
@@ -62,6 +73,8 @@ export const ResidentTabNavigator = () => {
           paddingBottom: spacing.sm,
           paddingTop: spacing.xs,
           height: componentSize.tabBar,
+          flexDirection: isRtl ? 'row-reverse' : 'row',
+          direction: isRtl ? 'rtl' : 'ltr',
         },
         headerStyle: {
           backgroundColor: isDark ? colors.surface.dark : colors.surface.light,
@@ -74,8 +87,10 @@ export const ResidentTabNavigator = () => {
           fontWeight: '700',
           fontSize: 18,
           color: isDark ? colors.text.primary.dark : colors.text.primary.light,
+          textAlign: 'auto',
         },
-        headerRight: () => <NotificationBell />,
+        headerRight: () => isRtl ? null : <NotificationBell />,
+        headerLeft: () => isRtl ? <NotificationBell /> : null,
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: '600',
@@ -101,7 +116,7 @@ export const ResidentTabNavigator = () => {
         name="Apartments"
         component={ApartmentsStackNavigator}
         options={{
-          title: t('Apartments.label', { defaultValue: 'My Apartment(s)' }),
+          title: t('Navigation.units', { defaultValue: 'Units' }),
           headerShown: false,
         }}
       />
@@ -109,8 +124,8 @@ export const ResidentTabNavigator = () => {
         name="Visitors"
         component={VisitorsScreen}
         options={{ 
-          title: t('Visitors.qrLabel', 'Visitor QR'),
-          header: () => <ScreenHeader title={t('Visitors.qrLabel', 'Visitor QR')} showBack={false} rightElement={<NotificationBell />} />
+          title: t('Navigation.visitors', { defaultValue: 'Visitors' }),
+          header: () => <ScreenHeader title={t('Navigation.visitors', { defaultValue: 'Visitors' })} showBack={false} rightElement={<NotificationBell />} />
         }}
       />
       {canViewPolls && (

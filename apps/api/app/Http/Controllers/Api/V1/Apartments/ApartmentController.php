@@ -45,7 +45,13 @@ class ApartmentController extends Controller
             'unitAccount.ledgerEntries' => fn ($query) => $query
                 ->whereIn('type', [LedgerEntryType::Charge->value, LedgerEntryType::Penalty->value])
                 ->where('amount', '>', 0)
+                ->whereDoesntHave('paymentAllocations', function ($q): void {
+                    $q->whereHas('paymentSubmission', function ($sq): void {
+                        $sq->whereIn('status', ['submitted', 'under_review', 'approved']);
+                    });
+                })
                 ->limit(50),
+            'unitAccount.paymentSubmissions' => fn ($query) => $query->latest()->limit(50),
         ]);
 
         return new ApartmentResource($unit);

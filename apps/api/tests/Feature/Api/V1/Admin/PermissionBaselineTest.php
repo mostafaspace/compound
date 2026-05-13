@@ -26,10 +26,18 @@ class PermissionBaselineTest extends TestCase
             return $method->invoke(new EnsureUserHasRole, $role);
         };
 
+        foreach (UserRole::cases() as $role) {
+            $this->assertIsArray($permissionsFor($role));
+        }
+
         $this->assertContains(Permission::LookupVehicles->value, $permissionsFor(UserRole::CompoundAdmin));
         $this->assertContains(Permission::ManageApartmentPenaltyPoints->value, $permissionsFor(UserRole::CompoundAdmin));
         $this->assertContains(Permission::ViewAdminSecurity->value, $permissionsFor(UserRole::CompoundAdmin));
         $this->assertContains(Permission::ManageAdminSecurity->value, $permissionsFor(UserRole::CompoundAdmin));
+
+        $this->assertContains(Permission::ViewCompounds->value, $permissionsFor(UserRole::President));
+        $this->assertContains(Permission::ViewOrgChart->value, $permissionsFor(UserRole::President));
+        $this->assertContains(Permission::ViewIssues->value, $permissionsFor(UserRole::President));
 
         $this->assertContains(Permission::LookupVehicles->value, $permissionsFor(UserRole::SupportAgent));
         $this->assertContains(Permission::ViewAdminSecurity->value, $permissionsFor(UserRole::SupportAgent));

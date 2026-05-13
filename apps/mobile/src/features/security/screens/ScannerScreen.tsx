@@ -5,6 +5,7 @@ import {
   useColorScheme,
   Linking,
   AppState,
+  FlatList,
 } from 'react-native';
 import {
   BarcodeScanner,
@@ -13,10 +14,13 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useValidatePassMutation, usePerformVisitorActionMutation } from '../../../services/security';
 import { ScreenContainer } from '../../../components/layout/ScreenContainer';
+import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { Typography } from '../../../components/ui/Typography';
 import { Button } from '../../../components/ui/Button';
+import { Card } from '../../../components/ui/Card';
 import { Input } from '../../../components/ui/Input';
 import { colors, layout, spacing, shadows, radii } from '../../../theme';
+import { visitorStatusPalette } from '../../../theme/semantics';
 import { Icon } from '../../../components/ui/Icon';
 import {
   appendScannerHistoryEntry,
@@ -24,8 +28,10 @@ import {
   normalizeScannedVisitorToken,
   type ScannerHistoryEntry,
 } from '../scanner-utils';
+import { isRtlLanguage, rowDirectionStyle, textDirectionStyle } from '../../../i18n/direction';
 
-function ScannerPreview({ onScanned }: { onScanned: (value: string) => void }) {
+function ScannerPreview({ onScanned, isRtl }: { onScanned: (value: string) => void; isRtl: boolean }) {
+  const { t } = useTranslation();
   const scannedRef = useRef(false);
 
   useEffect(() => {
@@ -50,8 +56,8 @@ function ScannerPreview({ onScanned }: { onScanned: (value: string) => void }) {
       <CameraView style={StyleSheet.absoluteFill} />
       <View pointerEvents="none" style={styles.cameraOverlay}>
         <View style={styles.scanFrame} />
-        <Typography variant="caption" style={styles.overlayText}>
-          Align the QR inside the frame
+        <Typography variant="caption" style={[styles.overlayText, textDirectionStyle(isRtl)]}>
+          {t('Security.alignFrame')}
         </Typography>
       </View>
     </View>
@@ -59,8 +65,9 @@ function ScannerPreview({ onScanned }: { onScanned: (value: string) => void }) {
 }
 
 export const ScannerScreen = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const isDark = useColorScheme() === 'dark';
+  const isRtl = isRtlLanguage(i18n.language);
 
   const [token, setToken] = useState('');
   const [scannerEnabled, setScannerEnabled] = useState(false);
@@ -111,11 +118,11 @@ export const ScannerScreen = () => {
       const vr = result.visitorRequest;
       const scannedAt = new Date().toISOString();
       const title = isValid
-        ? t('Security.validPass', 'Valid Pass')
-        : t('Security.invalidPass', 'Invalid Pass');
+        ? t('Security.validPass')
+        : t('Security.invalidPass');
       const detail = isValid && vr
-        ? `${vr.visitorName} • Unit ${vr.unit?.unitNumber ?? t('Common.notAvailable', { defaultValue: 'N/A' })}`
-        : t('Security.invalidToken', 'Invalid token');
+        ? `${vr.visitorName} • ${t('Apartments.unitNumber', { number: vr.unit?.unitNumber ?? t('Common.notAvailable') })}`
+        : t('Security.invalidToken');
 
       setScanResult({
         valid: isValid,
@@ -125,8 +132,8 @@ export const ScannerScreen = () => {
         visitorRequestId: vr?.id,
         unitNumber: vr?.unit?.unitNumber,
         message: isValid
-          ? `Valid pass for ${vr?.visitorName}`
-          : `Invalid or expired pass`,
+          ? t('Security.allowSuccess')
+          : t('Security.invalidToken'),
         scannedAt,
       });
       setScanHistory((current) => appendScannerHistoryEntry(current, {
@@ -138,7 +145,7 @@ export const ScannerScreen = () => {
       }));
     } catch (err: any) {
       const scannedAt = new Date().toISOString();
-      const message = err.data?.message || t('Security.invalidToken', 'Invalid token');
+      const message = err.data?.message || t('Security.invalidToken');
 
       setScanResult({
         valid: false,
@@ -150,7 +157,7 @@ export const ScannerScreen = () => {
       setScanHistory((current) => appendScannerHistoryEntry(current, {
         id: `${scannedAt}-${normalizedToken}`,
         status: 'invalid',
-        title: t('Security.invalidPass', 'Invalid Pass'),
+        title: t('Security.invalidPass'),
         detail: message,
         scannedAt,
       }));
@@ -196,10 +203,10 @@ export const ScannerScreen = () => {
       }).unwrap();
 
       const messageMap = {
-        arrive: t('Security.arrived', 'Visitor marked as arrived'),
-        allow: t('Security.allowed', 'Visitor allowed entry'),
-        deny: t('Security.denied', 'Visitor denied entry'),
-        complete: t('Security.completeSuccess', 'Visit marked complete.'),
+        arrive: t('Security.arrived'),
+        allow: t('Security.allowed'),
+        deny: t('Security.denied'),
+        complete: t('Security.completeSuccess'),
       };
       setScanResult((prev) => {
         if (!prev) {
@@ -231,7 +238,7 @@ export const ScannerScreen = () => {
       setScanResult((prev) => prev ? {
         ...prev,
         valid: false,
-        message: err.data?.message || t('Security.actionFailed', 'Visitor action could not be completed.'),
+        message: err.data?.message || t('Security.actionFailed'),
       } : null);
     }
   };
@@ -245,70 +252,94 @@ export const ScannerScreen = () => {
     })
     : [];
 
+  const renderHistoryItem = ({ item: entry }: { item: ScannerHistoryEntry }) => (
+    <View style={[styles.historyRow, rowDirectionStyle(isRtl)]}>
+      <View style={[
+        styles.historyDot,
+        { backgroundColor: entry.status === 'valid' ? colors.success : colors.error },
+        isRtl ? { marginLeft: spacing.sm } : { marginRight: spacing.sm }
+      ]} />
+      <View style={[styles.historyText, { alignItems: isRtl ? 'flex-end' : 'flex-start' }]}>
+        <Typography variant="label" style={textDirectionStyle(isRtl)}>{entry.title}</Typography>
+        <Typography variant="caption" style={[styles.historyDetail, textDirectionStyle(isRtl)]}>{entry.detail}</Typography>
+      </View>
+      <Typography variant="caption" style={[styles.historyTime, textDirectionStyle(isRtl)]}>
+        {new Date(entry.scannedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+      </Typography>
+    </View>
+  );
+
   return (
-    <ScreenContainer scrollable style={styles.container}>
-      <View style={styles.header}>
-        <Typography variant="h1">{t('Security.scanner', 'QR Scanner')}</Typography>
-        <Typography variant="caption" style={styles.subtitle}>
-          {t('Security.scanHint', 'Scan a visitor QR code or enter the token manually')}
+    <ScreenContainer scrollable>
+      <View style={[styles.header, textDirectionStyle(isRtl)]}>
+        <Typography variant="h1" style={textDirectionStyle(isRtl)}>{t('Security.scanner')}</Typography>
+        <Typography variant="caption" style={[styles.subtitle, textDirectionStyle(isRtl)]}>
+          {t('Security.scanHint')}
         </Typography>
       </View>
 
-      <View style={[styles.cameraCard, { backgroundColor: surfaceColor, borderColor }]}>
-        <View style={styles.cameraHeader}>
-          <View>
-            <Typography variant="label" style={styles.cameraTitle}>
-              {t('Security.liveScanner', { defaultValue: 'Live scanner' })}
+      <Card style={styles.cameraCard} contentStyle={{ padding: 0 }}>
+        <View style={[styles.cameraHeader, rowDirectionStyle(isRtl)]}>
+          <View style={{ flex: 1, alignItems: isRtl ? 'flex-end' : 'flex-start' }}>
+            <Typography variant="label" style={[styles.cameraTitle, textDirectionStyle(isRtl)]}>
+              {t('Security.liveScanner')}
             </Typography>
-            <Typography variant="caption" style={styles.cameraSubtitle}>
+            <Typography variant="caption" style={[styles.cameraSubtitle, textDirectionStyle(isRtl)]}>
               {scannerEnabled
-                ? t('Security.cameraOpen', { defaultValue: 'Camera is open. Scan one pass, review the result, then scan the next.' })
-                : t('Security.cameraClosed', { defaultValue: 'Camera is closed until you are ready to scan.' })}
+                ? t('Security.cameraOpen')
+                : t('Security.cameraClosed')}
             </Typography>
           </View>
           {scannerEnabled ? (
             <Button
-              title={t('Common.close', { defaultValue: 'Close' })}
+              title={t('Common.close')}
               onPress={handleCloseScanner}
               variant="outline"
               style={styles.cameraHeaderButton}
             />
           ) : (
             <Button
-              title={t('Security.openScanner', { defaultValue: 'Open QR camera' })}
+              title={t('Security.openScanner')}
               onPress={handleReset}
+              variant="primary"
               style={styles.cameraHeaderButton}
             />
           )}
         </View>
         {hasPermission === false ? (
           <View style={styles.placeholder}>
-            <Icon name="camera" color={colors.primary.light} size={44} />
-            <Typography variant="caption" style={styles.placeholderText}>
-              {t('Security.cameraPermissionNeeded', { defaultValue: 'Camera access is required to scan visitor QR passes.' })}
+            <View style={styles.placeholderIcon}>
+              <Icon name="camera" color={colors.primary.light} size={48} />
+            </View>
+            <Typography variant="body" style={[styles.placeholderText, textDirectionStyle(isRtl)]}>
+              {t('Security.cameraPermissionNeeded')}
             </Typography>
             <Button
-              title={t('Security.enableCamera', { defaultValue: 'Enable Camera' })}
+              title={t('Security.enableCamera')}
               onPress={handleRequestPermission}
+              variant="primary"
               style={styles.permissionButton}
             />
           </View>
         ) : scannerEnabled ? (
-          <ScannerPreview onScanned={(value) => { void handleProcessToken(value); }} />
+          <ScannerPreview onScanned={(value) => { void handleProcessToken(value); }} isRtl={isRtl} />
         ) : (
           <View style={styles.placeholder}>
-            <Icon name="qr" color={colors.primary.light} size={44} />
-            <Typography variant="caption" style={styles.placeholderText}>
-              {t('Security.scanAnotherHint', { defaultValue: 'Open the camera when the next visitor pass is ready.' })}
+            <View style={styles.placeholderIcon}>
+              <Icon name="qr" color={colors.primary.light} size={48} />
+            </View>
+            <Typography variant="body" style={[styles.placeholderText, textDirectionStyle(isRtl)]}>
+              {t('Security.scanAnotherHint')}
             </Typography>
             <Button
-              title={t('Security.openScanner', { defaultValue: 'Open QR camera' })}
+              title={t('Security.openScanner')}
               onPress={handleReset}
+              variant="primary"
               style={styles.permissionButton}
             />
           </View>
         )}
-      </View>
+      </Card>
 
       {scanResult ? (
         <View style={styles.resultContainer}>
@@ -324,36 +355,43 @@ export const ScannerScreen = () => {
             <View style={styles.resultIcon}>
               <Icon name={scanResult.valid ? 'check' : 'x'} color={scanResult.valid ? colors.success : colors.error} size={42} />
             </View>
-            <Typography variant="h2" style={styles.resultTitle}>
+            <Typography variant="h2" style={[styles.resultTitle, textDirectionStyle(isRtl)]}>
               {scanResult.valid
-                ? t('Security.validPass', 'Valid Pass')
-                : t('Security.invalidPass', 'Invalid Pass')}
+                ? t('Security.validPass')
+                : t('Security.invalidPass')}
             </Typography>
             {scanResult.message && (
-              <Typography variant="body" style={styles.resultMessage}>
+              <Typography variant="body" style={[styles.resultMessage, textDirectionStyle(isRtl)]}>
                 {scanResult.message}
               </Typography>
             )}
             {scanResult.visitorName && (
-              <Typography variant="body" style={styles.resultDetail}>
-                {t('Security.visitor', 'Visitor')}: {scanResult.visitorName}
+              <Typography variant="body" style={[styles.resultDetail, textDirectionStyle(isRtl)]}>
+                {t('Security.visitor')}: {scanResult.visitorName}
               </Typography>
             )}
             {scanResult.unitNumber && (
-              <Typography variant="body" style={styles.resultDetail}>
-                {t('Security.unit', 'Unit')}: {scanResult.unitNumber}
+              <Typography variant="body" style={[styles.resultDetail, textDirectionStyle(isRtl)]}>
+                {t('Security.unit')}: {scanResult.unitNumber}
               </Typography>
             )}
             {scanResult.visitorStatus && (
-              <Typography variant="body" style={styles.resultDetail}>
-                {t('Security.currentStatus', 'Current status')}: {scanResult.visitorStatus.replace(/_/g, ' ')}
-              </Typography>
+              <View style={[styles.statusRow, rowDirectionStyle(isRtl)]}>
+                <Typography variant="body" style={[styles.resultDetail, textDirectionStyle(isRtl)]}>
+                  {t('Security.currentStatus')}:
+                </Typography>
+                <StatusBadge
+                  label={t(`Common.statuses.${scanResult.visitorStatus}`, { defaultValue: scanResult.visitorStatus.replace(/_/g, ' ') })}
+                  backgroundColor={visitorStatusPalette(scanResult.visitorStatus).background}
+                  textColor={visitorStatusPalette(scanResult.visitorStatus).text}
+                />
+              </View>
             )}
             {scanResult.visitorRequestId && availableActions.length > 0 ? (
-              <View style={styles.resultActions}>
+              <View style={[styles.resultActions, rowDirectionStyle(isRtl)]}>
                 {availableActions.includes('arrive') ? (
                   <Button
-                    title={t('Security.arrive', 'Mark Arrived')}
+                    title={t('Security.arrive')}
                     onPress={() => { void handleVisitorAction('arrive'); }}
                     variant="outline"
                     style={styles.resultActionButton}
@@ -362,15 +400,16 @@ export const ScannerScreen = () => {
                 ) : null}
                 {availableActions.includes('allow') ? (
                   <Button
-                    title={t('Security.allow', 'Allow Entry')}
+                    title={t('Security.allow')}
                     onPress={() => { void handleVisitorAction('allow'); }}
+                    variant="success"
                     style={styles.resultActionButton}
                     loading={isPerforming}
                   />
                 ) : null}
                 {availableActions.includes('deny') ? (
                   <Button
-                    title={t('Security.deny', 'Deny Entry')}
+                    title={t('Security.deny')}
                     onPress={() => { void handleVisitorAction('deny'); }}
                     variant="outline"
                     style={[styles.resultActionButton, { borderColor: colors.error }]}
@@ -380,7 +419,7 @@ export const ScannerScreen = () => {
                 ) : null}
                 {availableActions.includes('complete') ? (
                   <Button
-                    title={t('Security.complete', 'Complete')}
+                    title={t('Security.complete')}
                     onPress={() => { void handleVisitorAction('complete'); }}
                     style={styles.resultActionButton}
                     loading={isPerforming}
@@ -389,8 +428,9 @@ export const ScannerScreen = () => {
               </View>
             ) : null}
             <Button
-              title={t('Security.scanAnother', 'Scan Another')}
+              title={t('Security.scanAnother')}
               onPress={handleReset}
+              variant="outline"
               style={styles.resetButton}
             />
           </View>
@@ -399,50 +439,40 @@ export const ScannerScreen = () => {
 
       <View style={styles.inputSection}>
         <Input
-          label={t('Security.tokenLabel', 'Visitor QR pass token')}
+          label={t('Security.tokenLabel')}
           onChangeText={setToken}
-          placeholder={t('Security.tokenPlaceholder', 'Paste or type QR token...')}
+          placeholder={t('Security.tokenPlaceholder')}
           value={token}
           containerStyle={styles.inputContainer}
+          textAlign={isRtl ? 'right' : 'left'}
         />
         <Button
-          title={t('Security.validate', 'Validate')}
+          title={t('Security.validate')}
           onPress={handleManualValidate}
+          variant="primary"
           loading={isValidating || isPerforming}
           style={styles.scanButton}
         />
       </View>
 
       {scanHistory.length > 0 ? (
-        <View style={[styles.historyCard, { backgroundColor: surfaceColor, borderColor }]}>
-          <Typography variant="h3" style={styles.historyTitle}>
-            {t('Security.recentScans', { defaultValue: 'Recent QR scans' })}
+        <Card style={styles.historyCard}>
+          <Typography variant="h3" style={[styles.historyTitle, textDirectionStyle(isRtl)]}>
+            {t('Security.recentScans')}
           </Typography>
-          {scanHistory.map((entry) => (
-            <View key={entry.id} style={styles.historyRow}>
-              <View style={[
-                styles.historyDot,
-                { backgroundColor: entry.status === 'valid' ? colors.success : colors.error },
-              ]} />
-              <View style={styles.historyText}>
-                <Typography variant="label">{entry.title}</Typography>
-                <Typography variant="caption" style={styles.historyDetail}>{entry.detail}</Typography>
-              </View>
-              <Typography variant="caption" style={styles.historyTime}>
-                {new Date(entry.scannedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </Typography>
-            </View>
-          ))}
-        </View>
+          <FlatList
+            data={scanHistory}
+            keyExtractor={(entry) => entry.id}
+            renderItem={renderHistoryItem}
+            scrollEnabled={false}
+          />
+        </Card>
       ) : null}
     </ScreenContainer>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    padding: layout.screenGutter,
-  },
   header: {
     marginBottom: layout.sectionGap,
   },
@@ -450,8 +480,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   cameraCard: {
-    borderRadius: radii.xl,
-    borderWidth: 1,
+    padding: 0,
     overflow: 'hidden',
     marginBottom: layout.sectionGap,
     minHeight: 320,
@@ -515,15 +544,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: layout.cardPadding,
-    paddingBottom: spacing.xl,
+    paddingVertical: spacing.xxl,
+  },
+  placeholderIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.background.light,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
   },
   placeholderText: {
-    marginTop: spacing.md,
+    marginTop: spacing.sm,
     textAlign: 'center',
+    color: colors.text.secondary.light,
+    maxWidth: '80%',
   },
   permissionButton: {
-    marginTop: spacing.lg,
-    minWidth: 180,
+    marginTop: spacing.xl,
+    minWidth: 200,
   },
   resultContainer: {
     marginBottom: layout.sectionGap,
@@ -547,7 +587,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   resultDetail: {
-    marginBottom: spacing.xs,
+    color: colors.text.secondary.light,
+  },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
   },
   resultActions: {
     width: '100%',
@@ -555,18 +601,15 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
   },
   resultActionButton: {
-    width: '100%',
+    flex: 1,
+    paddingHorizontal: spacing.sm,
   },
   resetButton: {
     marginTop: spacing.md,
     width: '100%',
   },
   historyCard: {
-    borderRadius: 20,
-    borderWidth: 1,
-    padding: layout.cardPadding,
     marginTop: spacing.sm,
-    ...shadows.sm,
   },
   historyTitle: {
     marginBottom: spacing.md,

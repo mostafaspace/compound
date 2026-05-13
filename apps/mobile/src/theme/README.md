@@ -9,7 +9,9 @@ This mobile app uses a production, role-first design system for compound operati
 - Do not use emoji, two-letter glyphs, or decorative text as structural icons. Use `Icon` from `components/ui/Icon`.
 - Keep touch targets at least `componentSize.touch` and use visible pressed, disabled, loading, and error states.
 - Keep logout/signout in the navigation/header layer only. Do not duplicate it inside dashboard content.
-- Use `FlatList` or another virtualized list for long data sets. Use `ScrollView` only for short page content and forms.
+- Use `FlatList` or another virtualized list for every rendered data list. Do not render UI collections with `.map()` in screens.
+- Use backend pagination/chunks for growing lists and wire `FlatList` with `onEndReached`, `refreshing`, and stable `keyExtractor` values. Temporary non-paged lists must be documented as bounded.
+- Use `ScrollView` only for short page content and forms that do not render repeated backend data.
 
 ## Tokens
 
@@ -30,6 +32,7 @@ This mobile app uses a production, role-first design system for compound operati
 ## Hard Rules For Future Agents
 
 - No raw visual systems in feature screens when a token or primitive exists.
+- No UI list rendering with `.map()` in screens. If a list can grow, it must be virtualized and prepared for pagination.
 - No duplicate logout/signout buttons on the same route.
 - No adding icon libraries without checking whether the local `Icon` primitive is enough.
 - No claiming a mobile UI pass is ready without running `npm run typecheck -w apps/mobile`.

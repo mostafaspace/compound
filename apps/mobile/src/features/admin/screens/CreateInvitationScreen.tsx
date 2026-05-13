@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, useColorScheme, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ScrollView, useColorScheme, ActivityIndicator, Alert, TouchableOpacity, FlatList } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
@@ -9,6 +9,7 @@ import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
 import { colors, layout, spacing } from '../../../theme';
 import { selectCurrentUser } from '../../../store/authSlice';
+import { isRtlLanguage, rowDirectionStyle, textDirectionStyle } from '../../../i18n/direction';
 import { 
   useGetBuildingsQuery, 
   useGetUnitsByBuildingQuery, 
@@ -16,8 +17,9 @@ import {
 } from '../../../services/admin';
 
 export const CreateInvitationScreen = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const isDark = useColorScheme() === 'dark';
+  const isRtl = isRtlLanguage(i18n.language);
   const navigation = useNavigation();
   const user = useSelector(selectCurrentUser);
 
@@ -35,10 +37,40 @@ export const CreateInvitationScreen = () => {
     skip: !formData.buildingId,
   });
   const [createInvitation, { isLoading: isSubmitting }] = useCreateResidentInvitationMutation();
+  const renderBuilding = ({ item: building }: { item: any }) => (
+    <TouchableOpacity
+      onPress={() => setFormData({ ...formData, buildingId: building.id, unitId: '' })}
+      style={[
+        styles.chip,
+        formData.buildingId === building.id && styles.activeChip,
+        { backgroundColor: isDark ? colors.surface.dark : colors.surface.light },
+        { marginEnd: spacing.sm }
+      ]}
+    >
+      <Typography variant="caption" style={[formData.buildingId === building.id ? styles.activeChipText : {}, textDirectionStyle(isRtl)]}>
+        {building.name}
+      </Typography>
+    </TouchableOpacity>
+  );
+
+  const renderUnit = ({ item: unit }: { item: any }) => (
+    <TouchableOpacity
+      onPress={() => setFormData({ ...formData, unitId: unit.id })}
+      style={[
+        styles.unitChip,
+        formData.unitId === unit.id && styles.activeChip,
+        { backgroundColor: isDark ? colors.surface.dark : colors.surface.light }
+      ]}
+    >
+      <Typography variant="caption" style={[formData.unitId === unit.id ? styles.activeChipText : {}, textDirectionStyle(isRtl)]}>
+        {unit.unitNumber}
+      </Typography>
+    </TouchableOpacity>
+  );
 
   const handleCreate = async () => {
     if (!formData.email || !formData.unitId || !formData.name) {
-      Alert.alert(t('Common.error'), t('Admin.fillAllFields', 'Please fill all required fields'));
+      Alert.alert(t('Common.error'), t('Admin.fillAllFields'));
       return;
     }
 
@@ -53,32 +85,32 @@ export const CreateInvitationScreen = () => {
       
       Alert.alert(
         t('Common.success'), 
-        t('Admin.invitationSent', 'Invitation sent successfully'),
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
+        t('Admin.invitationSent'),
+        [{ text: t('Common.done'), onPress: () => navigation.goBack() }]
       );
     } catch (error) {
-      Alert.alert(t('Common.error'), t('Admin.invitationFailed', 'Failed to send invitation'));
+      Alert.alert(t('Common.error'), t('Admin.invitationFailed'));
     }
   };
 
   return (
     <ScreenContainer edges={['left', 'right', 'bottom']}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Typography variant="h2" style={styles.title}>
-          {t('Admin.newInvitation', 'New Resident Invitation')}
+        <Typography variant="h2" style={[styles.title, textDirectionStyle(isRtl)]}>
+          {t('Admin.newInvitation')}
         </Typography>
         
         <View style={styles.section}>
           <Input
-            label={t('Admin.residentName', 'Resident Full Name')}
-            placeholder="John Doe"
+            label={t('Admin.residentName')}
+            placeholder={t('Admin.residentNamePlaceholder')}
             value={formData.name}
             onChangeText={(text) => setFormData({ ...formData, name: text })}
           />
           
           <Input
-            label={t('Admin.email', 'Email Address')}
-            placeholder="john@example.com"
+            label={t('Admin.email')}
+            placeholder={t('Admin.emailPlaceholder')}
             keyboardType="email-address"
             autoCapitalize="none"
             value={formData.email}
@@ -86,8 +118,8 @@ export const CreateInvitationScreen = () => {
           />
 
           <Input
-            label={t('Admin.phone', 'Phone Number (Optional)')}
-            placeholder="+201..."
+            label={t('Admin.phone')}
+            placeholder={t('Admin.phonePlaceholder')}
             keyboardType="phone-pad"
             value={formData.phone}
             onChangeText={(text) => setFormData({ ...formData, phone: text })}
@@ -95,59 +127,42 @@ export const CreateInvitationScreen = () => {
         </View>
 
         <View style={styles.section}>
-          <Typography variant="caption" style={styles.label}>
-            {t('Admin.building', 'Select Building')}
+          <Typography variant="caption" style={[styles.label, textDirectionStyle(isRtl)]}>
+            {t('Admin.building')}
           </Typography>
           <View style={styles.pickerContainer}>
             {loadingBuildings ? (
               <ActivityIndicator color={colors.primary.light} />
             ) : (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
-                {buildings.map((building: any) => (
-                  <TouchableOpacity
-                    key={building.id}
-                    onPress={() => setFormData({ ...formData, buildingId: building.id, unitId: '' })}
-                    style={[
-                      styles.chip,
-                      formData.buildingId === building.id && styles.activeChip,
-                      { backgroundColor: isDark ? colors.surface.dark : colors.surface.light }
-                    ]}
-                  >
-                    <Typography variant="caption" style={formData.buildingId === building.id ? styles.activeChipText : {}}>
-                      {building.name}
-                    </Typography>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
+              <FlatList
+                data={buildings}
+                keyExtractor={(building: any) => building.id}
+                renderItem={renderBuilding}
+                horizontal
+                inverted={isRtl}
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={[styles.horizontalScroll, rowDirectionStyle(isRtl)]}
+              />
             )}
           </View>
 
           {formData.buildingId ? (
             <>
-              <Typography variant="caption" style={[styles.label, { marginTop: spacing.md }]}>
-                {t('Admin.unit', 'Select Unit')}
+              <Typography variant="caption" style={[styles.label, { marginTop: spacing.md }, textDirectionStyle(isRtl)]}>
+                {t('Admin.unit')}
               </Typography>
               <View style={styles.pickerContainer}>
                 {loadingUnits ? (
                   <ActivityIndicator color={colors.primary.light} />
                 ) : (
-                  <View style={styles.unitsGrid}>
-                    {units.map((unit: any) => (
-                      <TouchableOpacity
-                        key={unit.id}
-                        onPress={() => setFormData({ ...formData, unitId: unit.id })}
-                        style={[
-                          styles.unitChip,
-                          formData.unitId === unit.id && styles.activeChip,
-                          { backgroundColor: isDark ? colors.surface.dark : colors.surface.light }
-                        ]}
-                      >
-                        <Typography variant="caption" style={formData.unitId === unit.id ? styles.activeChipText : {}}>
-                          {unit.unitNumber}
-                        </Typography>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
+                  <FlatList
+                    data={units}
+                    keyExtractor={(unit: any) => unit.id}
+                    renderItem={renderUnit}
+                    numColumns={3}
+                    scrollEnabled={false}
+                    columnWrapperStyle={[styles.unitsGrid, rowDirectionStyle(isRtl)]}
+                  />
                 )}
               </View>
             </>
@@ -155,27 +170,28 @@ export const CreateInvitationScreen = () => {
         </View>
 
         <View style={styles.section}>
-          <Typography variant="caption" style={styles.label}>
-            {t('Admin.role', 'Account Role')}
+          <Typography variant="caption" style={[styles.label, textDirectionStyle(isRtl)]}>
+            {t('Admin.role')}
           </Typography>
           <View
             style={[
               styles.roleOption,
               styles.lockedRole,
-              { backgroundColor: isDark ? colors.surface.dark : colors.surface.light }
+              { backgroundColor: isDark ? colors.surface.dark : colors.surface.light },
+              textDirectionStyle(isRtl)
             ]}
           >
-            <Typography variant="body" style={styles.lockedRoleText}>
-              {t('Roles.resident', 'Resident')}
+            <Typography variant="body" style={[styles.lockedRoleText, textDirectionStyle(isRtl)]}>
+              {t('Common.roles.resident')}
             </Typography>
           </View>
-          <Typography variant="caption" style={styles.helperText}>
-            {t('Admin.defaultResidentHelp', 'All new users start as residents. Admin roles are assigned later after verification.')}
+          <Typography variant="caption" style={[styles.helperText, textDirectionStyle(isRtl)]}>
+            {t('Admin.defaultResidentHelp')}
           </Typography>
         </View>
 
         <Button
-          title={t('Admin.sendInvitation', 'Send Invitation')}
+          title={t('Admin.sendInvitation')}
           onPress={handleCreate}
           loading={isSubmitting}
           style={styles.submitButton}

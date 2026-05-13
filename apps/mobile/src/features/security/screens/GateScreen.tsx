@@ -14,15 +14,18 @@ import { Input } from '../../../components/ui/Input';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { Typography } from '../../../components/ui/Typography';
 import { ScreenContainer } from '../../../components/layout/ScreenContainer';
+import { Card } from '../../../components/ui/Card';
+import { visitorStatusPalette } from '../../../theme/semantics';
 import { Icon } from '../../../components/ui/Icon';
 import { formatDate } from '../../../utils/formatters';
-import { visitorStatusPalette } from '../../../theme/semantics';
 import type { GuardStackParamList } from '../../../navigation/types';
 import type { NavigationProp } from '@react-navigation/native';
+import { isRtlLanguage, rowDirectionStyle, textDirectionStyle } from '../../../i18n/direction';
 
 export const GateScreen = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const isDark = useColorScheme() === 'dark';
+  const isRtl = isRtlLanguage(i18n.language);
   const navigation = useNavigation<NavigationProp<GuardStackParamList>>();
 
   const [token, setToken] = useState("");
@@ -51,13 +54,13 @@ export const GateScreen = () => {
     try {
       await performAction({ id, action }).unwrap();
       setSecurityMessage({
-        text: t(`Security.${action}Success`, `${action} complete`),
+        text: t(`Security.${action}Success`),
         type: 'success',
       });
       refetch();
     } catch (err: any) {
       setSecurityMessage({
-        text: err.data?.message || t('Security.actionFailed', 'Visitor action could not be completed.'),
+        text: err.data?.message || t('Security.actionFailed'),
         type: 'error',
       });
     }
@@ -66,9 +69,9 @@ export const GateScreen = () => {
   const renderActionButtons = (item: any) => {
     if (item.status === 'allowed') {
       return (
-        <View style={styles.actionRow}>
+        <View style={[styles.actionRow, rowDirectionStyle(isRtl)]}>
           <Button
-            title={t('Security.complete', 'Complete')}
+            title={t('Security.complete')}
             onPress={() => handleVisitorAction(item.id, 'complete')}
             style={[styles.actionBtn, styles.completeBtn]}
             loading={isPerforming}
@@ -81,18 +84,19 @@ export const GateScreen = () => {
       <View style={{ gap: spacing.md }}>
         {item.status !== 'arrived' && (
           <Button
-            title={t('Security.markArrived', 'Mark Arrived')}
+            title={t('Security.markArrived')}
             onPress={() => handleVisitorAction(item.id, 'arrive')}
             variant="outline"
             style={{ height: 44 }}
             loading={isPerforming}
           />
         )}
-        <View style={styles.actionRow}>
+        <View style={[styles.actionRow, rowDirectionStyle(isRtl)]}>
           <Button
             title={t("Security.allow")}
             onPress={() => handleVisitorAction(item.id, 'allow')}
-            style={[styles.actionBtn, styles.allowBtn]}
+            variant="success"
+            style={styles.actionBtn}
             loading={isPerforming}
           />
           <Button
@@ -112,46 +116,48 @@ export const GateScreen = () => {
     const statusPalette = visitorStatusPalette(item.status);
 
     return (
-      <View style={[styles.card, { backgroundColor: isDark ? colors.surface.dark : colors.surface.light, borderColor: isDark ? colors.border.dark : colors.border.light }]}>
-        <View style={styles.cardHeader}>
-          <View style={styles.visitorTitle}>
+      <Card style={{ marginBottom: layout.listGap }}>
+        <View style={[styles.cardHeader, rowDirectionStyle(isRtl)]}>
+          <View style={[styles.visitorTitle, rowDirectionStyle(isRtl)]}>
             <View style={styles.visitorIcon}>
               <Icon name="visitors" color={colors.primary.light} size={20} />
             </View>
-            <Typography variant="h3">{item.visitorName}</Typography>
+            <Typography variant="h3" style={textDirectionStyle(isRtl)}>{item.visitorName}</Typography>
           </View>
           <StatusBadge
-            label={item.status.replace(/_/g, ' ')}
+            label={t(`Common.statuses.${item.status}`, { defaultValue: item.status.replace(/_/g, ' ') })}
             backgroundColor={statusPalette.background}
             textColor={statusPalette.text}
           />
         </View>
-        <Typography variant="caption" style={styles.visitTime}>{formatDate(item.visitStartsAt)}</Typography>
+        <Typography variant="caption" style={[styles.visitTime, textDirectionStyle(isRtl)]}>{formatDate(item.visitStartsAt, i18n.language === 'ar' ? 'ar-EG' : 'en-US')}</Typography>
         {renderActionButtons(item)}
-      </View>
+      </Card>
     );
   };
 
   return (
-    <ScreenContainer withKeyboard style={styles.container}>
-      <View style={[styles.validationSection, { backgroundColor: isDark ? colors.surface.dark : colors.surface.light }]}>
-        <Typography variant="h3" style={styles.sectionTitle}>{t("Security.verifyPass", "Verify Pass")}</Typography>
-        <View style={styles.inputRow}>
+    <ScreenContainer withKeyboard>
+      <Card style={styles.validationSection}>
+        <Typography variant="h3" style={[styles.sectionTitle, textDirectionStyle(isRtl)]}>{t("Security.verifyPass")}</Typography>
+        <View style={[styles.inputRow, rowDirectionStyle(isRtl)]}>
           <Input
             onChangeText={setToken}
-            placeholder={t("Security.tokenPlaceholder", "Enter code or scan...")}
+            placeholder={t("Security.tokenPlaceholder")}
             value={token}
             containerStyle={styles.inputContainer}
+            textAlign={isRtl ? 'right' : 'left'}
           />
           <Button
-            title={t("Security.validate", "Check")}
+            title={t("Security.validate")}
             onPress={handleValidate}
+            variant="primary"
             loading={isValidating}
             style={styles.checkBtn}
           />
         </View>
         <Button
-          title={t("Security.openScanner", "Open Scanner")}
+          title={t("Security.openScanner")}
           onPress={() => navigation.navigate('Scanner')}
           variant="outline"
           style={styles.scannerShortcut}
@@ -162,23 +168,24 @@ export const GateScreen = () => {
             variant="body"
             style={[
               styles.message,
+              textDirectionStyle(isRtl),
               { color: securityMessage.type === 'success' ? colors.success : colors.error }
             ]}
           >
             {securityMessage.text}
           </Typography>
         )}
-      </View>
+      </Card>
 
       <View style={styles.listSection}>
-        <Typography variant="h2" style={styles.subTitle}>{t("Security.subtitle")}</Typography>
+        <Typography variant="h2" style={[styles.subTitle, textDirectionStyle(isRtl)]}>{t("Security.subtitle")}</Typography>
         <FlatList
           data={visitors}
           keyExtractor={(item) => item.id}
           renderItem={renderVisitorItem}
           refreshing={isLoadingVisitors}
           onRefresh={refetch}
-          ListEmptyComponent={<Typography variant="caption" style={styles.emptyText}>{t("Security.noPending")}</Typography>}
+          ListEmptyComponent={<Typography variant="caption" style={[styles.emptyText, textDirectionStyle(isRtl)]}>{t("Security.noPending")}</Typography>}
           contentContainerStyle={styles.listContent}
         />
       </View>
@@ -187,14 +194,8 @@ export const GateScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 0,
-  },
   validationSection: {
-    padding: layout.cardPadding,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.05)',
-    ...shadows.sm,
+    marginBottom: layout.sectionGap,
   },
   sectionTitle: {
     marginBottom: spacing.md,
@@ -208,8 +209,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   checkBtn: {
-    height: 48,
-    paddingHorizontal: spacing.md,
+    height: 56,
+    paddingHorizontal: spacing.xl,
   },
   scannerShortcut: {
     marginTop: spacing.sm,
@@ -224,21 +225,12 @@ const styles = StyleSheet.create({
   },
   listSection: {
     flex: 1,
-    paddingHorizontal: layout.screenGutter,
-    marginTop: layout.sectionGap,
   },
   subTitle: {
     marginBottom: spacing.md,
   },
   listContent: {
     paddingBottom: spacing.xl,
-  },
-  card: {
-    padding: layout.cardPadding,
-    borderRadius: radii.xl,
-    borderWidth: 1,
-    marginBottom: layout.listGap,
-    ...shadows.sm,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -271,6 +263,7 @@ const styles = StyleSheet.create({
   actionBtn: {
     flex: 1,
     height: 44,
+    paddingHorizontal: spacing.sm,
   },
   allowBtn: {
     backgroundColor: colors.success,

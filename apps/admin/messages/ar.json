@@ -1,30 +1,65 @@
 {
+  "Common": {
+    "compound": "الكومباوند",
+    "building": "المبنى",
+    "floor": "الدور",
+    "unit": "الوحدة"
+  },
   "Navigation": {
-    "dashboard": "لوحة القيادة",
-    "compounds": "المجمعات السكنية",
+    "groups": {
+      "operate": "تشغيل",
+      "community": "السكان",
+      "govern": "إدارة",
+      "secure": "الأمن",
+      "system": "النظام"
+    },
+    "dashboard": "الرئيسية",
+    "compounds": "الكومباوندات",
+    "newCompound": "كومباوند جديد",
     "buildings": "المباني",
     "units": "الوحدات",
     "documents": "المستندات",
-    "issues": "البلاغات",
+    "documentReviews": "مراجعات المستندات",
+    "issues": "طلبات السكان",
     "finance": "المالية",
-    "onboarding": "التسجيل والتحقق",
-    "auditLogs": "سجل التدقيق",
-    "visitors": "الزوار",
+    "financeAdvanced": "المالية المتقدمة",
+    "financeReports": "تقارير المالية",
+    "onboarding": "تسجيل السكان",
+    "auditLogs": "سجل العمليات",
+    "adminActivity": "نشاط الأدمن",
+    "vehicles": "البحث",
+    "visitors": "الضيوف",
     "announcements": "الإعلانات",
-    "dues": "الرسوم والمستحقات",
+    "dues": "الرسوم والمصاريف",
     "governance": "التصويت",
     "polls": "التصويت",
+    "newPoll": "تصويت جديد",
+    "pollTypes": "أنواع التصويت",
     "settings": "الإعدادات",
+    "roles": "الأدوار",
+    "permissions": "الصلاحيات",
     "notificationChannels": "قنوات الإشعارات",
     "imports": "استيراد البيانات",
-    "signOut": "تسجيل الخروج",
+    "signOut": "خروج",
     "analytics": "التحليلات",
     "security": "الأمن",
+    "securityGates": "البوابات",
+    "securityShifts": "ورديات الأمن",
+    "securityIncidents": "الحوادث",
+    "manualEntries": "إدخالات يدوية",
+    "securityDevices": "الأجهزة",
+    "securityAdmin": "أمان الأدمن",
     "meetings": "الاجتماعات",
+    "meetingActions": "المهام",
     "workOrders": "أوامر العمل",
-    "privacy": "الخصوصية والبيانات",
-    "launch": "جاهزية الإطلاق",
-    "orgChart": "الهيكل التنظيمي"
+    "privacy": "الخصوصية",
+    "launch": "جاهزية التشغيل",
+    "orgChart": "خريطة الإدارة",
+    "representatives": "الممثلون",
+    "supportUsers": "دعم المستخدمين",
+    "supportMerges": "دمج الحسابات",
+    "violationRules": "قواعد المخالفات",
+    "newViolationRule": "قاعدة مخالفة جديدة"
   },
   "Language": {
     "toggle": "تغيير اللغة",
@@ -45,7 +80,7 @@
     }
   },
   "Login": {
-    "brand": "إدارة المجمع",
+    "brand": "إدارة الكومباوند",
     "heroTitle": "لوحة العمليات",
     "heroSubtitle": "دخول آمن لإدارة سجل العقارات والمالية والسكان والحوكمة والدعم والأمن.",
     "seedHint": "استخدم حساب مدير تم إنشاؤه بعد تشغيل ترحيلات وقواعد البيانات التجريبية للخلفية.",
@@ -65,44 +100,44 @@
     }
   },
   "Dashboard": {
-    "eyebrow": "عمليات المجمع",
-    "title": "مركز التحكم الإنتاجي",
-    "modules": "الوحدات",
+    "eyebrow": "إدارة الكومباوند",
+    "title": "لوحة التحكم",
+    "modules": "كل الأقسام",
     "signedInAs": "تم تسجيل الدخول باسم {name} / {role}",
     "actions": {
-      "reviewQueue": "مراجعة قائمة الانتظار",
+      "reviewQueue": "مراجعة المطلوب",
       "systemStatus": "حالة النظام"
     },
     "operatorActions": {
-      "reviewQueueDetail": "{count, plural, one {هناك عنصر واحد يحتاج إلى متابعة.} two {هناك عنصران يحتاجان إلى متابعة.} few {هناك # عناصر تحتاج إلى متابعة.} many {هناك # عنصرا يحتاج إلى متابعة.} other {هناك # عنصر يحتاج إلى متابعة.}}",
-      "openIssueOperationsDetail": "راجع آخر عمليات البلاغات والسكان دون التنقل بين الوحدات.",
-      "reviewQueueLabel": "مراجعة قائمة الأولوية",
-      "openIssueOperationsLabel": "فتح عمليات البلاغات",
-      "assignApartmentsDetail": "اربط السكان بالوحدات الموثقة حتى تعمل مسارات الزوار والبلاغات والتصويت بشكل سليم.",
-      "assignApartmentsLabel": "تعيين الشقق",
-      "reviewOrgChartCoverageDetail": "راجع الأدوار التمثيلية الشاغرة وحافظ على اكتمال مسار التصعيد.",
-      "setActiveCompoundDetail": "اختر نطاق المجمع قبل فتح الأدوات الإدارية المرتبطة بالمجمع.",
-      "reviewOrgChartCoverageLabel": "مراجعة تغطية الهيكل التنظيمي",
+      "reviewQueueDetail": "{count, plural, one {فيه حاجة واحدة محتاجة متابعة.} two {فيه حاجتين محتاجين متابعة.} few {فيه # حاجات محتاجة متابعة.} many {فيه # حاجة محتاجة متابعة.} other {فيه # حاجة محتاجة متابعة.}}",
+      "openIssueOperationsDetail": "افتح طلبات السكان وشوف آخر حاجة محتاجة متابعة.",
+      "reviewQueueLabel": "راجع المطلوب",
+      "openIssueOperationsLabel": "طلبات السكان",
+      "assignApartmentsDetail": "اربط السكان بوحداتهم عشان الزوار والطلبات والتصويت يشتغلوا صح.",
+      "assignApartmentsLabel": "ربط الوحدات",
+      "reviewOrgChartCoverageDetail": "راجع الممثلين والمسؤولين الناقصين.",
+      "setActiveCompoundDetail": "اختار الكومباوند الأول عشان تفتح أدواته.",
+      "reviewOrgChartCoverageLabel": "خريطة الإدارة",
       "setActiveCompoundLabel": "تحديد المجمع النشط"
     },
     "panels": {
       "operatorNextSteps": {
-        "title": "خطوات المشغل التالية",
-        "subtitle": "روابط عملية أولاً لأسطح الإدارة التي ما زالت تحتاج إلى أكبر قدر من التحقق وقت التشغيل.",
+        "title": "ابدأ من هنا",
+        "subtitle": "أهم الروابط اللي غالباً هتحتاجها في الشغل اليومي.",
         "apiDegraded": "حالة الـ API متدهورة"
       },
       "runtimeClarity": {
-        "title": "وضوح وقت التشغيل",
+        "title": "حالة التشغيل",
         "apiDegraded": "حالة الـ API ليست خضراء. اعتبر أرقام اللوحة قابلة للتأخر حتى تعود لوحة الحالة.",
-        "noActiveCompound": "لا يوجد مجمع نشط محدد، لذلك ستظل صفحة الهيكل التنظيمي وغيرها من التدفقات المقيدة بالنطاق معطلة جزئيا.",
+        "noActiveCompound": "مفيش كومباوند محدد. بعض الصفحات هتحتاج تختار كومباوند الأول.",
         "noStats": "مقاييس اللوحة غير متاحة حاليا. استخدم روابط الوحدات أدناه للمتابعة بأمان.",
         "ready": "الإشارات الأساسية للوحة متاحة. يمكنك استخدام هذه الصفحة كنقطة بداية آمنة لفحوصات الإصدار."
       }
     },
     "stats": {
       "totalResidents": "إجمالي السكان",
-      "activeVisitors": "الزوار النشطون",
-      "openIssues": "البلاغات المفتوحة"
+      "activeVisitors": "الضيوف الحاليين",
+      "openIssues": "المشاكل المفتوحة"
     },
     "shortcuts": {
       "title": "الإجراءات السريعة",
@@ -110,12 +145,12 @@
         "title": "لا توجد إجراءات سريعة مخصصة لهذا الدور حاليا.",
         "description": "تابع من روابط المشغل أعلاه أو انتقل مباشرة إلى مسارات تقوية الإصدار أدناه.",
         "openAssignment": "فتح تعيين الشقة",
-        "reviewOrgChartCoverage": "مراجعة تغطية الهيكل التنظيمي",
-        "selectActiveCompound": "تحديد المجمع النشط"
+        "reviewOrgChartCoverage": "فتح خريطة الإدارة",
+        "selectActiveCompound": "اختيار الكومباوند"
       }
     },
     "modulesDisabled": {
-      "orgChart": "يبقى الوصول إلى الهيكل التنظيمي معطلا حتى يتم اختيار مجمع نشط من سجل العقارات."
+      "orgChart": "خريطة الإدارة محتاجة تختار كومباوند الأول."
     },
     "workstreams": {
       "financeReview": {
@@ -127,8 +162,8 @@
         "detail": "تصاريح نشطة اليوم"
       },
       "residentIssues": {
-        "label": "بلاغات السكان",
-        "detail": "بلاغات تجاوزت أهداف الاستجابة"
+        "label": "مشاكل السكان",
+        "detail": "مشاكل محتاجة متابعة"
       },
       "governance": {
         "label": "التصويت",
@@ -141,10 +176,10 @@
       "live": "مباشر",
       "empty": {
         "title": "لا يوجد ما يحتاج إلى انتباهك الآن.",
-        "description": "قائمة العمل المباشرة فارغة. استخدم الروابط أدناه إذا كنت ما زلت بحاجة إلى التحقق من التعيينات أو تغطية المجمع قبل الإصدار.",
-        "checkAssignment": "فحص تعيين الشقة",
-        "reviewOrgChart": "مراجعة الهيكل التنظيمي",
-        "selectCompound": "اختيار المجمع"
+          "description": "قائمة المتابعة فاضية. استخدم الروابط دي لو محتاج تراجع الوحدات أو خريطة الإدارة.",
+          "checkAssignment": "فحص تعيين الشقة",
+          "reviewOrgChart": "خريطة الإدارة",
+          "selectCompound": "اختيار الكومباوند"
       },
       "items": {
         "ownerOnboarding": "التحقق من طلبات تسجيل الملاك الجدد",
@@ -169,17 +204,17 @@
     }
   },
   "Notifications": {
-    "ariaLabel": "{count, plural, =0 {الإشعارات} one {الإشعارات، إشعار واحد غير مقروء} two {الإشعارات، إشعاران غير مقروءان} few {الإشعارات، # إشعارات غير مقروءة} many {الإشعارات، # إشعارا غير مقروء} other {الإشعارات، # إشعار غير مقروء}}",
-    "title": "الإشعارات",
-    "liveConnected": "التحديثات الفورية متصلة",
-    "polling": "يتم التحديث كل 30 ثانية",
-    "refresh": "تحديث الإشعارات",
-    "preferences": "تفضيلات الإشعارات",
-    "markAllRead": "تحديد الكل كمقروء",
-    "archiveAll": "أرشفة الكل",
+    "ariaLabel": "{count, plural, =0 {التنبيهات} one {التنبيهات، تنبيه واحد جديد} two {التنبيهات، تنبيهان جديدان} few {التنبيهات، # تنبيهات جديدة} many {التنبيهات، # تنبيه جديد} other {التنبيهات، # تنبيه جديد}}",
+    "title": "التنبيهات",
+    "liveConnected": "التنبيهات شغالة مباشر",
+    "polling": "بنحدّث كل 30 ثانية",
+    "refresh": "تحديث التنبيهات",
+    "preferences": "إعدادات التنبيهات",
+    "markAllRead": "اعتبر الكل مقروء",
+    "archiveAll": "إخفاء الكل",
     "read": "مقروء",
-    "archive": "أرشفة",
-    "empty": "لا توجد إشعارات تطابق عوامل التصفية المحددة.",
+    "archive": "إخفاء",
+    "empty": "مفيش تنبيهات مطابقة للفلاتر.",
     "filters": {
       "all": "الكل",
       "unread": "غير مقروء"
@@ -188,10 +223,11 @@
       "announcements": "الإعلانات",
       "documents": "المستندات",
       "finance": "المالية",
-      "issues": "البلاغات",
+      "issues": "طلبات السكان",
+      "onboarding": "تسجيل السكان",
       "polls": "التصويت",
       "system": "النظام",
-      "visitors": "الزوار",
+      "visitors": "الضيوف",
       "vehicles": "المركبات"
     },
     "preferencesForm": {
@@ -202,21 +238,21 @@
       "quietEnd": "نهاية ساعات الهدوء",
       "timezone": "المنطقة الزمنية",
       "timezonePlaceholder": "Africa/Cairo",
-      "mutedCategories": "الفئات المكتومة"
+      "mutedCategories": "أقسام مقفولة"
     }
   },
   "NotificationChannels": {
-    "title": "قنوات الإشعارات الخارجية",
-    "subtitle": "راجع القوالب الآمنة للخصوصية وتابع محاولات التسليم عبر الإشعارات الفورية والبريد الإلكتروني والرسائل القصيرة من داخل لوحة الإدارة.",
+    "title": "قنوات التنبيهات",
+    "subtitle": "راجع رسائل البريد والـ SMS والتنبيهات من مكان واحد.",
     "messages": {
-      "templateCreated": "تم إنشاء قالب الإشعار.",
-      "templateUpdated": "تم تحديث قالب الإشعار.",
+      "templateCreated": "تم إنشاء قالب التنبيه.",
+      "templateUpdated": "تم تحديث قالب التنبيه.",
       "templateStatusUpdated": "تم تحديث حالة القالب.",
       "deliveryRetried": "تمت إعادة محاولة التسليم الفاشل."
     },
     "scopeWarning": {
-      "title": "لم يتم تحديد نطاق المجمع",
-      "description": "اختر مجمعًا لمراجعة القوالب والسجلات الخاصة به. بدون نطاق محدد، سيتم التعامل مع القوالب الجديدة كقوالب عامة احتياطية."
+      "title": "مفيش كومباوند محدد",
+      "description": "اختار كومباوند عشان تراجع القوالب وسجل الإرسال الخاص بيه."
     },
     "metrics": {
       "templates": "القوالب المحملة",
@@ -225,18 +261,18 @@
       "retryable": "قابلة لإعادة المحاولة"
     },
     "filters": {
-      "title": "عوامل المراجعة",
-      "subtitle": "قم بتصفية القوالب ومحاولات التسليم حسب القناة واللغة والفئة والحالة.",
+      "title": "الفلاتر",
+      "subtitle": "فلتر حسب القناة، اللغة، القسم، والحالة.",
       "channel": "القناة",
       "locale": "اللغة",
-      "category": "الفئة",
+      "category": "القسم",
       "status": "حالة التسليم",
       "all": "الكل",
       "apply": "تطبيق",
       "clear": "مسح"
     },
     "channels": {
-      "push": "إشعار فوري",
+      "push": "تنبيه",
       "email": "بريد إلكتروني",
       "sms": "رسالة قصيرة"
     },
@@ -273,9 +309,9 @@
       "subject": "العنوان",
       "subjectPlaceholder": "يظهر فقط لمستلمي البريد الإلكتروني",
       "titleTemplate": "قالب العنوان",
-      "titlePlaceholder": "مثال: تحديث دفع للوحدة {{unit_number}}",
+      "titlePlaceholder": "مثال: تحديث دفع لوحدة",
       "bodyTemplate": "قالب النص",
-      "bodyPlaceholder": "مثال: يوجد تحديث مالي في {{compound_name}}. افتح التطبيق للمراجعة.",
+      "bodyPlaceholder": "مثال: يوجد تحديث مالي متاح. افتح التطبيق للمراجعة.",
       "activeToggle": "القالب نشط ويمكن استخدامه في محاولات التسليم",
       "create": "إنشاء القالب",
       "save": "حفظ التغييرات",
@@ -654,9 +690,11 @@
     "roles": {
       "super_admin": "مدير عام",
       "compound_admin": "مدير المجمع",
+      "president": "رئيس الاتحاد",
       "board_member": "عضو مجلس",
       "finance_reviewer": "مراجع مالي",
       "security_guard": "فرد أمن",
+      "resident": "ساكن",
       "resident_owner": "مالك مقيم",
       "resident_tenant": "مستأجر مقيم",
       "support_agent": "فريق الدعم"
@@ -1034,7 +1072,10 @@
     },
     "fields": {
       "documentType": "نوع المستند",
+      "user": "الساكن",
       "userId": "معرف المستخدم",
+      "userSearchPlaceholder": "ابحث باسم الساكن أو البريد أو الموبايل أو الرقم",
+      "userHelper": "اختار الساكن، ومش محتاج تعرف رقمه الداخلي.",
       "unitId": "معرف الوحدة",
       "file": "الملف",
       "reviewNote": "ملاحظة المراجعة"
@@ -1062,34 +1103,42 @@
     }
   },
   "AuditLogs": {
-    "title": "سجلات التدقيق",
-    "subtitle": "راجع نشاط واجهة برمجة التطبيقات الحساس حسب المنفذ والإجراء ومسار الطلب والحالة والوقت.",
+    "title": "سجل العمليات",
+    "subtitle": "شوف مين عمل إيه، وإمتى، ومن أي مسار في النظام.",
     "back": "لوحة التحكم",
-    "onboarding": "تأهيل المقيمين",
+    "onboarding": "تسجيل السكان",
     "search": "بحث",
     "action": "الإجراء",
-    "actorId": "معرف المنفذ",
+    "actorId": "رقم المستخدم",
     "method": "الطريقة",
     "module": "الوحدة",
     "severity": "الخطورة",
     "from": "من",
     "to": "إلى",
     "filter": "تصفية",
-    "exportCsv": "تصدير CSV",
-    "recentActivity": "النشاط الأخير",
-    "showingLatest": "عرض أحدث {count} سجلات تدقيق مطابقة.",
-    "clearFilters": "مسح المرشحات",
+    "exportCsv": "تحميل CSV",
+    "recentActivity": "آخر العمليات",
+    "showingLatest": "عرض آخر {count} عملية مطابقة.",
+    "paginationSummary": "عرض {from}-{to} من {total} عملية.",
+    "firstPage": "الأولى",
+    "previousPage": "السابق",
+    "nextPage": "التالي",
+    "lastPage": "الأخيرة",
+    "clearFilters": "مسح الفلاتر",
+    "searchPlaceholder": "ابحث باسم، مسار، IP، أو سبب",
+    "actionPlaceholder": "مثال: مراجعة مستند",
+    "modulePlaceholder": "مثال: المالية",
     "colTime": "الوقت",
-    "colActor": "المنفذ",
+    "colActor": "المستخدم",
     "colRequest": "الطلب",
     "colSubject": "الموضوع",
     "colStatus": "الحالة",
     "colSeverity": "الخطورة",
     "colReason": "السبب",
-    "colMetadata": "البيانات الوصفية",
+    "colMetadata": "تفاصيل",
     "notSet": "غير محدد",
     "noMetadata": "لا توجد بيانات وصفية",
-    "empty": "لا توجد سجلات تدقيق تطابق المرشحات المحددة.",
+    "empty": "مفيش عمليات مطابقة للفلاتر.",
     "system": "النظام",
     "userId": "المستخدم {id}",
     "noActor": "لا يوجد منفذ",
@@ -1099,21 +1148,21 @@
     "noSubject": "لا يوجد موضوع",
     "noReason": "—",
     "all": "الكل",
-    "viewTimeline": "الجدول الزمني",
+    "viewTimeline": "التاريخ",
     "severityInfo": "معلومات",
     "severityWarning": "تحذير",
     "severityCritical": "حرج"
   },
   "SupportConsole": {
-    "title": "لوحة الدعم",
-    "subtitle": "البحث عن المستخدمين وإدارة دورات حياتهم والتحقيق في الحسابات ومعالجة عمليات الدمج.",
+    "title": "دعم المستخدمين",
+    "subtitle": "ابحث عن أي مستخدم، راجع حسابه، وعدل الأدوار أو الدمج.",
     "back": "لوحة التحكم",
     "search": "بحث",
     "searchPlaceholder": "الاسم أو البريد الإلكتروني أو الهاتف",
-    "statusFilter": "الحالة",
+    "statusFilter": "حالة الحساب",
     "roleFilter": "الدور",
     "filter": "تصفية",
-    "clearFilters": "مسح",
+    "clearFilters": "مسح الفلاتر",
     "all": "الكل",
     "colName": "الاسم",
     "colEmail": "البريد الإلكتروني",
@@ -1121,9 +1170,14 @@
     "colStatus": "الحالة",
     "colActions": "الإجراءات",
     "viewDetails": "عرض",
-    "empty": "لا يوجد مستخدمون يطابقون المرشحات الحالية.",
+    "empty": "مفيش مستخدمين مطابقين للفلاتر.",
+    "paginationSummary": "عرض {from}-{to} من {total} مستخدم.",
+    "firstPage": "الأولى",
+    "previousPage": "السابق",
+    "nextPage": "التالي",
+    "lastPage": "الأخيرة",
     "statusActive": "نشط",
-    "statusSuspended": "موقوف",
+    "statusSuspended": "متوقف",
     "statusArchived": "مؤرشف",
     "statusInvited": "مدعو",
     "statusPendingReview": "قيد المراجعة",
@@ -1160,7 +1214,9 @@
     "updatedReactivated": "تم إعادة تفعيل المستخدم.",
     "updatedMovedOut": "تمت معالجة الانتقال.",
     "updatedRecovered": "تم استرداد الحساب.",
-    "mergeTargetLabel": "معرف مستخدم الهدف للدمج",
+    "mergeTargetLabel": "الحساب اللي هيتدمج فيه",
+    "mergeTargetPlaceholder": "ابحث بالاسم أو البريد أو الموبايل أو الرقم",
+    "mergeTargetHelper": "اختار الحساب اللي هينتقل له التاريخ والبيانات.",
     "mergeNotesLabel": "ملاحظات",
     "submitMerge": "بدء الدمج",
     "na": "غير متاح",
@@ -1209,24 +1265,59 @@
     "noReason": "—"
   },
   "OrgChart": {
-    "title": "الهيكل التنظيمي",
-    "subtitle": "إدارة تعيينات الممثلين للمباني والطوابق ومناطق المجمع.",
-    "scopeLabel": "النطاق الحالي",
+    "title": "خريطة الإدارة",
+    "subtitle": "شوف مين مسؤول عن كل مبنى ودور، وعدل الأدوار بسهولة.",
+    "manageRoles": "إدارة الأدوار",
+    "vacantPosition": "مكان فاضي",
+    "assignRep": "إضافة مسؤول",
+    "searchPlaceholder": "ابحث باسم أو مكان...",
+    "allBuildings": "كل المباني",
+    "exportImage": "تحميل صورة",
+    "liveChart": "خريطة مباشرة",
+    "errors": {
+      "profileLoad": "مش قادرين نحمّل بيانات الشخص.",
+      "validUserId": "اكتب رقم مستخدم صحيح.",
+      "requestFailed": "الطلب فشل. حاول تاني."
+    },
+    "profile": {
+      "title": "بيانات المسؤول",
+      "subtitle": "إدارة الكومباوند",
+      "loading": "بنحمّل البيانات...",
+      "email": "الإيميل",
+      "phone": "الموبايل",
+      "viewFull": "فتح ملف المستخدم"
+    },
+    "assignment": {
+      "title": "إضافة مسؤول",
+      "for": "المكان",
+      "userId": "رقم المستخدم",
+      "userIdPlaceholder": "اكتب الرقم...",
+      "user": "الشخص المسؤول",
+      "userSearchPlaceholder": "ابحث بالاسم أو البريد أو الموبايل أو الرقم",
+      "userHelper": "اختار الشخص من البحث، والسيستم هيستخدم رقمه تلقائياً.",
+      "cancel": "إلغاء",
+      "processing": "جارٍ الحفظ...",
+      "confirm": "تأكيد"
+    },
+    "breadcrumbs": {
+      "compounds": "الكومباوندات"
+    },
+    "scopeLabel": "المكان الحالي",
     "scope": {
-      "allCompounds": "جميع المجمعات",
-      "noCompound": "لا يوجد مجمع محدد",
-      "compound": "المجمع",
+      "allCompounds": "كل الكومباوندات",
+      "noCompound": "مفيش كومباوند محدد",
+      "compound": "الكومباوند",
       "building": "المبنى {id}...",
-      "floor": "الطابق {id}..."
+      "floor": "الدور {id}..."
     },
     "nav": {
-      "dashboard": "لوحة التحكم"
+      "dashboard": "الرئيسية"
     },
-    "newAssignment": "تعيين جديد",
+    "newAssignment": "إضافة مسؤول",
     "table": {
       "name": "الاسم",
-      "role": "دور الممثل",
-      "scope": "النطاق",
+      "role": "الدور",
+      "scope": "المكان",
       "status": "الحالة",
       "term": "المدة",
       "actions": "الإجراءات"
@@ -1236,17 +1327,21 @@
       "inactive": "غير نشط"
     },
     "form": {
-      "userId": "معرف المستخدم",
+      "user": "الشخص المسؤول",
+      "userId": "رقم المستخدم",
       "userIdPlaceholder": "مثال: 42",
-      "role": "دور التعيين",
-      "scopeId": "معرف المبنى (اختياري)",
-      "scopeIdPlaceholder": "معرف المبنى (اختياري)",
+      "userSearchPlaceholder": "ابحث بالاسم أو البريد أو الموبايل أو الرقم",
+      "userHelper": "اختار الشخص، ومش محتاج تعرف رقمه الداخلي.",
+      "role": "الدور",
+      "scopeId": "المبنى (اختياري)",
+      "scopeIdPlaceholder": "رقم المبنى (اختياري)",
+      "scopeSelectPlaceholder": "كل الكومباوند أو اختار مبنى",
       "startDate": "تاريخ البداية",
       "endDate": "تاريخ الانتهاء (اختياري)",
       "notes": "ملاحظات (اختياري)",
       "notesPlaceholder": "ملاحظات اختيارية",
       "selectPlaceholder": "اختر",
-      "submit": "إنشاء التعيين"
+      "submit": "إضافة المسؤول"
     },
     "roles": {
       "floor_representative": "ممثل الطابق",
@@ -1259,9 +1354,9 @@
     },
     "action": {
       "edit": "تعديل",
-      "deactivate": "إلغاء التفعيل"
+      "deactivate": "إيقاف"
     },
-    "empty": "لا توجد تعيينات ممثلين.",
+    "empty": "مفيش مسؤولين مضافين.",
     "messages": {
       "created": "تم إنشاء التعيين بنجاح.",
       "deactivated": "تم إلغاء تفعيل التعيين."
@@ -1311,6 +1406,24 @@
       "update": "حفظ التغييرات",
       "cancel": "إلغاء التعديل",
       "revision": "المراجعة {revision}"
+    },
+    "targeting": {
+      "title": "مين يستلم الإعلان؟",
+      "description": "اختار الجمهور بطريقة واضحة. ممكن تختار مبنى واحد أو أكتر، أو دور واحد أو أكتر.",
+      "compound": "كل الكومباوند",
+      "compoundHelp": "كل الأشخاص اللي لهم وصول في الكومباوند ده.",
+      "buildings": "مباني",
+      "buildingsHelp": "مبنى واحد أو أكتر بالكامل.",
+      "floors": "أدوار",
+      "floorsHelp": "دور واحد أو أكتر، حتى لو في مباني مختلفة.",
+      "selected": "تم اختيار __COUNT__",
+      "none": "لسه مفيش اختيار.",
+      "noBuildings": "مفيش مباني متاحة للكومباوند ده.",
+      "noFloors": "مفيش أدوار متاحة للكومباوند ده.",
+      "noMatches": "مفيش مباني أو أدوار مطابقة للبحث.",
+      "searchPlaceholder": "دور باسم المبنى أو الدور...",
+      "noCompound": "مفيش كومباوند محدد",
+      "unsupported": "الإعلان ده معمول بنوع جمهور قديم. هنحافظ على نفس الاستهداف الحالي لما تحفظ التعديلات."
     },
     "list": {
       "title": "سجل الإشعارات",
@@ -1378,9 +1491,11 @@
     "roles": {
       "super_admin": "مدير عام",
       "compound_admin": "مدير المجمع",
+      "president": "رئيس الاتحاد",
       "board_member": "عضو مجلس",
       "finance_reviewer": "مراجع مالي",
       "security_guard": "فرد أمن",
+      "resident": "ساكن",
       "resident_owner": "مالك مقيم",
       "resident_tenant": "مستأجر مقيم",
       "support_agent": "فريق الدعم"
@@ -1747,7 +1862,8 @@
       "devices": "الأجهزة",
       "incidents": "الحوادث",
       "manualEntries": "مداخل يدوية",
-      "adminAudit": "سجل المشرفين"
+      "adminAudit": "سجل المشرفين",
+      "adminActivity": "نشاط الأدمن"
     },
     "adminAuditTitle": "الأمن والتدقيق الإداري",
     "adminAuditSubtitle": "مراقبة نشاط حسابات المسؤولين، ومراجعة الأعلام الأمنية، وتدقيق جلسات تسجيل الدخول.",
@@ -1871,7 +1987,7 @@
       "readyExports": "جاهز للتنزيل",
       "legalHold": "التعليق القانوني",
       "legalHoldDesc": "لا يمكن إخفاء هوية المستخدمين الخاضعين للتعليق القانوني أو حذفهم حتى يُرفع التعليق.",
-      "manageViaSupport": "يُعيَّن عبر Admin API: POST /privacy/users/{id}/legal-hold"
+      "manageViaSupport": "يُعيَّن عبر Admin API: POST /privacy/users/:id/legal-hold"
     },
     "policies": {
       "title": "أنواع السياسات",
@@ -2076,5 +2192,47 @@
       "supportLead": "رئيس فريق الدعم",
       "escalationPath": "مسار التصعيد: وكيل الدعم ← رئيس الدعم ← مسؤول المجمع ← القائد التقني ← مالك المنتج"
     }
+  },
+  "RoleAssignments": {
+    "title": "تعيينات الرتب",
+    "currentRoles": "الرتب الحالية",
+    "noRoles": "مفيش رتب مخصصة.",
+    "assignRole": "تعيين رتبة",
+    "selectRole": "اختر رتبة…",
+    "scope": "النطاق",
+    "global": "عام (بدون قيود)",
+    "revoke": "سحب الرتبة",
+    "error": "مش عارفين نحمل تعيينات الرتب.",
+    "assignError": "مش عارفين نخصص الرتبة دي.",
+    "revokeError": "مش عارفين نسحب الرتبة دي.",
+    "loading": "بيحمل…",
+    "scopeIdPlaceholder": "معرف الـ {type} (ULID)"
+  },
+  "CommandBar": {
+    "searchPlaceholder": "ابحث عن صفحة، إجراء، ساكن، عربية، أو إعداد…",
+    "searchButton": "بحث",
+    "fallbackVehicleSearch": "البحث في العربيات بدلاً من ذلك",
+    "noResults": "لا توجد صفحة إدارة مطابقة للبحث."
+  },
+  "Vehicles": {
+    "searchPlaceholder": "دخل رقم العربية، كود الملصق، أو اسم الساكن...",
+    "searchButton": "بحث",
+    "searchFailed": "مش عارفين نبحث عن العربية دلوقتي. حاول تاني.",
+    "noResults": "مفيش نتائج لـ \"{query}\".",
+    "residentVehicle": "عربية ساكن",
+    "visitorRequest": "طلب زيارة",
+    "sticker": "الملصق",
+    "associatedUnit": "الوحدة المرتبطة",
+    "viewDetails": "عرض تفاصيل الشقة ←",
+    "noUnitLinked": "مفيش وحدة مرتبطة محددة",
+    "linkedContacts": "جهات الاتصال المرتبطة",
+    "noContactInfo": "مفيش بيانات اتصال",
+    "messagePlaceholder": "اكتب رسالتك لصاحب العربية (مثلاً: يا ريت تحرك عربيتك، هي قافلة البوابة)...",
+    "sendMessage": "إرسال الرسالة",
+    "cancel": "إلغاء",
+    "notifyOwner": "تنبيه المالك",
+    "enterMessage": "يا ريت تكتب رسالة",
+    "notifSent": "تم إرسال التنبيه لـ {count} ساكن موثق",
+    "notifFailed": "مش عارفين نبعت التنبيه"
   }
 }

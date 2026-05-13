@@ -1,7 +1,6 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import Link from "next/link";
 
-import { LogoutButton } from "@/components/logout-button";
 import { getCurrentUser, getAccountMerge } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
 import { cancelMergeAction, confirmMergeAction } from "../../actions";
@@ -78,7 +77,6 @@ export default async function MergeDetailPage({ params, searchParams }: MergeDet
               {merge.status === "completed" && t("statusCompleted")}
               {merge.status === "cancelled" && t("statusCancelled")}
             </span>
-            <LogoutButton />
           </div>
         </div>
       </header>

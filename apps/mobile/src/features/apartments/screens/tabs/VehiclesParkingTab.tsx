@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { FlatList, Pressable, ScrollView, StyleSheet, Text, useColorScheme, View } from "react-native";
+import { useTranslation } from "react-i18next";
 import { Button } from "../../../../components/ui/Button";
 import { colors, radii, shadows, spacing, typography } from "../../../../theme";
 import { useDeleteVehicleMutation } from "../../../../services/apartments/vehiclesApi";
@@ -7,11 +8,14 @@ import { useDeleteParkingSpotMutation } from "../../../../services/apartments/pa
 import type { ApartmentDetail, ApartmentVehicle, ApartmentParkingSpot } from "../../../../services/apartments/types";
 import { VehicleSheet } from "../../components/VehicleSheet";
 import { ParkingSpotSheet } from "../../components/ParkingSpotSheet";
+import { isRtlLanguage, rowDirectionStyle, textDirectionStyle } from "../../../../i18n/direction";
 
 const MAX = 4;
 
 export function VehiclesParkingTab({ apartment }: { apartment: ApartmentDetail }) {
+  const { t, i18n } = useTranslation();
   const isDark = useColorScheme() === "dark";
+  const isRtl = isRtlLanguage(i18n.language);
   const [vehicleSheet, setVehicleSheet] = useState<{ open: boolean; vehicle?: ApartmentVehicle }>({ open: false });
   const [parkingSheet, setParkingSheet] = useState<{ open: boolean; spot?: ApartmentParkingSpot }>({ open: false });
   const [deleteVehicle] = useDeleteVehicleMutation();
@@ -25,102 +29,116 @@ export function VehiclesParkingTab({ apartment }: { apartment: ApartmentDetail }
   const vehiclesAtCap = apartment.vehicles.length >= MAX;
   const parkingAtCap = apartment.parkingSpots.length >= MAX;
 
+  const renderVehicle = ({ item: v }: { item: ApartmentVehicle }) => (
+    <View style={[styles.card, { backgroundColor: surface, borderColor: border }, rowDirectionStyle(isRtl)]}>
+      <View style={styles.plateBadge}>
+        <Text style={styles.plateText}>{v.plate}</Text>
+      </View>
+      <View style={[styles.cardBody, textDirectionStyle(isRtl)]}>
+        <Text style={[styles.cardTitle, { color: text }, textDirectionStyle(isRtl)]}>
+          {[v.color, v.make, v.model].filter(Boolean).join(" ") || t("Vehicles.vehicle")}
+        </Text>
+        {v.stickerCode ? <Text style={[styles.cardMeta, { color: secondary }, textDirectionStyle(isRtl)]}>{t("Vehicles.sticker", { code: v.stickerCode })}</Text> : null}
+      </View>
+      <View style={[styles.rowActions, { alignItems: isRtl ? "flex-start" : "flex-end" }]}>
+        <Pressable onPress={() => setVehicleSheet({ open: true, vehicle: v })} style={styles.action}>
+          <Text style={[styles.actionText, { color: primary }, textDirectionStyle(isRtl)]}>{t("Common.edit")}</Text>
+        </Pressable>
+        <Pressable onPress={() => deleteVehicle({ unitId: apartment.id, vehicleId: v.id })} style={styles.action}>
+          <Text style={[styles.actionText, { color: colors.error }, textDirectionStyle(isRtl)]}>{t("Common.remove")}</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+
+  const renderParkingSpot = ({ item: s }: { item: ApartmentParkingSpot }) => (
+    <View style={[styles.card, { backgroundColor: surface, borderColor: border }, rowDirectionStyle(isRtl)]}>
+      <View style={styles.spotGlyph}>
+        <Text style={styles.spotGlyphText}>P</Text>
+      </View>
+      <View style={[styles.cardBody, textDirectionStyle(isRtl)]}>
+        <Text style={[styles.cardTitle, { color: text }, textDirectionStyle(isRtl)]}>{s.code}</Text>
+        <Text style={[styles.cardMeta, { color: secondary }, textDirectionStyle(isRtl)]}>{s.notes || t("Parking.assignedParking")}</Text>
+      </View>
+      <View style={[styles.rowActions, { alignItems: isRtl ? "flex-start" : "flex-end" }]}>
+        <Pressable onPress={() => setParkingSheet({ open: true, spot: s })} style={styles.action}>
+          <Text style={[styles.actionText, { color: primary }, textDirectionStyle(isRtl)]}>{t("Common.edit")}</Text>
+        </Pressable>
+        <Pressable onPress={() => deleteParkingSpot({ unitId: apartment.id, parkingSpotId: s.id })} style={styles.action}>
+          <Text style={[styles.actionText, { color: colors.error }, textDirectionStyle(isRtl)]}>{t("Common.remove")}</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+
   return (
     <ScrollView contentContainerStyle={styles.scroll}>
       {/* ─── Vehicles section ─── */}
-      <View style={styles.sectionHeader}>
-        <View>
-          <Text style={[styles.sectionTitle, { color: text }]}>Vehicles</Text>
-          <Text style={[styles.sectionSubtitle, { color: secondary }]}>
-            {apartment.vehicles.length}/{MAX}
+      <View style={[styles.sectionHeader, rowDirectionStyle(isRtl)]}>
+        <View style={textDirectionStyle(isRtl)}>
+          <Text style={[styles.sectionTitle, { color: text }, textDirectionStyle(isRtl)]}>{t("Vehicles.addVehicle")}</Text>
+          <Text style={[styles.sectionSubtitle, { color: secondary }, textDirectionStyle(isRtl)]}>
+            {isRtl ? `${MAX}/${apartment.vehicles.length}` : `${apartment.vehicles.length}/${MAX}`}
           </Text>
         </View>
         {vehiclesAtCap ? (
-          <Text style={[styles.capWarning, { color: colors.warning }]}>Capacity reached</Text>
+          <Text style={[styles.capWarning, { color: colors.warning }, textDirectionStyle(isRtl)]}>{t("Vehicles.capacityReached")}</Text>
         ) : null}
       </View>
 
       {apartment.vehicles.length === 0 ? (
-        <View style={[styles.empty, { backgroundColor: surface }]}>
-          <Text style={[styles.emptyTitle, { color: text }]}>No vehicles yet</Text>
-          <Text style={[styles.emptyBody, { color: secondary }]}>
-            Add plate, make, color, and sticker details.
+        <View style={[styles.empty, { backgroundColor: surface }, textDirectionStyle(isRtl)]}>
+          <Text style={[styles.emptyTitle, { color: text }, textDirectionStyle(isRtl)]}>{t("Vehicles.noVehicles")}</Text>
+          <Text style={[styles.emptyBody, { color: secondary }, textDirectionStyle(isRtl)]}>
+            {t("Vehicles.addVehicleHint")}
           </Text>
         </View>
       ) : (
-        apartment.vehicles.map((v) => (
-          <View key={v.id} style={[styles.card, { backgroundColor: surface, borderColor: border }]}>
-            <View style={styles.plateBadge}>
-              <Text style={styles.plateText}>{v.plate}</Text>
-            </View>
-            <View style={styles.cardBody}>
-              <Text style={[styles.cardTitle, { color: text }]}>
-                {[v.color, v.make, v.model].filter(Boolean).join(" ") || "Vehicle"}
-              </Text>
-              {v.stickerCode ? <Text style={[styles.cardMeta, { color: secondary }]}>Sticker {v.stickerCode}</Text> : null}
-            </View>
-            <View style={styles.rowActions}>
-              <Pressable onPress={() => setVehicleSheet({ open: true, vehicle: v })} style={styles.action}>
-                <Text style={[styles.actionText, { color: primary }]}>Edit</Text>
-              </Pressable>
-              <Pressable onPress={() => deleteVehicle({ unitId: apartment.id, vehicleId: v.id })} style={styles.action}>
-                <Text style={[styles.actionText, { color: colors.error }]}>Delete</Text>
-              </Pressable>
-            </View>
-          </View>
-        ))
+        <FlatList
+          data={apartment.vehicles}
+          keyExtractor={(vehicle) => String(vehicle.id)}
+          renderItem={renderVehicle}
+          scrollEnabled={false}
+        />
       )}
 
       <Button
-        title={vehiclesAtCap ? "Vehicle capacity reached" : "Add vehicle"}
+        title={vehiclesAtCap ? t("Vehicles.vehicleAtCapacity") : t("Vehicles.addVehicle")}
         onPress={() => setVehicleSheet({ open: true })}
         disabled={vehiclesAtCap}
       />
 
       {/* ─── Parking section ─── */}
-      <View style={[styles.sectionHeader, { marginTop: spacing.xl }]}>
-        <View>
-          <Text style={[styles.sectionTitle, { color: text }]}>Parking</Text>
-          <Text style={[styles.sectionSubtitle, { color: secondary }]}>
-            {apartment.parkingSpots.length}/{MAX}
+      <View style={[styles.sectionHeader, { marginTop: spacing.xl }, rowDirectionStyle(isRtl)]}>
+        <View style={textDirectionStyle(isRtl)}>
+          <Text style={[styles.sectionTitle, { color: text }, textDirectionStyle(isRtl)]}>{t("Parking.label")}</Text>
+          <Text style={[styles.sectionSubtitle, { color: secondary }, textDirectionStyle(isRtl)]}>
+            {isRtl ? `${MAX}/${apartment.parkingSpots.length}` : `${apartment.parkingSpots.length}/${MAX}`}
           </Text>
         </View>
         {parkingAtCap ? (
-          <Text style={[styles.capWarning, { color: colors.warning }]}>Capacity reached</Text>
+          <Text style={[styles.capWarning, { color: colors.warning }, textDirectionStyle(isRtl)]}>{t("Vehicles.capacityReached")}</Text>
         ) : null}
       </View>
 
       {apartment.parkingSpots.length === 0 ? (
-        <View style={[styles.empty, { backgroundColor: surface }]}>
-          <Text style={[styles.emptyTitle, { color: text }]}>No parking spots yet</Text>
-          <Text style={[styles.emptyBody, { color: secondary }]}>
-            {apartment.unit.hasParking ? "Add assigned spot codes for this unit." : "Parking is disabled for this unit."}
+        <View style={[styles.empty, { backgroundColor: surface }, textDirectionStyle(isRtl)]}>
+          <Text style={[styles.emptyTitle, { color: text }, textDirectionStyle(isRtl)]}>{t("Parking.noParking")}</Text>
+          <Text style={[styles.emptyBody, { color: secondary }, textDirectionStyle(isRtl)]}>
+            {apartment.unit.hasParking ? t("Parking.addParkingHint") : t("Parking.parkingDisabled")}
           </Text>
         </View>
       ) : (
-        apartment.parkingSpots.map((s) => (
-          <View key={s.id} style={[styles.card, { backgroundColor: surface, borderColor: border }]}>
-            <View style={styles.spotGlyph}>
-              <Text style={styles.spotGlyphText}>P</Text>
-            </View>
-            <View style={styles.cardBody}>
-              <Text style={[styles.cardTitle, { color: text }]}>{s.code}</Text>
-              <Text style={[styles.cardMeta, { color: secondary }]}>{s.notes || "Assigned parking spot"}</Text>
-            </View>
-            <View style={styles.rowActions}>
-              <Pressable onPress={() => setParkingSheet({ open: true, spot: s })} style={styles.action}>
-                <Text style={[styles.actionText, { color: primary }]}>Edit</Text>
-              </Pressable>
-              <Pressable onPress={() => deleteParkingSpot({ unitId: apartment.id, parkingSpotId: s.id })} style={styles.action}>
-                <Text style={[styles.actionText, { color: colors.error }]}>Delete</Text>
-              </Pressable>
-            </View>
-          </View>
-        ))
+        <FlatList
+          data={apartment.parkingSpots}
+          keyExtractor={(spot) => String(spot.id)}
+          renderItem={renderParkingSpot}
+          scrollEnabled={false}
+        />
       )}
 
       <Button
-        title={apartment.unit.hasParking ? "Add parking spot" : "Parking disabled by admin"}
+        title={apartment.unit.hasParking ? t("Parking.addParking") : t("Parking.parkingDisabledByAdmin")}
         onPress={() => setParkingSheet({ open: true })}
         disabled={!apartment.unit.hasParking || parkingAtCap}
       />

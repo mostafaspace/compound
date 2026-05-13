@@ -161,6 +161,7 @@ class UnitAccountController extends Controller
             paymentDate: $validated['payment_date'] ?? null,
             notes: $validated['notes'] ?? null,
             proof: $request->file('proof'),
+            ledgerEntryIds: $validated['ledger_entry_ids'] ?? [],
         );
 
         $this->auditLogger->record('finance.payment_submitted', actor: $actor, request: $request, metadata: [

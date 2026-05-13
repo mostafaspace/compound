@@ -54,7 +54,7 @@ export function RepresentativesList({ assignments, compoundId }: Representatives
       </div>
 
       <div className="overflow-hidden rounded-lg border border-line bg-panel">
-        <table className="w-full border-collapse text-left text-sm">
+        <table className="w-full border-collapse text-start text-sm">
           <thead className="bg-background text-muted">
             <tr>
               <th className="px-4 py-3 font-semibold">Name</th>

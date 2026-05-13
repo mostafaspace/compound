@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { Modal, Pressable, StyleSheet, Text, useColorScheme, View } from "react-native";
+import { Pressable, StyleSheet, Text, useColorScheme, View } from "react-native";
 import { pick, types } from "@react-native-documents/picker";
+import { BottomSheet } from "../../../components/ui/BottomSheet";
 import { Button } from "../../../components/ui/Button";
-import { colors, radii, shadows, spacing, typography } from "../../../theme";
+import { colors, radii, spacing, typography } from "../../../theme";
 import { useReplaceApartmentDocumentMutation } from "../../../services/apartments/documentsApi";
 import type { ApartmentDetail, ApartmentDocument, UploadFile } from "../../../services/apartments/types";
 
@@ -54,46 +55,42 @@ export function DocumentReplaceSheet({
   };
 
   return (
-    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.backdrop}>
-        <View style={[styles.sheet, { backgroundColor: colors.surface[isDark ? "dark" : "light"] }]}>
-          <View style={styles.handle} />
-          <Text style={[styles.title, { color: colors.text.primary[isDark ? "dark" : "light"] }]}>
-            Replace {formatDocumentType(document.documentType)}
-          </Text>
-          <Text style={[styles.subtitle, { color: colors.text.secondary[isDark ? "dark" : "light"] }]}>
-            Current document stays active while this replacement waits for admin review.
-          </Text>
-
-          <Pressable
-            onPress={chooseFile}
-            style={[
-              styles.filePicker,
-              {
-                backgroundColor: colors.surfaceMuted[isDark ? "dark" : "light"],
-                borderColor: colors.border[isDark ? "dark" : "light"],
-              },
-            ]}
-          >
-            <Text style={[styles.fileText, { color: colors.text.primary[isDark ? "dark" : "light"] }]}>
-              {file?.name ?? "Choose PDF or image"}
-            </Text>
-          </Pressable>
-
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-
-          <View style={styles.actions}>
-            <Button title="Cancel" variant="ghost" onPress={onClose} disabled={replaceState.isLoading} style={styles.actionButton} />
-            <Button
-              title={replaceState.isLoading ? "Submitting..." : "Submit replacement"}
-              onPress={submit}
-              disabled={replaceState.isLoading}
-              style={styles.actionButton}
-            />
-          </View>
+    <BottomSheet
+      title={`Replace ${formatDocumentType(document.documentType)}`}
+      subtitle="Current document stays active while this replacement waits for admin review."
+      onClose={onClose}
+      titleStyle={styles.title}
+      footer={
+        <View style={styles.actions}>
+          <Button title="Cancel" variant="ghost" onPress={onClose} disabled={replaceState.isLoading} style={styles.actionButton} />
+          <Button
+            title={replaceState.isLoading ? "Submitting..." : "Submit replacement"}
+            onPress={submit}
+            disabled={replaceState.isLoading}
+            style={styles.actionButton}
+          />
         </View>
+      }
+    >
+      <View>
+        <Pressable
+          onPress={chooseFile}
+          style={[
+            styles.filePicker,
+            {
+              backgroundColor: colors.surfaceMuted[isDark ? "dark" : "light"],
+              borderColor: colors.border[isDark ? "dark" : "light"],
+            },
+          ]}
+        >
+          <Text style={[styles.fileText, { color: colors.text.primary[isDark ? "dark" : "light"] }]}>
+            {file?.name ?? "Choose PDF or image"}
+          </Text>
+        </Pressable>
+
+        {error ? <Text style={styles.error}>{error}</Text> : null}
       </View>
-    </Modal>
+    </BottomSheet>
   );
 }
 
@@ -102,32 +99,8 @@ function formatDocumentType(type: string): string {
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    backgroundColor: "rgba(7, 17, 31, 0.58)",
-    flex: 1,
-    justifyContent: "flex-end",
-  },
-  sheet: {
-    borderTopLeftRadius: radii.xl,
-    borderTopRightRadius: radii.xl,
-    padding: spacing.lg,
-    ...shadows.lg,
-  },
-  handle: {
-    alignSelf: "center",
-    backgroundColor: colors.border.light,
-    borderRadius: radii.pill,
-    height: 4,
-    marginBottom: spacing.md,
-    width: 48,
-  },
   title: {
-    ...typography.h2,
     textTransform: "capitalize",
-  },
-  subtitle: {
-    ...typography.body,
-    marginTop: spacing.xs,
   },
   filePicker: {
     borderRadius: radii.xl,
@@ -151,7 +124,6 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: "row",
     gap: spacing.sm,
-    marginTop: spacing.lg,
   },
   actionButton: {
     flex: 1,

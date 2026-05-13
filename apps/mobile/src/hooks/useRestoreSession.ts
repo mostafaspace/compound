@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import * as Keychain from "react-native-keychain";
 import { setToken, setRestoring, setUser } from '../store/authSlice';
+import { setLanguagePreference } from '../store/systemSlice';
 import { authApi } from '../services/auth';
 import { RootState, AppDispatch } from '../store';
 
@@ -14,6 +15,20 @@ export const useRestoreSession = () => {
   useEffect(() => {
     async function restore() {
       try {
+        // 1. Restore Language & Theme from Keychain
+        const prefCredentials = await Keychain.getGenericPassword({ service: "compound.mobile.loginPreferences" });
+        if (prefCredentials) {
+          try {
+            const prefs = JSON.parse(prefCredentials.password);
+            if (prefs.language) {
+              dispatch(setLanguagePreference(prefs.language));
+            }
+          } catch (e) {
+            console.warn("[RestoreSession] Failed to parse preferences", e);
+          }
+        }
+
+        // 2. Restore Auth Session
         const credentials = await Keychain.getGenericPassword({ service: authTokenService });
 
         if (!credentials) {

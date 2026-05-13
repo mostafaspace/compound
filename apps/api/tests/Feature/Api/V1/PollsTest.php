@@ -75,6 +75,42 @@ class PollsTest extends TestCase
             ->assertJsonPath('data.0.status', PollStatus::Draft->value);
     }
 
+    public function test_poll_index_returns_live_vote_counts(): void
+    {
+        $compound = Compound::factory()->create();
+        $building = Building::factory()->for($compound)->create();
+        $unit = Unit::factory()->for($compound)->for($building)->create(['floor_id' => null]);
+        $resident = User::factory()->create([
+            'role' => UserRole::ResidentOwner->value,
+            'compound_id' => null,
+        ]);
+        ApartmentResident::factory()->create([
+            'unit_id' => $unit->id,
+            'user_id' => $resident->id,
+            'verification_status' => 'verified',
+            'starts_at' => now()->subYear(),
+            'ends_at' => null,
+        ]);
+
+        $poll = Poll::create([
+            'compound_id' => $compound->id,
+            'title' => 'Transparent live poll',
+            'status' => PollStatus::Active->value,
+            'scope' => 'compound',
+            'eligibility' => 'all_verified',
+            'created_by' => $resident->id,
+        ]);
+        $option = PollOption::create(['poll_id' => $poll->id, 'label' => 'Option A', 'sort_order' => 0]);
+
+        Sanctum::actingAs($resident);
+        $this->postJson("/api/v1/polls/{$poll->id}/vote", ['optionIds' => [$option->id]])->assertOk();
+
+        $this->getJson('/api/v1/polls')
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $poll->id)
+            ->assertJsonPath('data.0.votesCount', 1);
+    }
+
     public function test_effective_compound_head_with_membership_scope_cannot_see_other_compound_polls_when_compound_id_is_null(): void
     {
         $compoundA = Compound::factory()->create();

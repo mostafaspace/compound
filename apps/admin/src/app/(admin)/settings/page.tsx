@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 
 import { SiteNav } from "@/components/site-nav";
 import { getCompound, getCurrentUser, getSettings, getSystemStatus } from "@/lib/api";
-import { requireAdminUser } from "@/lib/session";
+import { hasEffectiveRole, requireAdminUser } from "@/lib/session";
 
 import { updateSettingsAction } from "./actions";
 
@@ -71,9 +71,11 @@ function renderValue(key: string, value: unknown): string {
 }
 
 export default async function SettingsPage({ searchParams }: SettingsPageProps) {
-  await requireAdminUser(getCurrentUser);
+  const user = await requireAdminUser(getCurrentUser);
   const t = await getTranslations("Settings");
+  const navT = await getTranslations("Navigation");
   const sp = searchParams ? await searchParams : {};
+  const canManageRoles = hasEffectiveRole(user, "super_admin") || (user.permissions ?? []).includes("manage_roles");
 
   // Fetch all namespace data and system status in parallel
   const [nsData, systemStatus] = await Promise.all([
@@ -109,17 +111,27 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
       <section className="mx-auto max-w-7xl space-y-8 px-5 py-6 lg:px-8">
         {/* Sub-page navigation */}
         <div className="flex flex-wrap gap-3">
+          {canManageRoles ? (
+            <>
+              <Link
+                href="/settings/permissions"
+                className="inline-flex items-center gap-2 rounded-lg border border-line bg-panel px-4 py-2.5 text-sm font-medium text-foreground transition hover:border-brand hover:text-brand"
+              >
+                {navT("permissions")}
+              </Link>
+              <Link
+                href="/settings/roles"
+                className="inline-flex items-center gap-2 rounded-lg border border-line bg-panel px-4 py-2.5 text-sm font-medium text-foreground transition hover:border-brand hover:text-brand"
+              >
+                {navT("roles")}
+              </Link>
+            </>
+          ) : null}
           <Link
-            href="/settings/permissions"
+            href="/violation-rules"
             className="inline-flex items-center gap-2 rounded-lg border border-line bg-panel px-4 py-2.5 text-sm font-medium text-foreground transition hover:border-brand hover:text-brand"
           >
-            Permissions
-          </Link>
-          <Link
-            href="/settings/roles"
-            className="inline-flex items-center gap-2 rounded-lg border border-line bg-panel px-4 py-2.5 text-sm font-medium text-foreground transition hover:border-brand hover:text-brand"
-          >
-            Roles
+            {navT("violationRules")}
           </Link>
         </div>
 
