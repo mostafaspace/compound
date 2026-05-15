@@ -1,6 +1,6 @@
 import React, { useRef, useMemo, useEffect } from 'react';
 import {
-  View, StyleSheet, ScrollView, useColorScheme, Alert, TextInput, TouchableOpacity, Image, FlatList
+  View, StyleSheet, ScrollView, useColorScheme, Alert, TextInput, TouchableOpacity, Image, FlatList, Pressable
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { RouteProp, useRoute } from '@react-navigation/native';
@@ -9,9 +9,10 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { launchImageLibrary, launchCamera, type ImagePickerResponse } from 'react-native-image-picker';
 import { issueCategoryValues, issuePriorityValues, issueTargetRoleValues } from '@compound/contracts';
-import { colors, layout, radii, spacing } from '../../../theme';
+import { colors, componentSize, layout, radii, shadows, spacing } from '../../../theme';
 import { Button } from '../../../components/ui/Button';
 import { Typography } from '../../../components/ui/Typography';
+import { Card } from '../../../components/ui/Card';
 import { ScreenContainer } from '../../../components/layout/ScreenContainer';
 import { RootStackParamList } from '../../../navigation/types';
 import { useAddEditIssue, MAX_ATTACHMENTS } from '../hooks/useAddEditIssue';
@@ -80,9 +81,10 @@ export const AddEditIssueScreen = () => {
     priority: z.enum(PRIORITIES),
   }), [t]);
 
-  const { control, handleSubmit, setValue, watch, formState: { errors } } = useForm<FormData>({
+  const { control, handleSubmit, setValue, watch, formState: { errors, isValid } } = useForm<FormData>({
     resolver: zodResolver(localizedSchema),
     defaultValues: initialValues,
+    mode: 'onChange',
   });
 
   const selectedTargetRole = watch('targetRole');
@@ -161,10 +163,14 @@ export const AddEditIssueScreen = () => {
   };
 
   const surface = isDark ? colors.surface.dark : colors.surface.light;
+  const surfaceMuted = isDark ? colors.surfaceMuted.dark : colors.surfaceMuted.light;
+  const background = isDark ? colors.background.dark : colors.background.light;
   const border = isDark ? colors.border.dark : colors.border.light;
   const text = isDark ? colors.text.primary.dark : colors.text.primary.light;
+  const mutedText = isDark ? colors.text.secondary.dark : colors.text.secondary.light;
+  const primary = isDark ? colors.primary.dark : colors.primary.light;
 
-  const submitDisabled = (!isEdit && submitBlockReason !== null) || isLoading;
+  const submitDisabled = (!isEdit && submitBlockReason !== null) || isLoading || !isValid;
   const submitLabel = isLoading
     ? t('Common.loading')
     : t(isEdit ? 'Common.save' : 'Issues.submit', { defaultValue: isEdit ? 'Save Changes' : 'Submit Issue' });
@@ -181,27 +187,71 @@ export const AddEditIssueScreen = () => {
     options: readonly T[],
     value: T,
     onChange: (v: T) => void,
-  ) => (
-    <FlatList
-      data={options}
-      keyExtractor={(opt) => opt}
-      horizontal
-      inverted={isRtl}
-      scrollEnabled={false}
-      contentContainerStyle={[styles.chips, rowDirectionStyle(isRtl)]}
-      renderItem={({ item: opt }) => (
-        <Button
-          title={fieldName === 'targetRole'
+  ) => {
+    const labelNamespace =
+      fieldName === 'category'
+        ? 'categories'
+        : fieldName === 'priority'
+          ? 'priorities'
+          : 'targetRoles';
+
+    return (
+      <FlatList
+        data={options}
+        keyExtractor={(opt) => `${fieldName}-${opt}`}
+        scrollEnabled={false}
+        numColumns={2}
+        contentContainerStyle={styles.optionGrid}
+        columnWrapperStyle={[styles.optionRow, rowDirectionStyle(isRtl)]}
+        renderItem={({ item: opt }) => {
+          const isSelected = value === opt;
+          const label = fieldName === 'targetRole'
             ? targetLabels[opt as (typeof TARGETS)[number]]
-            : t(`Issues.${fieldName}s.${opt}`, { defaultValue: opt })}
-          variant={value === opt ? 'primary' : 'ghost'}
-          onPress={() => onChange(opt)}
-          style={styles.chip}
-          textStyle={{ fontSize: 13 }}
-        />
-      )}
-    />
-  );
+            : t(`Issues.${labelNamespace}.${opt}`, { defaultValue: opt });
+
+          return (
+            <View style={styles.optionCell}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={label}
+                accessibilityState={{ selected: isSelected }}
+                onPress={() => onChange(opt)}
+                style={({ pressed }) => [
+                  styles.optionChip,
+                  rowDirectionStyle(isRtl),
+                  {
+                    backgroundColor: isSelected ? (isDark ? colors.palette.ink[900] : colors.palette.teal[50]) : surface,
+                    borderColor: isSelected ? primary : border,
+                  },
+                  isSelected && styles.optionChipSelected,
+                  pressed && styles.optionChipPressed,
+                ]}
+              >
+                <View
+                  style={[
+                    styles.optionDot,
+                    {
+                      borderColor: isSelected ? primary : border,
+                      backgroundColor: isSelected ? primary : 'transparent',
+                    },
+                  ]}
+                >
+                  {isSelected ? <Icon name="check" size={12} color={colors.text.inverse} strokeWidth={3} /> : null}
+                </View>
+                <Typography
+                  variant="bodyStrong"
+                  numberOfLines={2}
+                  style={[styles.optionLabel, { color: isSelected ? text : mutedText }, textDirectionStyle(isRtl)]}
+                >
+                  {label}
+                </Typography>
+              </Pressable>
+            </View>
+          );
+        }}
+      />
+    );
+  };
 
   const renderAttachmentPreview = ({ item }: { item: AttachmentPreviewItem }) => {
     if (item.kind === 'existing') {
@@ -224,10 +274,12 @@ export const AddEditIssueScreen = () => {
             </View>
           )}
           <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel={t('Common.remove', { defaultValue: 'Remove' })}
             style={styles.removeAttachmentBtn}
             onPress={() => removeExistingAttachment(att.id)}
           >
-            <Typography style={styles.removeAttachmentText}>✕</Typography>
+            <Icon name="x" color={colors.text.inverse} size={14} strokeWidth={3} />
           </TouchableOpacity>
         </View>
       );
@@ -241,23 +293,59 @@ export const AddEditIssueScreen = () => {
           resizeMode="cover"
         />
         <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel={t('Common.remove', { defaultValue: 'Remove' })}
           style={styles.removeAttachmentBtn}
           onPress={() => removeNewAttachment(item.index)}
         >
-          <Typography style={styles.removeAttachmentText}>✕</Typography>
+          <Icon name="x" color={colors.text.inverse} size={14} strokeWidth={3} />
         </TouchableOpacity>
       </View>
     );
   };
 
   return (
-    <ScreenContainer withKeyboard style={styles.container} edges={['left', 'right', 'bottom']}>
+    <ScreenContainer withKeyboard style={[styles.container, { backgroundColor: background }]} edges={['left', 'right', 'bottom']}>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="always">
-        {!isEdit && (
-          <>
-            <Typography variant="label" style={[styles.label, { color: text, marginTop: 0 }, textDirectionStyle(isRtl)]}>
-              {t('Issues.routeToLabel')}
-            </Typography>
+        <View style={[
+          styles.hero,
+          { backgroundColor: isDark ? colors.palette.ink[900] : colors.palette.teal[50], borderColor: isDark ? colors.palette.ink[700] : colors.palette.teal[100] },
+        ]}>
+          <View style={[styles.heroIcon, { backgroundColor: surface }]}>
+            <Icon name="issues" size={24} color={primary} />
+          </View>
+          <Typography variant="label" style={[styles.heroEyebrow, { color: primary }, textDirectionStyle(isRtl)]}>
+            {t('Issues.reportEyebrow', { defaultValue: isEdit ? 'Update request' : 'Support request' })}
+          </Typography>
+          <Typography variant="h2" style={[styles.heroTitle, { color: text }, textDirectionStyle(isRtl)]}>
+            {t(isEdit ? 'Issues.editTitle' : 'Issues.reportTitle', { defaultValue: isEdit ? 'Update the issue' : 'Tell us what happened' })}
+          </Typography>
+          <Typography variant="caption" style={[styles.heroSubtitle, { color: mutedText }, textDirectionStyle(isRtl)]}>
+            {t('Issues.reportSubtitle', {
+              defaultValue: 'Pick the right team, add a clear summary, and attach photos when they help.',
+            })}
+          </Typography>
+        </View>
+
+        {!isEdit ? (
+          <Card style={styles.sectionCard}>
+            <View style={[styles.sectionHeader, rowDirectionStyle(isRtl)]}>
+              <View style={[styles.sectionIcon, { backgroundColor: surfaceMuted }]}>
+                <Icon name="user" size={20} color={primary} />
+              </View>
+              <View style={styles.sectionHeaderText}>
+                <Typography variant="h3" style={[{ color: text }, textDirectionStyle(isRtl)]}>
+                  {t('Issues.routeTitle', { defaultValue: 'Who should handle it?' })}
+                </Typography>
+                <Typography variant="caption" style={[{ color: mutedText }, textDirectionStyle(isRtl)]}>
+                  {submitBlockReason === 'loading'
+                    ? t('Issues.loadingUnitContext')
+                    : submitBlockReason === 'missing-unit'
+                      ? t('Issues.assignmentRequiredBody')
+                      : t('Issues.routeToHelp')}
+                </Typography>
+              </View>
+            </View>
             <Controller
               control={control}
               name="targetRole"
@@ -265,121 +353,167 @@ export const AddEditIssueScreen = () => {
                 renderChips('targetRole', availableTargetRoles, value, onChange)
               }
             />
-            <Typography variant="caption" style={[styles.helperText, textDirectionStyle(isRtl)]}>
-              {submitBlockReason === 'loading'
-                ? t('Issues.loadingUnitContext')
-                : submitBlockReason === 'missing-unit'
-                  ? t('Issues.assignmentRequiredBody')
-                  : t('Issues.routeToHelp')}
-            </Typography>
-          </>
-        )}
+          </Card>
+        ) : null}
 
-        <Typography variant="label" style={[styles.label, { color: text, marginTop: isEdit ? 0 : spacing.sm }, textDirectionStyle(isRtl)]}>
-          {t('Issues.categoryLabel')}
-        </Typography>
-        <Controller
-          control={control}
-          name="category"
-          render={({ field: { value, onChange } }) => renderChips('category', CATEGORIES, value, onChange)}
-        />
+        <Card style={styles.sectionCard}>
+          <View style={[styles.sectionHeader, rowDirectionStyle(isRtl)]}>
+            <View style={[styles.sectionIcon, { backgroundColor: surfaceMuted }]}>
+              <Icon name="alert" size={20} color={primary} />
+            </View>
+            <View style={styles.sectionHeaderText}>
+              <Typography variant="h3" style={[{ color: text }, textDirectionStyle(isRtl)]}>
+                {t('Issues.detailsTitle', { defaultValue: 'Issue details' })}
+              </Typography>
+              <Typography variant="caption" style={[{ color: mutedText }, textDirectionStyle(isRtl)]}>
+                {t('Issues.detailsDescription', { defaultValue: 'A precise report helps the right person act faster.' })}
+              </Typography>
+            </View>
+          </View>
 
-        <Typography variant="label" style={[styles.label, { color: text }, textDirectionStyle(isRtl)]}>
-          {t('Issues.priorityLabel')}
-        </Typography>
-        <Controller
-          control={control}
-          name="priority"
-          render={({ field: { value, onChange } }) => renderChips('priority', PRIORITIES, value, onChange)}
-        />
-
-        <Typography variant="label" style={[styles.label, { color: text }, textDirectionStyle(isRtl)]}>
-          {t('Issues.titleLabel')}
-        </Typography>
-        <Controller
-          control={control}
-          name="title"
-          render={({ field: { value, onChange, onBlur } }) => (
-            <TextInput
-              style={[styles.input, {
-                backgroundColor: surface,
-                borderColor: errors.title ? colors.error : border,
-                color: text,
-              }, textDirectionStyle(isRtl)]}
-              value={value}
-              onChangeText={onChange}
-              onBlur={onBlur}
-              returnKeyType="next"
-              onSubmitEditing={() => descriptionRef.current?.focus()}
-              placeholder={t('Issues.titlePlaceholder')}
-              placeholderTextColor={colors.text.secondary.light}
-            />
-          )}
-        />
-        {errors.title && (
-          <Typography variant="caption" style={[styles.error, textDirectionStyle(isRtl)]}>{errors.title.message}</Typography>
-        )}
-
-        <Typography variant="label" style={[styles.label, { color: text }, textDirectionStyle(isRtl)]}>
-          {t('Issues.descriptionLabel')}
-        </Typography>
-        <Controller
-          control={control}
-          name="description"
-          render={({ field: { value, onChange, onBlur } }) => (
-            <TextInput
-              ref={descriptionRef}
-              style={[styles.textarea, {
-                backgroundColor: surface,
-                borderColor: errors.description ? colors.error : border,
-                color: text,
-              }, textDirectionStyle(isRtl)]}
-              value={value}
-              onChangeText={onChange}
-              onBlur={onBlur}
-              multiline
-              blurOnSubmit
-              returnKeyType="done"
-              numberOfLines={5}
-              placeholder={t('Issues.descriptionPlaceholder')}
-              placeholderTextColor={colors.text.secondary.light}
-              textAlignVertical="top"
-            />
-          )}
-        />
-        {errors.description && (
-          <Typography variant="caption" style={[styles.error, textDirectionStyle(isRtl)]}>{errors.description.message}</Typography>
-        )}
-
-        <View style={[styles.attachmentHeader, rowDirectionStyle(isRtl)]}>
-          <Typography variant="label" style={[styles.label, { color: text, marginTop: 0, marginBottom: 0 }, textDirectionStyle(isRtl)]}>
-            {t('Issues.attachmentLabel')}
+          <Typography variant="label" style={[styles.label, { color: primary }, textDirectionStyle(isRtl)]}>
+            {t('Issues.categoryLabel')}
           </Typography>
-          <Typography variant="caption" style={styles.helperText}>
-            {totalCount}/{MAX_ATTACHMENTS}
-          </Typography>
-        </View>
-
-        {attachmentItems.length > 0 && (
-          <FlatList
-            data={attachmentItems}
-            keyExtractor={(item) => String(item.id)}
-            renderItem={renderAttachmentPreview}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={{ marginTop: spacing.xs }}
+          <Controller
+            control={control}
+            name="category"
+            render={({ field: { value, onChange } }) => renderChips('category', CATEGORIES, value, onChange)}
           />
-        )}
 
-        {canAddMore && (
-          <TouchableOpacity
-            style={[styles.attachBtn, rowDirectionStyle(isRtl), { borderColor: border, backgroundColor: surface }]}
-            onPress={showAttachmentOptions}
-          >
-            <Icon name="plus" color={colors.primary.light} size={18} />
-            <Typography style={styles.attachBtnText}>{t('Issues.addAttachment')}</Typography>
-          </TouchableOpacity>
-        )}
+          <Typography variant="label" style={[styles.label, { color: primary }, textDirectionStyle(isRtl)]}>
+            {t('Issues.priorityLabel')}
+          </Typography>
+          <Controller
+            control={control}
+            name="priority"
+            render={({ field: { value, onChange } }) => renderChips('priority', PRIORITIES, value, onChange)}
+          />
+
+          <Typography variant="label" style={[styles.label, { color: primary }, textDirectionStyle(isRtl)]}>
+            {t('Issues.titleLabel')}
+          </Typography>
+          <Controller
+            control={control}
+            name="title"
+            render={({ field: { value, onChange, onBlur } }) => (
+              <TextInput
+                accessibilityLabel={t('Issues.titleLabel')}
+                style={[styles.input, {
+                  backgroundColor: surfaceMuted,
+                  borderColor: errors.title ? colors.error : border,
+                  color: text,
+                }, textDirectionStyle(isRtl)]}
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                returnKeyType="next"
+                onSubmitEditing={() => descriptionRef.current?.focus()}
+                placeholder={t('Issues.titlePlaceholder')}
+                placeholderTextColor={mutedText}
+              />
+            )}
+          />
+          {errors.title ? (
+            <Typography variant="error" style={[styles.error, textDirectionStyle(isRtl)]}>{errors.title.message}</Typography>
+          ) : (
+            <Typography variant="caption" style={[styles.helperText, { color: mutedText }, textDirectionStyle(isRtl)]}>
+              {t('Issues.titleHelper', { defaultValue: 'Example: Water leak near the elevator' })}
+            </Typography>
+          )}
+
+          <Typography variant="label" style={[styles.label, { color: primary }, textDirectionStyle(isRtl)]}>
+            {t('Issues.descriptionLabel')}
+          </Typography>
+          <Controller
+            control={control}
+            name="description"
+            render={({ field: { value, onChange, onBlur } }) => (
+              <TextInput
+                accessibilityLabel={t('Issues.descriptionLabel')}
+                ref={descriptionRef}
+                style={[styles.textarea, {
+                  backgroundColor: surfaceMuted,
+                  borderColor: errors.description ? colors.error : border,
+                  color: text,
+                }, textDirectionStyle(isRtl)]}
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                multiline
+                blurOnSubmit
+                returnKeyType="done"
+                numberOfLines={5}
+                placeholder={t('Issues.descriptionPlaceholder')}
+                placeholderTextColor={mutedText}
+                textAlignVertical="top"
+              />
+            )}
+          />
+          {errors.description ? (
+            <Typography variant="error" style={[styles.error, textDirectionStyle(isRtl)]}>{errors.description.message}</Typography>
+          ) : (
+            <Typography variant="caption" style={[styles.helperText, { color: mutedText }, textDirectionStyle(isRtl)]}>
+              {t('Issues.descriptionHelper', { defaultValue: 'Include location, timing, and anything urgent.' })}
+            </Typography>
+          )}
+        </Card>
+
+        <Card style={styles.sectionCard}>
+          <View style={[styles.attachmentHeader, rowDirectionStyle(isRtl)]}>
+            <View style={[styles.sectionHeaderText, styles.attachmentHeaderText]}>
+              <Typography variant="h3" style={[{ color: text }, textDirectionStyle(isRtl)]}>
+                {t('Issues.attachmentsTitle', { defaultValue: 'Photos' })}
+              </Typography>
+              <Typography variant="caption" style={[{ color: mutedText }, textDirectionStyle(isRtl)]}>
+                {t('Issues.attachmentsDescription', { defaultValue: 'Optional, but useful for maintenance and security cases.' })}
+              </Typography>
+            </View>
+            <View style={[styles.counterPill, { backgroundColor: surfaceMuted }]}>
+              <Typography variant="caption" style={{ color: mutedText }}>
+                {totalCount}/{MAX_ATTACHMENTS}
+              </Typography>
+            </View>
+          </View>
+
+          {attachmentItems.length > 0 ? (
+            <FlatList
+              data={attachmentItems}
+              keyExtractor={(item) => String(item.id)}
+              renderItem={renderAttachmentPreview}
+              horizontal
+              inverted={isRtl}
+              showsHorizontalScrollIndicator={false}
+              style={styles.attachmentList}
+            />
+          ) : (
+            <View style={[styles.emptyAttachmentState, { backgroundColor: surfaceMuted, borderColor: border }]}>
+              <Icon name="camera" color={mutedText} size={26} />
+              <Typography variant="caption" style={[{ color: mutedText, textAlign: 'center' }, textDirectionStyle(isRtl)]}>
+                {t('Issues.noAttachmentsYet', { defaultValue: 'No photos attached yet.' })}
+              </Typography>
+            </View>
+          )}
+
+          {canAddMore && (
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel={t('Issues.addAttachment')}
+              style={[styles.attachBtn, rowDirectionStyle(isRtl), { borderColor: border, backgroundColor: surfaceMuted }]}
+              onPress={showAttachmentOptions}
+            >
+              <Icon name="plus" color={primary} size={18} />
+              <Typography style={[styles.attachBtnText, { color: primary }]}>{t('Issues.addAttachment')}</Typography>
+            </TouchableOpacity>
+          )}
+        </Card>
+
+        {submitDisabled && !isLoading ? (
+          <Typography variant="caption" style={[styles.submitHint, { color: mutedText }, textDirectionStyle(isRtl)]}>
+            {submitBlockReason === 'missing-unit'
+              ? t('Issues.assignmentRequiredBody')
+              : t('Issues.submitDisabledHint', { defaultValue: 'Add the required details to submit this issue.' })}
+          </Typography>
+        ) : null}
 
         <Button
           title={submitLabel}
@@ -387,6 +521,7 @@ export const AddEditIssueScreen = () => {
           loading={isLoading}
           disabled={submitDisabled}
           style={styles.submitBtn}
+          leftIcon="check"
         />
       </ScrollView>
     </ScreenContainer>
@@ -395,35 +530,122 @@ export const AddEditIssueScreen = () => {
 
 const styles = StyleSheet.create({
   container: { padding: 0 },
-  scroll: { padding: layout.screenGutter, paddingBottom: layout.screenBottom },
-  label: { marginBottom: 2, marginTop: spacing.sm, fontWeight: '600' },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
-  chip: { paddingHorizontal: spacing.sm, paddingVertical: 2, marginBottom: 2 },
-  input: { borderWidth: 1, borderRadius: radii.md, paddingHorizontal: spacing.sm, minHeight: 44, justifyContent: 'center' },
-  textarea: { borderWidth: 1, borderRadius: radii.md, padding: spacing.sm, minHeight: 120 },
-  error: { color: colors.error, marginTop: 2 },
-  helperText: { color: colors.text.secondary.light, marginTop: 2 },
+  scroll: { padding: layout.screenGutter, paddingBottom: layout.screenBottom + spacing.lg, gap: spacing.md },
+  hero: {
+    borderWidth: 1,
+    borderRadius: radii.xl,
+    padding: spacing.md,
+    ...shadows.sm,
+  },
+  heroIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.ms,
+  },
+  heroEyebrow: { marginBottom: spacing.xs },
+  heroTitle: { marginBottom: spacing.xs, maxWidth: 280 },
+  heroSubtitle: { maxWidth: 300 },
+  sectionCard: { padding: spacing.md },
+  sectionHeader: {
+    alignItems: 'center',
+    gap: spacing.ms,
+    marginBottom: spacing.md,
+  },
+  sectionIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sectionHeaderText: { flex: 1, gap: spacing.xs },
+  label: { marginBottom: spacing.sm, marginTop: spacing.md },
+  optionGrid: { gap: spacing.sm },
+  optionRow: { gap: spacing.sm },
+  optionCell: { flex: 1 },
+  optionChip: {
+    minHeight: componentSize.touch + spacing.sm,
+    borderWidth: 1,
+    borderRadius: radii.lg,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  optionChipSelected: { borderWidth: 1.5 },
+  optionChipPressed: { opacity: 0.86, transform: [{ scale: 0.99 }] },
+  optionDot: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  optionLabel: { flex: 1, flexShrink: 1, fontSize: 13, lineHeight: 18 },
+  input: {
+    borderWidth: 1,
+    borderRadius: radii.lg,
+    paddingHorizontal: spacing.md,
+    minHeight: componentSize.input,
+    justifyContent: 'center',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  textarea: {
+    borderWidth: 1,
+    borderRadius: radii.lg,
+    padding: spacing.md,
+    minHeight: 144,
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  error: { marginTop: spacing.xs },
+  helperText: { marginTop: spacing.xs },
   attachmentHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+    marginBottom: spacing.md,
+  },
+  attachmentHeaderText: { flexShrink: 1 },
+  counterPill: {
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.sm,
+    minHeight: 30,
     alignItems: 'center',
-    marginTop: spacing.sm,
-    marginBottom: 2,
+    justifyContent: 'center',
   },
   attachBtn: {
     borderWidth: 1,
     borderStyle: 'dashed',
     borderRadius: radii.lg,
-    height: 44,
+    minHeight: componentSize.button,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: spacing.xs,
+    marginTop: spacing.md,
     flexDirection: 'row',
     gap: spacing.sm,
   },
   attachBtnText: {
-    color: colors.primary.light,
-    fontWeight: '600',
+    fontWeight: '800',
+  },
+  emptyAttachmentState: {
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderRadius: radii.lg,
+    minHeight: 112,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    padding: spacing.md,
+  },
+  attachmentList: {
+    marginTop: -spacing.xs,
   },
   attachmentPreviewContainer: {
     marginEnd: spacing.sm,
@@ -433,9 +655,9 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   attachmentPreview: {
-    width: 100,
-    height: 100,
-    borderRadius: radii.md,
+    width: 112,
+    height: 112,
+    borderRadius: radii.lg,
     backgroundColor: colors.surfaceMuted.light,
   },
   attachmentFallback: {
@@ -454,10 +676,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  removeAttachmentText: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: '800',
+  submitHint: {
+    textAlign: 'center',
+    paddingHorizontal: spacing.md,
   },
-  submitBtn: { marginTop: spacing.md, borderRadius: radii.md },
+  submitBtn: { borderRadius: radii.lg },
 });

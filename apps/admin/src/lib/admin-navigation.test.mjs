@@ -23,6 +23,14 @@ test("compound admins get neutral property navigation", () => {
   assert.equal(sections.some((section) => section.labelKey === "roles"), false);
   assert.equal(sections.some((section) => section.labelKey === "permissions"), false);
   assert.equal(sections.some((section) => section.labelKey === "units"), true);
+  assert.equal(sections.some((section) => section.href === "/vehicles"), true);
+});
+
+test("legacy vehicle lookup roles see vehicle navigation without serialized permissions", () => {
+  ["compound_admin", "compound_head", "president", "security_guard", "support_agent"].forEach((role) => {
+    const sections = getAdminSections({ roles: [role] });
+    assert.equal(sections.some((section) => section.href === "/vehicles"), true, role);
+  });
 });
 
 test("admin navigation exposes the major admin workspaces", () => {
@@ -48,7 +56,6 @@ test("admin navigation keeps subpages under parent workspaces", () => {
 
   [
     ["/document-reviews", "/documents"],
-    ["/finance/advanced", "/finance"],
     ["/meetings/action-items", "/meetings"],
     ["/polls/types", "/polls"],
     ["/representative-assignments", "/org-chart"],

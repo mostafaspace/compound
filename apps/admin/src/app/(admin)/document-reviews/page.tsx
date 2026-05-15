@@ -1,8 +1,10 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 
+import { AdminPagination } from "@/components/admin-pagination";
 import { SiteNav } from "@/components/site-nav";
 import { config } from "@/lib/config";
-import { getCurrentUser, listDocumentReviews, type ApartmentDocumentReview } from "@/lib/api";
+import { getCurrentUser, listDocumentReviewsPage, type ApartmentDocumentReview } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
 
 import { reviewDocumentVersionAction } from "./actions";
@@ -10,6 +12,7 @@ import { reviewDocumentVersionAction } from "./actions";
 interface DocumentReviewsPageProps {
   searchParams?: Promise<{
     approved?: string;
+    page?: string;
     rejected?: string;
   }>;
 }
@@ -17,7 +20,12 @@ interface DocumentReviewsPageProps {
 export default async function DocumentReviewsPage({ searchParams }: DocumentReviewsPageProps) {
   await requireAdminUser(getCurrentUser);
   const params = searchParams ? await searchParams : {};
-  const reviews = await listDocumentReviews();
+  const page = Math.max(1, Number(params.page ?? "1") || 1);
+  const [reviewsPage, commonT] = await Promise.all([
+    listDocumentReviewsPage({ page }),
+    getTranslations("Common"),
+  ]);
+  const reviews = reviewsPage.data;
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -31,12 +39,12 @@ export default async function DocumentReviewsPage({ searchParams }: DocumentRevi
             </Link>
             <h1 className="mt-2 text-3xl font-semibold md:text-4xl">Document reviews</h1>
             <p className="mt-2 max-w-3xl text-sm text-muted">
-              Review replacement uploads. Open the new document, then approve or reject the change.
+              Review replacement uploads one page at a time. Open the new document, then approve or reject the change.
             </p>
           </div>
           <div className="rounded-lg border border-line bg-background px-4 py-3">
             <div className="text-xs font-semibold uppercase tracking-wide text-muted">Pending</div>
-            <div className="mt-1 text-2xl font-semibold">{reviews.length}</div>
+            <div className="mt-1 text-2xl font-semibold">{reviewsPage.meta.total}</div>
           </div>
         </div>
       </header>
@@ -46,6 +54,13 @@ export default async function DocumentReviewsPage({ searchParams }: DocumentRevi
         {params.rejected ? <StatusBanner text="Document replacement rejected." /> : null}
 
         <div className="overflow-hidden rounded-lg border border-line bg-panel">
+          <div className="border-b border-line px-4 py-3 text-sm text-muted">
+            {commonT("pagination.summary", {
+              from: reviewsPage.meta.from ?? 0,
+              to: reviewsPage.meta.to ?? 0,
+              total: reviewsPage.meta.total,
+            })}
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[980px] border-collapse text-sm">
               <thead className="bg-background text-muted">
@@ -70,6 +85,21 @@ export default async function DocumentReviewsPage({ searchParams }: DocumentRevi
               </tbody>
             </table>
           </div>
+          <AdminPagination
+            basePath="/document-reviews"
+            labels={{
+              first: commonT("pagination.first"),
+              last: commonT("pagination.last"),
+              next: commonT("pagination.next"),
+              previous: commonT("pagination.previous"),
+              summary: commonT("pagination.summary", {
+                from: reviewsPage.meta.from ?? 0,
+                to: reviewsPage.meta.to ?? 0,
+                total: reviewsPage.meta.total,
+              }),
+            }}
+            meta={reviewsPage.meta}
+          />
         </div>
       </section>
     </main>
@@ -78,11 +108,13 @@ export default async function DocumentReviewsPage({ searchParams }: DocumentRevi
 
 function ReviewRow({ review }: { review: ApartmentDocumentReview }) {
   const document = review.document;
+  const unitLabel = document?.unit?.unitNumber ? `Apartment ${document.unit.unitNumber}` : "Apartment unavailable";
+  const uploaderLabel = review.uploader?.name ?? "Unknown uploader";
 
   return (
     <tr className="align-top hover:bg-background/60">
       <td className="px-4 py-4">
-        <div className="font-semibold">Unit {document?.unitId ?? "Unknown"}</div>
+        <div className="font-semibold">{unitLabel}</div>
         <div className="mt-1 text-xs capitalize text-muted">{document?.documentType?.replace(/_/g, " ") ?? "Document"}</div>
       </td>
       <td className="px-4 py-4">
@@ -90,8 +122,7 @@ function ReviewRow({ review }: { review: ApartmentDocumentReview }) {
         <div className="mt-1 text-xs text-muted">{review.mimeType ?? "Unknown type"}</div>
       </td>
       <td className="px-4 py-4">
-        <div className="font-medium">{review.uploader?.name ?? `User #${review.uploadedBy}`}</div>
-        <div className="mt-1 text-xs text-muted">ID {review.uploadedBy}</div>
+        <div className="font-medium">{uploaderLabel}</div>
       </td>
       <td className="px-4 py-4 text-muted">{formatDate(review.createdAt)}</td>
       <td className="px-4 py-4">

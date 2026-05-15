@@ -36,7 +36,7 @@ class AnnouncementController extends Controller
     {
         $this->announcementService->expireDueAnnouncements();
 
-        $query = Announcement::query()->with('author')->latest();
+        $query = Announcement::query()->with(['author', 'uploadedAttachments'])->latest();
 
         // Compound isolation: scope to the resolved compounds (null = super-admin sees all).
         /** @var User $actor */
@@ -125,7 +125,11 @@ class AnnouncementController extends Controller
 
         $user = $request->user();
         $query = Announcement::query()
-            ->with(['author', 'acknowledgements' => fn ($query) => $query->where('user_id', $user?->id)])
+            ->with([
+                'author',
+                'uploadedAttachments',
+                'acknowledgements' => fn ($query) => $query->where('user_id', $user?->id),
+            ])
             ->where('status', AnnouncementStatus::Published->value)
             ->where(function ($query): void {
                 $query->whereNull('expires_at')->orWhere('expires_at', '>', now());
@@ -228,7 +232,7 @@ class AnnouncementController extends Controller
             ]
         );
 
-        return new AnnouncementResource($announcement->refresh()->load('author'));
+        return new AnnouncementResource($announcement->refresh()->load(['author', 'uploadedAttachments']));
     }
 
     public function publish(Request $request, Announcement $announcement): AnnouncementResource
@@ -247,7 +251,7 @@ class AnnouncementController extends Controller
             metadata: ['status' => $announcement->status->value]
         );
 
-        return new AnnouncementResource($announcement->load('author'));
+        return new AnnouncementResource($announcement->load(['author', 'uploadedAttachments']));
     }
 
     public function archive(Request $request, Announcement $announcement): AnnouncementResource
@@ -263,7 +267,7 @@ class AnnouncementController extends Controller
             auditableId: $announcement->id,
         );
 
-        return new AnnouncementResource($announcement->load('author'));
+        return new AnnouncementResource($announcement->load(['author', 'uploadedAttachments']));
     }
 
     public function storeAttachment(

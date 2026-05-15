@@ -101,7 +101,7 @@ export default async function UnitDetailPage({ params, searchParams }: UnitDetai
             <div>
               <h2 className="text-xl font-semibold">Apartment overview</h2>
               <p className="mt-1 text-sm text-muted">
-                View-only apartment tabs for residents, vehicles, parking, notes, and finance.
+                View-only apartment tabs for residents, vehicles, parking, notes, and contributions.
               </p>
             </div>
             <Link className="text-sm font-semibold text-brand hover:text-brand-strong" href={`/units/${unit.id}/violations`}>
@@ -132,7 +132,7 @@ export default async function UnitDetailPage({ params, searchParams }: UnitDetai
                     key={vehicle.id}
                     title={vehicle.plate}
                     meta={[vehicle.color, vehicle.make, vehicle.model].filter(Boolean).join(" ") || "Vehicle"}
-                    detail={vehicle.stickerCode ? `Sticker ${vehicle.stickerCode}` : vehicle.notes ?? "No sticker on file"}
+                    detail={vehicle.notes ?? undefined}
                   />
                 ))
               ) : (
@@ -164,12 +164,12 @@ export default async function UnitDetailPage({ params, searchParams }: UnitDetai
               )}
             </ViewOnlyPanel>
 
-            <ViewOnlyPanel title="Finance summary">
+            <ViewOnlyPanel title="Contributions summary">
               {apartment.finance.account ? (
                 <>
                   <InfoRow
                     title={formatMoney(apartment.finance.account.balance, apartment.finance.account.currency)}
-                    meta="Current account balance"
+                    meta="Current contributions balance"
                     detail={`${apartment.finance.outstandingEntries.length} outstanding entries`}
                   />
                   {apartment.finance.outstandingEntries.slice(0, 4).map((entry) => (
@@ -182,7 +182,7 @@ export default async function UnitDetailPage({ params, searchParams }: UnitDetai
                   ))}
                 </>
               ) : (
-                <EmptyText>No finance account exists for this unit.</EmptyText>
+                <EmptyText>No contribution account exists for this apartment.</EmptyText>
               )}
             </ViewOnlyPanel>
 
@@ -243,15 +243,6 @@ export default async function UnitDetailPage({ params, searchParams }: UnitDetai
                             phoneVisibility: membership.phonePublic ? visibleLabel : hiddenLabel,
                             residentEmail: membership.residentEmail ?? notSetLabel,
                             emailVisibility: membership.emailPublic ? visibleLabel : hiddenLabel,
-                          })}
-                        </div>
-                        <div className="mt-1 text-xs text-muted">
-                          {t("unitDetail.memberships.vehicleSummary", {
-                            vehicle: membership.hasVehicle
-                              ? membership.vehiclePlate ?? t("unitDetail.common.registeredWithoutPlate")
-                              : t("unitDetail.common.noVehicleOnFile"),
-                            parking: membership.parkingSpotCode ?? notSetLabel,
-                            sticker: membership.garageStickerCode ?? notSetLabel,
                           })}
                         </div>
                       </td>
@@ -353,42 +344,6 @@ export default async function UnitDetailPage({ params, searchParams }: UnitDetai
                                 <input className="size-4" defaultChecked={membership.emailPublic} name="emailPublic" type="checkbox" />
                                 {t("unitDetail.editor.showEmail")}
                               </label>
-
-                              <div className="rounded-lg border border-line bg-background/60 p-4">
-                                <label className="flex items-center gap-2 text-sm font-medium">
-                                  <input className="size-4" defaultChecked={membership.hasVehicle} name="hasVehicle" type="checkbox" />
-                                  {t("unitDetail.editor.vehicleRegistered")}
-                                </label>
-                                <p className="mt-2 text-xs text-muted">
-                                  {t("unitDetail.editor.vehicleHint")}
-                                </p>
-                                <div className="mt-4 grid gap-4 md:grid-cols-3">
-                                  <label className="text-sm font-medium">
-                                    {t("unitDetail.editor.vehiclePlate")}
-                                    <input
-                                      className="mt-2 h-11 w-full rounded-lg border border-line px-3"
-                                      defaultValue={membership.vehiclePlate ?? ""}
-                                      name="vehiclePlate"
-                                    />
-                                  </label>
-                                  <label className="text-sm font-medium">
-                                    {t("unitDetail.editor.parkingCode")}
-                                    <input
-                                      className="mt-2 h-11 w-full rounded-lg border border-line px-3"
-                                      defaultValue={membership.parkingSpotCode ?? ""}
-                                      name="parkingSpotCode"
-                                    />
-                                  </label>
-                                  <label className="text-sm font-medium">
-                                    {t("unitDetail.editor.garageSticker")}
-                                    <input
-                                      className="mt-2 h-11 w-full rounded-lg border border-line px-3"
-                                      defaultValue={membership.garageStickerCode ?? ""}
-                                      name="garageStickerCode"
-                                    />
-                                  </label>
-                                </div>
-                              </div>
 
                               <div className="flex flex-wrap items-center justify-between gap-3">
                                 <p className="text-xs text-muted">{t("unitDetail.editor.saveHint")}</p>

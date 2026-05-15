@@ -31,6 +31,7 @@ export interface MoneyAmount {
 export interface UnitAccount {
   id: string;
   unitId: string;
+  unit?: import("./property").UnitSummary | null;
   balance: string;
   pendingBalance: string;
   currency: string;
@@ -56,7 +57,9 @@ export interface LedgerEntry {
 export interface PaymentSubmission {
   id: string;
   unitAccountId: string;
+  unitAccount?: UnitAccount | null;
   submittedBy: number | null;
+  submitter?: import("./platform").AuthenticatedUser | null;
   amount: string;
   currency: string;
   method: string;
@@ -133,6 +136,9 @@ export interface CollectionCampaign {
   description: string | null;
   status: CampaignStatus;
   targetAmount: string | null;
+  targetType?: "compound" | "building" | "floor";
+  targetIds?: string[] | null;
+  currency?: string;
   startedAt: string | null;
   closedAt: string | null;
   createdAt: string;

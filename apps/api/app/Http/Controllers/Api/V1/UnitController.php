@@ -152,7 +152,6 @@ class UnitController extends Controller
                     Rule::exists('floors', 'id')->where('building_id', $building->id),
                 ],
                 'type' => ['nullable', Rule::enum(UnitType::class)],
-                'areaSqm' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
                 'bedrooms' => ['nullable', 'integer', 'min:0', 'max:50'],
                 'status' => ['nullable', Rule::enum(UnitStatus::class)],
             ]);
@@ -189,7 +188,6 @@ class UnitController extends Controller
                         'floor_id' => $row['floorId'] ?? null,
                         'unit_number' => $row['unitNumber'],
                         'type' => $row['type'] ?? UnitType::Apartment->value,
-                        'area_sqm' => $row['areaSqm'] ?? null,
                         'bedrooms' => $row['bedrooms'] ?? null,
                         'status' => $row['status'] ?? UnitStatus::Active->value,
                     ]);
@@ -233,7 +231,7 @@ class UnitController extends Controller
         return response()->streamDownload(function () use ($building): void {
             $output = fopen('php://output', 'w');
 
-            fputcsv($output, ['unitNumber', 'type', 'status', 'floorId', 'floorLabel', 'areaSqm', 'bedrooms']);
+            fputcsv($output, ['unitNumber', 'type', 'status', 'floorId', 'floorLabel', 'bedrooms']);
 
             $building->units()
                 ->with('floor')
@@ -246,7 +244,6 @@ class UnitController extends Controller
                             $unit->status->value,
                             $unit->floor_id,
                             $unit->floor?->label,
-                            $unit->area_sqm,
                             $unit->bedrooms,
                         ]);
                     }
@@ -269,7 +266,6 @@ class UnitController extends Controller
             'floor_id' => $validated['floorId'] ?? null,
             'unit_number' => $validated['unitNumber'],
             'type' => $validated['type'] ?? 'apartment',
-            'area_sqm' => $validated['areaSqm'] ?? null,
             'bedrooms' => $validated['bedrooms'] ?? null,
             'status' => $validated['status'] ?? 'active',
         ]);
@@ -317,7 +313,6 @@ class UnitController extends Controller
             'floor_id' => array_key_exists('floorId', $validated) ? $validated['floorId'] : $unit->floor_id,
             'unit_number' => $validated['unitNumber'] ?? $unit->unit_number,
             'type' => $validated['type'] ?? $unit->type,
-            'area_sqm' => array_key_exists('areaSqm', $validated) ? $validated['areaSqm'] : $unit->area_sqm,
             'bedrooms' => array_key_exists('bedrooms', $validated) ? $validated['bedrooms'] : $unit->bedrooms,
             'status' => $validated['status'] ?? $unit->status,
         ])->save();

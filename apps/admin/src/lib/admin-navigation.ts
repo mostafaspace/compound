@@ -21,8 +21,13 @@ function hasRole(user: RoleLike, role: string): boolean {
   return user.roles?.includes(role) ?? false;
 }
 
+const legacyPermissionRoles: Record<string, string[]> = {
+  lookup_vehicles: ["compound_admin", "compound_head", "president", "security_guard", "support_agent"],
+};
+
 function hasPermission(user: RoleLike, permission: string): boolean {
   if (hasRole(user, "super_admin")) return true;
+  if (legacyPermissionRoles[permission]?.some((role) => hasRole(user, role))) return true;
   return user.permissions?.includes(permission) ?? false;
 }
 
@@ -42,10 +47,9 @@ const adminRouteRegistry: AdminSection[] = [
   { href: "/compounds/new", labelKey: "newCompound", group: "operate", icon: "Building2", keywords: ["create compound", "add compound"], requiredRole: "super_admin", parentHref: "/compounds" },
   { href: "/onboarding", labelKey: "onboarding", group: "operate", icon: "UserPlus", keywords: ["owners", "registration", "verification"], sidebar: true },
   { href: "/units/assign", labelKey: "units", group: "operate", icon: "Users", keywords: ["apartments", "residents", "assignment"], sidebar: true },
-  { href: "/vehicles", labelKey: "vehicles", group: "operate", icon: "Car", keywords: ["cars", "plates", "stickers", "vehicle lookup"], requiredPermission: "lookup_vehicles", sidebar: true },
+  { href: "/vehicles", labelKey: "vehicles", group: "operate", icon: "Car", keywords: ["cars", "plates", "vehicles", "vehicle lookup"], requiredPermission: "lookup_vehicles", sidebar: true },
   { href: "/visitors", labelKey: "visitors", group: "operate", icon: "DoorOpen", keywords: ["guests", "passes", "gate visitors"], sidebar: true },
   { href: "/finance", labelKey: "finance", group: "operate", icon: "WalletCards", keywords: ["accounts", "payments", "balances"], sidebar: true },
-  { href: "/finance/advanced", labelKey: "financeAdvanced", group: "operate", icon: "Landmark", keywords: ["reserve funds", "budgets", "expenses", "vendors"], parentHref: "/finance" },
   { href: "/finance/reports", labelKey: "financeReports", group: "operate", icon: "Receipt", keywords: ["financial reports", "payment reports"], parentHref: "/finance" },
   { href: "/dues", labelKey: "dues", group: "operate", icon: "Receipt", keywords: ["charges", "recurring charges", "dues"], sidebar: true },
   { href: "/documents", labelKey: "documents", group: "community", icon: "FileText", keywords: ["files", "resident documents"], sidebar: true },

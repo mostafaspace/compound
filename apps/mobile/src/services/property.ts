@@ -25,6 +25,7 @@ export interface PageQuery {
 }
 
 export const propertyApi = api.injectEndpoints({
+  overrideExisting: true,
   endpoints: (builder) => ({
     getUnits: builder.query<UnitMembership[], void>({
       query: () => "/my/units?perPage=20",
@@ -193,7 +194,7 @@ export const propertyApi = api.injectEndpoints({
       }),
       invalidatesTags: ["Notification"],
     }),
-    createAnnouncement: builder.mutation<void, {
+    createAnnouncement: builder.mutation<any, {
       titleEn: string;
       titleAr: string;
       bodyEn: string;
@@ -210,6 +211,16 @@ export const propertyApi = api.injectEndpoints({
         method: "POST",
         body,
       }),
+      transformResponse: (response: ApiEnvelope<any>) => response.data,
+      invalidatesTags: ["Announcement"],
+    }),
+    uploadAnnouncementAttachment: builder.mutation<any, { announcementId: string | number; formData: FormData }>({
+      query: ({ announcementId, formData }) => ({
+        url: `/announcements/${announcementId}/attachments`,
+        method: "POST",
+        body: formData,
+      }),
+      transformResponse: (response: ApiEnvelope<any>) => response.data,
       invalidatesTags: ["Announcement"],
     }),
     previewAnnouncementRecipients: builder.mutation<{ recipientCount: number }, { targetType: string; targetIds?: string[]; targetRole?: string; requiresVerifiedMembership?: boolean }>({
@@ -246,6 +257,7 @@ export const {
   useUpdateIssueMutation,
   useEscalateIssueMutation,
   useCreateAnnouncementMutation,
+  useUploadAnnouncementAttachmentMutation,
   useMarkNotificationReadMutation,
   useArchiveNotificationMutation,
   useDeleteIssueAttachmentMutation,

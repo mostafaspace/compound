@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
+import { normalizeDigits } from "@/lib/numerals";
 
 interface AdminSearchItem {
   href: string;
@@ -19,7 +20,7 @@ interface AdminGlobalSearchProps {
 }
 
 function normalize(value: string): string {
-  return value.trim().toLowerCase();
+  return normalizeDigits(value).trim().toLowerCase();
 }
 
 export function AdminGlobalSearch({
@@ -58,7 +59,7 @@ export function AdminGlobalSearch({
     }
 
     const params = new URLSearchParams();
-    if (normalizedQuery) params.set("q", query.trim());
+    if (normalizedQuery) params.set("q", normalizeDigits(query).trim());
     window.location.assign(`/vehicles${params.toString() ? `?${params.toString()}` : ""}`);
   }
 

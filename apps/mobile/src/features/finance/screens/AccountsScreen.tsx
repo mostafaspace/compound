@@ -36,8 +36,8 @@ export const AccountsScreen = () => {
   const [paymentNotes, setPaymentNotes] = useState("");
   const [paymentMessage, setPaymentMessage] = useState<string | null>(null);
 
-  const { data: accountDetail, isFetching: isFetchingDetail } = useGetAccountDetailQuery(selectedAccountId!, { 
-    skip: !selectedAccountId 
+  const { data: accountDetail, isFetching: isFetchingDetail, refetch: refetchAccountDetail } = useGetAccountDetailQuery(selectedAccountId!, {
+    skip: !selectedAccountId
   });
   
   const [submitPayment, { isLoading: isSubmitting }] = useSubmitPaymentMutation();
@@ -57,6 +57,11 @@ export const AccountsScreen = () => {
         accountId: selectedAccountId,
         body: formData,
       }).unwrap();
+
+      await Promise.all([
+        refetchAccounts(),
+        refetchAccountDetail(),
+      ]);
 
       setPaymentMessage(t("Finance.submitSuccess"));
       setTimeout(() => {

@@ -38,7 +38,6 @@ class UpdateUnitRequest extends FormRequest
                     ->ignore($unit?->id),
             ],
             'type' => ['sometimes', 'required', Rule::enum(UnitType::class)],
-            'areaSqm' => ['sometimes', 'nullable', 'numeric', 'min:0', 'max:999999.99'],
             'bedrooms' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:50'],
             'status' => ['sometimes', 'required', Rule::enum(UnitStatus::class)],
         ];

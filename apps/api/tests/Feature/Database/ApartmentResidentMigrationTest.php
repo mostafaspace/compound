@@ -27,8 +27,8 @@ class ApartmentResidentMigrationTest extends TestCase
     {
         $this->createLegacyUnitMembershipsTable();
 
-        $unit = Unit::factory()->create(['has_vehicle' => false]);
-        $unitWithoutVehicle = Unit::factory()->create(['has_vehicle' => true]);
+        $unit = Unit::factory()->create();
+        $unitWithoutVehicle = Unit::factory()->create();
         $user = User::factory()->create();
         $creator = User::factory()->create();
         $now = now()->subDay();
@@ -100,14 +100,6 @@ class ApartmentResidentMigrationTest extends TestCase
             'code' => 'P-42',
             'notes' => 'Migrated from unit_memberships:1001',
         ]);
-        $this->assertDatabaseHas('units', [
-            'id' => $unit->id,
-            'has_vehicle' => true,
-        ]);
-        $this->assertDatabaseHas('units', [
-            'id' => $unitWithoutVehicle->id,
-            'has_vehicle' => false,
-        ]);
         $this->assertSame(1, DB::table('apartment_residents')->where('id', 1001)->count());
         $this->assertSame(1, DB::table('apartment_vehicles')->where('plate', 'ABC-123')->count());
         $this->assertSame(1, DB::table('apartment_parking_spots')->where('code', 'P-42')->count());
@@ -165,11 +157,6 @@ class ApartmentResidentMigrationTest extends TestCase
         ]);
 
         $migration = $this->runApartmentResidentMigration();
-        $this->assertDatabaseHas('units', [
-            'id' => $unit->id,
-            'has_vehicle' => true,
-        ]);
-
         $migration->down();
 
         $this->assertDatabaseMissing('apartment_residents', ['id' => 2001]);
@@ -185,10 +172,6 @@ class ApartmentResidentMigrationTest extends TestCase
             'unit_id' => $unit->id,
             'code' => 'ROLL-P',
             'notes' => 'Existing spot',
-        ]);
-        $this->assertDatabaseHas('units', [
-            'id' => $unit->id,
-            'has_vehicle' => true,
         ]);
     }
 

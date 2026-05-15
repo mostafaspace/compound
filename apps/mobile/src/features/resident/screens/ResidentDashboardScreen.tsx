@@ -37,7 +37,7 @@ export const ResidentDashboardScreen = ({ navigation }: { navigation: ResidentDa
           <ActionTile
             title={t('Apartments.label', { defaultValue: 'My Apartment(s)' })}
             icon="building"
-            subtitle={t('Apartments.quickAction', { defaultValue: 'Residents, vehicles, documents, and finance' })}
+            subtitle={t('Apartments.quickAction', { defaultValue: 'Residents, vehicles, documents, and contributions' })}
             onPress={() => navigation.navigate('Apartments', { screen: 'ApartmentsList' })}
           />
           <ActionTile title={t('Visitors.label', 'Visitors')} icon="visitors" />

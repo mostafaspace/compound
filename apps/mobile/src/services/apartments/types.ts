@@ -17,10 +17,8 @@ export type ApartmentUnit = {
   floorId: string | null;
   unitNumber: string;
   type: string;
-  areaSqm: number | string | null;
   bedrooms: number | null;
   status: string;
-  hasVehicle: boolean;
   hasParking: boolean;
 };
 

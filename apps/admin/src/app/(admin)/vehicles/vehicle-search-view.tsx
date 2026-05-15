@@ -7,6 +7,7 @@ import { lookupVehiclesAction, notifyVehicleOwnerAction } from "./actions";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useToast } from "@/components/ui/toast";
+import { normalizeDigits } from "@/lib/numerals";
 
 interface VehicleSearchViewProps {
   initialResults?: VehicleLookupResult[];
@@ -16,7 +17,7 @@ export function VehicleSearchView({ initialResults = [] }: VehicleSearchViewProp
   const t = useTranslations("Vehicles");
   const searchParams = useSearchParams();
   const router = useRouter();
-  const initialQuery = searchParams.get("q") || "";
+  const initialQuery = normalizeDigits(searchParams.get("q") || "");
   const { success, error: toastError } = useToast();
   
   const [query, setQuery] = useState(initialQuery);
@@ -29,7 +30,7 @@ export function VehicleSearchView({ initialResults = [] }: VehicleSearchViewProp
   const searchIdRef = useRef(0);
 
   const performSearch = async (q: string) => {
-    const trimmedQuery = q.trim();
+    const trimmedQuery = normalizeDigits(q).trim();
     const searchId = searchIdRef.current + 1;
     searchIdRef.current = searchId;
     setSearchError(null);
@@ -65,7 +66,7 @@ export function VehicleSearchView({ initialResults = [] }: VehicleSearchViewProp
     e.preventDefault();
     const form = e.currentTarget as HTMLFormElement;
     const formData = new FormData(form);
-    const submittedQuery = String(formData.get("q") ?? query);
+    const submittedQuery = normalizeDigits(String(formData.get("q") ?? query));
     const trimmedQuery = submittedQuery.trim();
     setQuery(submittedQuery);
 
@@ -112,8 +113,8 @@ export function VehicleSearchView({ initialResults = [] }: VehicleSearchViewProp
           name="q"
           type="text"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onInput={(e) => setQuery(e.currentTarget.value)}
+          onChange={(e) => setQuery(normalizeDigits(e.target.value))}
+          onInput={(e) => setQuery(normalizeDigits(e.currentTarget.value))}
           placeholder={t("searchPlaceholder")}
           className="w-full h-14 ps-12 pe-28 rounded-2xl border border-line bg-panel text-lg font-medium shadow-sm focus:border-brand focus:ring-4 focus:ring-brand/10 outline-none transition-all"
           autoFocus
@@ -164,12 +165,6 @@ export function VehicleSearchView({ initialResults = [] }: VehicleSearchViewProp
                   <p className="mt-1 text-sm text-muted font-medium">
                     {[result.color, result.make, result.model].filter(Boolean).join(" ")}
                   </p>
-                  {result.stickerCode && (
-                    <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 bg-background border border-line rounded-xl shadow-inner">
-                      <span className="text-[10px] font-bold text-muted uppercase">{t("sticker")}</span>
-                      <span className="text-sm font-bold text-foreground">{result.stickerCode}</span>
-                    </div>
-                  )}
                 </div>
               </div>
               

@@ -9,6 +9,7 @@ use App\Enums\Permission;
 use App\Enums\UnitRelationType;
 use App\Enums\UserRole;
 use App\Enums\VerificationStatus;
+use App\Models\Finance\CollectionCampaign;
 use App\Models\Finance\LedgerEntry;
 use App\Models\Finance\PaymentSubmission;
 use App\Models\Finance\UnitAccount;
@@ -144,6 +145,45 @@ class FinanceTest extends TestCase
             'amount' => 100,
             'method' => 'bank_transfer',
         ])->assertForbidden();
+    }
+
+    public function test_resident_finance_list_auto_creates_account_and_applies_active_contribution(): void
+    {
+        $resident = User::factory()->create(['role' => UserRole::ResidentOwner->value]);
+        $compound = Compound::factory()->create();
+        $building = Building::factory()->for($compound)->create();
+        $unit = Unit::factory()->for($compound)->for($building)->create(['unit_number' => 'H-F02-F02']);
+
+        $unit->apartmentResidents()->create([
+            'user_id' => $resident->id,
+            'relation_type' => UnitRelationType::Owner->value,
+            'verification_status' => VerificationStatus::Verified->value,
+            'is_primary' => true,
+        ]);
+
+        CollectionCampaign::factory()
+            ->for($compound)
+            ->active()
+            ->create([
+                'name' => 'Camera contribution',
+                'description' => 'Shared camera system',
+                'target_amount' => '1000.00',
+                'target_type' => 'building',
+                'target_ids' => [$building->id],
+            ]);
+
+        Sanctum::actingAs($resident);
+
+        $this->getJson('/api/v1/my/finance/unit-accounts')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.unitId', $unit->id)
+            ->assertJsonPath('data.0.balance', '1000.00');
+
+        $this->assertDatabaseHas('unit_accounts', [
+            'unit_id' => $unit->id,
+            'balance' => '1000.00',
+        ]);
     }
 
     public function test_resident_can_submit_payment_against_own_ledger_entries(): void
@@ -840,6 +880,26 @@ class FinanceTest extends TestCase
         $this->assertSame('تم رفض الدفعة', $rejectNotif->metadata['titleTranslations']['ar'] ?? null);
     }
 
+    public function test_finance_reviewer_can_download_payment_proof(): void
+    {
+        Storage::fake('local');
+        config(['filesystems.default' => 'local']);
+
+        $reviewer = User::factory()->create(['role' => UserRole::FinanceReviewer->value]);
+        $account = UnitAccount::factory()->for($this->createUnit())->create(['balance' => '1000.00']);
+        Storage::disk('local')->put('payment-proofs/demo/proof.pdf', 'proof-pdf-bytes');
+        $payment = PaymentSubmission::factory()->for($account)->create([
+            'status' => PaymentStatus::Submitted->value,
+            'proof_path' => 'payment-proofs/demo/proof.pdf',
+        ]);
+
+        Sanctum::actingAs($reviewer);
+
+        $this->get("/api/v1/finance/payment-submissions/{$payment->id}/proof")
+            ->assertOk()
+            ->assertHeader('content-disposition');
+    }
+
     // -------------------------------------------------------------------------
     // P13 – Payment correction, payment date, and allocation
     // -------------------------------------------------------------------------
@@ -1025,6 +1085,99 @@ class FinanceTest extends TestCase
 
         $this->assertNotNull($notification);
         $this->assertNotEmpty($notification->metadata['titleTranslations']['ar'] ?? '');
+    }
+
+    public function test_active_contribution_campaign_applies_to_future_accounts_without_duplicate_charge(): void
+    {
+        $reviewer = User::factory()->create(['role' => UserRole::FinanceReviewer->value]);
+        $compound = Compound::factory()->create();
+        $targetBuilding = Building::factory()->for($compound)->create();
+        $otherBuilding = Building::factory()->for($compound)->create();
+        $targetUnit = Unit::factory()->for($compound)->for($targetBuilding)->create(['unit_number' => 'A-101']);
+        $futureUnit = Unit::factory()->for($compound)->for($targetBuilding)->create(['unit_number' => 'A-102']);
+        $otherUnit = Unit::factory()->for($compound)->for($otherBuilding)->create(['unit_number' => 'B-101']);
+
+        $campaign = CollectionCampaign::factory()
+            ->for($compound)
+            ->active()
+            ->create([
+                'name' => 'Camera contribution',
+                'description' => 'Shared camera system',
+                'target_amount' => '1000.00',
+                'target_type' => 'building',
+                'target_ids' => [$targetBuilding->id],
+            ]);
+
+        Sanctum::actingAs($reviewer);
+
+        $targetAccountId = $this->postJson('/api/v1/finance/unit-accounts', [
+            'unitId' => $targetUnit->id,
+            'currency' => 'EGP',
+        ])->assertCreated()->json('data.id');
+
+        $futureAccountId = $this->postJson('/api/v1/finance/unit-accounts', [
+            'unitId' => $futureUnit->id,
+            'currency' => 'EGP',
+        ])->assertCreated()->json('data.id');
+
+        $otherAccountId = $this->postJson('/api/v1/finance/unit-accounts', [
+            'unitId' => $otherUnit->id,
+            'currency' => 'EGP',
+        ])->assertCreated()->json('data.id');
+
+        $this->assertDatabaseHas('unit_accounts', ['id' => $targetAccountId, 'balance' => '1000.00']);
+        $this->assertDatabaseHas('unit_accounts', ['id' => $futureAccountId, 'balance' => '1000.00']);
+        $this->assertDatabaseHas('unit_accounts', ['id' => $otherAccountId, 'balance' => '0.00']);
+        $this->assertSame(1, LedgerEntry::query()->where('unit_account_id', $futureAccountId)->where('reference_id', $campaign->id)->count());
+
+        app(\App\Services\FinanceService::class)->applyActiveContributionCampaignsForAccount(UnitAccount::query()->findOrFail($futureAccountId), $reviewer);
+
+        $this->assertSame(1, LedgerEntry::query()->where('unit_account_id', $futureAccountId)->where('reference_id', $campaign->id)->count());
+        $this->assertDatabaseHas('unit_accounts', ['id' => $futureAccountId, 'balance' => '1000.00']);
+    }
+
+    public function test_active_contribution_campaign_creates_accounts_for_matching_units_when_charges_are_applied(): void
+    {
+        $reviewer = User::factory()->create(['role' => UserRole::FinanceReviewer->value]);
+        $compound = Compound::factory()->create();
+        $targetBuilding = Building::factory()->for($compound)->create();
+        $otherBuilding = Building::factory()->for($compound)->create();
+        $targetUnit = Unit::factory()->for($compound)->for($targetBuilding)->create(['unit_number' => 'H-F02-F02']);
+        $otherUnit = Unit::factory()->for($compound)->for($otherBuilding)->create(['unit_number' => 'A-F01-F01']);
+
+        $campaign = CollectionCampaign::factory()
+            ->for($compound)
+            ->active()
+            ->create([
+                'name' => 'Camera contribution',
+                'description' => 'Shared camera system',
+                'target_amount' => '1000.00',
+                'target_type' => 'building',
+                'target_ids' => [$targetBuilding->id],
+            ]);
+
+        Sanctum::actingAs($reviewer);
+
+        $this->postJson("/api/v1/finance/collection-campaigns/{$campaign->id}/charges", [
+            'amount' => 1000,
+            'description' => 'Shared camera system',
+        ])
+            ->assertOk()
+            ->assertJsonPath('posted', 1);
+
+        $this->assertDatabaseHas('unit_accounts', [
+            'unit_id' => $targetUnit->id,
+            'balance' => '1000.00',
+        ]);
+        $this->assertDatabaseMissing('unit_accounts', [
+            'unit_id' => $otherUnit->id,
+        ]);
+        $this->assertDatabaseHas('ledger_entries', [
+            'type' => LedgerEntryType::Charge->value,
+            'amount' => '1000.00',
+            'reference_type' => CollectionCampaign::class,
+            'reference_id' => $campaign->id,
+        ]);
     }
 
     private function createUnit(string $unitNumber = 'A-101'): Unit

@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
+import { AdminPagination } from "@/components/admin-pagination";
 import { SiteNav } from "@/components/site-nav";
-import { getCurrentUser, getMeetings, getMeetingActionItems } from "@/lib/api";
+import { getCurrentUser, getMeetingActionItems, getMeetingsPage } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
 
 // ─── Badge ───────────────────────────────────────────────────────────────────
@@ -43,19 +44,22 @@ function ScopeBadge({ scope }: { scope: string }) {
 export default async function MeetingsPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ status?: string; scope?: string }>;
+  searchParams?: Promise<{ page?: string; status?: string; scope?: string }>;
 }) {
   await requireAdminUser(getCurrentUser, ["super_admin", "compound_admin", "board_member"]);
 
   const sp = searchParams ? await searchParams : {};
   const status = typeof sp.status === "string" ? sp.status : "all";
   const scope = typeof sp.scope === "string" ? sp.scope : "";
+  const page = Math.max(1, Number(sp.page ?? "1") || 1);
 
-  const [t, meetings, actionItems] = await Promise.all([
+  const [t, commonT, meetingsPage, actionItems] = await Promise.all([
     getTranslations("Meetings"),
-    getMeetings({ status: status !== "all" ? status : undefined, scope: scope || undefined }),
+    getTranslations("Common"),
+    getMeetingsPage({ page, status: status !== "all" ? status : undefined, scope: scope || undefined }),
     getMeetingActionItems({ status: "open" }),
   ]);
+  const meetings = meetingsPage.data;
 
   const draftCount = meetings.filter((m) => m.status === "draft").length;
   const scheduledCount = meetings.filter((m) => m.status === "scheduled").length;
@@ -147,42 +151,70 @@ export default async function MeetingsPage({
         </form>
 
         {/* Meeting list */}
-        {meetings.length === 0 ? (
-          <div className="rounded-lg border border-line bg-panel py-16 text-center">
-            <p className="text-sm text-muted">{t("empty")}</p>
+        <div className="overflow-hidden rounded-lg border border-line bg-panel">
+          <div className="border-b border-line px-5 py-3 text-sm text-muted">
+            {commonT("pagination.summary", {
+              from: meetingsPage.meta.from ?? 0,
+              to: meetingsPage.meta.to ?? 0,
+              total: meetingsPage.meta.total,
+            })}
           </div>
-        ) : (
-          <div className="divide-y divide-line rounded-lg border border-line bg-panel">
-            {meetings.map((meeting) => (
-              <Link
-                key={meeting.id}
-                href={`/meetings/${meeting.id}`}
-                className="flex items-start gap-4 px-5 py-4 hover:bg-panel-hover transition-colors"
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-semibold truncate">{meeting.title}</span>
-                    <StatusBadge status={meeting.status} />
-                    <ScopeBadge scope={meeting.scope} />
+          {meetings.length === 0 ? (
+            <div className="py-16 text-center">
+              <p className="text-sm text-muted">{t("empty")}</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-line">
+              {meetings.map((meeting) => (
+                <Link
+                  key={meeting.id}
+                  href={`/meetings/${meeting.id}`}
+                  className="flex items-start gap-4 px-5 py-4 transition-colors hover:bg-panel-hover"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="truncate font-semibold">{meeting.title}</span>
+                      <StatusBadge status={meeting.status} />
+                      <ScopeBadge scope={meeting.scope} />
+                    </div>
+                    {meeting.scheduledAt && (
+                      <p className="mt-1 text-xs text-muted">
+                        {t("fields.scheduledAt")}: {new Date(meeting.scheduledAt).toLocaleString()}
+                      </p>
+                    )}
+                    {meeting.location && (
+                      <p className="mt-0.5 text-xs text-muted">
+                        {t("fields.location")}: {meeting.location}
+                      </p>
+                    )}
                   </div>
-                  {meeting.scheduledAt && (
-                    <p className="mt-1 text-xs text-muted">
-                      {t("fields.scheduledAt")}: {new Date(meeting.scheduledAt).toLocaleString()}
-                    </p>
-                  )}
-                  {meeting.location && (
-                    <p className="mt-0.5 text-xs text-muted">
-                      {t("fields.location")}: {meeting.location}
-                    </p>
-                  )}
-                </div>
-                <span className="shrink-0 text-xs text-muted">
-                  {new Date(meeting.createdAt).toLocaleDateString()}
-                </span>
-              </Link>
-            ))}
-          </div>
-        )}
+                  <span className="shrink-0 text-xs text-muted">
+                    {new Date(meeting.createdAt).toLocaleDateString()}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          )}
+          <AdminPagination
+            basePath="/meetings"
+            labels={{
+              first: commonT("pagination.first"),
+              last: commonT("pagination.last"),
+              next: commonT("pagination.next"),
+              previous: commonT("pagination.previous"),
+              summary: commonT("pagination.summary", {
+                from: meetingsPage.meta.from ?? 0,
+                to: meetingsPage.meta.to ?? 0,
+                total: meetingsPage.meta.total,
+              }),
+            }}
+            meta={meetingsPage.meta}
+            params={{
+              scope: scope || undefined,
+              status: status !== "all" ? status : undefined,
+            }}
+          />
+        </div>
       </section>
     </main>
   );

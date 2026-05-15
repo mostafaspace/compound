@@ -72,7 +72,7 @@ class OwnerRegistrationTest extends TestCase
             'compound_id' => $compound->id,
             'building_id' => $building->id,
             'email' => 'owner@example.com',
-            'phone' => '+201000000123',
+            'phone' => '201000000123',
             'status' => 'under_review',
             'owner_acknowledged' => true,
         ]);
@@ -92,6 +92,20 @@ class OwnerRegistrationTest extends TestCase
         $this->postJson('/api/v1/public/owner-registration-requests', $payload)
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['ownerAcknowledged', 'idCardPdf', 'contractPdf']);
+    }
+
+    public function test_public_application_requires_arabic_owner_name_and_numeric_phone(): void
+    {
+        $compound = Compound::factory()->create(['code' => 'NEXT-POINT', 'status' => 'active']);
+        $building = Building::factory()->for($compound)->create(['code' => 'H']);
+
+        $payload = $this->validPayload($building->id);
+        $payload['fullNameArabic'] = 'Mostafa Ahmed Mohamed Ali';
+        $payload['phone'] = '+201000000123';
+
+        $this->postJson('/api/v1/public/owner-registration-requests', $payload)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['fullNameArabic', 'phone']);
     }
 
     public function test_admin_can_deny_application_and_status_is_visible_to_original_device(): void
@@ -214,7 +228,7 @@ class OwnerRegistrationTest extends TestCase
     {
         return [
             'fullNameArabic' => 'مصطفى أحمد محمد علي',
-            'phone' => '+201000000123',
+            'phone' => '201000000123',
             'email' => 'owner@example.com',
             'apartmentCode' => 'HR-F01-F02',
             'buildingId' => $buildingId,

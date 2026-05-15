@@ -23,6 +23,7 @@ export type AppIconName =
   | 'id'
   | 'issues'
   | 'more'
+  | 'moon'
   | 'notifications'
   | 'polls'
   | 'plus'
@@ -31,6 +32,7 @@ export type AppIconName =
   | 'scanner'
   | 'settings'
   | 'shield'
+  | 'sun'
   | 'trash'
   | 'units'
   | 'user'
@@ -190,6 +192,9 @@ export function Icon({
           <Circle {...strokeProps} cx="19" cy="12" r="1" />
         </>
       ) : null}
+      {name === 'moon' ? (
+        <Path {...strokeProps} d="M20.5 14.5A8 8 0 0 1 9.5 3.5 7 7 0 1 0 20.5 14.5Z" />
+      ) : null}
       {name === 'polls' ? (
         <>
           <Path {...strokeProps} d="M5 19V9" />
@@ -241,6 +246,12 @@ export function Icon({
       ) : null}
       {name === 'shield' ? (
         <Path {...strokeProps} d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
+      ) : null}
+      {name === 'sun' ? (
+        <>
+          <Circle {...strokeProps} cx="12" cy="12" r="4" />
+          <Path {...strokeProps} d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+        </>
       ) : null}
       {name === 'units' ? (
         <>

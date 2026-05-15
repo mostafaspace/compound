@@ -116,7 +116,7 @@ class ImportBatchController extends Controller
 
             // Add a sample row so users can see the expected format
             $sampleRow = match ($importType) {
-                ImportBatchType::Units => ['B01', '101', 'apartment', '120.5', '3', '1'],
+                ImportBatchType::Units => ['B01', '101', 'apartment', '3', '1'],
                 ImportBatchType::Users => ['John Smith', 'john@example.com', '+201234567890', 'resident_owner', '101', 'owner'],
                 ImportBatchType::OpeningBalances => ['101', '5000.00', 'EGP', 'Opening balance as of handover', '2026-01-01'],
             };

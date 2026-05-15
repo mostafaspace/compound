@@ -192,7 +192,7 @@ export function ReceiptSubmitSheet({
           multiline
           value={notes}
           onChangeText={setNotes}
-          placeholder="Optional note for the finance team"
+          placeholder="Optional note for the contribution review team"
           placeholderTextColor={colors.text.secondary[isDark ? "dark" : "light"]}
           textAlignVertical="top"
           style={[

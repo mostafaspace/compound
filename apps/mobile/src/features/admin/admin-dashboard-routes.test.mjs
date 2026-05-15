@@ -8,6 +8,7 @@ import {
 
 test("profile shortcut routes admins into More settings instead of a missing profile screen", () => {
   assert.deepEqual(getAdminDashboardNavigationTarget("profile"), {
+    navigator: "tab",
     screen: "More",
     params: { screen: "Settings" },
   });
@@ -15,8 +16,24 @@ test("profile shortcut routes admins into More settings instead of a missing pro
 
 test("polls shortcut routes admins into the More stack poll screen", () => {
   assert.deepEqual(getAdminDashboardNavigationTarget("Polls"), {
+    navigator: "tab",
     screen: "More",
     params: { screen: "Polls" },
+  });
+});
+
+test("root shortcuts route through the root stack", () => {
+  assert.deepEqual(getAdminDashboardNavigationTarget("CreatePoll"), {
+    navigator: "root",
+    screen: "CreatePoll",
+  });
+  assert.deepEqual(getAdminDashboardNavigationTarget("AuditLog"), {
+    navigator: "root",
+    screen: "AuditLog",
+  });
+  assert.deepEqual(getAdminDashboardNavigationTarget("AdminInvitations"), {
+    navigator: "root",
+    screen: "AdminInvitations",
   });
 });
 
@@ -29,13 +46,13 @@ test("quick actions expose the production routes expected on the dashboard", () 
   assert.deepEqual(
     routes,
     [
-      "Visitors",
-      "Units",
-      "Finance",
-      "AuditLog",
-      "AdminInvitations",
-      "Polls",
       "CreatePoll",
+      "Polls",
+      "Units",
+      "Visitors",
+      "Finance",
+      "AdminInvitations",
+      "AuditLog",
     ]
   );
 });

@@ -205,7 +205,6 @@ class ImportService
                 'building_id' => $building->id,
                 'floor_id' => $floorId,
                 'type' => $unitType,
-                'area_sqm' => filled($row['area_sqm'] ?? '') ? (float) $row['area_sqm'] : null,
                 'bedrooms' => filled($row['bedrooms'] ?? '') ? (int) $row['bedrooms'] : null,
             ];
 

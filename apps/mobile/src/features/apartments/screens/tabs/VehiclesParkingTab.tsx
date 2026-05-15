@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { FlatList, Pressable, ScrollView, StyleSheet, Text, useColorScheme, View } from "react-native";
+import { FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, useColorScheme, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../../../components/ui/Button";
 import { colors, radii, shadows, spacing, typography } from "../../../../theme";
@@ -9,10 +9,11 @@ import type { ApartmentDetail, ApartmentVehicle, ApartmentParkingSpot } from "..
 import { VehicleSheet } from "../../components/VehicleSheet";
 import { ParkingSpotSheet } from "../../components/ParkingSpotSheet";
 import { isRtlLanguage, rowDirectionStyle, textDirectionStyle } from "../../../../i18n/direction";
+import type { ApartmentTabRefreshProps } from "../ApartmentDetailScreen";
 
 const MAX = 4;
 
-export function VehiclesParkingTab({ apartment }: { apartment: ApartmentDetail }) {
+export function VehiclesParkingTab({ apartment, onRefresh, refreshing, onContentScroll }: { apartment: ApartmentDetail } & ApartmentTabRefreshProps) {
   const { t, i18n } = useTranslation();
   const isDark = useColorScheme() === "dark";
   const isRtl = isRtlLanguage(i18n.language);
@@ -38,7 +39,7 @@ export function VehiclesParkingTab({ apartment }: { apartment: ApartmentDetail }
         <Text style={[styles.cardTitle, { color: text }, textDirectionStyle(isRtl)]}>
           {[v.color, v.make, v.model].filter(Boolean).join(" ") || t("Vehicles.vehicle")}
         </Text>
-        {v.stickerCode ? <Text style={[styles.cardMeta, { color: secondary }, textDirectionStyle(isRtl)]}>{t("Vehicles.sticker", { code: v.stickerCode })}</Text> : null}
+        {v.notes ? <Text style={[styles.cardMeta, { color: secondary }, textDirectionStyle(isRtl)]}>{v.notes}</Text> : null}
       </View>
       <View style={[styles.rowActions, { alignItems: isRtl ? "flex-start" : "flex-end" }]}>
         <Pressable onPress={() => setVehicleSheet({ open: true, vehicle: v })} style={styles.action}>
@@ -72,7 +73,12 @@ export function VehiclesParkingTab({ apartment }: { apartment: ApartmentDetail }
   );
 
   return (
-    <ScrollView contentContainerStyle={styles.scroll}>
+    <ScrollView
+      contentContainerStyle={styles.scroll}
+      onScroll={onContentScroll}
+      scrollEventThrottle={16}
+      refreshControl={<RefreshControl refreshing={Boolean(refreshing)} onRefresh={onRefresh} />}
+    >
       {/* ─── Vehicles section ─── */}
       <View style={[styles.sectionHeader, rowDirectionStyle(isRtl)]}>
         <View style={textDirectionStyle(isRtl)}>

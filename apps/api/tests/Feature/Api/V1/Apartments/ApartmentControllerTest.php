@@ -38,7 +38,7 @@ class ApartmentControllerTest extends TestCase
     public function test_show_returns_aggregate_payload(): void
     {
         $user = User::factory()->create();
-        $unit = Unit::factory()->create(['has_vehicle' => true, 'has_parking' => true]);
+        $unit = Unit::factory()->create(['has_parking' => true]);
         ApartmentResident::factory()->create([
             'unit_id' => $unit->id,
             'user_id' => $user->id,

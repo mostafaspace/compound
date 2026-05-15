@@ -257,7 +257,11 @@ class OwnerRegistrationController extends Controller
             category: NotificationCategory::Onboarding,
             title: 'Owner registration approved',
             body: "Your registration for {$registrationRequest->apartment_code} has been approved. You can now sign in.",
-            metadata: ['owner_registration_request_id' => $registrationRequest->id],
+            metadata: [
+                'type' => 'owner_registration_approved',
+                'owner_registration_request_id' => $registrationRequest->id,
+                'apartment_code' => $registrationRequest->apartment_code,
+            ],
             priority: 'high',
             respectPreferences: false,
         );

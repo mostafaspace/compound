@@ -6,8 +6,12 @@ import { redirect } from "next/navigation";
 
 import {
   approveFinancePayment,
+  applyCollectionCampaignCharges,
+  archiveCollectionCampaign,
+  createCollectionCampaign,
   createFinanceLedgerEntry,
   createFinanceUnitAccount,
+  publishCollectionCampaign,
   rejectFinancePayment,
   requestFinancePaymentCorrection,
 } from "@/lib/api";
@@ -26,7 +30,7 @@ export async function createFinanceUnitAccountAction(formData: FormData) {
   });
 
   revalidatePath("/finance");
-  redirect("/finance?accountCreated=1");
+  redirect("/finance?tab=create&accountCreated=1");
 }
 
 export async function createFinanceLedgerEntryAction(formData: FormData) {
@@ -42,7 +46,48 @@ export async function createFinanceLedgerEntryAction(formData: FormData) {
   });
 
   revalidatePath("/finance");
-  redirect("/finance?ledgerCreated=1");
+  redirect("/finance?tab=create&ledgerCreated=1");
+}
+
+export async function createContributionCampaignAction(formData: FormData) {
+  const amount = Number(formData.get("amount") ?? 0);
+  const description = String(formData.get("description") ?? "").trim();
+  const targetType = String(formData.get("targetType") ?? "compound").trim();
+  const targetIds = formData.getAll("targetIds").map((value) => String(value).trim()).filter(Boolean);
+
+  if (!Number.isFinite(amount) || amount <= 0 || !description) {
+    throw new Error("Contribution amount and description are required.");
+  }
+
+  if (targetType !== "compound" && targetIds.length === 0) {
+    throw new Error("Select at least one building or floor.");
+  }
+
+  const campaign = await createCollectionCampaign({
+    name: description,
+    description,
+    targetAmount: amount,
+    currency: "EGP",
+    targetType,
+    targetIds,
+  });
+
+  const activeCampaign = await publishCollectionCampaign(campaign.id);
+
+  await applyCollectionCampaignCharges(activeCampaign.id, {
+    amount,
+    description,
+  });
+
+  revalidatePath("/finance");
+  redirect("/finance?tab=campaigns&ledgerCreated=1");
+}
+
+export async function archiveContributionCampaignAction(campaignId: string) {
+  await archiveCollectionCampaign(campaignId);
+
+  revalidatePath("/finance");
+  redirect("/finance?tab=campaigns&campaignArchived=1");
 }
 
 export async function approveFinancePaymentAction(paymentSubmissionId: string, formData: FormData) {
@@ -53,7 +98,7 @@ export async function approveFinancePaymentAction(paymentSubmissionId: string, f
   });
 
   revalidatePath("/finance");
-  redirect("/finance?paymentApproved=1");
+  redirect("/finance?tab=submissions&paymentApproved=1");
 }
 
 export async function rejectFinancePaymentAction(paymentSubmissionId: string, formData: FormData) {
@@ -62,7 +107,7 @@ export async function rejectFinancePaymentAction(paymentSubmissionId: string, fo
   await rejectFinancePayment(paymentSubmissionId, { reason });
 
   revalidatePath("/finance");
-  redirect("/finance?paymentRejected=1");
+  redirect("/finance?tab=submissions&paymentRejected=1");
 }
 
 export async function requestCorrectionPaymentAction(paymentSubmissionId: string, formData: FormData) {
@@ -71,5 +116,5 @@ export async function requestCorrectionPaymentAction(paymentSubmissionId: string
   await requestFinancePaymentCorrection(paymentSubmissionId, { note });
 
   revalidatePath("/finance");
-  redirect("/finance?correctionRequested=1");
+  redirect("/finance?tab=submissions&correctionRequested=1");
 }

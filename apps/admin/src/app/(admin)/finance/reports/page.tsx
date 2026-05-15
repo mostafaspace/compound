@@ -154,7 +154,7 @@ export default async function FinanceReportsPage({ searchParams }: ReportsPagePr
                   {accounts.map((account) => (
                     <tr key={account.id}>
                       <td className="py-2 pe-4 font-medium">
-                        {(account as { unit?: { unitNumber?: string } }).unit?.unitNumber ?? account.unitId}
+                        {(account as { unit?: { unitNumber?: string } }).unit?.unitNumber ?? t("accounts.unitUnavailable")}
                       </td>
                       <td className="py-2 pe-4 text-muted">
                         {(account as { unit?: { building?: { name?: string } } }).unit?.building?.name ?? "—"}

@@ -14,6 +14,7 @@ import {
   createAnnouncement,
   publishAnnouncement,
   updateAnnouncement,
+  uploadAnnouncementAttachment,
 } from "@/lib/api";
 
 function nullableDate(value: FormDataEntryValue | null): string | null {
@@ -35,8 +36,6 @@ function targetIdsFromForm(formData: FormData): string[] | undefined {
 function announcementPayload(formData: FormData) {
   const targetType = String(formData.get("targetType") ?? "all") as AnnouncementTargetType;
   const targetRole = String(formData.get("targetRole") ?? "").trim();
-  const attachmentUrl = String(formData.get("attachmentUrl") ?? "").trim();
-  const attachmentName = String(formData.get("attachmentName") ?? "").trim();
 
   return {
     titleEn: String(formData.get("titleEn") ?? "").trim(),
@@ -52,12 +51,26 @@ function announcementPayload(formData: FormData) {
     requiresAcknowledgement: formData.get("requiresAcknowledgement") === "1",
     scheduledAt: nullableDate(formData.get("scheduledAt")),
     expiresAt: nullableDate(formData.get("expiresAt")),
-    attachments: attachmentUrl ? [{ name: attachmentName || attachmentUrl, url: attachmentUrl }] : undefined,
   };
 }
 
+function photoFilesFromForm(formData: FormData): File[] {
+  return formData
+    .getAll("photos")
+    .filter((value): value is File => value instanceof File && value.size > 0);
+}
+
+async function uploadAnnouncementPhotos(announcementId: string, formData: FormData): Promise<void> {
+  const files = photoFilesFromForm(formData);
+
+  for (const file of files) {
+    await uploadAnnouncementAttachment(announcementId, file);
+  }
+}
+
 export async function createAnnouncementAction(formData: FormData) {
-  await createAnnouncement(announcementPayload(formData));
+  const announcement = await createAnnouncement(announcementPayload(formData));
+  await uploadAnnouncementPhotos(announcement.id, formData);
 
   revalidatePath("/announcements");
   redirect("/announcements?created=1");
@@ -65,6 +78,7 @@ export async function createAnnouncementAction(formData: FormData) {
 
 export async function updateAnnouncementAction(announcementId: string, formData: FormData) {
   await updateAnnouncement(announcementId, announcementPayload(formData));
+  await uploadAnnouncementPhotos(announcementId, formData);
 
   revalidatePath("/announcements");
   redirect("/announcements?updated=1");

@@ -1,9 +1,10 @@
 import type { PollStatus } from "@compound/contracts";
 import Link from "next/link";
-import { getLocale } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 
+import { AdminPagination } from "@/components/admin-pagination";
 import { SiteNav } from "@/components/site-nav";
-import { getCurrentUser, getPolls } from "@/lib/api";
+import { getCurrentUser, getPollsPage } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
 import { publishPollAction, closePollAction } from "./actions";
 
@@ -20,14 +21,19 @@ function formatDate(value: string | null, locale: string): string {
 }
 
 interface PollsPageProps {
-  searchParams?: Promise<{ published?: string }>;
+  searchParams?: Promise<{ page?: string; published?: string }>;
 }
 
 export default async function PollsPage({ searchParams }: PollsPageProps) {
   await requireAdminUser(getCurrentUser);
-  const locale = await getLocale();
   const params = searchParams ? await searchParams : {};
-  const polls = await getPolls();
+  const page = Math.max(1, Number(params.page ?? "1") || 1);
+  const [locale, commonT, pollsPage] = await Promise.all([
+    getLocale(),
+    getTranslations("Common"),
+    getPollsPage({ page }),
+  ]);
+  const polls = pollsPage.data;
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -66,7 +72,16 @@ export default async function PollsPage({ searchParams }: PollsPageProps) {
         ) : null}
 
         <div className="rounded-lg border border-line bg-panel p-5">
-          <h2 className="text-lg font-semibold">All Polls ({polls.length})</h2>
+          <div className="flex flex-col gap-1 border-b border-line pb-4">
+            <h2 className="text-lg font-semibold">All Polls</h2>
+            <p className="text-sm text-muted">
+              {commonT("pagination.summary", {
+                from: pollsPage.meta.from ?? 0,
+                to: pollsPage.meta.to ?? 0,
+                total: pollsPage.meta.total,
+              })}
+            </p>
+          </div>
 
           {polls.length === 0 ? (
             <p className="mt-4 text-sm text-muted">No polls yet. Create your first poll.</p>
@@ -142,6 +157,21 @@ export default async function PollsPage({ searchParams }: PollsPageProps) {
               ))}
             </div>
           )}
+          <AdminPagination
+            basePath="/polls"
+            labels={{
+              first: commonT("pagination.first"),
+              last: commonT("pagination.last"),
+              next: commonT("pagination.next"),
+              previous: commonT("pagination.previous"),
+              summary: commonT("pagination.summary", {
+                from: pollsPage.meta.from ?? 0,
+                to: pollsPage.meta.to ?? 0,
+                total: pollsPage.meta.total,
+              }),
+            }}
+            meta={pollsPage.meta}
+          />
         </div>
       </section>
     </main>

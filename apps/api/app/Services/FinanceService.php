@@ -46,8 +46,30 @@ class FinanceService
                 );
             }
 
+            $this->applyActiveContributionCampaignsForAccount($account->load('unit'), $actor);
+
             return $account->refresh();
         });
+    }
+
+    public function ensureAccountForUnit(Unit $unit, ?User $actor = null, ?string $currency = null, bool $applyActiveCampaigns = true): UnitAccount
+    {
+        $unit->loadMissing('compound');
+
+        /** @var UnitAccount $account */
+        $account = UnitAccount::query()->firstOrCreate(
+            ['unit_id' => $unit->id],
+            [
+                'currency' => strtoupper($currency ?? $unit->compound?->currency ?? 'EGP'),
+                'balance' => '0.00',
+            ],
+        );
+
+        if ($applyActiveCampaigns) {
+            $this->applyActiveContributionCampaignsForAccount($account->load('unit'), $actor);
+        }
+
+        return $account->refresh();
     }
 
     public function postLedgerEntry(
@@ -447,13 +469,22 @@ class FinanceService
 
     public function applyCampaignCharges(
         CollectionCampaign $campaign,
-        array $unitAccountIds,
+        ?array $unitAccountIds,
         float $amount,
         string $description,
         User $actor,
     ): int {
         if ($campaign->status !== CampaignStatus::Active) {
             abort(422, 'Charges can only be applied to active campaigns.');
+        }
+
+        if ($unitAccountIds === null) {
+            $this->ensureAccountsForCampaign($campaign, $actor);
+            $unitAccountIds = $this->resolveCampaignAccountIds($campaign);
+        }
+
+        if ($unitAccountIds === []) {
+            return 0;
         }
 
         $matchingAccountsCount = UnitAccount::query()
@@ -471,6 +502,10 @@ class FinanceService
             $accounts = UnitAccount::query()->findMany($unitAccountIds);
 
             foreach ($accounts as $account) {
+                if ($this->campaignLedgerExists($campaign, $account)) {
+                    continue;
+                }
+
                 $this->postLedgerEntry(
                     account: $account,
                     type: LedgerEntryType::Charge,
@@ -496,6 +531,121 @@ class FinanceService
         );
 
         return $posted;
+    }
+
+    public function applyActiveContributionCampaignsForAccount(UnitAccount $account, ?User $actor = null): int
+    {
+        $account->loadMissing('unit');
+
+        if (! $account->unit) {
+            return 0;
+        }
+
+        $campaigns = CollectionCampaign::query()
+            ->where('compound_id', $account->unit->compound_id)
+            ->where('status', CampaignStatus::Active->value)
+            ->whereNotNull('target_amount')
+            ->get();
+
+        $posted = 0;
+
+        foreach ($campaigns as $campaign) {
+            if (! $this->campaignMatchesAccount($campaign, $account)) {
+                continue;
+            }
+
+            if ($this->campaignLedgerExists($campaign, $account)) {
+                continue;
+            }
+
+            $this->postLedgerEntry(
+                account: $account,
+                type: LedgerEntryType::Charge,
+                amount: (float) $campaign->target_amount,
+                description: $campaign->description ?: $campaign->name,
+                actor: $actor,
+                referenceType: CollectionCampaign::class,
+                referenceId: $campaign->id,
+            );
+
+            $posted++;
+        }
+
+        return $posted;
+    }
+
+    private function resolveCampaignAccountIds(CollectionCampaign $campaign): array
+    {
+        return UnitAccount::query()
+            ->whereHas('unit', function ($query) use ($campaign): void {
+                $query->where('compound_id', $campaign->compound_id);
+                $targetIds = $campaign->target_ids ?? [];
+
+                match ($campaign->target_type ?? 'compound') {
+                    'building' => $query->whereIn('building_id', $targetIds),
+                    'floor' => $query->whereIn('floor_id', $targetIds),
+                    default => null,
+                };
+            })
+            ->pluck('id')
+            ->all();
+    }
+
+    private function ensureAccountsForCampaign(CollectionCampaign $campaign, User $actor): int
+    {
+        $targetIds = $campaign->target_ids ?? [];
+        $createdOrExisting = 0;
+
+        Unit::query()
+            ->where('compound_id', $campaign->compound_id)
+            ->when(
+                ($campaign->target_type ?? 'compound') === 'building',
+                fn ($query) => $query->whereIn('building_id', $targetIds),
+            )
+            ->when(
+                ($campaign->target_type ?? 'compound') === 'floor',
+                fn ($query) => $query->whereIn('floor_id', $targetIds),
+            )
+            ->chunkById(100, function (Collection $units) use ($campaign, $actor, &$createdOrExisting): void {
+                foreach ($units as $unit) {
+                    $this->ensureAccountForUnit(
+                        unit: $unit,
+                        actor: $actor,
+                        currency: $campaign->currency,
+                        applyActiveCampaigns: false,
+                    );
+                    $createdOrExisting++;
+                }
+            });
+
+        return $createdOrExisting;
+    }
+
+    private function campaignMatchesAccount(CollectionCampaign $campaign, UnitAccount $account): bool
+    {
+        $account->loadMissing('unit');
+        $unit = $account->unit;
+
+        if (! $unit || $unit->compound_id !== $campaign->compound_id) {
+            return false;
+        }
+
+        $targetIds = $campaign->target_ids ?? [];
+
+        return match ($campaign->target_type ?? 'compound') {
+            'building' => in_array($unit->building_id, $targetIds, true),
+            'floor' => in_array($unit->floor_id, $targetIds, true),
+            default => true,
+        };
+    }
+
+    private function campaignLedgerExists(CollectionCampaign $campaign, UnitAccount $account): bool
+    {
+        return LedgerEntry::query()
+            ->where('unit_account_id', $account->id)
+            ->where('reference_type', CollectionCampaign::class)
+            ->where('reference_id', $campaign->id)
+            ->exists();
     }
 
     private function notifySubmitter(PaymentSubmission $payment, string $decision, ?string $reason = null): void

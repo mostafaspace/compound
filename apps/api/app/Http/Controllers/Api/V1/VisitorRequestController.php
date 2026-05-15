@@ -328,6 +328,8 @@ class VisitorRequestController extends Controller
 
     private function notifyHost(VisitorRequest $visitorRequest, string $title, string $body): void
     {
+        $translations = $this->visitorHostNotificationTranslations($visitorRequest);
+
         $this->notificationService->create(
             userId: $visitorRequest->host_user_id,
             category: NotificationCategory::Visitors,
@@ -337,9 +339,49 @@ class VisitorRequestController extends Controller
                 'visitorRequestId' => $visitorRequest->id,
                 'unitId' => $visitorRequest->unit_id,
                 'status' => $visitorRequest->status->value,
+                'type' => 'visitor_'.$visitorRequest->status->value,
+                'titleTranslations' => [
+                    'en' => $title,
+                    'ar' => $translations['title'],
+                ],
+                'bodyTranslations' => [
+                    'en' => $body,
+                    'ar' => $translations['body'],
+                ],
             ],
             priority: 'high',
         );
+    }
+
+    /**
+     * @return array{title: string, body: string}
+     */
+    private function visitorHostNotificationTranslations(VisitorRequest $visitorRequest): array
+    {
+        $name = $visitorRequest->visitor_name;
+
+        return match ($visitorRequest->status) {
+            VisitorRequestStatus::Arrived => [
+                'title' => 'وصل الضيف',
+                'body' => "وصل {$name} إلى البوابة.",
+            ],
+            VisitorRequestStatus::Allowed => [
+                'title' => 'تم السماح بدخول الضيف',
+                'body' => "تم السماح بدخول {$name}.",
+            ],
+            VisitorRequestStatus::Denied => [
+                'title' => 'تم رفض دخول الضيف',
+                'body' => "تم رفض دخول {$name}.",
+            ],
+            VisitorRequestStatus::Completed => [
+                'title' => 'اكتملت الزيارة',
+                'body' => "اكتملت زيارة {$name}.",
+            ],
+            default => [
+                'title' => 'تحديث زيارة',
+                'body' => "يوجد تحديث على زيارة {$name}.",
+            ],
+        };
     }
 
     private function notifySecurity(VisitorRequest $visitorRequest): void
@@ -368,15 +410,25 @@ class VisitorRequestController extends Controller
                     ->orWhereNull('compound_id');
             }))
             ->each(function (User $user) use ($visitorRequest): void {
+                $body = "{$visitorRequest->visitor_name} is expected for unit {$visitorRequest->unit?->unit_number}.";
                 $this->notificationService->create(
                     userId: $user->id,
                     category: NotificationCategory::Visitors,
                     title: 'Visitor pass issued',
-                    body: "{$visitorRequest->visitor_name} is expected for unit {$visitorRequest->unit?->unit_number}.",
+                    body: $body,
                     metadata: [
                         'visitorRequestId' => $visitorRequest->id,
                         'unitId' => $visitorRequest->unit_id,
                         'status' => $visitorRequest->status->value,
+                        'type' => 'visitor_pass_issued',
+                        'titleTranslations' => [
+                            'en' => 'Visitor pass issued',
+                            'ar' => 'تم إصدار تصريح ضيف',
+                        ],
+                        'bodyTranslations' => [
+                            'en' => $body,
+                            'ar' => "ضيف جديد {$visitorRequest->visitor_name} متوقع للوحدة {$visitorRequest->unit?->unit_number}.",
+                        ],
                     ],
                     priority: 'normal',
                 );

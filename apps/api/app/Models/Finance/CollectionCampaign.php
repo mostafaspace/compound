@@ -19,6 +19,9 @@ class CollectionCampaign extends Model
         'description',
         'status',
         'target_amount',
+        'target_type',
+        'target_ids',
+        'currency',
         'metadata',
         'started_at',
         'closed_at',
@@ -28,6 +31,7 @@ class CollectionCampaign extends Model
     {
         return [
             'metadata' => 'array',
+            'target_ids' => 'array',
             'target_amount' => 'decimal:2',
             'status' => CampaignStatus::class,
             'started_at' => 'datetime',

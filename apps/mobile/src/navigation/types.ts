@@ -24,6 +24,7 @@ export type RootStackParamList = {
   VehicleNotifyInbox: undefined;
   NotificationsCenter: undefined;
   DocumentViewer: { url: string; title?: string; mimeType?: string | null };
+  ApartmentDetail: { unitId: string; adminMode?: boolean };
 };
 
 export type AuthStackParamList = {
@@ -35,12 +36,12 @@ export type MainTabParamList = {
   Apartments: NavigatorScreenParams<ApartmentsStackParamList> | undefined;
   Visitors: undefined;
   Polls: undefined;
-  More: undefined;
+  More: NavigatorScreenParams<MoreStackParamList> | undefined;
 };
 
 export type ApartmentsStackParamList = {
   ApartmentsList: undefined;
-  ApartmentDetail: { unitId: string };
+  ApartmentDetail: { unitId: string; adminMode?: boolean };
 };
 
 export type AdminTabParamList = {
@@ -48,7 +49,7 @@ export type AdminTabParamList = {
   Visitors: undefined;
   Finance: undefined;
   Units: undefined;
-  More: undefined;
+  More: NavigatorScreenParams<MoreStackParamList> | undefined;
 };
 
 export type MoreStackParamList = {

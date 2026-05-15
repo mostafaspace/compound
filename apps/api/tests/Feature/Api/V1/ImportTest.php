@@ -100,8 +100,8 @@ class ImportTest extends TestCase
         Sanctum::actingAs($admin);
 
         $file = $this->csvFile([
-            ['building_code', 'unit_number', 'type', 'area_sqm', 'bedrooms', 'floor_number'],
-            ['B01', '101', 'apartment', '120.5', '3', ''],
+            ['building_code', 'unit_number', 'type', 'bedrooms', 'floor_number'],
+            ['B01', '101', 'apartment', '3', ''],
         ]);
 
         $response = $this->postJson('/api/v1/imports', [
@@ -133,9 +133,9 @@ class ImportTest extends TestCase
         Sanctum::actingAs($admin);
 
         $file = $this->csvFile([
-            ['building_code', 'unit_number', 'type', 'area_sqm', 'bedrooms', 'floor_number'],
-            ['B01', '101', 'apartment', '120.5', '3', ''],
-            ['B01', '102', 'studio', '60', '', ''],
+            ['building_code', 'unit_number', 'type', 'bedrooms', 'floor_number'],
+            ['B01', '101', 'apartment', '3', ''],
+            ['B01', '102', 'studio', '', ''],
         ]);
 
         $this->postJson('/api/v1/imports', [
@@ -163,8 +163,8 @@ class ImportTest extends TestCase
         Sanctum::actingAs($admin);
 
         $file = $this->csvFile([
-            ['building_code', 'unit_number', 'type', 'area_sqm', 'bedrooms', 'floor_number'],
-            ['NONEXISTENT', '101', 'apartment', '', '', ''],
+            ['building_code', 'unit_number', 'type', 'bedrooms', 'floor_number'],
+            ['NONEXISTENT', '101', 'apartment', '', ''],
         ]);
 
         $response = $this->postJson('/api/v1/imports', [
@@ -187,8 +187,8 @@ class ImportTest extends TestCase
         Sanctum::actingAs($admin);
 
         $file = $this->csvFile([
-            ['building_code', 'unit_number', 'type', 'area_sqm', 'bedrooms', 'floor_number'],
-            ['B01', '101', 'invalid_type', '', '', ''],
+            ['building_code', 'unit_number', 'type', 'bedrooms', 'floor_number'],
+            ['B01', '101', 'invalid_type', '', ''],
         ]);
 
         $this->postJson('/api/v1/imports', [
@@ -378,8 +378,8 @@ class ImportTest extends TestCase
         Sanctum::actingAs($adminA);
 
         $file = $this->csvFile([
-            ['building_code', 'unit_number', 'type', 'area_sqm', 'bedrooms', 'floor_number'],
-            ['B01', '101', 'apartment', '', '', ''],
+            ['building_code', 'unit_number', 'type', 'bedrooms', 'floor_number'],
+            ['B01', '101', 'apartment', '', ''],
         ]);
 
         $this->postJson('/api/v1/imports', [

@@ -16,7 +16,7 @@
   "scripts": {
     "dev": "npm run dev --workspaces --if-present",
     "dev:admin": "npm run dev -w apps/admin",
-    "dev:mobile": "npx react-native start --projectRoot apps/mobile",
+    "dev:mobile": "npm run start -w apps/mobile",
     "dev:api": "cd apps/api && php artisan serve",
     "build": "npm run build --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",

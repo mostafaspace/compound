@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
+import { AdminPagination } from "@/components/admin-pagination";
+import { AdminUnitPicker } from "@/components/admin-unit-picker";
 import { AdminUserPicker } from "@/components/admin-user-picker";
 import { SiteNav } from "@/components/site-nav";
-import { getCurrentUser, getDocuments, getDocumentTypes, getSystemStatus, getUsers } from "@/lib/api";
+import { getCurrentUser, getDocumentsPage, getDocumentTypes, getSystemStatus, getUnits, getUsers } from "@/lib/api";
 import { toAdminUserOption } from "@/lib/admin-user-options";
 import { requireAdminUser } from "@/lib/session";
 
@@ -12,6 +14,7 @@ import { reviewDocumentAction, uploadDocumentAction } from "./actions";
 interface DocumentsPageProps {
   searchParams?: Promise<{
     error?: string;
+    page?: string;
     reviewed?: string;
     uploaded?: string;
   }>;
@@ -20,14 +23,18 @@ interface DocumentsPageProps {
 export default async function DocumentsPage({ searchParams }: DocumentsPageProps) {
   const t = await getTranslations("Documents");
   const navT = await getTranslations("Navigation");
+  const commonT = await getTranslations("Common");
   await requireAdminUser(getCurrentUser);
   const params = searchParams ? await searchParams : {};
-  const [documentTypes, documents, systemStatus, users] = await Promise.all([
+  const page = params.page && Number.isInteger(Number(params.page)) ? Math.max(1, Number(params.page)) : 1;
+  const [documentTypes, documentsPage, systemStatus, users, units] = await Promise.all([
     getDocumentTypes(),
-    getDocuments(),
+    getDocumentsPage({ page, perPage: 20 }),
     getSystemStatus(),
     getUsers({ perPage: 100, status: "active" }),
+    getUnits({ perPage: 100 }),
   ]);
+  const documents = documentsPage.data ?? [];
   const isDegraded = systemStatus?.status !== "ok";
   const uploadDisabled = documentTypes.length === 0;
   const showLoadWarning = isDegraded && documentTypes.length === 0 && documents.length === 0;
@@ -112,10 +119,13 @@ export default async function DocumentsPage({ searchParams }: DocumentsPageProps
               searchStatus="active"
               helperText={t("fields.userHelper")}
             />
-            <label className="text-sm font-medium">
-              {t("fields.unitId")}
-              <input className="mt-2 h-11 w-full rounded-lg border border-line px-3 font-mono text-xs" disabled={uploadDisabled} name="unitId" />
-            </label>
+            <AdminUnitPicker
+              helperText={t("fields.unitHelper")}
+              label={t("fields.unitId")}
+              name="unitId"
+              placeholder={t("fields.unitSearchPlaceholder")}
+              units={uploadDisabled ? [] : units}
+            />
             <label className="text-sm font-medium">
               {t("fields.file")}
               <input
@@ -138,53 +148,77 @@ export default async function DocumentsPage({ searchParams }: DocumentsPageProps
         </form>
 
         <div className="overflow-hidden rounded-lg border border-line bg-panel">
-          <div className="border-b border-line px-4 py-3">
+          <div className="flex flex-col gap-1 border-b border-line px-4 py-3 md:flex-row md:items-center md:justify-between">
             <h2 className="text-lg font-semibold">{t("reviewQueue.title")}</h2>
+            <p className="text-sm text-muted">
+              {commonT("pagination.summary", {
+                from: documentsPage.meta.from ?? 0,
+                to: documentsPage.meta.to ?? 0,
+                total: documentsPage.meta.total,
+              })}
+            </p>
           </div>
-          <table className="w-full border-collapse text-start text-sm">
-            <thead className="bg-background text-muted">
-              <tr>
-                <th className="px-4 py-3 font-semibold">{t("table.document")}</th>
-                <th className="px-4 py-3 font-semibold">{t("table.user")}</th>
-                <th className="px-4 py-3 font-semibold">{t("table.status")}</th>
-                <th className="px-4 py-3 font-semibold">{t("table.review")}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
-              {documents.length === 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[820px] border-collapse text-start text-sm">
+              <thead className="bg-background text-muted">
                 <tr>
-                  <td className="px-4 py-6 text-muted" colSpan={4}>
-                    {t("reviewQueue.empty")}
-                  </td>
+                  <th className="px-4 py-3 font-semibold">{t("table.document")}</th>
+                  <th className="px-4 py-3 font-semibold">{t("table.user")}</th>
+                  <th className="px-4 py-3 font-semibold">{t("table.status")}</th>
+                  <th className="px-4 py-3 font-semibold">{t("table.review")}</th>
                 </tr>
-              ) : (
-                documents.map((document) => (
-                  <tr key={document.id}>
-                    <td className="px-4 py-4">
-                      <div className="font-semibold">{document.documentType?.name ?? t("table.unknownType", { id: document.documentTypeId })}</div>
-                      <div className="text-muted">{document.originalName}</div>
-                    </td>
-                    <td className="px-4 py-4">{t("table.userRow", { id: document.userId })}</td>
-                    <td className="px-4 py-4">{t(`statuses.${document.status}`)}</td>
-                    <td className="px-4 py-4">
-                      <form action={reviewDocumentAction.bind(null, document.id)} className="grid gap-2">
-                        <select className="h-10 rounded-lg border border-line px-2" name="status" defaultValue={document.status}>
-                          <option value="under_review">{t("statuses.under_review")}</option>
-                          <option value="approved">{t("statuses.approved")}</option>
-                          <option value="rejected">{t("statuses.rejected")}</option>
-                          <option value="missing">{t("statuses.missing")}</option>
-                        </select>
-                        <input className="h-10 rounded-lg border border-line px-2" name="reviewNote" placeholder={t("fields.reviewNote")} defaultValue={document.reviewNote ?? ""} />
-                        <button className="inline-flex h-10 items-center justify-center rounded-lg border border-line px-3 text-sm font-semibold hover:border-brand" type="submit">
-                          {t("actions.saveReview")}
-                        </button>
-                      </form>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {documents.length === 0 ? (
+                  <tr>
+                    <td className="px-4 py-6 text-center text-muted" colSpan={4}>
+                      {t("reviewQueue.empty")}
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  documents.map((document) => (
+                    <tr key={document.id}>
+                      <td className="px-4 py-4">
+                        <div className="font-semibold">{document.documentType?.name ?? t("table.unknownType", { id: document.documentTypeId })}</div>
+                        <div className="text-muted">{document.originalName}</div>
+                      </td>
+                      <td className="px-4 py-4">{t("table.userRow", { id: document.userId })}</td>
+                      <td className="px-4 py-4">{t(`statuses.${document.status}`)}</td>
+                      <td className="px-4 py-4">
+                        <form action={reviewDocumentAction.bind(null, document.id)} className="grid gap-2">
+                          <select className="h-10 rounded-lg border border-line px-2" name="status" defaultValue={document.status}>
+                            <option value="under_review">{t("statuses.under_review")}</option>
+                            <option value="approved">{t("statuses.approved")}</option>
+                            <option value="rejected">{t("statuses.rejected")}</option>
+                            <option value="missing">{t("statuses.missing")}</option>
+                          </select>
+                          <input className="h-10 rounded-lg border border-line px-2" name="reviewNote" placeholder={t("fields.reviewNote")} defaultValue={document.reviewNote ?? ""} />
+                          <button className="inline-flex h-10 items-center justify-center rounded-lg border border-line px-3 text-sm font-semibold hover:border-brand" type="submit">
+                            {t("actions.saveReview")}
+                          </button>
+                        </form>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+          <AdminPagination
+            basePath="/documents"
+            labels={{
+              first: commonT("pagination.first"),
+              previous: commonT("pagination.previous"),
+              next: commonT("pagination.next"),
+              last: commonT("pagination.last"),
+              summary: commonT("pagination.summary", {
+                from: documentsPage.meta.from ?? 0,
+                to: documentsPage.meta.to ?? 0,
+                total: documentsPage.meta.total,
+              }),
+            }}
+            meta={documentsPage.meta}
+          />
         </div>
       </section>
     </main>

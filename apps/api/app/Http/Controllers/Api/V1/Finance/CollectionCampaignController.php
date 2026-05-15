@@ -132,7 +132,7 @@ class CollectionCampaignController extends Controller
 
         $count = $this->financeService->applyCampaignCharges(
             campaign: $campaign,
-            unitAccountIds: $validated['unit_account_ids'],
+            unitAccountIds: $validated['unit_account_ids'] ?? null,
             amount: (float) $validated['amount'],
             description: $validated['description'],
             actor: $actor,

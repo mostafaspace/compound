@@ -23,6 +23,7 @@ export const financeApi = api.injectEndpoints({
         body,
       }),
       invalidatesTags: (result, error, { accountId, unitId }) => [
+        "UnitAccount",
         { type: "UnitAccount", id: accountId },
         ...(unitId ? [{ type: "ApartmentDetail" as const, id: unitId }] : [{ type: "ApartmentDetail" as const }]),
       ],

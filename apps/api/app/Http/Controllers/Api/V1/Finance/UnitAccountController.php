@@ -36,13 +36,24 @@ class UnitAccountController extends Controller
         $compoundIds = $this->compoundContext->resolveAccessibleCompoundIds($actor);
 
         $accounts = UnitAccount::query()
-            ->with(['unit.building', 'unit.compound'])
+            ->with(['unit.building', 'unit.floor', 'unit.compound', 'unit.apartmentResidents.user'])
             ->when($compoundIds !== null, fn ($q) => $q->whereHas(
                 'unit', fn ($uq) => $uq->whereIn('compound_id', $compoundIds)
             ))
             ->when($request->filled('unitId'), fn ($query) => $query->where('unit_id', $request->string('unitId')->toString()))
+            ->when($request->filled('search'), function ($query) use ($request): void {
+                $search = $request->string('search')->toString();
+                $like = "%{$search}%";
+
+                $query->whereHas('unit', function ($unitQuery) use ($like): void {
+                    $unitQuery
+                        ->where('unit_number', 'like', $like)
+                        ->orWhereHas('building', fn ($buildingQuery) => $buildingQuery->where('name', 'like', $like)->orWhere('code', 'like', $like))
+                        ->orWhereHas('apartmentResidents.user', fn ($userQuery) => $userQuery->where('name', 'like', $like)->orWhere('email', 'like', $like));
+                });
+            })
             ->latest()
-            ->paginate();
+            ->paginate(min(100, max(1, $request->integer('perPage', 50))));
 
         return UnitAccountResource::collection($accounts);
     }
@@ -51,6 +62,17 @@ class UnitAccountController extends Controller
     {
         /** @var User $user */
         $user = $request->user();
+
+        Unit::query()
+            ->whereHas('apartmentResidents', function ($query) use ($user): void {
+                $query->where('user_id', $user->id)
+                    ->where('verification_status', 'verified')
+                    ->where(function ($query): void {
+                        $query->whereNull('ends_at')->orWhere('ends_at', '>=', now()->toDateString());
+                    });
+            })
+            ->get()
+            ->each(fn (Unit $unit) => $this->financeService->ensureAccountForUnit($unit, $user));
 
         $accounts = UnitAccount::query()
             ->with(['unit.building', 'unit.compound'])
@@ -89,7 +111,7 @@ class UnitAccountController extends Controller
             'opening_balance' => $validated['openingBalance'] ?? null,
         ]);
 
-        return UnitAccountResource::make($account->load(['unit.building', 'unit.compound', 'ledgerEntries']))
+        return UnitAccountResource::make($account->load(['unit.building', 'unit.floor', 'unit.compound', 'unit.apartmentResidents.user', 'ledgerEntries']))
             ->response()
             ->setStatusCode(Response::HTTP_CREATED);
     }

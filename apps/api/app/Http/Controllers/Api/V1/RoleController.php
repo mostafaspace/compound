@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Spatie\Permission\Models\Role;
@@ -13,13 +14,12 @@ class RoleController extends Controller
     {
         $roles = Role::where('guard_name', 'sanctum')
             ->with('permissions')
-            ->withCount('users')
             ->get()
             ->map(fn (Role $role) => [
                 'id' => $role->id,
                 'name' => $role->name,
                 'permissions' => $role->permissions->pluck('name'),
-                'users_count' => $role->users_count,
+                'users_count' => $this->usersCount($role),
                 'is_system' => (bool) $role->is_system,
             ]);
 
@@ -61,7 +61,7 @@ class RoleController extends Controller
             'id' => $role->id,
             'name' => $role->name,
             'permissions' => $role->fresh('permissions')->permissions->pluck('name'),
-            'users_count' => $role->users()->count(),
+            'users_count' => $this->usersCount($role),
             'is_system' => (bool) $role->is_system,
         ]]);
     }
@@ -74,7 +74,7 @@ class RoleController extends Controller
             ], 422);
         }
 
-        $usersCount = $role->users()->count();
+        $usersCount = $this->usersCount($role);
         if ($usersCount > 0) {
             return response()->json([
                 'message' => "Cannot delete role '{$role->name}': {$usersCount} user(s) are assigned to it.",
@@ -84,5 +84,19 @@ class RoleController extends Controller
         $role->delete();
 
         return response()->json(['data' => ['deleted' => true]]);
+    }
+
+    private function usersCount(Role $role): int
+    {
+        return User::query()
+            ->where('role', $role->name)
+            ->orWhereExists(function ($query) use ($role): void {
+                $query->selectRaw('1')
+                    ->from('model_has_roles')
+                    ->whereColumn('model_has_roles.model_id', 'users.id')
+                    ->where('model_has_roles.role_id', $role->id)
+                    ->where('model_has_roles.model_type', User::class);
+            })
+            ->count();
     }
 }

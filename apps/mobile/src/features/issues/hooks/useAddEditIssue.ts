@@ -9,8 +9,10 @@ import {
   useDeleteIssueAttachmentMutation,
   useGetUnitsQuery
 } from '../../../services/property';
-import { Issue } from '@compound/contracts';
+import { getEffectiveRoleNames, Issue } from '@compound/contracts';
 import { getIssueSubmitBlockReason, getAvailableIssueTargetRoles, getDefaultIssueTargetRole } from '../issue-flow-utils';
+import { useSelector } from 'react-redux';
+import { selectCurrentUser } from '../../../store/authSlice';
 
 export const MAX_ATTACHMENTS = 4;
 
@@ -25,6 +27,7 @@ export const useAddEditIssue = (issue?: Issue) => {
   const { t } = useTranslation();
   const navigation = useNavigation();
   const isEdit = Boolean(issue);
+  const currentUser = useSelector(selectCurrentUser);
 
   const { data: units = [], isLoading: isLoadingUnits } = useGetUnitsQuery();
   const [createIssue, { isLoading: isCreating }] = useCreateIssueMutation();
@@ -70,20 +73,28 @@ export const useAddEditIssue = (issue?: Issue) => {
 
   const primaryUnit = units.find((unit) => unit.isPrimary) ?? units[0];
   const hasFloorScope = Boolean(primaryUnit?.unit?.floorId);
+  const effectiveRoles = useMemo(() => {
+    if (!currentUser) return [];
+
+    return [
+      ...getEffectiveRoleNames(currentUser),
+      ...(currentUser.scopes ?? []).map((scope) => scope.role),
+    ];
+  }, [currentUser]);
   const submitBlockReason = getIssueSubmitBlockReason({
     isLoadingUnits,
     hasPrimaryUnit: Boolean(primaryUnit?.unitId),
   });
 
-  const availableTargetRoles = getAvailableIssueTargetRoles(hasFloorScope);
+  const availableTargetRoles = getAvailableIssueTargetRoles(hasFloorScope, effectiveRoles);
 
   const initialValues = useMemo(() => ({
-    targetRole: issue?.metadata?.requestedTargetRole || getDefaultIssueTargetRole(hasFloorScope),
+    targetRole: issue?.metadata?.requestedTargetRole || getDefaultIssueTargetRole(hasFloorScope, effectiveRoles),
     category: issue?.category || 'maintenance',
     priority: issue?.priority || 'normal',
     title: issue?.title || '',
     description: issue?.description || '',
-  }), [issue, hasFloorScope]);
+  }), [issue, hasFloorScope, effectiveRoles]);
 
   const handleSave = async (data: any) => {
     if (!isEdit && submitBlockReason) {

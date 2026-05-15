@@ -17,8 +17,8 @@ class StoreOwnerRegistrationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'fullNameArabic' => ['required', 'string', 'min:8', 'max:255'],
-            'phone' => ['required', 'string', 'max:32'],
+            'fullNameArabic' => ['required', 'string', 'min:8', 'max:255', 'regex:/^[\p{Arabic}\sـ]+$/u'],
+            'phone' => ['required', 'string', 'regex:/^\d{10,15}$/'],
             'email' => ['required', 'email:rfc', 'max:255'],
             'apartmentCode' => ['required', 'string', 'max:64', 'regex:/^[A-Z]{1,2}[A-Z]?-F\\d{1,2}-[A-Z]\\d{1,3}$/i'],
             'buildingId' => ['required', 'ulid', 'exists:buildings,id'],

@@ -3,6 +3,7 @@ import { getCurrentUser, lookupVehicles } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
 import { VehicleSearchView } from "./vehicle-search-view";
 import { Suspense } from "react";
+import { normalizeDigits } from "@/lib/numerals";
 
 interface VehiclesPageProps {
   searchParams?: Promise<{ q?: string }>;
@@ -11,12 +12,12 @@ interface VehiclesPageProps {
 export default async function VehiclesPage({ searchParams }: VehiclesPageProps) {
   await requireAdminUser(getCurrentUser);
   const params = searchParams ? await searchParams : {};
-  const query = String(params.q ?? "").trim();
+  const query = normalizeDigits(String(params.q ?? "")).trim();
   const initialResults = query.length >= 2 ? await lookupVehicles(query) : [];
 
   return (
     <main className="min-h-screen bg-background text-foreground">
-      <SiteNav breadcrumb={[{ label: "Vehicle Lookup" }]} />
+      <SiteNav breadcrumb={[{ label: "Vehicles" }]} />
       
       <header className="border-b border-line bg-panel overflow-hidden relative">
         <div className="absolute top-0 end-0 p-8 opacity-5 select-none pointer-events-none">
@@ -25,7 +26,7 @@ export default async function VehiclesPage({ searchParams }: VehiclesPageProps) 
           </svg>
         </div>
         <div className="mx-auto max-w-7xl px-5 py-12 lg:px-8">
-          <h1 className="text-4xl font-black tracking-tight text-foreground">Vehicle Lookup</h1>
+          <h1 className="text-4xl font-black tracking-tight text-foreground">Vehicles</h1>
           <p className="mt-2 text-lg text-muted max-w-2xl font-medium">
             Identify vehicles across the compound. Verify residents and visitors instantly to resolve security or parking incidents.
           </p>

@@ -33,6 +33,12 @@ export const AdminDashboardScreen = () => {
 
   const navigateToTarget = (route: Parameters<typeof getAdminDashboardNavigationTarget>[0]) => {
     const target = getAdminDashboardNavigationTarget(route);
+    if (target.navigator === 'root') {
+      const rootNavigation = navigation.getParent<StackNavigationProp<any>>();
+      rootNavigation?.navigate(target.screen as any, target.params as any);
+      return;
+    }
+
     navigation.navigate(target.screen as any, target.params as any);
   };
 
@@ -64,7 +70,7 @@ export const AdminDashboardScreen = () => {
       case 'Units':
         return t('Admin.units', 'Units');
       case 'Finance':
-        return t('Admin.finance', 'Finance');
+        return t('Admin.finance', 'Contributions');
       case 'AuditLog':
         return t('Admin.logs', 'Audit');
       case 'AdminInvitations':
@@ -118,7 +124,12 @@ export const AdminDashboardScreen = () => {
   );
 
   return (
-    <ScreenContainer style={{ backgroundColor: isDark ? colors.background.dark : colors.background.light }}>
+    <ScreenContainer
+      style={[
+        styles.screen,
+        { backgroundColor: isDark ? colors.background.dark : colors.background.light },
+      ]}
+    >
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -144,7 +155,7 @@ export const AdminDashboardScreen = () => {
 
         {/* Hero Analytics Card */}
         <View style={styles.heroContainer}>
-          <Svg height="140" width={width - spacing.lg * 2} style={styles.heroBg}>
+          <Svg height="140" width={width - layout.screenGutter * 2} style={styles.heroBg}>
             <Defs>
               <SvgGradient id="grad" x1="0" y1="0" x2="1" y2="1">
                 <Stop offset="0" stopColor={colors.primary.light} stopOpacity="1" />
@@ -210,9 +221,9 @@ export const AdminDashboardScreen = () => {
                 data={quickActions}
                 keyExtractor={(action) => action.route}
                 renderItem={renderQuickAction}
-                numColumns={3}
-                scrollEnabled={false}
-                columnWrapperStyle={[styles.quickActionsGrid, rowDirectionStyle(isRtl)]}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={[styles.quickActionsRail, rowDirectionStyle(isRtl)]}
               />
             </View>
 
@@ -250,6 +261,10 @@ export const AdminDashboardScreen = () => {
 };
 
 const styles = StyleSheet.create({
+  screen: {
+    paddingHorizontal: 0,
+    paddingTop: 0,
+  },
   scrollContent: {
     padding: layout.screenGutter,
     paddingBottom: layout.screenBottom,
@@ -355,23 +370,24 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
   },
-  quickActionsGrid: {
+  quickActionsRail: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: layout.cardGap,
   },
   actionCard: {
-    width: (width - spacing.lg * 2 - spacing.md * 2) / 3,
-    paddingVertical: spacing.lg,
+    width: 112,
+    minHeight: 120,
+    paddingVertical: spacing.md,
     borderRadius: radii.xl,
     alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
     borderColor: colors.border.light,
     ...shadows.sm,
   },
   actionIconBg: {
-    width: 56,
-    height: 56,
+    width: 48,
+    height: 48,
     borderRadius: radii.lg,
     backgroundColor: colors.surfaceMuted.light,
     justifyContent: 'center',

@@ -2,8 +2,9 @@ import type { IssueCategory, IssueStatus } from "@compound/contracts";
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 
+import { AdminPagination } from "@/components/admin-pagination";
 import { SiteNav } from "@/components/site-nav";
-import { getCurrentUser, getIssues, getSystemStatus } from "@/lib/api";
+import { getCurrentUser, getIssuesPage, getSystemStatus } from "@/lib/api";
 import { issuePriorityBadgeClass, issueStatusBadgeClass } from "@/lib/semantic-badges";
 import { requireAdminUser } from "@/lib/session";
 
@@ -11,6 +12,7 @@ interface IssuesPageProps {
   searchParams?: Promise<{
     status?: string;
     category?: string;
+    page?: string;
   }>;
 }
 
@@ -35,13 +37,16 @@ export default async function IssuesPage({ searchParams }: IssuesPageProps) {
   const params = searchParams ? await searchParams : {};
   const activeStatus = parseStatus(params.status);
   const activeCategory = parseCategory(params.category);
+  const page = params.page && Number.isInteger(Number(params.page)) ? Math.max(1, Number(params.page)) : 1;
 
-  const [issues, t, locale, systemStatus] = await Promise.all([
-    getIssues({ status: activeStatus, category: activeCategory }),
+  const [issuesPage, t, commonT, locale, systemStatus] = await Promise.all([
+    getIssuesPage({ status: activeStatus, category: activeCategory, page, perPage: 20 }),
     getTranslations("Issues"),
+    getTranslations("Common"),
     getLocale(),
     getSystemStatus(),
   ]);
+  const issues = issuesPage.data ?? [];
   const isDegraded = systemStatus?.status !== "ok";
   const showDegradedWarning = isDegraded && issues.length === 0;
 
@@ -163,68 +168,99 @@ export default async function IssuesPage({ searchParams }: IssuesPageProps) {
           </div>
         </div>
 
-        <div className="overflow-x-auto rounded-lg border border-line bg-panel">
-          <table className="w-full min-w-[1100px] border-collapse text-start text-sm">
-            <thead className="bg-background text-muted">
-              <tr>
-                <th className="px-4 py-3 font-semibold">{t("id")}</th>
-                <th className="px-4 py-3 font-semibold">{t("issueTitle")}</th>
-                <th className="px-4 py-3 font-semibold">{t("reporter")}</th>
-                <th className="px-4 py-3 font-semibold">{t("category")}</th>
-                <th className="px-4 py-3 font-semibold">{t("location")}</th>
-                <th className="px-4 py-3 font-semibold">{t("assignee")}</th>
-                <th className="px-4 py-3 font-semibold">{t("status")}</th>
-                <th className="px-4 py-3 font-semibold">{t("priority")}</th>
-                <th className="px-4 py-3 font-semibold">{t("createdAt")}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
-              {issues.length === 0 ? (
+        <div className="overflow-hidden rounded-lg border border-line bg-panel">
+          <div className="flex flex-col gap-1 border-b border-line px-4 py-3 md:flex-row md:items-center md:justify-between">
+            <h2 className="text-base font-semibold">{t("title")}</h2>
+            <p className="text-sm text-muted">
+              {commonT("pagination.summary", {
+                from: issuesPage.meta.from ?? 0,
+                to: issuesPage.meta.to ?? 0,
+                total: issuesPage.meta.total,
+              })}
+            </p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[1100px] border-collapse text-start text-sm">
+              <thead className="bg-background text-muted">
                 <tr>
-                  <td className="px-4 py-6 text-muted" colSpan={9}>
-                    {t("noIssues")}
-                  </td>
+                  <th className="px-4 py-3 font-semibold">{t("id")}</th>
+                  <th className="px-4 py-3 font-semibold">{t("issueTitle")}</th>
+                  <th className="px-4 py-3 font-semibold">{t("reporter")}</th>
+                  <th className="px-4 py-3 font-semibold">{t("category")}</th>
+                  <th className="px-4 py-3 font-semibold">{t("location")}</th>
+                  <th className="px-4 py-3 font-semibold">{t("assignee")}</th>
+                  <th className="px-4 py-3 font-semibold">{t("status")}</th>
+                  <th className="px-4 py-3 font-semibold">{t("priority")}</th>
+                  <th className="px-4 py-3 font-semibold">{t("createdAt")}</th>
                 </tr>
-              ) : (
-                issues.map((issue) => (
-                  <tr key={issue.id}>
-                    <td className="px-4 py-4 font-mono text-xs">{issue.id.slice(0, 8)}</td>
-                    <td className="px-4 py-4">
-                      <Link className="font-semibold text-brand hover:text-brand-strong" href={`/issues/${issue.id}`}>
-                        {issue.title}
-                      </Link>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {issues.length === 0 ? (
+                  <tr>
+                    <td className="px-4 py-6 text-center text-muted" colSpan={9}>
+                      {t("noIssues")}
                     </td>
-                    <td className="px-4 py-4">
-                      <div className="font-semibold">{issue.reporter?.name ?? t("unknownReporter")}</div>
-                      <div className="text-muted">{issue.reporter?.email ?? ""}</div>
-                    </td>
-                    <td className="px-4 py-4">{categoryLabel[issue.category] ?? issue.category}</td>
-                    <td className="px-4 py-4">
-                      {issue.unit ? (
-                        <span>{t("unitNumber", { unit: issue.unit.unitNumber })}</span>
-                      ) : issue.building ? (
-                        <span>{issue.building.name}</span>
-                      ) : (
-                        <span className="text-muted">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-4">{issue.assignee?.name ?? <span className="text-muted">{t("unassigned")}</span>}</td>
-                    <td className="px-4 py-4">
-                      <span className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${issueStatusBadgeClass(issue.status)}`}>
-                        {statusLabel[issue.status] ?? issue.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-4">
-                      <span className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${issuePriorityBadgeClass(issue.priority)}`}>
-                        {priorityLabel[issue.priority] ?? issue.priority}
-                      </span>
-                    </td>
-                    <td className="px-4 py-4 text-muted">{formatDate(issue.createdAt, locale)}</td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  issues.map((issue) => (
+                    <tr key={issue.id}>
+                      <td className="px-4 py-4 font-mono text-xs">{issue.id.slice(0, 8)}</td>
+                      <td className="px-4 py-4">
+                        <Link className="font-semibold text-brand hover:text-brand-strong" href={`/issues/${issue.id}`}>
+                          {issue.title}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="font-semibold">{issue.reporter?.name ?? t("unknownReporter")}</div>
+                        <div className="text-muted">{issue.reporter?.email ?? ""}</div>
+                      </td>
+                      <td className="px-4 py-4">{categoryLabel[issue.category] ?? issue.category}</td>
+                      <td className="px-4 py-4">
+                        {issue.unit ? (
+                          <span>{t("unitNumber", { unit: issue.unit.unitNumber })}</span>
+                        ) : issue.building ? (
+                          <span>{issue.building.name}</span>
+                        ) : (
+                          <span className="text-muted">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-4">{issue.assignee?.name ?? <span className="text-muted">{t("unassigned")}</span>}</td>
+                      <td className="px-4 py-4">
+                        <span className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${issueStatusBadgeClass(issue.status)}`}>
+                          {statusLabel[issue.status] ?? issue.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4">
+                        <span className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${issuePriorityBadgeClass(issue.priority)}`}>
+                          {priorityLabel[issue.priority] ?? issue.priority}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 text-muted">{formatDate(issue.createdAt, locale)}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+          <AdminPagination
+            basePath="/issues"
+            labels={{
+              first: commonT("pagination.first"),
+              previous: commonT("pagination.previous"),
+              next: commonT("pagination.next"),
+              last: commonT("pagination.last"),
+              summary: commonT("pagination.summary", {
+                from: issuesPage.meta.from ?? 0,
+                to: issuesPage.meta.to ?? 0,
+                total: issuesPage.meta.total,
+              }),
+            }}
+            meta={issuesPage.meta}
+            params={{
+              status: activeStatus !== "all" ? activeStatus : undefined,
+              category: activeCategory !== "all" ? activeCategory : undefined,
+            }}
+          />
         </div>
       </section>
     </main>

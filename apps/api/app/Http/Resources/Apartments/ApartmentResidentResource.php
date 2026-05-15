@@ -7,6 +7,7 @@ use App\Http\Resources\UserResource;
 use App\Models\Apartments\ApartmentResident;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * @mixin ApartmentResident
@@ -34,7 +35,7 @@ class ApartmentResidentResource extends JsonResource
             'phonePublic' => $this->phone_public,
             'residentEmail' => $this->resident_email,
             'emailPublic' => $this->email_public,
-            'photoPath' => $this->photo_path,
+            'photoPath' => $this->photo_path ? url(Storage::disk('public')->url($this->photo_path)) : null,
             'createdAt' => $this->created_at?->toJSON(),
             'updatedAt' => $this->updated_at?->toJSON(),
         ];

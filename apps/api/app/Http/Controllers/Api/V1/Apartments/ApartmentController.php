@@ -8,11 +8,14 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Apartments\ApartmentResource;
 use App\Models\Apartments\ApartmentResident;
 use App\Models\Property\Unit;
+use App\Services\FinanceService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class ApartmentController extends Controller
 {
+    public function __construct(private readonly FinanceService $financeService) {}
+
     public function index(Request $request): AnonymousResourceCollection
     {
         $unitIds = ApartmentResident::query()
@@ -33,6 +36,7 @@ class ApartmentController extends Controller
     public function show(Request $request, Unit $unit): ApartmentResource
     {
         $this->authorize('view', $unit);
+        $this->financeService->ensureAccountForUnit($unit, $request->user());
 
         $unit->load([
             'building',

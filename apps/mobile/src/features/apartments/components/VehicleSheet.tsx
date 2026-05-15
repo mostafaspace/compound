@@ -25,7 +25,6 @@ export function VehicleSheet({
   const [make, setMake] = useState(vehicle?.make ?? "");
   const [model, setModel] = useState(vehicle?.model ?? "");
   const [color, setColor] = useState(vehicle?.color ?? "");
-  const [stickerCode, setStickerCode] = useState(vehicle?.stickerCode ?? "");
   const [notes, setNotes] = useState(vehicle?.notes ?? "");
   const [error, setError] = useState<string | null>(null);
   const [createVehicle, createState] = useCreateVehicleMutation();
@@ -51,7 +50,6 @@ export function VehicleSheet({
       make: make.trim() || null,
       model: model.trim() || null,
       color: color.trim() || null,
-      sticker_code: stickerCode.trim() || null,
       notes: notes.trim() || null,
     };
 
@@ -71,7 +69,6 @@ export function VehicleSheet({
   return (
     <BottomSheet
       title={vehicle ? t("Vehicles.editVehicle") : t("Vehicles.addVehicle")}
-      subtitle={t("Vehicles.capacityNote")}
       onClose={onClose}
       footer={
         <View style={styles.actions}>
@@ -94,7 +91,6 @@ export function VehicleSheet({
         <Input label={t("Vehicles.make")} value={make} onChangeText={setMake} placeholder={t("Vehicles.makePlaceholder")} />
         <Input label={t("Vehicles.model")} value={model} onChangeText={setModel} placeholder={t("Vehicles.modelPlaceholder")} />
         <Input label={t("Vehicles.color")} value={color} onChangeText={setColor} placeholder={t("Vehicles.colorPlaceholder")} />
-        <Input label={t("Vehicles.stickerCode")} value={stickerCode} onChangeText={setStickerCode} placeholder={t("Vehicles.optional")} />
         <Input label={t("Vehicles.notes")} value={notes} onChangeText={setNotes} placeholder={t("Vehicles.optionalNotes")} multiline />
 
         {error ? <Text style={styles.error}>{error}</Text> : null}

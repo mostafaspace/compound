@@ -445,6 +445,8 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
                 ->name('unit-accounts.ledger-entries.store');
             Route::get('/payment-submissions', [PaymentSubmissionController::class, 'index'])
                 ->name('payment-submissions.index');
+            Route::get('/payment-submissions/{paymentSubmission}/proof', [PaymentSubmissionController::class, 'proof'])
+                ->name('payment-submissions.proof');
             Route::patch('/payment-submissions/{paymentSubmission}/approve', [PaymentSubmissionController::class, 'approve'])
                 ->name('payment-submissions.approve');
             Route::patch('/payment-submissions/{paymentSubmission}/reject', [PaymentSubmissionController::class, 'reject'])

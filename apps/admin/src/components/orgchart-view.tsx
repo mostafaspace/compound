@@ -28,6 +28,7 @@ import {
   assignCompoundHead,
   assignBuildingHead,
   assignFloorRepresentative,
+  expireRepresentativeAssignment,
 } from "@/lib/orgchart-actions";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -119,6 +120,9 @@ export function OrgChartView({ data, assignableUsers = [], canManage = false }: 
   const [assignmentUserIdInput, setAssignmentUserIdInput] = useState("");
   const [assignmentError, setAssignmentError] = useState<string | null>(null);
   const [assignmentSubmitting, setAssignmentSubmitting] = useState(false);
+  const [unassigningRep, setUnassigningRep] = useState<OrgChartRepresentative | null>(null);
+  const [unassignError, setUnassignError] = useState<string | null>(null);
+  const [unassignSubmitting, setUnassignSubmitting] = useState(false);
 
   // 1. Flatten data for D3-Org-Chart
   const flatData = useMemo(() => {
@@ -193,6 +197,67 @@ export function OrgChartView({ data, assignableUsers = [], canManage = false }: 
       setSelectedRepLoading(false);
     }
   }, [t]);
+
+  const getAssignmentTarget = useCallback((rep: OrgChartRepresentative) => {
+    if (rep.scopeLevel === "compound") {
+      return {
+        id: rep.compoundId ?? data.compound.id,
+        type: "compound",
+        label: data.compound.name,
+      };
+    }
+
+    if (rep.scopeLevel === "building" && rep.buildingId) {
+      const building = data.buildings.find((item) => item.id === rep.buildingId);
+      return {
+        id: rep.buildingId,
+        type: "building",
+        label: building?.name ?? t("scope.building", { id: rep.buildingId.slice(0, 8) }),
+      };
+    }
+
+    if (rep.scopeLevel === "floor" && rep.floorId) {
+      const building = data.buildings.find((item) => item.floors.some((floor) => floor.id === rep.floorId));
+      const floor = building?.floors.find((item) => item.id === rep.floorId);
+      return {
+        id: rep.floorId,
+        type: "floor",
+        label: [building?.name, floor?.label].filter(Boolean).join(" · ") || t("scope.floor", { id: rep.floorId.slice(0, 8) }),
+      };
+    }
+
+    return null;
+  }, [data, t]);
+
+  const startReplacementAssignment = useCallback((rep: OrgChartRepresentative) => {
+    const target = getAssignmentTarget(rep);
+    if (!target) {
+      setSelectedRepError(t("errors.requestFailed"));
+      return;
+    }
+
+    setAssignmentUserIdInput("");
+    setAssignmentError(null);
+    setAssigningState(target);
+  }, [getAssignmentTarget, t]);
+
+  const confirmUnassign = useCallback(async () => {
+    if (!unassigningRep) return;
+
+    setUnassignSubmitting(true);
+    setUnassignError(null);
+
+    try {
+      await expireRepresentativeAssignment(unassigningRep.id);
+      setUnassigningRep(null);
+      setSelectedRep(null);
+      router.refresh();
+    } catch {
+      setUnassignError(t("errors.requestFailed"));
+    } finally {
+      setUnassignSubmitting(false);
+    }
+  }, [router, t, unassigningRep]);
 
   // 2. Initialize / Update Chart
   useLayoutEffect(() => {
@@ -323,19 +388,22 @@ export function OrgChartView({ data, assignableUsers = [], canManage = false }: 
       <div className="flex flex-col lg:flex-row items-center justify-between gap-4 bg-white/50 backdrop-blur-xl p-4 rounded-[2.5rem] border-2 border-slate-100 shadow-premium-sm">
         <div className="flex items-center gap-4 w-full lg:w-auto">
           <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl">
-            <button onClick={() => chartRef.current?.zoomIn()} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-white transition-all text-slate-600">
+            <button type="button" aria-label={t("toolbar.zoomIn")} onClick={() => chartRef.current?.zoomIn()} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-white transition-all text-slate-600">
                <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5}><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg>
             </button>
-            <button onClick={() => chartRef.current?.fit()} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-white transition-all text-slate-600">
+            <button type="button" aria-label={t("toolbar.fit")} onClick={() => chartRef.current?.fit()} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-white transition-all text-slate-600">
                <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2}><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>
             </button>
-            <button onClick={() => chartRef.current?.zoomOut()} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-white transition-all text-slate-600">
+            <button type="button" aria-label={t("toolbar.zoomOut")} onClick={() => chartRef.current?.zoomOut()} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-white transition-all text-slate-600">
                <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5}><path d="M5 12h14" strokeLinecap="round"/></svg>
             </button>
           </div>
 
           <div className="relative flex-1 max-w-sm">
+            <label htmlFor="org-chart-search" className="sr-only">{t("toolbar.searchLabel")}</label>
             <input
+              id="org-chart-search"
+              name="org_chart_search"
               type="text"
               placeholder={t("searchPlaceholder")}
               value={searchQuery}
@@ -347,7 +415,10 @@ export function OrgChartView({ data, assignableUsers = [], canManage = false }: 
             </div>
           </div>
 
+          <label htmlFor="org-chart-building-filter" className="sr-only">{t("toolbar.buildingFilterLabel")}</label>
           <select 
+            id="org-chart-building-filter"
+            name="org_chart_building_filter"
             value={buildingFilter}
             onChange={(e) => setBuildingFilter(e.target.value)}
             className="h-12 px-6 rounded-2xl border-2 border-slate-100 bg-white font-black text-xs uppercase tracking-widest outline-none focus:border-indigo-500 cursor-pointer"
@@ -358,7 +429,7 @@ export function OrgChartView({ data, assignableUsers = [], canManage = false }: 
         </div>
 
         <div className="flex items-center gap-4">
-           <button onClick={() => chartRef.current?.exportImg()} className="h-12 px-6 rounded-2xl bg-slate-900 text-white font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg">{t("exportImage")}</button>
+           <button type="button" onClick={() => chartRef.current?.exportImg()} className="h-12 px-6 rounded-2xl bg-slate-900 text-white font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg">{t("exportImage")}</button>
         </div>
       </div>
 
@@ -383,7 +454,7 @@ export function OrgChartView({ data, assignableUsers = [], canManage = false }: 
                 <h3 className="font-black text-xl text-slate-900">{t("profile.title")}</h3>
                 <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mt-1">{t("profile.subtitle")}</p>
               </div>
-              <button onClick={() => setSelectedRep(null)} className="w-10 h-10 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 transition-all">✕</button>
+              <button type="button" aria-label={t("profile.close")} onClick={() => setSelectedRep(null)} className="w-10 h-10 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 transition-all">✕</button>
            </div>
            <div className="flex-1 overflow-y-auto p-10 flex flex-col items-center">
               <div className="w-32 h-32 rounded-full border-4 border-white shadow-xl overflow-hidden mb-6">
@@ -418,7 +489,77 @@ export function OrgChartView({ data, assignableUsers = [], canManage = false }: 
               </div>
            </div>
            <div className="p-8 bg-slate-50 border-t border-slate-100 flex flex-col gap-3">
-              <Link href={`/support/users/${selectedRep.user.id}`} className="flex h-14 w-full items-center justify-center rounded-2xl bg-indigo-600 text-white font-black text-sm hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all">{t("profile.viewFull")}</Link>
+              {canManage ? (
+                <div className="rounded-3xl border border-slate-200 bg-white p-3">
+                  <p className="px-2 pb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">{t("profile.manageTitle")}</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => startReplacementAssignment(selectedRep)}
+                      className="flex h-12 items-center justify-center rounded-2xl bg-indigo-600 px-3 text-center text-xs font-black text-white shadow-lg shadow-indigo-100 transition-all hover:bg-indigo-700"
+                    >
+                      {t("profile.change")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUnassignError(null);
+                        setUnassigningRep(selectedRep);
+                      }}
+                      className="flex h-12 items-center justify-center rounded-2xl border border-red-200 bg-red-50 px-3 text-center text-xs font-black text-red-600 transition-all hover:bg-red-100"
+                    >
+                      {t("profile.unassign")}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+              <Link href={`/support/users/${selectedRep.user.id}`} className="flex h-14 w-full items-center justify-center rounded-2xl bg-slate-900 text-white font-black text-sm hover:bg-slate-800 shadow-lg shadow-slate-200 transition-all">{t("profile.viewFull")}</Link>
+           </div>
+        </div>
+      )}
+
+      {/* Unassign Confirmation */}
+      {unassigningRep && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-md">
+           <div className="w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl overflow-hidden p-8">
+              <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-red-50 text-red-600">
+                <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                  <path d="M3 6h18" strokeLinecap="round" />
+                  <path d="M8 6V4h8v2" strokeLinecap="round" />
+                  <path d="M19 6l-1 14H6L5 6" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M10 11v5M14 11v5" strokeLinecap="round" />
+                </svg>
+              </div>
+              <h3 className="text-2xl font-black text-slate-900 mb-3">{t("unassign.title")}</h3>
+              <p className="text-slate-500 font-medium leading-7">
+                {t("unassign.body", {
+                  name: unassigningRep.user.name,
+                  role: t(`roles.${unassigningRep.role}`),
+                })}
+              </p>
+
+              {unassignError ? <p className="mt-5 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-600">{unassignError}</p> : null}
+
+              <div className="flex gap-3 pt-8">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUnassigningRep(null);
+                    setUnassignError(null);
+                  }}
+                  className="flex-1 h-14 rounded-2xl bg-slate-100 text-slate-600 font-black text-sm hover:bg-slate-200 transition-all"
+                >
+                  {t("unassign.cancel")}
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmUnassign}
+                  disabled={unassignSubmitting}
+                  className="flex-1 h-14 rounded-2xl bg-red-600 text-white font-black text-sm hover:bg-red-700 disabled:opacity-50 shadow-xl shadow-red-100 transition-all"
+                >
+                  {unassignSubmitting ? t("unassign.processing") : t("unassign.confirm")}
+                </button>
+              </div>
            </div>
         </div>
       )}

@@ -1,12 +1,12 @@
 import React from "react";
-import { ActivityIndicator, StyleSheet, useColorScheme, View, FlatList, TouchableOpacity } from "react-native";
+import { ActivityIndicator, Animated, NativeScrollEvent, NativeSyntheticEvent, StyleSheet, useColorScheme, View, FlatList, TouchableOpacity } from "react-native";
 import { Typography } from "../../../components/ui/Typography";
 import { createMaterialTopTabNavigator, type MaterialTopTabBarProps } from "@react-navigation/material-top-tabs";
 import { ScreenContainer } from "../../../components/layout/ScreenContainer";
 import { useTranslation } from "react-i18next";
 import { isRtlLanguage, rowDirectionStyle, textDirectionStyle } from "../../../i18n/direction";
 import { colors, radii, spacing, typography } from "../../../theme";
-import { useGetApartmentQuery } from "../../../services/apartments/apartmentsApi";
+import { useGetAdminApartmentQuery, useGetApartmentQuery } from "../../../services/apartments/apartmentsApi";
 import type { ApartmentDetail } from "../../../services/apartments/types";
 import { DocumentsTab } from "./tabs/DocumentsTab";
 import { FinanceTab } from "./tabs/FinanceTab";
@@ -19,6 +19,7 @@ type ApartmentDetailScreenProps = {
   route: {
     params: {
       unitId: string;
+      adminMode?: boolean;
     };
   };
 };
@@ -30,6 +31,12 @@ type ApartmentTabParamList = {
   Notes: undefined;
   Documents: undefined;
   Contributions: undefined;
+};
+
+export type ApartmentTabRefreshProps = {
+  onRefresh?: () => void | Promise<unknown>;
+  refreshing?: boolean;
+  onContentScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
 };
 
 const Tab = createMaterialTopTabNavigator<ApartmentTabParamList>();
@@ -127,32 +134,101 @@ export function ApartmentDetailScreen({ route }: ApartmentDetailScreenProps) {
   const { t, i18n } = useTranslation();
   const isDark = useColorScheme() === "dark";
   const isRtl = isRtlLanguage(i18n.language);
-  const { unitId } = route.params;
-  const { data, isLoading, refetch } = useGetApartmentQuery(unitId);
+  const { unitId, adminMode } = route.params;
+  const isAdmin = adminMode === true;
+  const residentQuery = useGetApartmentQuery(unitId, { skip: isAdmin });
+  const adminQuery = useGetAdminApartmentQuery(unitId, { skip: !isAdmin });
+  const activeQuery = isAdmin ? adminQuery : residentQuery;
+  const { data, isLoading, isError, isFetching, refetch } = activeQuery;
+  const collapseAnim = React.useRef(new Animated.Value(0)).current;
+  const collapsedRef = React.useRef(false);
+  const lastScrollYRef = React.useRef(0);
+
+  const setHeaderCollapsed = React.useCallback((collapsed: boolean) => {
+    if (collapsedRef.current === collapsed) {
+      return;
+    }
+
+    collapsedRef.current = collapsed;
+    Animated.timing(collapseAnim, {
+      toValue: collapsed ? 1 : 0,
+      duration: 220,
+      useNativeDriver: false,
+    }).start();
+  }, [collapseAnim]);
+
+  const handleTabScroll = React.useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const nextY = event.nativeEvent.contentOffset.y;
+    const previousY = lastScrollYRef.current;
+    const delta = nextY - previousY;
+
+    if (nextY <= 8) {
+      setHeaderCollapsed(false);
+    } else if (delta > 8) {
+      setHeaderCollapsed(true);
+    } else if (delta < -8) {
+      setHeaderCollapsed(false);
+    }
+
+    lastScrollYRef.current = nextY;
+  }, [setHeaderCollapsed]);
+
+  const heroStyle = {
+    maxHeight: collapseAnim.interpolate({ inputRange: [0, 1], outputRange: [156, 0] }),
+    opacity: collapseAnim.interpolate({ inputRange: [0, 0.75, 1], outputRange: [1, 0.2, 0] }),
+    marginBottom: collapseAnim.interpolate({ inputRange: [0, 1], outputRange: [spacing.md, 0] }),
+    transform: [
+      {
+        translateY: collapseAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -18] }),
+      },
+    ],
+  };
+
+  const tabRefreshProps: ApartmentTabRefreshProps = {
+    onRefresh: refetch,
+    refreshing: Boolean(isFetching),
+    onContentScroll: handleTabScroll,
+  };
+
   if (isLoading || !data) {
     return (
       <ScreenContainer style={styles.center}>
-        <ActivityIndicator color={colors.primary.dark} />
-        <Typography variant="caption" color="secondary" style={{ marginTop: spacing.sm }}>
-          {t("Common.loading")}
-        </Typography>
+        {isError ? (
+          <>
+            <Typography variant="h3" style={textDirectionStyle(isRtl)}>
+              {t("Apartments.loadError", { defaultValue: "Could not load apartment detail." })}
+            </Typography>
+            <Typography variant="caption" color="secondary" style={[styles.loadingCopy, textDirectionStyle(isRtl)]}>
+              {t("Apartments.loadErrorHint", { defaultValue: "Please go back and try opening the unit again." })}
+            </Typography>
+          </>
+        ) : (
+          <>
+            <ActivityIndicator color={colors.primary.dark} />
+            <Typography variant="caption" color="secondary" style={[styles.loadingCopy, textDirectionStyle(isRtl)]}>
+              {t("Common.loading")}
+            </Typography>
+          </>
+        )}
       </ScreenContainer>
     );
   }
 
   return (
     <ScreenContainer withKeyboard={false} style={styles.container}>
-      <View style={[styles.hero, { backgroundColor: colors.surface[isDark ? "dark" : "light"] }, textDirectionStyle(isRtl)]}>
-        <Typography variant="label" color="primary">
-          {t("Apartments.hubLabel")}
-        </Typography>
-        <Typography variant="h1" style={{ marginTop: spacing.xs }}>
-          {t("Apartments.unitNumber", { number: data.unit.unitNumber })}
-        </Typography>
-        <Typography variant="caption" color="secondary" style={{ marginTop: spacing.xs }}>
-          {t("Apartments.counts", { residents: data.residents.length, vehicles: data.vehicles.length, documents: data.documents.length })}
-        </Typography>
-      </View>
+      <Animated.View style={[styles.heroContainer, heroStyle]}>
+        <View style={[styles.hero, { backgroundColor: colors.surface[isDark ? "dark" : "light"] }, textDirectionStyle(isRtl)]}>
+          <Typography variant="label" color="primary">
+            {t("Apartments.hubLabel")}
+          </Typography>
+          <Typography variant="h1" style={{ marginTop: spacing.xs }}>
+            {t("Apartments.unitNumber", { number: data.unit.unitNumber })}
+          </Typography>
+          <Typography variant="caption" color="secondary" style={{ marginTop: spacing.xs }}>
+            {t("Apartments.counts", { residents: data.residents.length, vehicles: data.vehicles.length, documents: data.documents.length })}
+          </Typography>
+        </View>
+      </Animated.View>
 
       <View style={styles.tabs}>
         <Tab.Navigator
@@ -162,15 +238,23 @@ export function ApartmentDetailScreen({ route }: ApartmentDetailScreenProps) {
             swipeEnabled: true,
           }}
         >
-          <Tab.Screen name="Residents" options={{ title: t("Apartments.tabs.residents") }}>{() => <ResidentsTab apartment={data} />}</Tab.Screen>
-          <Tab.Screen name="Vehicles & Parking" options={{ title: t("Apartments.tabs.vehicles") }}>{() => <VehiclesParkingTab apartment={data} />}</Tab.Screen>
-          <Tab.Screen name="Violations" options={{ title: t("Apartments.tabs.violations") }}>{() => <ViolationsTab apartment={data} />}</Tab.Screen>
-          <Tab.Screen name="Notes" options={{ title: t("Apartments.tabs.notes") }}>{() => <NotesTab apartment={data} />}</Tab.Screen>
-          <Tab.Screen name="Documents" options={{ title: t("Apartments.tabs.documents") }}>{() => <DocumentsTab apartment={data} />}</Tab.Screen>
-          <Tab.Screen name="Contributions" options={{ title: t("Apartments.tabs.finance") }}>{() => <FinanceTab apartment={data} onRefresh={refetch} />}</Tab.Screen>
+          <Tab.Screen name="Residents" options={{ title: t("Apartments.tabs.residents") }}>{() => <ApartmentTabScene isDark={isDark}><ResidentsTab apartment={data} {...tabRefreshProps} /></ApartmentTabScene>}</Tab.Screen>
+          <Tab.Screen name="Vehicles & Parking" options={{ title: t("Apartments.tabs.vehicles") }}>{() => <ApartmentTabScene isDark={isDark}><VehiclesParkingTab apartment={data} {...tabRefreshProps} /></ApartmentTabScene>}</Tab.Screen>
+          <Tab.Screen name="Violations" options={{ title: t("Apartments.tabs.violations") }}>{() => <ApartmentTabScene isDark={isDark}><ViolationsTab apartment={data} {...tabRefreshProps} /></ApartmentTabScene>}</Tab.Screen>
+          <Tab.Screen name="Notes" options={{ title: t("Apartments.tabs.notes") }}>{() => <ApartmentTabScene isDark={isDark}><NotesTab apartment={data} {...tabRefreshProps} /></ApartmentTabScene>}</Tab.Screen>
+          <Tab.Screen name="Documents" options={{ title: t("Apartments.tabs.documents") }}>{() => <ApartmentTabScene isDark={isDark}><DocumentsTab apartment={data} {...tabRefreshProps} /></ApartmentTabScene>}</Tab.Screen>
+          <Tab.Screen name="Contributions" options={{ title: t("Apartments.tabs.finance") }}>{() => <ApartmentTabScene isDark={isDark}><FinanceTab apartment={data} {...tabRefreshProps} /></ApartmentTabScene>}</Tab.Screen>
         </Tab.Navigator>
       </View>
     </ScreenContainer>
+  );
+}
+
+function ApartmentTabScene({ children, isDark }: { children: React.ReactNode; isDark: boolean }) {
+  return (
+    <View style={[styles.tabScene, { backgroundColor: colors.background[isDark ? "dark" : "light"] }]}>
+      {children}
+    </View>
   );
 }
 
@@ -194,17 +278,27 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flex: 1,
     justifyContent: "center",
+    padding: spacing.lg,
+  },
+  loadingCopy: {
+    marginTop: spacing.sm,
+    textAlign: "center",
   },
   container: {
     paddingHorizontal: 0,
   },
+  heroContainer: {
+    overflow: "hidden",
+  },
   hero: {
     borderRadius: radii.xl,
     marginHorizontal: spacing.md,
-    marginBottom: spacing.md,
     padding: spacing.md,
   },
   tabs: {
+    flex: 1,
+  },
+  tabScene: {
     flex: 1,
   },
   tabLabel: {

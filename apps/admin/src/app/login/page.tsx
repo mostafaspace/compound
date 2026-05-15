@@ -58,10 +58,11 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               <input
                 autoComplete="email"
                 className="h-11 rounded-lg border border-line px-3 text-sm outline-none focus:border-brand"
+                inputMode="email"
                 name="email"
                 placeholder="admin@compound.local"
                 required
-                type="email"
+                type="text"
               />
             </label>
 

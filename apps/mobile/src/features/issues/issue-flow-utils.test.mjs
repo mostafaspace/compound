@@ -20,6 +20,37 @@ test("building-only residents cannot choose the floor representative route", () 
   ]);
 });
 
+test("representatives do not see their own role as a complaint target", () => {
+  assert.deepEqual(getAvailableIssueTargetRoles(true, ["floor_representative"]), [
+    "building_representative",
+    "president",
+    "compound_admin",
+  ]);
+
+  assert.deepEqual(getAvailableIssueTargetRoles(true, ["building_representative"]), [
+    "floor_representative",
+    "president",
+    "compound_admin",
+  ]);
+
+  assert.deepEqual(getAvailableIssueTargetRoles(true, ["president"]), [
+    "floor_representative",
+    "building_representative",
+    "compound_admin",
+  ]);
+
+  assert.deepEqual(getAvailableIssueTargetRoles(true, ["compound_head"]), [
+    "floor_representative",
+    "building_representative",
+    "president",
+  ]);
+});
+
+test("default issue target skips the reporter's own role", () => {
+  assert.equal(getDefaultIssueTargetRole(true, ["floor_representative"]), "building_representative");
+  assert.equal(getDefaultIssueTargetRole(false, ["building_representative"]), "president");
+});
+
 test("issue submit is blocked while unit context is still loading", () => {
   assert.equal(
     getIssueSubmitBlockReason({ isLoadingUnits: true, hasPrimaryUnit: false }),

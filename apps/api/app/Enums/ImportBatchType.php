@@ -25,7 +25,6 @@ enum ImportBatchType: string
                 'building_code',
                 'unit_number',
                 'type',
-                'area_sqm',
                 'bedrooms',
                 'floor_number',
             ],

@@ -19,7 +19,7 @@ interface AdminUserPickerProps {
 }
 
 function formatUserLabel(user: AdminUserOption): string {
-  return `${user.name} · ${user.email} · #${user.id}`;
+  return `${user.name} · ${user.email}`;
 }
 
 function userMatches(user: AdminUserOption, query: string): boolean {
@@ -38,7 +38,7 @@ export function AdminUserPicker({
   excludeUserId,
   helperText,
   onUserChange,
-  placeholder = "Search by name, email, phone, or ID",
+  placeholder = "Search by name, email, or phone",
   required = false,
   searchStatus,
 }: AdminUserPickerProps) {
@@ -119,7 +119,7 @@ export function AdminUserPicker({
       {helperText ? <p className="mt-1 text-xs leading-5 text-muted">{helperText}</p> : null}
       {selectedUser ? (
         <div className="mt-2 rounded-lg border border-line bg-panel px-3 py-2 text-xs text-muted">
-          Selected <span className="font-semibold text-foreground">{selectedUser.name}</span> · ID #{selectedUser.id}
+          Selected <span className="font-semibold text-foreground">{selectedUser.name}</span> · {selectedUser.email}
         </div>
       ) : null}
       {open ? (
@@ -141,12 +141,12 @@ export function AdminUserPicker({
               >
                 <span className="text-sm font-semibold text-foreground">{user.name}</span>
                 <span className="text-xs text-muted">
-                  {user.email} · #{user.id} · {user.status.replace(/_/g, " ")}
+                  {user.email} · {user.status.replace(/_/g, " ")}
                 </span>
               </button>
             ))
           ) : (
-            <div className="px-3 py-3 text-sm text-muted">No users found. Try name, email, phone, or ID.</div>
+            <div className="px-3 py-3 text-sm text-muted">No users found. Try name, email, or phone.</div>
           )}
         </div>
       ) : null}

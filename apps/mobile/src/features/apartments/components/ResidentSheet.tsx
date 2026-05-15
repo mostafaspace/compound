@@ -24,10 +24,12 @@ export function ResidentSheet({
   apartment,
   resident,
   onClose,
+  onSaved,
 }: {
   apartment: ApartmentDetail;
   resident?: ApartmentResident;
   onClose: () => void;
+  onSaved?: () => void;
 }) {
   const { t, i18n } = useTranslation();
   const isDark = useColorScheme() === "dark";
@@ -103,6 +105,7 @@ export function ResidentSheet({
         await createResident({ unitId: apartment.id, body }).unwrap();
       }
 
+      onSaved?.();
       onClose();
     } catch {
       setError(t("Residents.errors.saveFailed"));
@@ -113,15 +116,14 @@ export function ResidentSheet({
     <BottomSheet
       onClose={onClose}
       header={
-        <>
+        <View style={textDirectionStyle(isRtl)}>
           <Typography variant="h2" style={textDirectionStyle(isRtl)}>
             {resident ? t("Residents.editResident") : t("Residents.addResident")}
           </Typography>
-          <Typography variant="body" color="secondary" style={[styles.subtitle, textDirectionStyle(isRtl)]}>
-            {t("Residents.nonUserHint")}
-          </Typography>
-        </>
+        </View>
       }
+      maxHeight="94%"
+      contentContainerStyle={styles.sheetContent}
       footer={
         <View>
           <View style={[styles.actions, rowDirectionStyle(isRtl)]}>
@@ -140,6 +142,12 @@ export function ResidentSheet({
     >
       <View style={styles.form}>
         <Input label={t("Residents.fields.name")} value={name} onChangeText={setName} placeholder={t("Residents.fields.namePlaceholder")} />
+        <Button
+          title={photo ? t("Residents.actions.photoSelected") : t("Residents.actions.pickPhoto")}
+          variant="outline"
+          onPress={pickPhoto}
+          style={styles.photoButton}
+        />
         <Input label={t("Residents.fields.phone")} value={phone} onChangeText={setPhone} placeholder={t("Residents.fields.phonePlaceholder")} keyboardType="phone-pad" />
         <Input label={t("Residents.fields.email")} value={email} onChangeText={setEmail} placeholder={t("Residents.fields.emailPlaceholder")} keyboardType="email-address" autoCapitalize="none" />
 
@@ -156,13 +164,6 @@ export function ResidentSheet({
           contentContainerStyle={[styles.chips, rowDirectionStyle(isRtl)]}
         />
 
-        <Button
-          title={photo ? t("Residents.actions.photoSelected") : t("Residents.actions.pickPhoto")}
-          variant="outline"
-          onPress={pickPhoto}
-          style={styles.photoButton}
-        />
-
         {error ? <Typography variant="caption" style={styles.error}>{error}</Typography> : null}
       </View>
     </BottomSheet>
@@ -173,8 +174,8 @@ const styles = StyleSheet.create({
   form: {
     gap: spacing.sm,
   },
-  subtitle: {
-    marginTop: spacing.xs,
+  sheetContent: {
+    paddingBottom: spacing.xl,
   },
   label: {
     ...typography.label,
@@ -197,7 +198,7 @@ const styles = StyleSheet.create({
     textTransform: "capitalize",
   },
   photoButton: {
-    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
   },
   actions: {
     flexDirection: "row",

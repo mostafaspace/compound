@@ -14,8 +14,10 @@ import {
   ViewStyle,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 import { colors, radii, shadows, spacing, typography } from "../../theme";
 import { Icon } from "./Icon";
+import { appDirectionStyle, isRtlLanguage, textDirectionStyle } from "../../i18n/direction";
 
 type BottomSheetProps = {
   visible?: boolean;
@@ -47,8 +49,11 @@ export function BottomSheet({
   titleStyle,
 }: BottomSheetProps) {
   const isDark = useColorScheme() === "dark";
+  const { i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const mode = isDark ? "dark" : "light";
+  const isRtl = isRtlLanguage(i18n.language);
+  const directionalText: TextStyle = textDirectionStyle(isRtl);
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -67,6 +72,7 @@ export function BottomSheet({
                 maxHeight,
                 paddingBottom: Math.max(insets.bottom, spacing.sm),
               },
+              appDirectionStyle(isRtl),
               sheetStyle,
             ]}
           >
@@ -76,10 +82,10 @@ export function BottomSheet({
                 {header ?? (
                   <>
                     {title ? (
-                      <Text style={[styles.title, { color: colors.text.primary[mode] }, titleStyle]}>{title}</Text>
+                      <Text style={[styles.title, { color: colors.text.primary[mode] }, directionalText, titleStyle]}>{title}</Text>
                     ) : null}
                     {subtitle ? (
-                      <Text style={[styles.subtitle, { color: colors.text.secondary[mode] }]}>{subtitle}</Text>
+                      <Text style={[styles.subtitle, { color: colors.text.secondary[mode] }, directionalText]}>{subtitle}</Text>
                     ) : null}
                   </>
                 )}

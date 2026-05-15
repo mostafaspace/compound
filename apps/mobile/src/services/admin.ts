@@ -101,6 +101,59 @@ export const adminApi = api.injectEndpoints({
       transformResponse: (response: any) => response.data,
       providesTags: ["Admin", "Finance"],
     }),
+    getCollectionCampaigns: builder.query<any[], void>({
+      query: () => "/finance/collection-campaigns",
+      transformResponse: (response: any) => response.data,
+      providesTags: ["Admin", "Finance"],
+    }),
+    createFinanceLedgerEntry: builder.mutation<any, { unitAccountId: string; body: { type: string; amount: number; description: string } }>({
+      query: ({ unitAccountId, body }) => ({
+        url: `/finance/unit-accounts/${unitAccountId}/ledger-entries`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Admin", "Finance", "UnitAccount"],
+    }),
+    createCollectionCampaign: builder.mutation<any, { name: string; description?: string; targetAmount: number; currency?: string; targetType: string; targetIds?: string[] }>({
+      query: (body) => ({
+        url: "/finance/collection-campaigns",
+        method: "POST",
+        body: {
+          name: body.name,
+          description: body.description,
+          target_amount: body.targetAmount,
+          currency: body.currency ?? "EGP",
+          target_type: body.targetType,
+          target_ids: body.targetIds ?? [],
+        },
+      }),
+      transformResponse: (response: any) => response.data,
+      invalidatesTags: ["Admin", "Finance", "UnitAccount"],
+    }),
+    publishCollectionCampaign: builder.mutation<any, string>({
+      query: (campaignId) => ({
+        url: `/finance/collection-campaigns/${campaignId}/publish`,
+        method: "PATCH",
+      }),
+      transformResponse: (response: any) => response.data,
+      invalidatesTags: ["Admin", "Finance", "UnitAccount"],
+    }),
+    archiveCollectionCampaign: builder.mutation<any, string>({
+      query: (campaignId) => ({
+        url: `/finance/collection-campaigns/${campaignId}/archive`,
+        method: "PATCH",
+      }),
+      transformResponse: (response: any) => response.data,
+      invalidatesTags: ["Admin", "Finance", "UnitAccount"],
+    }),
+    applyCollectionCampaignCharges: builder.mutation<any, { campaignId: string; amount: number; description: string }>({
+      query: ({ campaignId, amount, description }) => ({
+        url: `/finance/collection-campaigns/${campaignId}/charges`,
+        method: "POST",
+        body: { amount, description },
+      }),
+      invalidatesTags: ["Admin", "Finance", "UnitAccount"],
+    }),
     approvePayment: builder.mutation<void, { id: string; description?: string }>({
       query: ({ id, ...body }) => ({
         url: `/finance/payment-submissions/${id}/approve`,
@@ -153,6 +206,12 @@ export const {
   useUpdateUnitMembershipMutation,
   useGetFinanceUnitAccountsQuery,
   useGetFinancePaymentSubmissionsQuery,
+  useGetCollectionCampaignsQuery,
+  useCreateFinanceLedgerEntryMutation,
+  useCreateCollectionCampaignMutation,
+  usePublishCollectionCampaignMutation,
+  useArchiveCollectionCampaignMutation,
+  useApplyCollectionCampaignChargesMutation,
   useApprovePaymentMutation,
   useRejectPaymentMutation,
   useGetAuditLogsQuery,

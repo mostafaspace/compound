@@ -72,7 +72,7 @@ return new class extends Migration
             }
         });
 
-        if (Schema::hasColumn('unit_memberships', 'has_vehicle')) {
+        if (Schema::hasColumn('unit_memberships', 'has_vehicle') && Schema::hasColumn('units', 'has_vehicle')) {
             $membershipUnitIds = DB::table('unit_memberships')
                 ->pluck('unit_id')
                 ->unique()

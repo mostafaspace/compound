@@ -92,8 +92,8 @@ export const AdminTabNavigator = () => {
         name="Finance"
         component={AdminFinanceScreen}
         options={{ 
-          title: t('Finance.label', 'Finance'),
-          header: () => <ScreenHeader title={t('Finance.label', 'Finance')} showBack={false} rightElement={<NotificationBell />} />
+          title: t('Finance.label', 'Contributions'),
+          header: () => <ScreenHeader title={t('Finance.label', 'Contributions')} showBack={false} rightElement={<NotificationBell />} />
         }}
       />
       <Tab.Screen
@@ -107,6 +107,11 @@ export const AdminTabNavigator = () => {
       <Tab.Screen
         name="More"
         component={MoreNavigator}
+        listeners={({ navigation }) => ({
+          tabPress: () => {
+            navigation.navigate('More', { screen: 'MoreHome' });
+          },
+        })}
         options={{ 
           title: t('Common.more', 'More'), 
           headerShown: false 

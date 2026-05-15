@@ -32,8 +32,10 @@ export interface AnnouncementAttachment {
   id?: string;
   name?: string;
   url?: string;
+  downloadUrl?: string;
   mimeType?: string;
   size?: number;
+  createdAt?: string;
 }
 
 export interface AnnouncementAcknowledgementSummary {

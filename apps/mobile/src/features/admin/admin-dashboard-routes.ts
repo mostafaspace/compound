@@ -9,6 +9,7 @@ export type AdminDashboardActionRoute =
   | "profile";
 
 export interface AdminDashboardNavigationTarget {
+  navigator?: "root" | "tab";
   screen: string;
   params?: {
     screen?: string;
@@ -21,13 +22,13 @@ export interface AdminDashboardQuickAction {
 }
 
 const QUICK_ACTIONS: AdminDashboardQuickAction[] = [
-  { key: "Visitors", route: "Visitors" },
-  { key: "Units", route: "Units" },
-  { key: "Finance", route: "Finance" },
-  { key: "AuditLog", route: "AuditLog" },
-  { key: "AdminInvitations", route: "AdminInvitations" },
-  { key: "Polls", route: "Polls" },
   { key: "CreatePoll", route: "CreatePoll" },
+  { key: "Polls", route: "Polls" },
+  { key: "Units", route: "Units" },
+  { key: "Visitors", route: "Visitors" },
+  { key: "Finance", route: "Finance" },
+  { key: "AdminInvitations", route: "AdminInvitations" },
+  { key: "AuditLog", route: "AuditLog" },
 ];
 
 export function getAdminDashboardQuickActions(): AdminDashboardQuickAction[] {
@@ -40,19 +41,32 @@ export function getAdminDashboardNavigationTarget(
   switch (route) {
     case "profile":
       return {
+        navigator: "tab",
         screen: "More",
         params: { screen: "Settings" },
       };
     case "Polls":
       return {
+        navigator: "tab",
         screen: "More",
         params: { screen: "Polls" },
       };
     case "CreatePoll":
       return {
+        navigator: "root",
         screen: "CreatePoll",
       };
+    case "AuditLog":
+      return {
+        navigator: "root",
+        screen: "AuditLog",
+      };
+    case "AdminInvitations":
+      return {
+        navigator: "root",
+        screen: "AdminInvitations",
+      };
     default:
-      return { screen: route };
+      return { navigator: "tab", screen: route };
   }
 }

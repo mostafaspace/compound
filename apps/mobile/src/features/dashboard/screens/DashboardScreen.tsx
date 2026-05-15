@@ -12,24 +12,7 @@ import { useGetDashboardQuery } from '../../../services/dashboard';
 import { Card } from '../../../components/ui/Card';
 import { Icon, type AppIconName } from '../../../components/ui/Icon';
 import { useIsRtl, rowDirectionStyle, textDirectionStyle } from '../../../i18n/direction';
-
-const shortcutRouteMap: Record<string, { screen: string; params?: object }> = {
-  '/units/assign': { screen: 'Admin', params: { screen: 'Units' } },
-  '/visitors/create': { screen: 'CreateVisitor' },
-  '/issues/create': { screen: 'AddEditIssue' },
-  '/polls': { screen: 'Main', params: { screen: 'Polls' } },
-  '/org-chart': { screen: 'Main', params: { screen: 'More', params: { screen: 'OrgChart', initial: false } } },
-  '/visitors': { screen: 'Main', params: { screen: 'Visitors' } },
-  '/apartments': { screen: 'Main', params: { screen: 'Apartments', params: { screen: 'ApartmentsList' } } },
-  '/property': { screen: 'Main', params: { screen: 'Apartments', params: { screen: 'ApartmentsList' } } },
-  '/finance': { screen: 'Main', params: { screen: 'Apartments', params: { screen: 'ApartmentsList' } } },
-  '/documents': { screen: 'Main', params: { screen: 'Apartments', params: { screen: 'ApartmentsList' } } },
-  '/issues': { screen: 'Main', params: { screen: 'More', params: { screen: 'Issues', initial: false } } },
-  '/security/scanner': { screen: 'Guard', params: { screen: 'Scanner' } },
-  '/security/entries': { screen: 'Guard', params: { screen: 'Gate' } },
-  '/security/manual-entry': { screen: 'Guard', params: { screen: 'Gate' } },
-  '/governance': { screen: 'Main', params: { screen: 'Polls' } },
-};
+import { resolveDashboardShortcutTarget } from '../dashboard-navigation';
 
 type DashboardRow =
   | { type: 'hero' }
@@ -48,10 +31,17 @@ export const DashboardScreen = () => {
   const { data: dashboard } = useGetDashboardQuery();
 
   const navigateToRoute = (route: string) => {
-    const mapping = shortcutRouteMap[route];
-    if (mapping) {
-      navigation.navigate(mapping.screen, mapping.params);
+    const target = resolveDashboardShortcutTarget(route);
+    if (!target) {
+      return;
     }
+
+    if (target.navigator === 'tab') {
+      navigation.navigate(target.screen, target.params);
+      return;
+    }
+
+    navigation.navigate(target.screen, target.params);
   };
 
   if (!user) return null;

@@ -1,10 +1,10 @@
 import React, { useState } from "react";
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, useColorScheme, View } from "react-native";
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, useColorScheme, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { pick, types } from "@react-native-documents/picker";
 import { Typography } from "../../../../components/ui/Typography";
 import { Button } from "../../../../components/ui/Button";
-import { colors, radii, shadows, spacing, typography } from "../../../../theme";
+import { colors, layout, radii, shadows, spacing } from "../../../../theme";
 import { isRtlLanguage, rowDirectionStyle, textDirectionStyle } from "../../../../i18n/direction";
 import {
   useGetApartmentDocumentShareLinkMutation,
@@ -17,16 +17,17 @@ import { DocumentReplaceSheet } from "../../components/DocumentReplaceSheet";
 import { useNavigation } from "@react-navigation/native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../../../../navigation/types";
+import type { ApartmentTabRefreshProps } from "../ApartmentDetailScreen";
 
 const DOCUMENT_TYPES = ["ownership_proof", "lease", "id_copy", "utility_bill", "other"] as const;
 const OWNER_REGISTRATION_DOCUMENT_TYPES = new Set<string>(["ownership_proof", "lease", "id_copy"]);
 
-export function DocumentsTab({ apartment }: { apartment: ApartmentDetail }) {
+export function DocumentsTab({ apartment, onRefresh, refreshing, onContentScroll }: { apartment: ApartmentDetail } & ApartmentTabRefreshProps) {
   const { t, i18n } = useTranslation();
   const isDark = useColorScheme() === "dark";
   const isRtl = isRtlLanguage(i18n.language);
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
-  const { data = apartment.documents, isLoading } = useListApartmentDocumentsQuery(apartment.id);
+  const { data = apartment.documents, isLoading, isFetching, refetch } = useListApartmentDocumentsQuery(apartment.id);
   const [uploadDocument, uploadState] = useUploadApartmentDocumentMutation();
   const [getShareLink, shareLinkState] = useGetApartmentDocumentShareLinkMutation();
   const [uploadingType, setUploadingType] = useState<string | null>(null);
@@ -34,6 +35,10 @@ export function DocumentsTab({ apartment }: { apartment: ApartmentDetail }) {
   const [error, setError] = useState<string | null>(null);
   const [openingId, setOpeningId] = useState<number | string | null>(null);
   const uploadableDocumentTypes = getUploadableDocumentTypes(data);
+  const handleRefresh = () => {
+    void refetch();
+    void onRefresh?.();
+  };
 
   const openDocument = async (document: ApartmentDocument) => {
     try {
@@ -97,8 +102,21 @@ export function DocumentsTab({ apartment }: { apartment: ApartmentDetail }) {
         data={data}
         keyExtractor={(document) => String(document.id)}
         contentContainerStyle={styles.list}
+        refreshing={Boolean(refreshing || isFetching)}
+        onRefresh={handleRefresh}
+        onScroll={onContentScroll}
+        scrollEventThrottle={16}
         ListHeaderComponent={
-          <View style={[styles.headerCard, { backgroundColor: colors.surface[isDark ? "dark" : "light"] }, textDirectionStyle(isRtl)]}>
+          <View
+            style={[
+              styles.headerCard,
+              {
+                backgroundColor: colors.surface[isDark ? "dark" : "light"],
+                borderColor: colors.border[isDark ? "dark" : "light"],
+              },
+              textDirectionStyle(isRtl),
+            ]}
+          >
             <Typography variant="label" color="primary">{t("Documents.label")}</Typography>
             <Typography variant="h2" style={{ marginTop: spacing.xs }}>
               {t("Documents.cabinetTitle")}
@@ -114,7 +132,16 @@ export function DocumentsTab({ apartment }: { apartment: ApartmentDetail }) {
         }
         ListEmptyComponent={<EmptyState t={t} isRtl={isRtl} />}
         ListFooterComponent={
-          <View style={[styles.uploadCard, { backgroundColor: colors.surface[isDark ? "dark" : "light"] }, textDirectionStyle(isRtl)]}>
+          <View
+            style={[
+              styles.uploadCard,
+              {
+                backgroundColor: colors.surface[isDark ? "dark" : "light"],
+                borderColor: colors.border[isDark ? "dark" : "light"],
+              },
+              textDirectionStyle(isRtl),
+            ]}
+          >
             <Typography variant="bodyStrong">
               {t("Documents.uploadAnother")}
             </Typography>
@@ -251,7 +278,16 @@ function EmptyState({ t, isRtl }: { t: any, isRtl: boolean }) {
   const isDark = useColorScheme() === "dark";
 
   return (
-    <View style={[styles.empty, { backgroundColor: colors.surface[isDark ? "dark" : "light"] }, textDirectionStyle(isRtl)]}>
+    <View
+      style={[
+        styles.empty,
+        {
+          backgroundColor: colors.surface[isDark ? "dark" : "light"],
+          borderColor: colors.border[isDark ? "dark" : "light"],
+        },
+        textDirectionStyle(isRtl),
+      ]}
+    >
       <Typography variant="h3">{t("Documents.noDocuments")}</Typography>
       <Typography variant="body" color="secondary" style={{ marginTop: spacing.xs }}>
         {t("Documents.noDocumentsHint")}
@@ -352,12 +388,13 @@ function formatDate(value: string | null, t: any): string {
 const styles = StyleSheet.create({
   list: {
     gap: spacing.md,
-    padding: spacing.md,
+    padding: layout.screenGutter,
   },
   headerCard: {
     borderRadius: radii.xl,
-    padding: spacing.lg,
-    ...shadows.md,
+    borderWidth: 1,
+    padding: layout.heroPadding,
+    ...shadows.sm,
   },
   loader: {
     marginTop: spacing.md,
@@ -406,11 +443,15 @@ const styles = StyleSheet.create({
   },
   empty: {
     borderRadius: radii.xl,
-    padding: spacing.lg,
+    borderWidth: 1,
+    padding: layout.heroPadding,
+    ...shadows.sm,
   },
   uploadCard: {
     borderRadius: radii.xl,
-    padding: spacing.lg,
+    borderWidth: 1,
+    padding: layout.heroPadding,
+    ...shadows.sm,
   },
   typeGrid: {
     flexDirection: "row",

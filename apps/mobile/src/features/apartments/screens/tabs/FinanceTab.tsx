@@ -9,8 +9,9 @@ import { colors, radii, shadows, spacing, typography } from "../../../../theme";
 import type { ApartmentDetail } from "../../../../services/apartments/types";
 import { ReceiptSubmitSheet } from "../../components/ReceiptSubmitSheet";
 import { isRtlLanguage, rowDirectionStyle, textDirectionStyle } from "../../../../i18n/direction";
+import type { ApartmentTabRefreshProps } from "../ApartmentDetailScreen";
 
-export function FinanceTab({ apartment, onRefresh }: { apartment: ApartmentDetail; onRefresh?: () => void }) {
+export function FinanceTab({ apartment, onRefresh, refreshing, onContentScroll }: { apartment: ApartmentDetail } & ApartmentTabRefreshProps) {
   const { t, i18n } = useTranslation();
   const isDark = useColorScheme() === "dark";
   const isRtl = isRtlLanguage(i18n.language);
@@ -28,16 +29,26 @@ export function FinanceTab({ apartment, onRefresh }: { apartment: ApartmentDetai
 
   if (!account) {
     return (
-      <View style={styles.list}>
-        <View style={[styles.empty, { backgroundColor: colors.surface[isDark ? "dark" : "light"] }, textDirectionStyle(isRtl)]}>
-          <Text style={[styles.emptyTitle, { color: colors.text.primary[isDark ? "dark" : "light"] }, textDirectionStyle(isRtl)]}>
-            {t("Finance.noAccount")}
-          </Text>
-          <Text style={[styles.emptyBody, { color: colors.text.secondary[isDark ? "dark" : "light"] }, textDirectionStyle(isRtl)]}>
-            {t("Finance.noAccountHint")}
-          </Text>
-        </View>
-      </View>
+      <FlatList
+        data={[] as string[]}
+        keyExtractor={(item) => item}
+        renderItem={() => null}
+        contentContainerStyle={styles.list}
+        refreshing={Boolean(refreshing)}
+        onRefresh={onRefresh}
+        onScroll={onContentScroll}
+        scrollEventThrottle={16}
+        ListEmptyComponent={
+          <View style={[styles.empty, { backgroundColor: colors.surface[isDark ? "dark" : "light"] }, textDirectionStyle(isRtl)]}>
+            <Text style={[styles.emptyTitle, { color: colors.text.primary[isDark ? "dark" : "light"] }, textDirectionStyle(isRtl)]}>
+              {t("Finance.noAccount")}
+            </Text>
+            <Text style={[styles.emptyBody, { color: colors.text.secondary[isDark ? "dark" : "light"] }, textDirectionStyle(isRtl)]}>
+              {t("Finance.noAccountHint")}
+            </Text>
+          </View>
+        }
+      />
     );
   }
 
@@ -68,6 +79,10 @@ export function FinanceTab({ apartment, onRefresh }: { apartment: ApartmentDetai
         data={(activeTab === "outstanding" ? outstandingEntries : submissions) as any[]}
         keyExtractor={(item) => String(item.id)}
         contentContainerStyle={styles.list}
+        refreshing={Boolean(refreshing)}
+        onRefresh={onRefresh}
+        onScroll={onContentScroll}
+        scrollEventThrottle={16}
         ListHeaderComponent={
           <>
             <View
@@ -362,6 +377,11 @@ function PaymentSubmissionRow({
       {submission.rejectionReason && (
         <Typography variant="caption" style={{ color: colors.error, marginTop: spacing.xs }}>
           {submission.rejectionReason}
+        </Typography>
+      )}
+      {submission.correctionNote && (
+        <Typography variant="caption" style={{ color: colors.warning, marginTop: spacing.xs }}>
+          {t("Finance.correctionRequested")}: {submission.correctionNote}
         </Typography>
       )}
     </View>

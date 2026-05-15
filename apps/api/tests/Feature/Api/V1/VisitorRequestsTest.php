@@ -84,6 +84,13 @@ class VisitorRequestsTest extends TestCase
             'category' => 'visitors',
             'title' => 'Visitor pass issued',
         ]);
+
+        $securityNotification = Notification::query()
+            ->where('category', 'visitors')
+            ->where('title', 'Visitor pass issued')
+            ->firstOrFail();
+
+        $this->assertSame('تم إصدار تصريح ضيف', $securityNotification->metadata['titleTranslations']['ar'] ?? null);
     }
 
     public function test_resident_can_reopen_shared_visitor_pass_with_same_qr_token(): void
@@ -401,6 +408,14 @@ class VisitorRequestsTest extends TestCase
             'category' => 'visitors',
             'title' => 'Visitor allowed',
         ]);
+
+        $allowedNotification = Notification::query()
+            ->where('user_id', $resident->id)
+            ->where('category', 'visitors')
+            ->where('title', 'Visitor allowed')
+            ->firstOrFail();
+
+        $this->assertSame('تم السماح بدخول الضيف', $allowedNotification->metadata['titleTranslations']['ar'] ?? null);
     }
 
     public function test_scoped_security_cannot_scan_or_process_other_compound_visitor_request(): void

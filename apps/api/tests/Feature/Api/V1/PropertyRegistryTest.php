@@ -171,7 +171,6 @@ class PropertyRegistryTest extends TestCase
             'floorId' => $floorId,
             'unitNumber' => '001',
             'type' => 'apartment',
-            'areaSqm' => 125.5,
             'bedrooms' => 3,
         ])
             ->assertCreated()
@@ -231,7 +230,6 @@ class PropertyRegistryTest extends TestCase
             'unitNumber' => '202',
             'type' => 'duplex',
             'status' => UnitStatus::Vacant->value,
-            'areaSqm' => 160.25,
             'bedrooms' => 4,
         ])
             ->assertOk()
@@ -807,9 +805,9 @@ class PropertyRegistryTest extends TestCase
         $csv = UploadedFile::fake()->createWithContent(
             'units.csv',
             implode("\n", [
-                'unitNumber,type,status,floorId,areaSqm,bedrooms',
-                "301,apartment,active,{$floor->id},122.50,3",
-                "302,duplex,vacant,{$floor->id},160,4",
+                'unitNumber,type,status,floorId,bedrooms',
+                "301,apartment,active,{$floor->id},3",
+                "302,duplex,vacant,{$floor->id},4",
             ])
         );
 
@@ -830,9 +828,9 @@ class PropertyRegistryTest extends TestCase
         $csv = UploadedFile::fake()->createWithContent(
             'units.csv',
             implode("\n", [
-                'unitNumber,type,status,floorId,areaSqm,bedrooms',
-                "301,apartment,active,{$floor->id},122.50,3",
-                "302,duplex,vacant,{$floor->id},160,4",
+                'unitNumber,type,status,floorId,bedrooms',
+                "301,apartment,active,{$floor->id},3",
+                "302,duplex,vacant,{$floor->id},4",
             ])
         );
 
@@ -857,7 +855,7 @@ class PropertyRegistryTest extends TestCase
 
         $export = $response->streamedContent();
 
-        $this->assertStringContainsString('unitNumber,type,status,floorId,floorLabel,areaSqm,bedrooms', $export);
+        $this->assertStringContainsString('unitNumber,type,status,floorId,floorLabel,bedrooms', $export);
         $this->assertStringContainsString('301,apartment,active', $export);
         $this->assertStringContainsString('302,duplex,vacant', $export);
     }
@@ -880,12 +878,12 @@ class PropertyRegistryTest extends TestCase
         $csv = UploadedFile::fake()->createWithContent(
             'units.csv',
             implode("\n", [
-                'unitNumber,type,status,floorId,areaSqm,bedrooms',
-                '401,apartment,active,,90,2',
-                '402,unknown,active,,100,2',
-                "403,apartment,active,{$otherFloor->id},100,2",
-                '404,apartment,active,,100,2',
-                '404,apartment,active,,100,2',
+                'unitNumber,type,status,floorId,bedrooms',
+                '401,apartment,active,,2',
+                '402,unknown,active,,2',
+                "403,apartment,active,{$otherFloor->id},2",
+                '404,apartment,active,,2',
+                '404,apartment,active,,2',
             ])
         );
 

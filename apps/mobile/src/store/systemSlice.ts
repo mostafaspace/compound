@@ -1,7 +1,6 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { RootState } from "../store";
 import { type AppLanguage } from "../i18n/direction";
-import { I18nManager } from "react-native";
 
 interface SystemState {
   isOffline: boolean;
@@ -13,7 +12,7 @@ interface SystemState {
 const initialState: SystemState = {
   isOffline: false,
   lastError: null,
-  language: "en", // Default to English to avoid boot loops if restoration is slow
+  language: "ar",
   colorScheme: "dark",
 };
 

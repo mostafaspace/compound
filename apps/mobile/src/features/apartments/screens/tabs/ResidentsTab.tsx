@@ -8,8 +8,9 @@ import type { ApartmentDetail, ApartmentResident } from "../../../../services/ap
 import { ResidentSheet } from "../../components/ResidentSheet";
 import { useIsRtl, rowDirectionStyle, textDirectionStyle } from "../../../../i18n/direction";
 import { Typography } from "../../../../components/ui/Typography";
+import type { ApartmentTabRefreshProps } from "../ApartmentDetailScreen";
 
-export function ResidentsTab({ apartment }: { apartment: ApartmentDetail }) {
+export function ResidentsTab({ apartment, onRefresh, refreshing, onContentScroll }: { apartment: ApartmentDetail } & ApartmentTabRefreshProps) {
   const { t } = useTranslation();
   const isDark = useColorScheme() === "dark";
   const isRtl = useIsRtl();
@@ -18,11 +19,15 @@ export function ResidentsTab({ apartment }: { apartment: ApartmentDetail }) {
   const [deleteResident] = useDeleteResidentMutation();
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background[isDark ? "dark" : "light"] }]}>
       <FlatList
         data={apartment.residents}
         keyExtractor={(resident) => String(resident.id)}
         contentContainerStyle={styles.list}
+        refreshing={Boolean(refreshing)}
+        onRefresh={onRefresh}
+        onScroll={onContentScroll}
+        scrollEventThrottle={16}
         ListHeaderComponent={
           <View style={[styles.header, textDirectionStyle(isRtl)]}>
             <Typography variant="h2">{t("Residents.label")}</Typography>
@@ -46,8 +51,8 @@ export function ResidentsTab({ apartment }: { apartment: ApartmentDetail }) {
         )}
       />
       <Button title={t("Residents.addResident")} onPress={() => setIsAdding(true)} style={styles.fab} />
-      {isAdding ? <ResidentSheet apartment={apartment} onClose={() => setIsAdding(false)} /> : null}
-      {editing ? <ResidentSheet apartment={apartment} resident={editing} onClose={() => setEditing(null)} /> : null}
+      {isAdding ? <ResidentSheet apartment={apartment} onSaved={onRefresh} onClose={() => setIsAdding(false)} /> : null}
+      {editing ? <ResidentSheet apartment={apartment} resident={editing} onSaved={onRefresh} onClose={() => setEditing(null)} /> : null}
     </View>
   );
 }

@@ -115,6 +115,11 @@ export const MainTabNavigator = () => {
       <Tab.Screen
         name="More" 
         component={MoreNavigator}
+        listeners={({ navigation }) => ({
+          tabPress: () => {
+            navigation.navigate('More', { screen: 'MoreHome' });
+          },
+        })}
         options={{ 
           title: t("Common.more", { defaultValue: "More" }),
           headerShown: false

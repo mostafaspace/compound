@@ -190,7 +190,7 @@ export const componentSize = {
 export const layout = {
   screenGutter: spacing.md,
   screenTop: spacing.md,
-  screenBottom: spacing.xl,
+  screenBottom: componentSize.tabBar + spacing.lg,
   sectionGap: spacing.lg,
   cardPadding: spacing.md,
   cardGap: spacing.md,

@@ -13,7 +13,12 @@ export const apartmentsApi = api.injectEndpoints({
       transformResponse: (response: ApiEnvelope<ApartmentDetail>) => response.data,
       providesTags: (_result, _error, id) => [{ type: "ApartmentDetail", id }],
     }),
+    getAdminApartment: builder.query<ApartmentDetail, string>({
+      query: (id) => `/admin/apartments/${id}`,
+      transformResponse: (response: ApiEnvelope<ApartmentDetail>) => response.data,
+      providesTags: (_result, _error, id) => [{ type: "ApartmentDetail", id }],
+    }),
   }),
 });
 
-export const { useListApartmentsQuery, useGetApartmentQuery } = apartmentsApi;
+export const { useListApartmentsQuery, useGetApartmentQuery, useGetAdminApartmentQuery } = apartmentsApi;

@@ -27,7 +27,6 @@ class UnitFactory extends Factory
             'floor_id' => null,
             'unit_number' => fake()->bothify('###'),
             'type' => fake()->randomElement([UnitType::Apartment->value, UnitType::Duplex->value, UnitType::Villa->value]),
-            'area_sqm' => fake()->randomFloat(2, 80, 350),
             'bedrooms' => fake()->numberBetween(1, 5),
             'status' => UnitStatus::Active->value,
             'metadata' => [],

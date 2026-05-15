@@ -9,6 +9,7 @@ import {
   Pressable,
   ScrollView,
   TouchableOpacity,
+  Modal,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
@@ -17,6 +18,9 @@ import type { StackNavigationProp } from '@react-navigation/stack';
 import { skipToken } from '@reduxjs/toolkit/query';
 import * as Keychain from "react-native-keychain";
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
+import { Controller, useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { useForgotPasswordMutation, useLoginMutation, useResetPasswordMutation } from '../../../services/auth';
 import { setCredentials } from '../../../store/authSlice';
 import {
@@ -34,25 +38,27 @@ import { uatPersonaEmails, uatPersonaPassword } from '../login-personas';
 import { useGetOwnerRegistrationStatusQuery } from '../../../services/ownerRegistration';
 import type { RootStackParamList } from '../../../navigation/types';
 import { appDirectionStyle, applyNativeDirection, centerTextDirectionStyle, isRtlLanguage, rowDirectionStyle, textDirectionStyle } from '../../../i18n/direction';
-import { mobilePreferencesService, persistMobilePreferences } from '../../../i18n/preferences';
+import { persistMobilePreferences } from '../../../i18n/preferences';
 
 const PersonaChip = ({
   label,
   onSelect,
   testID,
   disabled,
+  accessibilityLabel,
 }: {
   label: string,
   onSelect: () => void;
   testID: string;
   disabled?: boolean;
+  accessibilityLabel: string;
 }) => (
   <TouchableOpacity 
     onPress={onSelect}
     disabled={disabled}
     testID={testID}
     accessibilityRole="button"
-    accessibilityLabel={`Use ${label} UAT persona`}
+    accessibilityLabel={accessibilityLabel}
     style={{
       paddingHorizontal: 12,
       paddingVertical: 6,
@@ -73,6 +79,11 @@ const authTokenService = "compound.mobile.authToken";
 const ownerDeviceService = "compound.mobile.ownerRegistrationDevice";
 const ownerRequestService = "compound.mobile.ownerRegistrationRequest";
 
+type PasswordSetupForm = {
+  password: string;
+  confirmPassword: string;
+};
+
 export const LoginScreen = () => {
   const { t, i18n } = useTranslation();
   const dispatch = useDispatch();
@@ -81,14 +92,20 @@ export const LoginScreen = () => {
   const colorScheme = useSelector(selectColorSchemePreference);
   const isLight = colorScheme === "light";
   const isArabic = isRtlLanguage(language);
+  const surface = isLight ? colors.surface.light : colors.palette.ink[900];
+  const text = isLight ? colors.text.primary.light : colors.text.primary.dark;
+  const secondaryText = isLight ? colors.text.secondary.light : colors.text.secondary.dark;
+  const border = isLight ? colors.border.light : colors.palette.ink[700];
+  const mutedSurface = isLight ? colors.surfaceMuted.light : colors.palette.ink[800];
   
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorMap, setErrorMap] = useState<Record<string, string>>({});
   const [systemError, setSystemError] = useState<string | null>(null);
   const [ownerStatusLookup, setOwnerStatusLookup] = useState<{ deviceId?: string; requestToken?: string } | null>(null);
+  const [ownerStatusDismissed, setOwnerStatusDismissed] = useState(false);
   const [passwordResetToken, setPasswordResetToken] = useState<string | null>(null);
-  const [newPassword, setNewPassword] = useState("");
+  const [passwordSetupVisible, setPasswordSetupVisible] = useState(false);
   const submitInFlightRef = useRef(false);
   
   const [login, { isLoading: isSigningIn }] = useLoginMutation();
@@ -97,6 +114,33 @@ export const LoginScreen = () => {
   const { data: ownerStatus, refetch: refetchOwnerStatus } = useGetOwnerRegistrationStatusQuery(
     ownerStatusLookup?.deviceId || ownerStatusLookup?.requestToken ? ownerStatusLookup : skipToken,
   );
+  const passwordSetupSchema = React.useMemo(() => z.object({
+    password: z.string().min(8, t("Auth.newPasswordTooShort", { defaultValue: "Password must be at least 8 characters." })),
+    confirmPassword: z.string().min(1, t("Auth.confirmPasswordRequired", { defaultValue: "Confirm the password." })),
+  }).superRefine((value, context) => {
+    if (value.password !== value.confirmPassword) {
+      context.addIssue({
+        code: "custom",
+        path: ["confirmPassword"],
+        message: t("Auth.passwordMismatch", { defaultValue: "The two password fields do not match." }),
+      });
+    }
+  }), [t]);
+  const {
+    control: passwordSetupControl,
+    handleSubmit: submitPasswordSetupForm,
+    reset: resetPasswordSetupForm,
+    setError: setPasswordSetupError,
+    clearErrors: clearPasswordSetupErrors,
+    formState: { errors: passwordSetupErrors, isValid: passwordSetupIsValid },
+  } = useForm<PasswordSetupForm>({
+    defaultValues: {
+      password: "",
+      confirmPassword: "",
+    },
+    mode: "onChange",
+    resolver: zodResolver(passwordSetupSchema),
+  });
 
   useEffect(() => {
     const hydrateOwnerStatus = async () => {
@@ -106,6 +150,7 @@ export const LoginScreen = () => {
       ]);
 
       if (device || request) {
+        setOwnerStatusDismissed(false);
         setOwnerStatusLookup({
           deviceId: device ? device.password : undefined,
           requestToken: request ? request.password : undefined,
@@ -136,6 +181,19 @@ export const LoginScreen = () => {
     dispatch(setColorSchemePreference(nextColorScheme));
     void persistPreferences(language, nextColorScheme);
   }, [colorScheme, dispatch, language, persistPreferences]);
+
+  const clearOwnerRegistrationPrompt = useCallback(async () => {
+    setOwnerStatusLookup(null);
+    setOwnerStatusDismissed(true);
+    setPasswordResetToken(null);
+    setPasswordSetupVisible(false);
+    resetPasswordSetupForm();
+    clearPasswordSetupErrors();
+    await Promise.allSettled([
+      Keychain.resetGenericPassword({ service: ownerDeviceService }),
+      Keychain.resetGenericPassword({ service: ownerRequestService }),
+    ]);
+  }, [clearPasswordSetupErrors, resetPasswordSetupForm]);
 
   const submitLogin = useCallback(async (nextEmail: string, nextPassword: string) => {
     if (submitInFlightRef.current) {
@@ -169,6 +227,8 @@ export const LoginScreen = () => {
       } catch (storageError) {
         console.warn("Auth token persistence failed; keeping in-memory session active", storageError);
       }
+
+      await clearOwnerRegistrationPrompt();
       
     } catch (err: any) {
       console.error("Login failed", err);
@@ -196,7 +256,7 @@ export const LoginScreen = () => {
     } finally {
       submitInFlightRef.current = false;
     }
-  }, [dispatch, login, t]);
+  }, [clearOwnerRegistrationPrompt, dispatch, login, t]);
 
   const handleLogin = useCallback(async () => {
     await submitLogin(email, password);
@@ -218,7 +278,10 @@ export const LoginScreen = () => {
       setEmail(ownerStatus.login.email);
       if (ownerStatus.login.passwordSetupToken) {
         setPasswordResetToken(ownerStatus.login.passwordSetupToken);
-        setSystemError("Owner request approved. Enter a new password below to activate your login.");
+        resetPasswordSetupForm();
+        clearPasswordSetupErrors();
+        setPasswordSetupVisible(true);
+        setSystemError(null);
       }
     }
 
@@ -227,11 +290,11 @@ export const LoginScreen = () => {
     } else {
       navigation.navigate("OwnerRegistration");
     }
-  }, [navigation, ownerStatus, ownerStatusLookup, refetchOwnerStatus]);
+  }, [clearPasswordSetupErrors, navigation, ownerStatus, ownerStatusLookup, refetchOwnerStatus, resetPasswordSetupForm]);
 
   const handleForgotPassword = useCallback(async () => {
     if (!email.trim()) {
-      setSystemError("Enter your email first, then tap Forgot Password.");
+      setSystemError(t("Auth.enterEmailFirst", { defaultValue: "Enter your email first, then tap Forgot Password." }));
       return;
     }
 
@@ -239,18 +302,32 @@ export const LoginScreen = () => {
       const result = await forgotPassword({ email: email.trim().toLowerCase() }).unwrap();
       if (result.resetToken) {
         setPasswordResetToken(result.resetToken);
-        setSystemError("Reset token ready. Enter a new password below.");
+        resetPasswordSetupForm();
+        clearPasswordSetupErrors();
+        setPasswordSetupVisible(true);
+        setSystemError(null);
       } else {
-        setSystemError(result.message || "If this email exists, reset instructions are available.");
+        setSystemError(result.message || t("Auth.resetIfExists", { defaultValue: "If this email exists, reset instructions are available." }));
       }
     } catch {
-      setSystemError("Could not start password reset. Please try again.");
+      setSystemError(t("Auth.resetStartFailed", { defaultValue: "Could not start password reset. Please try again." }));
     }
-  }, [email, forgotPassword]);
+  }, [clearPasswordSetupErrors, email, forgotPassword, resetPasswordSetupForm, t]);
 
-  const handleResetPassword = useCallback(async () => {
-    if (!email.trim() || !passwordResetToken || newPassword.length < 8) {
-      setSystemError("Enter your email and a new password with at least 8 characters.");
+  const handleResetPassword = useCallback(async (values: PasswordSetupForm) => {
+    if (!email.trim()) {
+      setPasswordSetupError("root", {
+        type: "manual",
+        message: t("Auth.enterEmailFirst", { defaultValue: "Enter your email first, then tap Forgot Password." }),
+      });
+      return;
+    }
+
+    if (!passwordResetToken) {
+      setPasswordSetupError("root", {
+        type: "manual",
+        message: t("Auth.passwordResetFailed", { defaultValue: "Password reset failed or expired. Request a new reset token." }),
+      });
       return;
     }
 
@@ -258,22 +335,34 @@ export const LoginScreen = () => {
       await resetPassword({
         email: email.trim().toLowerCase(),
         token: passwordResetToken,
-        password: newPassword,
-        password_confirmation: newPassword,
+        password: values.password,
+        password_confirmation: values.confirmPassword,
       }).unwrap();
-      setPassword(newPassword);
-      setNewPassword("");
+      setPassword(values.password);
+      resetPasswordSetupForm();
       setPasswordResetToken(null);
-      setSystemError("Password reset. You can sign in now.");
+      setPasswordSetupVisible(false);
+      await clearOwnerRegistrationPrompt();
+      setSystemError(t("Auth.passwordResetDone", { defaultValue: "Password reset. You can sign in now." }));
     } catch {
-      setSystemError("Password reset failed or expired. Request a new reset token.");
+      setPasswordSetupError("root", {
+        type: "server",
+        message: t("Auth.passwordResetFailed", { defaultValue: "Password reset failed or expired. Request a new reset token." }),
+      });
     }
-  }, [email, newPassword, passwordResetToken, resetPassword]);
+  }, [clearOwnerRegistrationPrompt, email, passwordResetToken, resetPassword, resetPasswordSetupForm, setPasswordSetupError, t]);
+
+  const ownerStatusLoginEmail = ownerStatus?.login?.email ?? ownerStatus?.email;
+  const ownerStatusEmailMatchesForm = Boolean(
+    ownerStatusLoginEmail && email.trim().toLowerCase() === ownerStatusLoginEmail.toLowerCase(),
+  );
+  const isApprovedOwnerPromptResolved = ownerStatus?.status === "approved" && (password.length > 0 || ownerStatusEmailMatchesForm);
+  const visibleOwnerStatus = ownerStatusLookup && !ownerStatusDismissed && !isApprovedOwnerPromptResolved ? ownerStatus : undefined;
 
   return (
     <KeyboardAvoidingView 
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={[styles.container, { backgroundColor: isLight ? '#F8FAFC' : '#020617' }]}
+      style={[styles.container, { backgroundColor: isLight ? colors.background.light : colors.background.dark }]}
     >
       <StatusBar barStyle={isLight ? "dark-content" : "light-content"} />
       
@@ -300,48 +389,49 @@ export const LoginScreen = () => {
           bounces={false}
         >
           <View style={[styles.inner, appDirectionStyle(isArabic)]}>
-              <View style={[styles.loginToggles, rowDirectionStyle(isArabic), { [isArabic ? 'alignSelf' : 'alignSelf']: isArabic ? 'flex-start' : 'flex-end' }]}>
+              <View style={[styles.loginToggles, rowDirectionStyle(isArabic), { alignSelf: isArabic ? 'flex-start' : 'flex-end', backgroundColor: isLight ? colors.surface.light : 'rgba(255,255,255,0.06)', borderColor: border }]}>
                 <Pressable
                   onPress={handleToggleLanguage}
                   hitSlop={8}
                   accessibilityRole="button"
-                  accessibilityLabel={language === "en" ? "Switch to Arabic layout" : "Switch to English layout"}
-                  accessibilityHint="Changes text language and screen direction"
-                  style={[styles.preferenceChip, { backgroundColor: isLight ? '#FFFFFF' : 'rgba(255,255,255,0.06)', borderColor: isLight ? '#DDE6E2' : 'rgba(255,255,255,0.12)' }]}
+                  accessibilityLabel={language === "en" ? t("Settings.switchToArabic") : t("Settings.switchToEnglish")}
+                  accessibilityHint={t("Settings.languageHint")}
+                  style={[styles.preferenceChip, { backgroundColor: mutedSurface, borderColor: border }]}
                 >
-                  <Typography style={[styles.preferenceText, { color: isLight ? colors.palette.ink[800] : colors.palette.ink[100] }]}>
-                    {language === "en" ? "AR" : "EN"}
+                  <Typography style={[styles.preferenceText, { color: text }]}>
+                    {language === "en" ? "العربية" : "English"}
                   </Typography>
                 </Pressable>
                 <Pressable
                   onPress={handleToggleTheme}
                   hitSlop={8}
                   accessibilityRole="button"
-                  accessibilityLabel={isLight ? "Switch to dark mode" : "Switch to light mode"}
-                  style={[styles.preferenceChip, { backgroundColor: isLight ? '#FFFFFF' : 'rgba(255,255,255,0.06)', borderColor: isLight ? '#DDE6E2' : 'rgba(255,255,255,0.12)' }]}
+                  accessibilityLabel={isLight ? t("Settings.switchToDark") : t("Settings.switchToLight")}
+                  style={[styles.preferenceIconChip, { backgroundColor: mutedSurface, borderColor: border }]}
                 >
-                  <Typography style={[styles.preferenceText, { color: isLight ? colors.palette.ink[800] : colors.palette.ink[100] }]}>
-                    {isLight ? "Dark" : "Light"}
-                  </Typography>
+                  <Icon name={isLight ? "moon" : "sun"} color={text} size={18} />
                 </Pressable>
               </View>
               <View style={styles.header}>
-                <View style={styles.logoCircle}>
-                  <Icon name="building" color={isLight ? colors.palette.ink[800] : colors.palette.ink[50]} size={38} />
+                <View style={[styles.logoCircle, { backgroundColor: isLight ? colors.surface.light : 'rgba(255,255,255,0.06)', borderColor: border }]}>
+                  <Icon name="building" color={isLight ? colors.primary.light : colors.primary.dark} size={34} />
                 </View>
-                <Typography variant="h1" style={[styles.brandTitle, { color: isLight ? colors.palette.ink[950] : '#FFFFFF' }, centerTextDirectionStyle(isArabic)]}>
+                <Typography variant="h1" style={[styles.brandTitle, { color: text }, centerTextDirectionStyle(isArabic)]}>
                   {t("App.brand", { defaultValue: "Compound" })}
                 </Typography>
-                <Typography variant="caption" style={[styles.brandSubtitle, { color: isLight ? colors.palette.ink[600] : '#94A3B8' }, centerTextDirectionStyle(isArabic)]}>
+                <Typography variant="caption" style={[styles.brandSubtitle, { color: secondaryText }, centerTextDirectionStyle(isArabic)]}>
                   {t("App.subtitle", { defaultValue: "Smart Living Management" })}
                 </Typography>
               </View>
 
-              <View style={[styles.card, { backgroundColor: isLight ? '#FFFFFF' : 'rgba(30, 41, 59, 0.7)', borderColor: isLight ? '#DDE6E2' : 'rgba(255,255,255,0.1)' }]}>
-                <Typography variant="h2" style={[styles.signInTitle, { color: isLight ? colors.palette.ink[950] : '#FFFFFF' }, textDirectionStyle(isArabic)]}>
+              <View style={[styles.card, { backgroundColor: surface, borderColor: border }]}>
+                <Typography variant="label" style={[styles.cardEyebrow, textDirectionStyle(isArabic)]}>
+                  {t("Auth.landingEyebrow", { defaultValue: "Resident portal" })}
+                </Typography>
+                <Typography variant="h2" style={[styles.signInTitle, { color: text }, textDirectionStyle(isArabic)]}>
                   {t("Auth.signIn", { defaultValue: "Welcome Back" })}
                 </Typography>
-                <Typography variant="caption" style={[styles.instructions, { color: isLight ? colors.palette.ink[600] : colors.palette.ink[500] }, textDirectionStyle(isArabic)]}>
+                <Typography variant="caption" style={[styles.instructions, { color: secondaryText }, textDirectionStyle(isArabic)]}>
                   {t("Auth.instructions", { defaultValue: "Please enter your credentials to continue" })}
                 </Typography>
 
@@ -357,16 +447,23 @@ export const LoginScreen = () => {
 
                 <View style={styles.form}>
                   {__DEV__ && (
-                    <View style={styles.devPersonas}>
-	                      <Typography variant="caption" style={styles.devTitle}>DEV PERSONAS</Typography>
-                        <Typography variant="caption" style={styles.devHint}>
-                          Tap a persona to fill the form, then sign in once.
+                    <View style={[styles.devPersonas, { borderTopColor: border }]}>
+	                      <Typography variant="caption" style={[styles.devTitle, textDirectionStyle(isArabic)]}>
+                          {t("Auth.devPersonas", { defaultValue: "Dev personas" })}
                         </Typography>
-	                      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.personaScroll}>
-                        <PersonaChip label="Admin" testID="login-persona-admin" disabled={isSigningIn} onSelect={() => handlePersonaFill(uatPersonaEmails.admin)} />
-                        <PersonaChip label="Resident" testID="login-persona-resident" disabled={isSigningIn} onSelect={() => handlePersonaFill(uatPersonaEmails.resident)} />
-                        <PersonaChip label="Security" testID="login-persona-security" disabled={isSigningIn} onSelect={() => handlePersonaFill(uatPersonaEmails.security)} />
-                        <PersonaChip label="Board" testID="login-persona-board" disabled={isSigningIn} onSelect={() => handlePersonaFill(uatPersonaEmails.board)} />
+                        <Typography variant="caption" style={[styles.devHint, { color: secondaryText }, textDirectionStyle(isArabic)]}>
+                          {t("Auth.devPersonasHint", { defaultValue: "Tap a persona to fill the form, then sign in once." })}
+                        </Typography>
+	                      <ScrollView
+                          horizontal
+                          showsHorizontalScrollIndicator={false}
+                          style={styles.personaScroll}
+                          contentContainerStyle={rowDirectionStyle(isArabic)}
+                        >
+                        <PersonaChip label={t("Auth.personaAdmin", "Admin")} accessibilityLabel={t("Auth.usePersona", { role: t("Auth.personaAdmin", "Admin") })} testID="login-persona-admin" disabled={isSigningIn} onSelect={() => handlePersonaFill(uatPersonaEmails.admin)} />
+                        <PersonaChip label={t("Auth.personaResident", "Resident")} accessibilityLabel={t("Auth.usePersona", { role: t("Auth.personaResident", "Resident") })} testID="login-persona-resident" disabled={isSigningIn} onSelect={() => handlePersonaFill(uatPersonaEmails.resident)} />
+                        <PersonaChip label={t("Auth.personaSecurity", "Security")} accessibilityLabel={t("Auth.usePersona", { role: t("Auth.personaSecurity", "Security") })} testID="login-persona-security" disabled={isSigningIn} onSelect={() => handlePersonaFill(uatPersonaEmails.security)} />
+                        <PersonaChip label={t("Auth.personaBoard", "Board")} accessibilityLabel={t("Auth.usePersona", { role: t("Auth.personaBoard", "Board") })} testID="login-persona-board" disabled={isSigningIn} onSelect={() => handlePersonaFill(uatPersonaEmails.board)} />
                       </ScrollView>
                     </View>
                   )}
@@ -424,65 +521,45 @@ export const LoginScreen = () => {
                     style={styles.loginButton}
                   />
 
-                  {passwordResetToken ? (
-                    <View style={styles.resetPanel}>
-                      <Input
-                        label="New password"
-                        value={newPassword}
-                        onChangeText={setNewPassword}
-                        secureTextEntry
-                        placeholder="At least 8 characters"
-                        style={[styles.loginInput, isLight && styles.loginInputLight, isArabic && styles.loginInputRtl]}
-                      />
-                      <Button
-                        title="Set new password"
-                        onPress={handleResetPassword}
-                        loading={isResettingPassword}
-                        disabled={newPassword.length < 8 || isResettingPassword}
-                        variant="secondary"
-                      />
-                    </View>
-                  ) : null}
-
                   <Pressable style={styles.forgotBtn} onPress={handleForgotPassword} disabled={isRequestingReset}>
-                    <Typography style={styles.forgotText}>
-                      {isRequestingReset ? "Preparing reset..." : t("Auth.forgotPassword", { defaultValue: "Forgot Password?" })}
+                    <Typography style={[styles.forgotText, { color: secondaryText }]}>
+                      {isRequestingReset ? t("Auth.preparingReset", { defaultValue: "Preparing reset..." }) : t("Auth.forgotPassword", { defaultValue: "Forgot Password?" })}
                     </Typography>
                   </Pressable>
                 </View>
               </View>
 
-              {ownerStatus ? (
+              {visibleOwnerStatus ? (
                 <Pressable
                   onPress={handleRefreshOwnerStatus}
                   accessibilityRole="button"
                   style={[
                     styles.ownerStatusCard,
                     rowDirectionStyle(isArabic),
-                    ownerStatus.status === "approved" ? styles.ownerStatusApproved : ownerStatus.status === "denied" ? styles.ownerStatusDenied : styles.ownerStatusPending,
+                    visibleOwnerStatus.status === "approved" ? styles.ownerStatusApproved : visibleOwnerStatus.status === "denied" ? styles.ownerStatusDenied : styles.ownerStatusPending,
                   ]}
                 >
                   <View style={styles.ownerStatusIcon}>
                     <Icon
-                      name={ownerStatus.status === "approved" ? "check" : ownerStatus.status === "denied" ? "x" : "documents"}
-                      color={ownerStatus.status === "denied" ? '#FCA5A5' : '#FFFFFF'}
+                      name={visibleOwnerStatus.status === "approved" ? "check" : visibleOwnerStatus.status === "denied" ? "x" : "documents"}
+                      color={visibleOwnerStatus.status === "denied" ? '#FCA5A5' : '#FFFFFF'}
                       size={18}
                     />
                   </View>
                   <View style={styles.ownerStatusCopy}>
                     <Typography style={[styles.ownerStatusTitle, textDirectionStyle(isArabic)]}>
-                      {ownerStatus.status === "approved"
-                        ? "Owner request approved"
-                        : ownerStatus.status === "denied"
-                          ? "Owner request denied"
-                          : "Owner request under review"}
+                      {visibleOwnerStatus.status === "approved"
+                        ? t("Auth.ownerRequestApproved", { defaultValue: "Owner request approved" })
+                        : visibleOwnerStatus.status === "denied"
+                          ? t("Auth.ownerRequestDenied", { defaultValue: "Owner request denied" })
+                          : t("Auth.ownerRequestReview", { defaultValue: "Owner request under review" })}
                     </Typography>
                     <Typography style={[styles.ownerStatusText, textDirectionStyle(isArabic)]}>
-                      {ownerStatus.status === "approved"
-                        ? `Login email: ${ownerStatus.login?.email ?? ownerStatus.email}. Tap this card to fill it, then use Forgot Password to set your first password.`
-                        : ownerStatus.status === "denied"
-                          ? ownerStatus.decisionReason ?? "Open request status to see the admin reason."
-                          : "Admin is reviewing your documents. Tap to refresh status."}
+	                      {visibleOwnerStatus.status === "approved"
+	                        ? t("Auth.ownerApprovedBody", { email: visibleOwnerStatus.login?.email ?? visibleOwnerStatus.email, defaultValue: `Login email: ${visibleOwnerStatus.login?.email ?? visibleOwnerStatus.email}. Tap this card to set your first password.` })
+	                        : visibleOwnerStatus.status === "denied"
+	                          ? visibleOwnerStatus.decisionReason ?? t("Auth.ownerDeniedBody", { defaultValue: "Open request status to see the admin reason." })
+	                          : t("Auth.ownerReviewBody", { defaultValue: "Admin is reviewing your documents. Tap to refresh status." })}
                     </Typography>
                   </View>
                 </Pressable>
@@ -500,10 +577,84 @@ export const LoginScreen = () => {
               </View>
           </View>
         </ScrollView>
-      </View>
-    </KeyboardAvoidingView>
-  );
-};
+	      </View>
+        <Modal
+          visible={passwordSetupVisible && Boolean(passwordResetToken)}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setPasswordSetupVisible(false)}
+        >
+          <Pressable style={styles.modalBackdrop} onPress={() => setPasswordSetupVisible(false)}>
+            <View
+              style={[styles.passwordSheet, { backgroundColor: surface, borderColor: border }]}
+              onStartShouldSetResponder={() => true}
+            >
+              <View style={[styles.sheetHandle, { backgroundColor: border }]} />
+              <Typography variant="h2" style={[styles.sheetTitle, { color: text }, textDirectionStyle(isArabic)]}>
+                {t("Auth.passwordSetupTitle", { defaultValue: "Create your password" })}
+              </Typography>
+              <Typography style={[styles.sheetBody, { color: secondaryText }, textDirectionStyle(isArabic)]}>
+                {t("Auth.passwordSetupBody", { defaultValue: "Use a strong password to activate this approved account. You will use it for future sign-ins." })}
+              </Typography>
+              <Controller
+                control={passwordSetupControl}
+                name="password"
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <Input
+                    value={value}
+                    onBlur={onBlur}
+                    onChangeText={(nextValue) => {
+                      clearPasswordSetupErrors("root");
+                      onChange(nextValue);
+                    }}
+                    secureTextEntry
+                    label={t("Auth.newPassword", { defaultValue: "New password" })}
+                    placeholder={t("Auth.newPasswordPlaceholder", { defaultValue: "At least 8 characters" })}
+                    style={[styles.loginInput, isLight && styles.loginInputLight, isArabic && styles.loginInputRtl]}
+                    error={passwordSetupErrors.password?.message}
+                  />
+                )}
+              />
+              <Controller
+                control={passwordSetupControl}
+                name="confirmPassword"
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <Input
+                    value={value}
+                    onBlur={onBlur}
+                    onChangeText={(nextValue) => {
+                      clearPasswordSetupErrors("root");
+                      onChange(nextValue);
+                    }}
+                    secureTextEntry
+                    label={t("Auth.confirmPassword", { defaultValue: "Confirm password" })}
+                    placeholder={t("Auth.confirmPasswordPlaceholder", { defaultValue: "Repeat the password" })}
+                    style={[styles.loginInput, isLight && styles.loginInputLight, isArabic && styles.loginInputRtl]}
+                    error={passwordSetupErrors.confirmPassword?.message}
+                  />
+                )}
+              />
+              {passwordSetupErrors.root?.message ? (
+                <Typography variant="error" style={[styles.sheetError, textDirectionStyle(isArabic)]}>
+                  {passwordSetupErrors.root.message}
+                </Typography>
+              ) : null}
+              <Typography variant="caption" style={[styles.passwordHint, { color: secondaryText }, textDirectionStyle(isArabic)]}>
+                {t("Auth.passwordRequirement", { defaultValue: "Minimum 8 characters. Avoid using your unit code or phone number." })}
+              </Typography>
+              <Button
+                title={t("Auth.setNewPassword", { defaultValue: "Set new password" })}
+                onPress={submitPasswordSetupForm(handleResetPassword)}
+                loading={isResettingPassword}
+                disabled={!passwordSetupIsValid || isResettingPassword}
+                style={styles.sheetButton}
+              />
+            </View>
+          </Pressable>
+        </Modal>
+	    </KeyboardAvoidingView>
+	  );
+	};
 
 const styles = StyleSheet.create({
   container: {
@@ -546,6 +697,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  preferenceIconChip: {
+    minHeight: 44,
+    minWidth: 44,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   preferenceText: {
     fontSize: 12,
     fontWeight: '800',
@@ -583,6 +742,14 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.1)',
     zIndex: 3,
     ...shadows.lg,
+  },
+  cardEyebrow: {
+    color: colors.primary.dark,
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 1.4,
+    marginBottom: spacing.xs,
+    textTransform: 'uppercase',
   },
   signInTitle: {
     color: '#FFFFFF',
@@ -643,13 +810,45 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  resetPanel: {
-    marginTop: 16,
-    padding: spacing.md,
-    borderRadius: radii.xl,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+  modalBackdrop: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(2, 6, 23, 0.72)',
+  },
+  passwordSheet: {
+    borderTopStartRadius: 32,
+    borderTopEndRadius: 32,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xl,
+    ...shadows.lg,
+  },
+  sheetHandle: {
+    width: 44,
+    height: 4,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: spacing.lg,
+  },
+  sheetTitle: {
+    marginBottom: spacing.xs,
+  },
+  sheetBody: {
+    lineHeight: 22,
+    marginBottom: spacing.lg,
+  },
+  passwordHint: {
+    lineHeight: 18,
+    marginTop: -spacing.sm,
+    marginBottom: spacing.md,
+  },
+  sheetError: {
+    marginTop: -spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  sheetButton: {
+    minHeight: 56,
   },
   footer: {
     flexDirection: 'row',

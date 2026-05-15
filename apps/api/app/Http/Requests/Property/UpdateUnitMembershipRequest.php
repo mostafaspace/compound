@@ -30,10 +30,6 @@ class UpdateUnitMembershipRequest extends FormRequest
             'phonePublic' => ['sometimes', 'boolean'],
             'residentEmail' => ['sometimes', 'nullable', 'email', 'max:255'],
             'emailPublic' => ['sometimes', 'boolean'],
-            'hasVehicle' => ['sometimes', 'boolean'],
-            'vehiclePlate' => ['sometimes', 'nullable', 'string', 'max:20', 'required_if:hasVehicle,true'],
-            'parkingSpotCode' => ['sometimes', 'nullable', 'string', 'max:50'],
-            'garageStickerCode' => ['sometimes', 'nullable', 'string', 'max:50'],
         ];
     }
 }

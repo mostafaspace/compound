@@ -33,7 +33,6 @@ class NextPointSeeder extends Seeder
                 'residential_units' => 3000,
                 'resident_capacity' => 11000,
                 'green_area_sqm' => 12000,
-                'area_range_sqm' => ['min' => 96, 'max' => 324],
                 'payment_plan' => ['down_payment_from_percent' => 30, 'installments_up_to_months' => 72],
                 'website' => 'https://nexthome-egy.com',
                 'logo_url' => 'https://nexthome-egy.com/media/1986/logo-02.png',
@@ -193,7 +192,6 @@ class NextPointSeeder extends Seeder
                 ], [
                     'floor_id' => $floor->id,
                     'type' => $type->value,
-                    'area_sqm' => $area,
                     'bedrooms' => $beds,
                     'status' => 'active',
                 ]);
@@ -243,7 +241,6 @@ class NextPointSeeder extends Seeder
                 ], [
                     'floor_id' => $floor->id,
                     'type' => $type->value,
-                    'area_sqm' => $area,
                     'bedrooms' => $beds,
                     'status' => 'active',
                 ]);
@@ -288,7 +285,6 @@ class NextPointSeeder extends Seeder
                 ], [
                     'floor_id' => $floor->id,
                     'type' => $type->value,
-                    'area_sqm' => $area,
                     'bedrooms' => $beds,
                     'status' => 'active',
                 ]);

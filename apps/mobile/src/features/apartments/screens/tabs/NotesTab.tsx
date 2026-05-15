@@ -23,8 +23,9 @@ import {
   useUpdateNoteMutation,
 } from "../../../../services/apartments/notesApi";
 import type { ApartmentDetail, ApartmentNote } from "../../../../services/apartments/types";
+import type { ApartmentTabRefreshProps } from "../ApartmentDetailScreen";
 
-export function NotesTab({ apartment }: { apartment: ApartmentDetail }) {
+export function NotesTab({ apartment, onRefresh, refreshing, onContentScroll }: { apartment: ApartmentDetail } & ApartmentTabRefreshProps) {
   const { t, i18n } = useTranslation();
   const isDark = useColorScheme() === "dark";
   const isRtl = isRtlLanguage(i18n.language);
@@ -36,7 +37,7 @@ export function NotesTab({ apartment }: { apartment: ApartmentDetail }) {
   const [editingBody, setEditingBody] = useState("");
   const [editError, setEditError] = useState<string | null>(null);
   const [deletingNoteId, setDeletingNoteId] = useState<number | null>(null);
-  const { data = apartment.recentNotes, isLoading } = useListNotesQuery(apartment.id);
+  const { data = apartment.recentNotes, isLoading, isFetching, refetch } = useListNotesQuery(apartment.id);
   const [appendNote, appendState] = useAppendNoteMutation();
   const [updateNote, updateState] = useUpdateNoteMutation();
   const [deleteNote] = useDeleteNoteMutation();
@@ -138,6 +139,11 @@ export function NotesTab({ apartment }: { apartment: ApartmentDetail }) {
     );
   };
 
+  const handleRefresh = () => {
+    void refetch();
+    void onRefresh?.();
+  };
+
   return (
     <>
       <FlatList
@@ -145,6 +151,10 @@ export function NotesTab({ apartment }: { apartment: ApartmentDetail }) {
         keyExtractor={(note) => String(note.id)}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.list}
+        refreshing={Boolean(refreshing || isFetching)}
+        onRefresh={handleRefresh}
+        onScroll={onContentScroll}
+        scrollEventThrottle={16}
         ListHeaderComponent={
           <View style={[styles.timelineHeader, { backgroundColor: colors.surface[isDark ? "dark" : "light"] }, textDirectionStyle(isRtl)]}>
             <View style={[styles.headerTop, rowDirectionStyle(isRtl)]}>

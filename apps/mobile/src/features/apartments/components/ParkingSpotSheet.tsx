@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { useTranslation } from "react-i18next";
 import { BottomSheet } from "../../../components/ui/BottomSheet";
 import { Button } from "../../../components/ui/Button";
 import { Input } from "../../../components/ui/Input";
@@ -16,6 +17,7 @@ export function ParkingSpotSheet({
   parkingSpot?: ApartmentParkingSpot;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const [code, setCode] = useState(parkingSpot?.code ?? "");
   const [notes, setNotes] = useState(parkingSpot?.notes ?? "");
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +27,7 @@ export function ParkingSpotSheet({
 
   const submit = async () => {
     if (!code.trim()) {
-      setError("Spot code is required.");
+      setError(t("Parking.codeRequired"));
       return;
     }
 
@@ -45,25 +47,31 @@ export function ParkingSpotSheet({
 
       onClose();
     } catch {
-      setError("Could not save parking spot. Please try again.");
+      setError(t("Parking.saveError"));
     }
   };
 
   return (
     <BottomSheet
-      title={parkingSpot ? "Edit parking" : "Add parking"}
-      subtitle="Parking capacity is capped at 4 per unit."
+      title={parkingSpot ? t("Parking.editParking") : t("Parking.addParking")}
       onClose={onClose}
       footer={
         <View style={styles.actions}>
-          <Button title="Cancel" variant="ghost" onPress={onClose} disabled={isSaving} style={styles.actionButton} />
-          <Button title={isSaving ? "Saving..." : "Save"} onPress={submit} disabled={isSaving} style={styles.actionButton} />
+          <Button title={t("Common.cancel")} variant="ghost" onPress={onClose} disabled={isSaving} style={styles.actionButton} />
+          <Button title={isSaving ? t("Common.saving") : t("Common.save")} onPress={submit} disabled={isSaving} style={styles.actionButton} />
         </View>
       }
     >
       <View style={styles.form}>
-        <Input label="Spot code" value={code} onChangeText={setCode} placeholder="B2-17" autoCapitalize="characters" error={error && !code.trim() ? error : null} />
-        <Input label="Notes" value={notes} onChangeText={setNotes} placeholder="Optional notes" multiline />
+        <Input
+          label={t("Parking.spotCode")}
+          value={code}
+          onChangeText={setCode}
+          placeholder={t("Parking.spotPlaceholder")}
+          autoCapitalize="characters"
+          error={error && !code.trim() ? error : null}
+        />
+        <Input label={t("Parking.notes")} value={notes} onChangeText={setNotes} placeholder={t("Parking.optionalNotes")} multiline />
 
         {error && code.trim() ? <Text style={styles.error}>{error}</Text> : null}
       </View>

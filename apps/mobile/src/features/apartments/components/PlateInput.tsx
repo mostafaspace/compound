@@ -3,6 +3,8 @@ import { Pressable, StyleSheet, Text, TextInput, useColorScheme, View } from "re
 import { colors, radii, spacing, typography } from "../../../theme";
 import type { PlateFormat } from "../../../services/apartments/types";
 import { useTranslation } from "react-i18next";
+import { arabicLettersOnly, digitsOnly } from "../../../utils/numerals";
+import { appDirectionStyle, isRtlLanguage, textDirectionStyle } from "../../../i18n/direction";
 
 type Props = {
   format: PlateFormat;
@@ -10,9 +12,6 @@ type Props = {
   digits: string;
   onChange: (next: { format: PlateFormat; letters: string; digits: string }) => void;
 };
-
-const ARABIC_LETTER_RE = /^[ء-ي]$/;
-const ARABIC_DIGIT_RE = /^[٠-٩۰-۹\d]$/;
 
 /**
  * Split stored "أ ب ج" into array of 3 single chars.
@@ -29,11 +28,11 @@ function joinLetters(arr: [string, string, string]): string {
 
 export function PlateInput({ format, letters, digits, onChange }: Props) {
   const isDark = useColorScheme() === "dark";
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isRtl = isRtlLanguage(i18n.language);
   const tint = colors.primary[isDark ? "dark" : "light"];
   const text = colors.text.primary[isDark ? "dark" : "light"];
   const border = colors.border[isDark ? "dark" : "light"];
-  const placeholder = isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.15)";
 
   const [l1, l2, l3] = splitLetters(letters);
   const ref2 = useRef<TextInput>(null);
@@ -41,9 +40,8 @@ export function PlateInput({ format, letters, digits, onChange }: Props) {
   const refDigits = useRef<TextInput>(null);
 
   const updateLetter = (index: 0 | 1 | 2, value: string) => {
-    // Only allow Arabic letters
-    const char = value.slice(-1);
-    if (char && !ARABIC_LETTER_RE.test(char)) return;
+    const char = arabicLettersOnly(value, 1);
+    if (value && !char) return;
 
     const arr: [string, string, string] = [l1, l2, l3];
     arr[index] = char;
@@ -58,17 +56,11 @@ export function PlateInput({ format, letters, digits, onChange }: Props) {
   };
 
   const handleDigits = (value: string) => {
-    // Only allow Arabic-Indic digits and Latin digits, max 5
-    const filtered = value
-      .split("")
-      .filter((ch) => ARABIC_DIGIT_RE.test(ch))
-      .slice(0, 5)
-      .join("");
-    onChange({ format, letters, digits: filtered });
+    onChange({ format, letters, digits: digitsOnly(value, 5) });
   };
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, appDirectionStyle(isRtl)]}>
       {/* Format toggle */}
       <View style={styles.toggleRow}>
         <Pressable
@@ -90,46 +82,54 @@ export function PlateInput({ format, letters, digits, onChange }: Props) {
       </View>
 
       {/* Plate label */}
-      <Text style={[styles.label, { color: text }]}>{t("Vehicles.plateNumber")}</Text>
+      <Text
+        style={[
+          styles.label,
+          { color: text },
+          textDirectionStyle(isRtl),
+        ]}
+      >
+        {t("Vehicles.plateNumber")}
+      </Text>
 
       {/* Input fields — RTL arrangement */}
       <View style={styles.inputRow}>
-        {format === "letters_numbers" ? (
-          <>
-            <TextInput
-              style={[styles.letterInput, { borderColor: border, color: text }]}
-              value={l1}
-              onChangeText={(t) => updateLetter(0, t)}
-              maxLength={1}
-              textAlign="center"
-            />
-            <TextInput
-              ref={ref2}
-              style={[styles.letterInput, { borderColor: border, color: text }]}
-              value={l2}
-              onChangeText={(t) => updateLetter(1, t)}
-              maxLength={1}
-              textAlign="center"
-            />
-            <TextInput
-              ref={ref3}
-              style={[styles.letterInput, { borderColor: border, color: text }]}
-              value={l3}
-              onChangeText={(t) => updateLetter(2, t)}
-              maxLength={1}
-              textAlign="center"
-            />
-          </>
-        ) : null}
         <TextInput
           ref={refDigits}
-          style={[styles.digitInput, { borderColor: border, color: text }]}
+          style={[styles.digitInput, { borderColor: border, color: text, writingDirection: "ltr" }]}
           value={digits}
           onChangeText={handleDigits}
           keyboardType="numeric"
           maxLength={5}
           textAlign="center"
         />
+        {format === "letters_numbers" ? (
+          <>
+            <TextInput
+              ref={ref3}
+              style={[styles.letterInput, { borderColor: border, color: text, writingDirection: "rtl" }]}
+              value={l3}
+              onChangeText={(t) => updateLetter(2, t)}
+              maxLength={1}
+              textAlign="center"
+            />
+            <TextInput
+              ref={ref2}
+              style={[styles.letterInput, { borderColor: border, color: text, writingDirection: "rtl" }]}
+              value={l2}
+              onChangeText={(t) => updateLetter(1, t)}
+              maxLength={1}
+              textAlign="center"
+            />
+            <TextInput
+              style={[styles.letterInput, { borderColor: border, color: text, writingDirection: "rtl" }]}
+              value={l1}
+              onChangeText={(t) => updateLetter(0, t)}
+              maxLength={1}
+              textAlign="center"
+            />
+          </>
+        ) : null}
       </View>
     </View>
   );
@@ -154,10 +154,12 @@ const styles = StyleSheet.create({
   },
   label: {
     ...typography.label,
+    alignSelf: "stretch",
     marginTop: spacing.xs,
   },
   inputRow: {
-    flexDirection: "row-reverse",
+    direction: "ltr",
+    flexDirection: "row",
     gap: spacing.sm,
   },
   letterInput: {

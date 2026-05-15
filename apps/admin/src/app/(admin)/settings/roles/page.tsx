@@ -18,7 +18,7 @@ export default async function RolesPage() {
         <div className="mx-auto max-w-7xl px-5 py-6 lg:px-8">
           <h1 className="text-3xl font-semibold">Roles</h1>
           <p className="mt-1 text-sm text-muted">
-            Define roles and assign permissions to each role.
+            Choose which product features each role can view or manage. Changes apply to both web and mobile access checks.
           </p>
         </div>
       </header>

@@ -16,7 +16,7 @@ class VehicleServiceTest extends TestCase
 
     public function test_creates_vehicle(): void
     {
-        $unit = Unit::factory()->create(['has_vehicle' => true]);
+        $unit = Unit::factory()->create();
 
         $vehicle = app(VehicleService::class)->create($unit, User::factory()->create(), [
             'plate_format' => 'letters_numbers',
@@ -29,22 +29,24 @@ class VehicleServiceTest extends TestCase
         $this->assertSame('abg1234', $vehicle->plate_normalized);
     }
 
-    public function test_creates_vehicle_even_when_unit_vehicle_capability_is_disabled(): void
+    public function test_normalizes_arabic_digits_to_english_digits(): void
     {
-        $unit = Unit::factory()->create(['has_vehicle' => false]);
+        $unit = Unit::factory()->create();
 
         $vehicle = app(VehicleService::class)->create($unit, User::factory()->create(), [
             'plate_format' => 'letters_numbers',
-            'plate_letters_input' => 'أ',
-            'plate_digits_input' => '1',
+            'plate_letters_input' => 'ع ع ع',
+            'plate_digits_input' => '١٢۳٤',
         ]);
 
-        $this->assertSame($unit->id, $vehicle->unit_id);
+        $this->assertSame('ع ع ع 1234', $vehicle->plate);
+        $this->assertSame('1234', $vehicle->plate_digits);
+        $this->assertSame('aaa1234', $vehicle->plate_normalized);
     }
 
     public function test_rejects_over_capacity(): void
     {
-        $unit = Unit::factory()->create(['has_vehicle' => true]);
+        $unit = Unit::factory()->create();
         ApartmentVehicle::factory()->count(4)->create(['unit_id' => $unit->id]);
 
         $this->expectException(CapacityExceededException::class);

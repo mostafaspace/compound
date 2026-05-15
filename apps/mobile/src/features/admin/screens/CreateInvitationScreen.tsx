@@ -7,7 +7,7 @@ import { ScreenContainer } from '../../../components/layout/ScreenContainer';
 import { Typography } from '../../../components/ui/Typography';
 import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
-import { colors, layout, spacing } from '../../../theme';
+import { colors, layout, radii, shadows, spacing } from '../../../theme';
 import { selectCurrentUser } from '../../../store/authSlice';
 import { isRtlLanguage, rowDirectionStyle, textDirectionStyle } from '../../../i18n/direction';
 import { 
@@ -94,13 +94,37 @@ export const CreateInvitationScreen = () => {
   };
 
   return (
-    <ScreenContainer edges={['left', 'right', 'bottom']}>
+    <ScreenContainer style={styles.container} edges={['left', 'right', 'bottom']}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Typography variant="h2" style={[styles.title, textDirectionStyle(isRtl)]}>
-          {t('Admin.newInvitation')}
-        </Typography>
+        <View
+          style={[
+            styles.hero,
+            {
+              backgroundColor: isDark ? colors.surface.dark : colors.surface.light,
+              borderColor: isDark ? colors.border.dark : colors.border.light,
+            },
+          ]}
+        >
+          <Typography variant="label" style={[styles.eyebrow, textDirectionStyle(isRtl)]}>
+            {t('Admin.invites')}
+          </Typography>
+          <Typography variant="h2" style={[styles.title, textDirectionStyle(isRtl)]}>
+            {t('Admin.newInvitation')}
+          </Typography>
+          <Typography variant="body" style={[styles.subtitle, textDirectionStyle(isRtl)]}>
+            {t('Admin.newInvitationSubtitle')}
+          </Typography>
+        </View>
         
-        <View style={styles.section}>
+        <View
+          style={[
+            styles.sectionCard,
+            {
+              backgroundColor: isDark ? colors.surface.dark : colors.surface.light,
+              borderColor: isDark ? colors.border.dark : colors.border.light,
+            },
+          ]}
+        >
           <Input
             label={t('Admin.residentName')}
             placeholder={t('Admin.residentNamePlaceholder')}
@@ -126,7 +150,15 @@ export const CreateInvitationScreen = () => {
           />
         </View>
 
-        <View style={styles.section}>
+        <View
+          style={[
+            styles.sectionCard,
+            {
+              backgroundColor: isDark ? colors.surface.dark : colors.surface.light,
+              borderColor: isDark ? colors.border.dark : colors.border.light,
+            },
+          ]}
+        >
           <Typography variant="caption" style={[styles.label, textDirectionStyle(isRtl)]}>
             {t('Admin.building')}
           </Typography>
@@ -169,7 +201,15 @@ export const CreateInvitationScreen = () => {
           ) : null}
         </View>
 
-        <View style={styles.section}>
+        <View
+          style={[
+            styles.sectionCard,
+            {
+              backgroundColor: isDark ? colors.surface.dark : colors.surface.light,
+              borderColor: isDark ? colors.border.dark : colors.border.light,
+            },
+          ]}
+        >
           <Typography variant="caption" style={[styles.label, textDirectionStyle(isRtl)]}>
             {t('Admin.role')}
           </Typography>
@@ -202,15 +242,37 @@ export const CreateInvitationScreen = () => {
 };
 
 const styles = StyleSheet.create({
+  container: {
+    paddingHorizontal: 0,
+    paddingTop: 0,
+  },
   scrollContent: {
     padding: layout.screenGutter,
     paddingBottom: layout.screenBottom,
   },
-  title: {
-    marginBottom: layout.sectionGap,
+  hero: {
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    padding: layout.heroPadding,
+    marginBottom: layout.cardGap,
+    ...shadows.sm,
   },
-  section: {
-    marginBottom: layout.sectionGap,
+  eyebrow: {
+    color: colors.primary.light,
+    marginBottom: spacing.xs,
+  },
+  title: {
+    marginBottom: spacing.xs,
+  },
+  subtitle: {
+    color: colors.text.secondary.light,
+  },
+  sectionCard: {
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    padding: layout.cardPadding,
+    marginBottom: layout.cardGap,
+    ...shadows.sm,
   },
   label: {
     marginBottom: spacing.sm,

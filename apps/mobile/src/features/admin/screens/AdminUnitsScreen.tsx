@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, FlatList, useColorScheme, Pressable, ActivityIndicator, Alert, TextInput, Switch } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
+import { useNavigation } from '@react-navigation/native';
+import type { StackNavigationProp } from '@react-navigation/stack';
 import { selectCurrentUser } from '../../../store/authSlice';
 import {
   useCreateUnitMembershipMutation,
@@ -11,14 +13,16 @@ import {
   useGetUnassignedUsersQuery,
   useUpdateUnitMembershipMutation,
 } from '../../../services/admin';
-import { colors, layout, spacing } from '../../../theme';
+import { colors, layout, radii, shadows, spacing } from '../../../theme';
 import { Typography } from '../../../components/ui/Typography';
 import { ScreenContainer } from '../../../components/layout/ScreenContainer';
 import { Icon } from '../../../components/ui/Icon';
+import type { RootStackParamList } from '../../../navigation/types';
 
 export const AdminUnitsScreen = () => {
   const { t } = useTranslation();
   const isDark = useColorScheme() === 'dark';
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const user = useSelector(selectCurrentUser);
   
   const [selectedBuildingId, setSelectedBuildingId] = useState<string | null>(null);
@@ -30,10 +34,6 @@ export const AdminUnitsScreen = () => {
     phonePublic: false,
     residentEmail: '',
     emailPublic: false,
-    hasVehicle: false,
-    vehiclePlate: '',
-    parkingSpotCode: '',
-    garageStickerCode: '',
   });
 
   const { data: buildings = [], isLoading: loadingBuildings } = useGetBuildingsQuery(user?.compoundId || '', {
@@ -81,10 +81,6 @@ export const AdminUnitsScreen = () => {
       phonePublic: selectedMembership.phonePublic,
       residentEmail: selectedMembership.residentEmail ?? selectedMembership.user?.email ?? '',
       emailPublic: selectedMembership.emailPublic,
-      hasVehicle: selectedMembership.hasVehicle,
-      vehiclePlate: selectedMembership.vehiclePlate ?? '',
-      parkingSpotCode: selectedMembership.parkingSpotCode ?? '',
-      garageStickerCode: selectedMembership.garageStickerCode ?? '',
     });
   }, [selectedMembership?.id]);
 
@@ -193,13 +189,28 @@ export const AdminUnitsScreen = () => {
         </View>
       </View>
       <Typography variant="body" style={styles.unitDetail}>
-        {item.type ?? t("Common.notAvailable", { defaultValue: "N/A" })} • {item.areaSqm ?? t("Common.notAvailable", { defaultValue: "N/A" })} sqm
+        {item.type ?? t("Common.notAvailable", { defaultValue: "N/A" })}
       </Typography>
       <Typography variant="caption">{item.residentName || t("Property.noResident", { defaultValue: "No Resident Assigned" })}</Typography>
       {selectedUnitId === String(item.id) ? (
-        <Typography variant="caption" style={styles.selectedHint}>
-          {t("Property.assignmentTarget", { defaultValue: "Selected for next apartment assignment" })}
-        </Typography>
+        <View style={styles.selectedActions}>
+          <Typography variant="caption" style={styles.selectedHint}>
+            {t("Property.assignmentTarget", { defaultValue: "Selected for next apartment assignment" })}
+          </Typography>
+          <Pressable
+            onPress={() => navigation.navigate('ApartmentDetail', { unitId: String(item.id), adminMode: true })}
+            style={({ pressed }) => [
+              styles.openDetailButton,
+              pressed && styles.pressed,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={t("Property.openApartmentDetail", { defaultValue: "Open apartment detail" })}
+          >
+            <Typography variant="label" style={styles.openDetailText}>
+              {t("Property.openApartmentDetail", { defaultValue: "Open detail" })}
+            </Typography>
+          </Pressable>
+        </View>
       ) : null}
     </Pressable>
   );
@@ -338,7 +349,7 @@ export const AdminUnitsScreen = () => {
         </Typography>
         {!selectedUnitId ? (
           <Typography variant="caption" style={styles.assignmentCopy}>
-            {t("Property.selectUnitToEditProfile", { defaultValue: "Select a unit first to edit resident details and vehicle information." })}
+            {t("Property.selectUnitToEditProfile", { defaultValue: "Select a unit first to edit resident contact details." })}
           </Typography>
         ) : loadingSelectedUnit ? (
           <ActivityIndicator color={colors.primary.light} style={{ padding: spacing.md }} />
@@ -389,31 +400,6 @@ export const AdminUnitsScreen = () => {
                   <Typography variant="caption">{t("Property.emailPublic", { defaultValue: "Show email publicly" })}</Typography>
                   <Switch value={profileForm.emailPublic} onValueChange={(emailPublic) => setProfileForm((current) => ({ ...current, emailPublic }))} />
                 </View>
-                <View style={styles.switchRow}>
-                  <Typography variant="caption">{t("Property.hasVehicle", { defaultValue: "Has vehicle" })}</Typography>
-                  <Switch value={profileForm.hasVehicle} onValueChange={(hasVehicle) => setProfileForm((current) => ({ ...current, hasVehicle }))} />
-                </View>
-                <TextInput
-                  style={[styles.input, { backgroundColor: isDark ? colors.background.dark : colors.background.light, borderColor: isDark ? colors.border.dark : colors.border.light, color: isDark ? colors.text.primary.dark : colors.text.primary.light }]}
-                  placeholder={t("Property.vehiclePlate", { defaultValue: "Vehicle plate" })}
-                  placeholderTextColor="#94a3b8"
-                  value={profileForm.vehiclePlate}
-                  onChangeText={(vehiclePlate) => setProfileForm((current) => ({ ...current, vehiclePlate }))}
-                />
-                <TextInput
-                  style={[styles.input, { backgroundColor: isDark ? colors.background.dark : colors.background.light, borderColor: isDark ? colors.border.dark : colors.border.light, color: isDark ? colors.text.primary.dark : colors.text.primary.light }]}
-                  placeholder={t("Property.parkingSpotCode", { defaultValue: "Parking spot code" })}
-                  placeholderTextColor="#94a3b8"
-                  value={profileForm.parkingSpotCode}
-                  onChangeText={(parkingSpotCode) => setProfileForm((current) => ({ ...current, parkingSpotCode }))}
-                />
-                <TextInput
-                  style={[styles.input, { backgroundColor: isDark ? colors.background.dark : colors.background.light, borderColor: isDark ? colors.border.dark : colors.border.light, color: isDark ? colors.text.primary.dark : colors.text.primary.light }]}
-                  placeholder={t("Property.garageStickerCode", { defaultValue: "Garage sticker code" })}
-                  placeholderTextColor="#94a3b8"
-                  value={profileForm.garageStickerCode}
-                  onChangeText={(garageStickerCode) => setProfileForm((current) => ({ ...current, garageStickerCode }))}
-                />
                 <Pressable
                   disabled={savingProfile}
                   onPress={handleSaveMembershipProfile}
@@ -458,8 +444,9 @@ const styles = StyleSheet.create({
   buildingCard: {
     width: 160,
     padding: spacing.md,
-    borderRadius: 16,
+    borderRadius: radii.xl,
     borderWidth: 2,
+    ...shadows.sm,
   },
   buildingHeader: {
     flexDirection: 'row',
@@ -480,9 +467,10 @@ const styles = StyleSheet.create({
   },
   unitCard: {
     padding: layout.cardPadding,
-    borderRadius: 16,
+    borderRadius: radii.xl,
     borderWidth: 2,
     marginBottom: spacing.md,
+    ...shadows.sm,
   },
   unitHeader: {
     flexDirection: 'row',
@@ -501,9 +489,27 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   selectedHint: {
-    marginTop: spacing.sm,
     color: colors.primary.light,
     fontWeight: '600',
+    flex: 1,
+  },
+  selectedActions: {
+    marginTop: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  openDetailButton: {
+    minHeight: 44,
+    borderRadius: radii.lg,
+    backgroundColor: colors.primary.light,
+    paddingHorizontal: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  openDetailText: {
+    color: colors.text.inverse,
+    fontWeight: '800',
   },
   emptyText: {
     paddingHorizontal: layout.screenGutter,
@@ -529,7 +535,7 @@ const styles = StyleSheet.create({
   },
   unassignedCard: {
     borderWidth: 1,
-    borderRadius: 16,
+    borderRadius: radii.xl,
     padding: spacing.md,
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -555,14 +561,14 @@ const styles = StyleSheet.create({
   },
   membershipCard: {
     borderWidth: 1,
-    borderRadius: 16,
+    borderRadius: radii.xl,
     padding: spacing.md,
     gap: 4,
     marginBottom: spacing.sm,
   },
   profileEditor: {
     borderWidth: 1,
-    borderRadius: 16,
+    borderRadius: radii.xl,
     padding: spacing.md,
     gap: spacing.sm,
     marginTop: spacing.md,

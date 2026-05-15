@@ -15,11 +15,12 @@ import {
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 
+import { AdminPagination } from "@/components/admin-pagination";
 import { SiteNav } from "@/components/site-nav";
 import {
   getAnnouncement,
   getAnnouncementAcknowledgements,
-  getAnnouncements,
+  getAnnouncementsPage,
   getBuilding,
   getCompound,
   getCompounds,
@@ -44,6 +45,7 @@ interface AnnouncementsPageProps {
     created?: string;
     edit?: string;
     from?: string;
+    page?: string;
     published?: string;
     q?: string;
     status?: string;
@@ -113,18 +115,21 @@ export default async function AnnouncementsPage({ searchParams }: AnnouncementsP
 
   const locale = await getLocale();
   const t = await getTranslations("Announcements");
+  const commonT = await getTranslations("Common");
   const params = searchParams ? await searchParams : {};
   const status = parseStatus(params.status);
   const category = parseCategory(params.category);
   const targetType = parseTargetType(params.targetType);
   const authorId = params.authorId ? Number(params.authorId) : undefined;
+  const page = Math.max(1, Number(params.page ?? "1") || 1);
   const scopedCompoundId = (await getCompoundContext()) ?? currentUser.compoundId;
 
-  const [announcements, editingAnnouncement, acknowledgementDetails, compounds] = await Promise.all([
-    getAnnouncements({
+  const [announcementsPage, editingAnnouncement, acknowledgementDetails, compounds] = await Promise.all([
+    getAnnouncementsPage({
       authorId: Number.isFinite(authorId) ? authorId : undefined,
       category,
       from: params.from,
+      page,
       perPage: 50,
       search: params.q,
       status,
@@ -136,6 +141,7 @@ export default async function AnnouncementsPage({ searchParams }: AnnouncementsP
     params.ack ? getAnnouncementAcknowledgements(params.ack) : Promise.resolve(null),
     scopedCompoundId ? Promise.resolve([]) : getCompounds(),
   ]);
+  const announcements = announcementsPage.data;
   const activeCompoundId = scopedCompoundId ?? compounds[0]?.id ?? "";
   const activeCompound = activeCompoundId ? await getCompound(activeCompoundId) : null;
   const buildingDetails = await Promise.all(
@@ -186,7 +192,7 @@ export default async function AnnouncementsPage({ searchParams }: AnnouncementsP
         <StatusMessages params={params} t={t} />
 
         <div className="grid gap-5 md:grid-cols-4">
-          <MetricCard label={t("metrics.total")} value={announcements.length} />
+          <MetricCard label={t("metrics.total")} value={announcementsPage.meta.total} />
           <MetricCard label={t("metrics.published")} value={announcements.filter((item) => item.status === "published").length} />
           <MetricCard label={t("metrics.scheduled")} value={announcements.filter((item) => item.status === "scheduled").length} />
           <MetricCard label={t("metrics.archived")} value={announcements.filter((item) => item.status === "archived").length} />
@@ -403,19 +409,18 @@ export default async function AnnouncementsPage({ searchParams }: AnnouncementsP
                   name="expiresAt"
                   type="datetime-local"
                 />
-                <TextInput
-                  defaultValue={editingAnnouncement?.attachments.at(0)?.name ?? ""}
-                  id={fieldId(composerPrefix, "attachment-name")}
-                  label={t("fields.attachmentName")}
-                  name="attachmentName"
-                />
-                <TextInput
-                  defaultValue={editingAnnouncement?.attachments.at(0)?.url ?? ""}
-                  id={fieldId(composerPrefix, "attachment-url")}
-                  label={t("fields.attachmentUrl")}
-                  name="attachmentUrl"
-                  type="url"
-                />
+                <label className="text-xs font-semibold text-muted md:col-span-2" htmlFor={fieldId(composerPrefix, "photos")}>
+                  {t("fields.photos")}
+                  <input
+                    accept="image/*"
+                    className="mt-1 block w-full rounded-lg border border-dashed border-line bg-background px-3 py-3 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-brand file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white"
+                    id={fieldId(composerPrefix, "photos")}
+                    multiple
+                    name="photos"
+                    type="file"
+                  />
+                  <span className="mt-1 block text-xs font-normal leading-5 text-muted">{t("fields.photosHelp")}</span>
+                </label>
               </div>
 
               <div className="grid gap-3 md:grid-cols-2">
@@ -447,7 +452,13 @@ export default async function AnnouncementsPage({ searchParams }: AnnouncementsP
           <section className="overflow-hidden rounded-lg border border-line bg-panel">
             <div className="border-b border-line p-5">
               <h2 className="text-lg font-semibold">{t("list.title")}</h2>
-              <p className="mt-1 text-sm text-muted">{t("list.subtitle")}</p>
+              <p className="mt-1 text-sm text-muted">
+                {commonT("pagination.summary", {
+                  from: announcementsPage.meta.from ?? 0,
+                  to: announcementsPage.meta.to ?? 0,
+                  total: announcementsPage.meta.total,
+                })}
+              </p>
             </div>
 
             <div className="overflow-x-auto">
@@ -475,6 +486,11 @@ export default async function AnnouncementsPage({ searchParams }: AnnouncementsP
                               {announcement.body[locale === "ar" ? "ar" : "en"]}
                             </p>
                             <p className="mt-2 font-mono text-xs text-muted">{announcement.id.slice(0, 10)}</p>
+                            {announcement.attachments.length > 0 ? (
+                              <p className="mt-2 text-xs font-semibold text-brand">
+                                {t("list.attachments", { count: announcement.attachments.length })}
+                              </p>
+                            ) : null}
                           </div>
                         </td>
                         <td className="px-4 py-4">{t(`categories.${announcement.category}`)}</td>
@@ -540,6 +556,31 @@ export default async function AnnouncementsPage({ searchParams }: AnnouncementsP
                 </tbody>
               </table>
             </div>
+            <AdminPagination
+              basePath="/announcements"
+              labels={{
+                first: commonT("pagination.first"),
+                last: commonT("pagination.last"),
+                next: commonT("pagination.next"),
+                previous: commonT("pagination.previous"),
+                summary: commonT("pagination.summary", {
+                  from: announcementsPage.meta.from ?? 0,
+                  to: announcementsPage.meta.to ?? 0,
+                  total: announcementsPage.meta.total,
+                }),
+              }}
+              meta={announcementsPage.meta}
+              params={{
+                authorId: params.authorId,
+                category: category !== "all" ? category : undefined,
+                from: params.from,
+                q: params.q,
+                status: status !== "all" ? status : undefined,
+                targetId: params.targetId,
+                targetType: targetType !== "all" ? targetType : undefined,
+                to: params.to,
+              }}
+            />
           </section>
         </div>
 

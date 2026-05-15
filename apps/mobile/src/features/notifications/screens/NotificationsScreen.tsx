@@ -48,6 +48,87 @@ function getDeepLink(
   }
 }
 
+function getLocalizedNotification(item: {
+  title?: string;
+  body?: string;
+  metadata?: Record<string, unknown> | null;
+}, t: ReturnType<typeof useTranslation>["t"], language: string): { title: string; body: string } {
+  const metadata = item.metadata ?? {};
+  const locale = language.startsWith("ar") ? "ar" : "en";
+  const titleTranslations = metadata.titleTranslations as Record<string, string> | undefined;
+  const bodyTranslations = metadata.bodyTranslations as Record<string, string> | undefined;
+
+  if (titleTranslations?.[locale] || bodyTranslations?.[locale]) {
+    return {
+      title: titleTranslations?.[locale] ?? item.title ?? t("Notifications.label", { defaultValue: "Notifications" }),
+      body: bodyTranslations?.[locale] ?? item.body ?? "",
+    };
+  }
+
+  const type = typeof metadata.type === "string" ? metadata.type : null;
+  const apartmentCode = typeof metadata.apartment_code === "string"
+    ? metadata.apartment_code
+    : item.body?.match(/for\s+([A-Z0-9/-]+)\s+has/i)?.[1];
+
+  if (type === "owner_registration_approved" || item.title === "Owner registration approved") {
+    return {
+      title: t("Notifications.ownerRegistration.approvedTitle", { defaultValue: "Owner registration approved" }),
+      body: t("Notifications.ownerRegistration.approvedBody", {
+        apartmentCode: apartmentCode ?? t("Common.unit", { defaultValue: "your unit" }),
+        defaultValue: "Your registration for {{apartmentCode}} has been approved. You can now sign in.",
+      }),
+    };
+  }
+
+  const visitorName = item.body?.split(" ")[0] ?? t("Notifications.visitors.guest", { defaultValue: "Your guest" });
+  const visitorFallbacks: Record<string, { title: string; body: string }> = {
+    "Visitor arrived": {
+      title: t("Notifications.visitors.arrivedTitle", { defaultValue: "Visitor arrived" }),
+      body: t("Notifications.visitors.arrivedBody", {
+        visitorName,
+        defaultValue: "{{visitorName}} arrived at the gate.",
+      }),
+    },
+    "Visitor allowed": {
+      title: t("Notifications.visitors.allowedTitle", { defaultValue: "Visitor allowed" }),
+      body: t("Notifications.visitors.allowedBody", {
+        visitorName,
+        defaultValue: "{{visitorName}} was allowed entry.",
+      }),
+    },
+    "Visitor denied": {
+      title: t("Notifications.visitors.deniedTitle", { defaultValue: "Visitor denied" }),
+      body: t("Notifications.visitors.deniedBody", {
+        visitorName,
+        defaultValue: "{{visitorName}} was denied entry.",
+      }),
+    },
+    "Visit completed": {
+      title: t("Notifications.visitors.completedTitle", { defaultValue: "Visit completed" }),
+      body: t("Notifications.visitors.completedBody", {
+        visitorName,
+        defaultValue: "{{visitorName}}'s visit was completed.",
+      }),
+    },
+    "Visitor pass issued": {
+      title: t("Notifications.visitors.issuedTitle", { defaultValue: "Visitor pass issued" }),
+      body: t("Notifications.visitors.issuedBody", {
+        visitorName,
+        defaultValue: "{{visitorName}} is expected at the gate.",
+      }),
+    },
+  };
+
+  if (item.title && visitorFallbacks[item.title]) {
+    return visitorFallbacks[item.title];
+  }
+
+  return {
+    title: item.title ?? t("Notifications.label", { defaultValue: "Notifications" }),
+    body: item.body ?? "",
+  };
+}
+
 export const NotificationsScreen = () => {
   const { t, i18n } = useTranslation();
   const isDark = useColorScheme() === 'dark';
@@ -69,36 +150,41 @@ export const NotificationsScreen = () => {
     }
   };
 
-  const renderItem = ({ item }: { item: any }) => (
-    <Pressable onPress={() => handlePress(item)} style={[
-      styles.card,
-      { backgroundColor: isDark ? colors.surface.dark : colors.surface.light, borderColor: isDark ? colors.border.dark : colors.border.light },
-      !item.readAt && styles.unreadCard
-    ]}>
-      <View style={[styles.header, rowDirectionStyle(isRtl)]}>
-        <View style={[styles.titleRow, rowDirectionStyle(isRtl)]}>
-          <View style={styles.iconBadge}>
-            <Icon name="notifications" color={colors.primary.light} size={20} />
-          </View>
-          <Typography variant="h3" style={[styles.title, textDirectionStyle(isRtl)]}>{item.title}</Typography>
-        </View>
-        {!item.readAt && <View style={styles.unreadDot} />}
-      </View>
-      <Typography variant="body" style={[styles.body, textDirectionStyle(isRtl)]}>{item.body}</Typography>
-      <Typography variant="caption" style={textDirectionStyle(isRtl)}>{formatDate(item.createdAt, i18n.language === 'ar' ? 'ar-EG' : 'en-US')}</Typography>
+  const renderItem = ({ item }: { item: any }) => {
+    const localized = getLocalizedNotification(item, t, i18n.language);
+    const bodyColor = isDark ? colors.text.secondary.dark : colors.text.secondary.light;
 
-      <View style={[styles.actions, rowDirectionStyle(isRtl), { justifyContent: isRtl ? 'flex-start' : 'flex-end' }]}>
-        {!item.readAt && (
-          <Pressable onPress={() => markRead(item.id)}>
-            <Typography variant="label" style={[styles.actionText, textDirectionStyle(isRtl)]}>{t("Notifications.markRead")}</Typography>
+    return (
+      <Pressable onPress={() => handlePress(item)} style={[
+        styles.card,
+        { backgroundColor: isDark ? colors.surface.dark : colors.surface.light, borderColor: isDark ? colors.border.dark : colors.border.light },
+        !item.readAt && styles.unreadCard
+      ]}>
+        <View style={[styles.header, rowDirectionStyle(isRtl)]}>
+          <View style={[styles.titleRow, rowDirectionStyle(isRtl)]}>
+            <View style={styles.iconBadge}>
+              <Icon name="notifications" color={colors.primary.light} size={20} />
+            </View>
+            <Typography variant="h3" style={[styles.title, textDirectionStyle(isRtl)]}>{localized.title}</Typography>
+          </View>
+          {!item.readAt && <View style={styles.unreadDot} />}
+        </View>
+        <Typography variant="body" style={[styles.body, { color: bodyColor }, textDirectionStyle(isRtl)]}>{localized.body}</Typography>
+        <Typography variant="caption" style={textDirectionStyle(isRtl)}>{formatDate(item.createdAt, i18n.language === 'ar' ? 'ar-EG' : 'en-US')}</Typography>
+
+        <View style={[styles.actions, rowDirectionStyle(isRtl), { justifyContent: isRtl ? 'flex-start' : 'flex-end' }]}>
+          {!item.readAt && (
+            <Pressable onPress={() => markRead(item.id)}>
+              <Typography variant="label" style={[styles.actionText, textDirectionStyle(isRtl)]}>{t("Notifications.markRead")}</Typography>
+            </Pressable>
+          )}
+          <Pressable onPress={() => archive(item.id)}>
+            <Typography variant="label" style={[styles.actionText, { color: colors.error }, textDirectionStyle(isRtl)]}>{t("Notifications.archive")}</Typography>
           </Pressable>
-        )}
-        <Pressable onPress={() => archive(item.id)}>
-          <Typography variant="label" style={[styles.actionText, { color: colors.error }, textDirectionStyle(isRtl)]}>{t("Notifications.archive")}</Typography>
-        </Pressable>
-      </View>
-    </Pressable>
-  );
+        </View>
+      </Pressable>
+    );
+  };
 
   return (
     <ScreenContainer style={styles.container}>
@@ -171,7 +257,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary.dark,
   },
   body: {
-    color: colors.text.secondary.light,
     marginBottom: spacing.sm,
   },
   actions: {

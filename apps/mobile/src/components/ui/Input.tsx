@@ -26,6 +26,7 @@ export const Input: React.FC<InputProps> = ({
   error,
   containerStyle,
   secureTextEntry,
+  style,
   ...props
 }) => {
   const isDark = useColorScheme() === 'dark';
@@ -48,21 +49,21 @@ export const Input: React.FC<InputProps> = ({
           secureTextEntry={isPassword ? hidden : undefined}
           style={[
             styles.input,
-            isPassword && (isRtl ? styles.inputWithToggleRtl : styles.inputWithToggle),
             {
               backgroundColor: props.editable === false ? mutedSurface : surfaceColor,
               color: textColor,
               borderColor,
             },
             textDirectionStyle(isRtl),
-            props.style
+            style,
+            isPassword && styles.inputWithToggle,
           ]}
           {...props}
         />
         {isPassword && (
           <Pressable
             onPress={() => setHidden((v) => !v)}
-            style={[styles.eyeButton, isRtl ? styles.eyeButtonRtl : styles.eyeButtonLtr]}
+            style={[styles.eyeButton, styles.eyeButtonEnd]}
             accessibilityLabel={hidden ? "Show password" : "Hide password"}
             accessibilityRole="button"
             hitSlop={8}
@@ -97,23 +98,19 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   inputWithToggle: {
-    paddingEnd: 48,
-  },
-  inputWithToggleRtl: {
-    paddingStart: 48,
+    paddingEnd: 64,
   },
   eyeButton: {
     position: 'absolute',
+    top: 0,
+    bottom: 0,
     minHeight: componentSize.touch,
     justifyContent: 'center',
     alignItems: 'center',
     width: componentSize.touch,
   },
-  eyeButtonLtr: {
+  eyeButtonEnd: {
     end: spacing.sm,
-  },
-  eyeButtonRtl: {
-    start: spacing.sm,
   },
   error: {
     marginTop: spacing.xs,

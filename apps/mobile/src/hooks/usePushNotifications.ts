@@ -1,21 +1,26 @@
 import { useEffect } from 'react';
 import messaging, { FirebaseMessagingTypes } from '@react-native-firebase/messaging';
-import { Alert, Platform } from 'react-native';
+import { Platform } from 'react-native';
 import { useRegisterDeviceMutation } from '../services/auth';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { selectCurrentToken } from '../store/authSlice';
+import { api } from '../services/api';
+import type { AppDispatch } from '../store';
+import { openNotificationsCenter } from '../navigation/rootNavigation';
 
-function showForegroundNotification(remoteMessage: FirebaseMessagingTypes.RemoteMessage) {
-  const title = remoteMessage.notification?.title;
-  const body = remoteMessage.notification?.body;
-  if (title || body) {
-    Alert.alert(title ?? '', body ?? '');
+function syncForegroundNotification(
+  remoteMessage: FirebaseMessagingTypes.RemoteMessage,
+  dispatch: AppDispatch,
+) {
+  if (remoteMessage.messageId || remoteMessage.notification) {
+    dispatch(api.util.invalidateTags(['Notification']));
   }
 }
 
 export const usePushNotifications = (enabled = true) => {
   const [registerDevice] = useRegisterDeviceMutation();
   const authToken = useSelector(selectCurrentToken);
+  const dispatch = useDispatch<AppDispatch>();
 
   useEffect(() => {
     if (!enabled || !authToken) return;
@@ -54,11 +59,26 @@ export const usePushNotifications = (enabled = true) => {
       }
     });
 
-    const unsubscribeForeground = messaging().onMessage(showForegroundNotification);
+    const unsubscribeForeground = messaging().onMessage((remoteMessage) => {
+      syncForegroundNotification(remoteMessage, dispatch);
+    });
+
+    const unsubscribeOpened = messaging().onNotificationOpenedApp(() => {
+      dispatch(api.util.invalidateTags(['Notification']));
+      openNotificationsCenter();
+    });
+
+    void messaging().getInitialNotification().then((remoteMessage) => {
+      if (remoteMessage) {
+        dispatch(api.util.invalidateTags(['Notification']));
+        openNotificationsCenter();
+      }
+    });
 
     return () => {
       unsubscribeTokenRefresh();
       unsubscribeForeground();
+      unsubscribeOpened();
     };
-  }, [authToken, enabled, registerDevice]);
+  }, [authToken, dispatch, enabled, registerDevice]);
 };

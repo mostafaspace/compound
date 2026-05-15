@@ -1,16 +1,17 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, StyleSheet, TextInput, ScrollView, Switch, Alert, TouchableOpacity, ActivityIndicator, FlatList } from 'react-native';
+import { View, StyleSheet, TextInput, ScrollView, Switch, Alert, TouchableOpacity, ActivityIndicator, FlatList, Image } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { launchCamera, launchImageLibrary, type ImagePickerResponse } from 'react-native-image-picker';
 
 import { ScreenContainer } from '../../../components/layout/ScreenContainer';
 import { Typography } from '../../../components/ui/Typography';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
 import { colors, layout, spacing, radii } from '../../../theme';
-import { useCreateAnnouncementMutation, usePreviewAnnouncementRecipientsMutation } from '../../../services/property';
+import { useCreateAnnouncementMutation, usePreviewAnnouncementRecipientsMutation, useUploadAnnouncementAttachmentMutation } from '../../../services/property';
 import { useGetBuildingsQuery, useLazyGetFloorsByBuildingQuery } from '../../../services/admin';
 import { selectCurrentUser } from '../../../store/authSlice';
 
@@ -24,12 +25,20 @@ const ANNOUNCEMENT_CATEGORIES = [
 ] as const;
 
 type TargetType = 'compound' | 'building' | 'floor';
+const MAX_PHOTOS = 6;
+const IMAGE_PICKER_OPTIONS = {
+  mediaType: 'photo' as const,
+  quality: 0.8 as const,
+  maxWidth: 1920,
+  maxHeight: 1920,
+};
 
 export const CreateAnnouncementScreen = () => {
   const { t } = useTranslation();
   const navigation = useNavigation();
   const user = useSelector(selectCurrentUser);
   const [createAnnouncement, { isLoading: isCreating }] = useCreateAnnouncementMutation();
+  const [uploadAnnouncementAttachment, { isLoading: isUploading }] = useUploadAnnouncementAttachmentMutation();
   const [previewRecipients, { data: previewData, isLoading: isPreviewing }] = usePreviewAnnouncementRecipientsMutation();
   const [loadFloors] = useLazyGetFloorsByBuildingQuery();
 
@@ -48,21 +57,28 @@ export const CreateAnnouncementScreen = () => {
   const [selectedFloors, setSelectedFloors] = useState<string[]>([]);
   const [floorsByBuilding, setFloorsByBuilding] = useState<Record<string, any[]>>({});
   const [targetSearch, setTargetSearch] = useState('');
+  const [photos, setPhotos] = useState<any[]>([]);
 
   useEffect(() => {
     let cancelled = false;
 
     const hydrateFloors = async () => {
-      const entries = await Promise.all(
-        buildings.map(async (building: any) => {
-          try {
-            const floors = await loadFloors(building.id).unwrap();
-            return [building.id, floors] as const;
-          } catch {
-            return [building.id, []] as const;
-          }
-        }),
-      );
+      const floorRequests: Array<Promise<readonly [string, any[]]>> = [];
+
+      for (const building of buildings) {
+        floorRequests.push(
+          (async () => {
+            try {
+              const floors = await loadFloors(building.id).unwrap();
+              return [building.id, floors] as const;
+            } catch {
+              return [building.id, []] as const;
+            }
+          })(),
+        );
+      }
+
+      const entries = await Promise.all(floorRequests);
 
       if (!cancelled) {
         setFloorsByBuilding(Object.fromEntries(entries));
@@ -90,20 +106,20 @@ export const CreateAnnouncementScreen = () => {
     return buildings.filter((building: any) => String(building.name).toLowerCase().includes(normalizedTargetSearch));
   }, [buildings, normalizedTargetSearch]);
   const visibleFloorGroups = useMemo(() => {
-    return buildings
-      .map((building: any) => {
-        const floors = floorsByBuilding[building.id] ?? [];
-        if (!normalizedTargetSearch) return { building, floors };
+    return buildings.reduce((groups: Array<{ building: any; floors: any[] }>, building: any) => {
+      const floors = floorsByBuilding[building.id] ?? [];
+      const visibleFloors = normalizedTargetSearch
+        ? (String(building.name).toLowerCase().includes(normalizedTargetSearch)
+          ? floors
+          : floors.filter((floor: any) => String(floor.label).toLowerCase().includes(normalizedTargetSearch)))
+        : floors;
 
-        const buildingMatches = String(building.name).toLowerCase().includes(normalizedTargetSearch);
-        return {
-          building,
-          floors: buildingMatches
-            ? floors
-            : floors.filter((floor: any) => String(floor.label).toLowerCase().includes(normalizedTargetSearch)),
-        };
-      })
-      .filter((group: { floors: any[] }) => group.floors.length > 0);
+      if (visibleFloors.length > 0) {
+        groups.push({ building, floors: visibleFloors });
+      }
+
+      return groups;
+    }, []);
   }, [buildings, floorsByBuilding, normalizedTargetSearch]);
 
   useEffect(() => {
@@ -169,6 +185,97 @@ export const CreateAnnouncementScreen = () => {
     </TouchableOpacity>
   );
 
+  const renderBuildingSelection = ({ item: building }: { item: any }) => {
+    const isSelected = selectedBuildings.includes(building.id);
+
+    return (
+      <TouchableOpacity
+        onPress={() => toggle(building.id, selectedBuildings, setSelectedBuildings)}
+        style={[styles.selectionItem, isSelected && styles.selectionItemActive]}
+      >
+        <Typography
+          variant="caption"
+          color={isSelected ? 'white' : 'secondary'}
+          style={styles.selectionText}
+        >
+          {building.name}
+        </Typography>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderFloorSelection = ({ item: floor }: { item: any }) => {
+    const isSelected = selectedFloors.includes(floor.id);
+
+    return (
+      <TouchableOpacity
+        onPress={() => toggle(floor.id, selectedFloors, setSelectedFloors)}
+        style={[styles.selectionItem, isSelected && styles.selectionItemActive]}
+      >
+        <Typography
+          variant="caption"
+          color={isSelected ? 'white' : 'secondary'}
+          style={styles.selectionText}
+        >
+          {floor.label}
+        </Typography>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderFloorGroup = ({ item }: { item: { building: any; floors: any[] } }) => (
+    <View style={styles.floorGroup}>
+      <Typography variant="caption" style={styles.floorGroupTitle}>{item.building.name}</Typography>
+      <FlatList
+        data={item.floors}
+        keyExtractor={(floor) => floor.id}
+        renderItem={renderFloorSelection}
+        scrollEnabled={false}
+        contentContainerStyle={styles.selectionStack}
+      />
+    </View>
+  );
+
+  const handlePickerResult = (result: ImagePickerResponse) => {
+    if (!result.assets?.length) return;
+
+    const remaining = MAX_PHOTOS - photos.length;
+    const selected = result.assets
+      .filter((asset) => asset.uri)
+      .filter((asset) => !asset.fileSize || asset.fileSize <= 10 * 1024 * 1024)
+      .slice(0, remaining);
+
+    if (selected.length > 0) {
+      setPhotos((current) => [...current, ...selected]);
+    }
+  };
+
+  const showPhotoOptions = () => {
+    if (photos.length >= MAX_PHOTOS) {
+      Alert.alert(t('Common.error'), t('Announcements.maxPhotos', { count: MAX_PHOTOS }));
+      return;
+    }
+
+    const remaining = MAX_PHOTOS - photos.length;
+    Alert.alert(t('Announcements.photos'), undefined, [
+      {
+        text: t('Announcements.takePhoto'),
+        onPress: async () => {
+          const result = await launchCamera(IMAGE_PICKER_OPTIONS);
+          handlePickerResult(result);
+        },
+      },
+      {
+        text: t('Announcements.choosePhotos'),
+        onPress: async () => {
+          const result = await launchImageLibrary({ ...IMAGE_PICKER_OPTIONS, selectionLimit: remaining });
+          handlePickerResult(result);
+        },
+      },
+      { text: t('Common.cancel'), style: 'cancel' },
+    ]);
+  };
+
   const handleCreate = async () => {
     if (!titleEn || !titleAr || !bodyEn || !bodyAr) {
       Alert.alert(t('Common.error'), t('Announcements.fillRequired'));
@@ -191,7 +298,7 @@ export const CreateAnnouncementScreen = () => {
     }
 
     try {
-      await createAnnouncement({
+      const announcement = await createAnnouncement({
         titleEn,
         titleAr,
         bodyEn,
@@ -203,6 +310,19 @@ export const CreateAnnouncementScreen = () => {
         targetType,
         targetIds,
       }).unwrap();
+
+      if (photos.length > 0) {
+        for (const photo of photos) {
+          const formData = new FormData() as any;
+          formData.append('file', {
+            uri: photo.uri,
+            name: photo.fileName || 'announcement-photo.jpg',
+            type: photo.type || 'image/jpeg',
+          });
+          await uploadAnnouncementAttachment({ announcementId: announcement.id, formData }).unwrap();
+        }
+      }
+
       Alert.alert(t('Common.success'), t('Announcements.created'));
       navigation.goBack();
     } catch (err) {
@@ -274,21 +394,13 @@ export const CreateAnnouncementScreen = () => {
                 ) : buildings.length === 0 ? (
                   <Typography variant="caption" color="secondary">{t('Announcements.noBuildings')}</Typography>
                 ) : visibleBuildings.length > 0 ? (
-                  visibleBuildings.map((building: any) => (
-                    <TouchableOpacity
-                      key={building.id}
-                      onPress={() => toggle(building.id, selectedBuildings, setSelectedBuildings)}
-                      style={[styles.selectionItem, selectedBuildings.includes(building.id) && styles.selectionItemActive]}
-                    >
-                      <Typography
-                        variant="caption"
-                        color={selectedBuildings.includes(building.id) ? 'white' : 'secondary'}
-                        style={styles.selectionText}
-                      >
-                        {building.name}
-                      </Typography>
-                    </TouchableOpacity>
-                  ))
+                  <FlatList
+                    data={visibleBuildings}
+                    keyExtractor={(building) => building.id}
+                    renderItem={renderBuildingSelection}
+                    scrollEnabled={false}
+                    contentContainerStyle={styles.selectionStack}
+                  />
                 ) : (
                   <Typography variant="caption" color="secondary">{t('Announcements.noMatches')}</Typography>
                 )}
@@ -302,26 +414,13 @@ export const CreateAnnouncementScreen = () => {
                 ) : buildings.length === 0 ? (
                   <Typography variant="caption" color="secondary">{t('Announcements.noBuildings')}</Typography>
                 ) : visibleFloorGroups.length > 0 ? (
-                  visibleFloorGroups.map(({ building, floors }: { building: any; floors: any[] }) => (
-                    <View key={building.id} style={styles.floorGroup}>
-                      <Typography variant="caption" style={styles.floorGroupTitle}>{building.name}</Typography>
-                      {floors.map((floor: any) => (
-                        <TouchableOpacity
-                          key={floor.id}
-                          onPress={() => toggle(floor.id, selectedFloors, setSelectedFloors)}
-                          style={[styles.selectionItem, selectedFloors.includes(floor.id) && styles.selectionItemActive]}
-                        >
-                          <Typography
-                            variant="caption"
-                            color={selectedFloors.includes(floor.id) ? 'white' : 'secondary'}
-                            style={styles.selectionText}
-                          >
-                            {floor.label}
-                          </Typography>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  ))
+                  <FlatList
+                    data={visibleFloorGroups}
+                    keyExtractor={({ building }) => building.id}
+                    renderItem={renderFloorGroup}
+                    scrollEnabled={false}
+                    contentContainerStyle={styles.selectionStack}
+                  />
                 ) : (
                   <Typography variant="caption" color="secondary">
                     {targetSearch ? t('Announcements.noMatches') : t('Announcements.noFloors')}
@@ -376,6 +475,39 @@ export const CreateAnnouncementScreen = () => {
             />
           </View>
 
+          <View style={styles.inputGroup}>
+            <Typography variant="label" style={styles.label}>{t('Announcements.photos')}</Typography>
+            <TouchableOpacity style={styles.photoButton} onPress={showPhotoOptions}>
+              <Ionicons name="images-outline" size={20} color={colors.primary.main} />
+              <View style={styles.photoButtonText}>
+                <Typography variant="body" style={styles.photoButtonTitle}>{t('Announcements.addPhotos')}</Typography>
+                <Typography variant="caption" color="secondary">
+                  {t('Announcements.photosHelp', { count: photos.length, max: MAX_PHOTOS })}
+                </Typography>
+              </View>
+            </TouchableOpacity>
+            {photos.length > 0 && (
+              <FlatList
+                data={photos}
+                keyExtractor={(item, index) => item.uri ?? String(index)}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.photoPreviewRow}
+                renderItem={({ item, index }) => (
+                  <View style={styles.photoPreviewWrap}>
+                    <Image source={{ uri: item.uri }} style={styles.photoPreview} />
+                    <TouchableOpacity
+                      style={styles.removePhotoButton}
+                      onPress={() => setPhotos((current) => current.filter((_, photoIndex) => photoIndex !== index))}
+                    >
+                      <Ionicons name="close" size={14} color="white" />
+                    </TouchableOpacity>
+                  </View>
+                )}
+              />
+            )}
+          </View>
+
           <View style={styles.switchGroup}>
             <View style={{ flex: 1 }}>
               <Typography variant="body" style={styles.switchTitle}>
@@ -396,7 +528,7 @@ export const CreateAnnouncementScreen = () => {
           <Button
             title={t('Announcements.create')}
             onPress={handleCreate}
-            loading={isCreating}
+            loading={isCreating || isUploading}
             style={styles.submitBtn}
           />
         </View>
@@ -501,6 +633,9 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     gap: spacing.xs,
   },
+  selectionStack: {
+    gap: spacing.xs,
+  },
   selectionItem: {
     minHeight: 40,
     justifyContent: 'center',
@@ -542,6 +677,51 @@ const styles = StyleSheet.create({
     marginStart: 6,
     color: '#0369a1',
     fontWeight: '600',
+  },
+  photoButton: {
+    minHeight: 64,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: '#cbd5e1',
+    backgroundColor: '#f8fafc',
+    padding: spacing.md,
+  },
+  photoButtonText: {
+    flex: 1,
+  },
+  photoButtonTitle: {
+    fontWeight: '700',
+  },
+  photoPreviewRow: {
+    gap: spacing.sm,
+    paddingTop: spacing.xs,
+    paddingEnd: spacing.md,
+  },
+  photoPreviewWrap: {
+    width: 92,
+    height: 92,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#e2e8f0',
+  },
+  photoPreview: {
+    width: '100%',
+    height: '100%',
+  },
+  removePhotoButton: {
+    position: 'absolute',
+    top: 6,
+    end: 6,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(15, 23, 42, 0.72)',
   },
   switchGroup: {
     flexDirection: 'row',

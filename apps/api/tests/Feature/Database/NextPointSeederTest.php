@@ -53,7 +53,6 @@ class NextPointSeederTest extends TestCase
             ->firstOrFail();
 
         $this->assertSame('apartment', $unit->type->value);
-        $this->assertSame('130.00', (string) $unit->area_sqm);
         $this->assertSame(2, $unit->floor?->level_number);
         $this->assertSame('H', $unit->building?->code);
     }

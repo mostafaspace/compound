@@ -28,18 +28,28 @@ const TARGETS_WITHOUT_FLOOR_SCOPE: IssueTargetRole[] = [
 
 export function getDefaultIssueTargetRole(
   hasFloorScope: boolean,
+  effectiveRoles: string[] = [],
 ): IssueTargetRole {
-  return hasFloorScope
-    ? "floor_representative"
-    : "building_representative";
+  return getAvailableIssueTargetRoles(hasFloorScope, effectiveRoles)[0] ?? "compound_admin";
 }
 
 export function getAvailableIssueTargetRoles(
   hasFloorScope: boolean,
+  effectiveRoles: string[] = [],
 ): IssueTargetRole[] {
-  return hasFloorScope
+  const baseTargets = hasFloorScope
     ? TARGETS_WITH_FLOOR_SCOPE
     : TARGETS_WITHOUT_FLOOR_SCOPE;
+
+  return baseTargets.filter((target) => !isSameIssueTargetRole(target, effectiveRoles));
+}
+
+function isSameIssueTargetRole(target: IssueTargetRole, effectiveRoles: string[]): boolean {
+  if (target === "compound_admin") {
+    return effectiveRoles.includes("compound_admin") || effectiveRoles.includes("compound_head");
+  }
+
+  return effectiveRoles.includes(target);
 }
 
 export function getIssueSubmitBlockReason({

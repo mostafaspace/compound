@@ -17,7 +17,7 @@ class ApplyCampaignChargesRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'unit_account_ids' => ['required', 'array', 'min:1'],
+            'unit_account_ids' => ['nullable', 'array', 'min:1'],
             'unit_account_ids.*' => ['string', 'exists:unit_accounts,id'],
             'amount' => ['required', 'numeric', 'min:0.01'],
             'description' => ['required', 'string', 'max:500'],

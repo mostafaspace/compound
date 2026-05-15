@@ -1,9 +1,10 @@
 "use server";
 
 import { lookupVehicles, notifyVehicleOwner } from "@/lib/api";
+import { normalizeDigits } from "@/lib/numerals";
 
 export async function lookupVehiclesAction(query: string) {
-  return await lookupVehicles(query);
+  return await lookupVehicles(normalizeDigits(query));
 }
 
 export async function notifyVehicleOwnerAction(

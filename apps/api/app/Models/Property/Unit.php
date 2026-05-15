@@ -33,10 +33,8 @@ class Unit extends Model
         'floor_id',
         'unit_number',
         'type',
-        'area_sqm',
         'bedrooms',
         'status',
-        'has_vehicle',
         'has_parking',
         'metadata',
         'archived_at',
@@ -48,12 +46,10 @@ class Unit extends Model
     {
         return [
             'archived_at' => 'datetime',
-            'area_sqm' => 'decimal:2',
             'bedrooms' => 'integer',
             'metadata' => 'array',
             'status' => UnitStatus::class,
             'type' => UnitType::class,
-            'has_vehicle' => 'boolean',
             'has_parking' => 'boolean',
         ];
     }

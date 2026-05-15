@@ -24,7 +24,7 @@ class ApartmentVehicleControllerTest extends TestCase
         parent::setUp();
 
         $this->user = User::factory()->create();
-        $this->unit = Unit::factory()->create(['has_vehicle' => true]);
+        $this->unit = Unit::factory()->create();
 
         ApartmentResident::factory()->create([
             'unit_id' => $this->unit->id,
@@ -47,17 +47,6 @@ class ApartmentVehicleControllerTest extends TestCase
             ->assertJsonPath('data.plate', 'أ ب ج 1234')
             ->assertJsonPath('data.plateFormat', 'letters_numbers')
             ->assertJsonPath('data.plateLettersAr', 'أ ب ج');
-    }
-
-    public function test_member_can_create_vehicle_even_when_unit_vehicle_capability_is_disabled(): void
-    {
-        $this->unit->update(['has_vehicle' => false]);
-
-        $this->postJson("/api/v1/apartments/{$this->unit->id}/vehicles", [
-            'plate_format' => 'letters_numbers',
-            'plate_letters_input' => 'أ',
-            'plate_digits_input' => '1',
-        ])->assertCreated();
     }
 
     public function test_capacity_exceeded_returns_conflict(): void

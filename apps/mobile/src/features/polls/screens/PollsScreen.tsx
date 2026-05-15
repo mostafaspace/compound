@@ -5,6 +5,7 @@ import {
   FlatList,
   useColorScheme,
   Pressable,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NavigationProp } from '@react-navigation/native';
@@ -32,6 +33,9 @@ export const PollsScreen = () => {
 
   const { data: pollPage, isFetching, isLoading, refetch } = useGetPollsQuery({ page, perPage: 20 });
   const mutedText = isDark ? colors.text.secondary.dark : colors.text.secondary.light;
+  const surfaceColor = isDark ? colors.surface.dark : colors.surface.light;
+  const mutedSurfaceColor = isDark ? colors.surfaceMuted.dark : colors.surfaceMuted.light;
+  const borderColor = isDark ? colors.border.dark : colors.border.light;
   const hasMore = Boolean(pollPage && pollPage.meta.current_page < pollPage.meta.last_page);
 
   useEffect(() => {
@@ -99,7 +103,7 @@ export const PollsScreen = () => {
         {/* Header row: status badge + poll type chip */}
         <View style={[styles.cardHeader, rowDirectionStyle(isRtl)]}>
           <View style={[styles.titleRow, rowDirectionStyle(isRtl)]}>
-            <View style={styles.iconBadge}>
+            <View style={[styles.iconBadge, { backgroundColor: mutedSurfaceColor }]}>
               <Icon name="polls" color={colors.primary.light} size={20} />
             </View>
             <View style={styles.titleBlock}>
@@ -182,12 +186,42 @@ export const PollsScreen = () => {
         onRefresh={refreshPolls}
         onEndReached={loadMorePolls}
         onEndReachedThreshold={0.6}
-        ListEmptyComponent={
-          <View style={styles.center}>
-            <Typography variant="caption" style={textDirectionStyle(isRtl)}>
-              {isLoading ? t('Common.loading') : t('Polls.empty')}
+        ListHeaderComponent={
+          <View style={[styles.headerCard, { backgroundColor: surfaceColor, borderColor }, textDirectionStyle(isRtl)]}>
+            <Typography variant="label" style={[styles.eyebrow, textDirectionStyle(isRtl)]}>
+              {t('Polls.label')}
+            </Typography>
+            <Typography variant="h2" style={[styles.headerTitle, textDirectionStyle(isRtl)]}>
+              {t('Polls.title')}
+            </Typography>
+            <Typography variant="body" style={[styles.headerSubtitle, { color: mutedText }, textDirectionStyle(isRtl)]}>
+              {t('Polls.subtitle')}
             </Typography>
           </View>
+        }
+        ListEmptyComponent={
+          <View style={[styles.emptyCard, { backgroundColor: surfaceColor, borderColor }, textDirectionStyle(isRtl)]}>
+            {isLoading ? (
+              <ActivityIndicator color={colors.primary.light} />
+            ) : (
+              <>
+                <View style={[styles.emptyIcon, { backgroundColor: mutedSurfaceColor }]}>
+                  <Icon name="polls" color={colors.primary.light} size={24} />
+                </View>
+                <Typography variant="h3" style={textDirectionStyle(isRtl)}>
+                  {t('Polls.empty')}
+                </Typography>
+                <Typography variant="body" style={[styles.emptyText, { color: mutedText }, textDirectionStyle(isRtl)]}>
+                  {t('Polls.subtitle')}
+                </Typography>
+              </>
+            )}
+          </View>
+        }
+        ListFooterComponent={
+          isFetching && page > 1 ? (
+            <ActivityIndicator color={colors.primary.light} style={styles.footerLoader} />
+          ) : null
         }
         contentContainerStyle={styles.listContent}
       />
@@ -202,15 +236,32 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: layout.screenGutter,
-    paddingTop: spacing.sm,
+    paddingTop: layout.screenTop,
     paddingBottom: layout.screenBottom,
     flexGrow: 1,
   },
-  card: {
-    padding: spacing.ms,
-    borderRadius: radii.lg,
+  headerCard: {
+    borderRadius: radii.xl,
     borderWidth: 1,
-    marginBottom: spacing.sm,
+    padding: layout.heroPadding,
+    marginBottom: layout.cardGap,
+    ...shadows.sm,
+  },
+  eyebrow: {
+    color: colors.primary.light,
+    marginBottom: spacing.xs,
+  },
+  headerTitle: {
+    marginBottom: spacing.xs,
+  },
+  headerSubtitle: {
+    lineHeight: 24,
+  },
+  card: {
+    padding: layout.cardPadding,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    marginBottom: layout.listGap,
     ...shadows.sm,
   },
   cardHeader: {
@@ -225,12 +276,11 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   iconBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: radii.sm,
+    width: 44,
+    height: 44,
+    borderRadius: radii.md,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surfaceMuted.light,
   },
   titleBlock: {
     flex: 1,
@@ -270,10 +320,26 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
     gap: spacing.md,
   },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
+  emptyCard: {
     alignItems: 'center',
-    marginTop: spacing.xl,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    padding: layout.heroPadding,
+    ...shadows.sm,
+  },
+  emptyIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: radii.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  emptyText: {
+    marginTop: spacing.xs,
+    textAlign: 'center',
+  },
+  footerLoader: {
+    marginVertical: spacing.md,
   },
 });

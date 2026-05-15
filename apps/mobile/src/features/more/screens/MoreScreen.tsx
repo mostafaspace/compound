@@ -35,6 +35,11 @@ export const MoreScreen = ({ navigation }: { navigation: MoreScreenNavigationPro
   const user = useSelector(selectCurrentUser);
   const roleType = getEffectiveRoleType(user);
   const isAdmin = roleType === 'admin';
+  const surfaceColor = isDark ? colors.surface.dark : colors.surface.light;
+  const mutedSurfaceColor = isDark ? colors.surfaceMuted.dark : colors.surfaceMuted.light;
+  const borderColor = isDark ? colors.border.dark : colors.border.light;
+  const secondaryText = isDark ? colors.text.secondary.dark : colors.text.secondary.light;
+  const displayRole = formatRoleLabel(user?.role ?? roleType);
 
   const handleLogout = async () => {
     dispatch(logout());
@@ -200,12 +205,12 @@ export const MoreScreen = ({ navigation }: { navigation: MoreScreenNavigationPro
             item.isFirst && styles.firstMenuItem,
             !item.isLast && styles.borderBottom,
             item.isLast && styles.lastMenuItem,
-            { borderBottomColor: isDark ? colors.border.dark : colors.border.light, backgroundColor: isDark ? colors.surface.dark : colors.surface.light },
+            { borderColor, borderBottomColor: borderColor, backgroundColor: surfaceColor },
             pressed && styles.menuItemPressed,
           ]}
         >
           <View style={[styles.row, rowDirectionStyle(isRtl)]}>
-            <View style={[styles.iconBadge, { backgroundColor: isDark ? colors.surfaceMuted.dark : colors.surfaceMuted.light }]}>
+            <View style={[styles.iconBadge, { backgroundColor: mutedSurfaceColor }]}>
               <Icon name={item.item.icon} color={colors.primary.light} size={22} />
             </View>
             <Typography variant="h3" style={[styles.label, textDirectionStyle(isRtl)]}>{item.item.label}</Typography>
@@ -222,13 +227,13 @@ export const MoreScreen = ({ navigation }: { navigation: MoreScreenNavigationPro
           style={({ pressed }) => [
             styles.logoutBtn,
             rowDirectionStyle(isRtl),
-            { backgroundColor: isDark ? colors.surface.dark : colors.surface.light, borderColor: colors.error },
+            { backgroundColor: surfaceColor, borderColor: colors.error },
             pressed && { opacity: 0.7 },
           ]}
           accessibilityRole="button"
           accessibilityLabel={t('Auth.logout')}
         >
-          <Icon name="settings" color={colors.error} size={20} />
+          <Icon name="x" color={colors.error} size={20} />
           <Typography variant="h3" style={[styles.logoutText, textDirectionStyle(isRtl)]}>
             {t('Auth.logout')}
           </Typography>
@@ -254,6 +259,33 @@ export const MoreScreen = ({ navigation }: { navigation: MoreScreenNavigationPro
           return item.id;
         }}
         renderItem={renderRow}
+        ListHeaderComponent={
+          <View style={[styles.profileCard, { backgroundColor: surfaceColor, borderColor }, textDirectionStyle(isRtl)]}>
+            <View style={[styles.profileTop, rowDirectionStyle(isRtl)]}>
+              <View style={[styles.profileAvatar, { backgroundColor: mutedSurfaceColor }]}>
+                <Icon name="user" color={colors.primary.light} size={26} />
+              </View>
+              <View style={[styles.profileCopy, textDirectionStyle(isRtl)]}>
+                <Typography variant="h2" numberOfLines={1} style={textDirectionStyle(isRtl)}>
+                  {user?.name ?? t("Common.profile")}
+                </Typography>
+                <Typography variant="caption" style={[styles.profileEmail, { color: secondaryText }, textDirectionStyle(isRtl)]} numberOfLines={1}>
+                  {user?.email ?? ""}
+                </Typography>
+              </View>
+            </View>
+            <View style={[styles.profileMeta, rowDirectionStyle(isRtl)]}>
+              <Typography variant="label" style={[styles.rolePill, textDirectionStyle(isRtl)]}>
+                {displayRole}
+              </Typography>
+              {user?.status ? (
+                <Typography variant="caption" style={[styles.statusText, { color: secondaryText }, textDirectionStyle(isRtl)]}>
+                  {formatRoleLabel(user.status)}
+                </Typography>
+              ) : null}
+            </View>
+          </View>
+        }
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
       />
@@ -261,12 +293,60 @@ export const MoreScreen = ({ navigation }: { navigation: MoreScreenNavigationPro
   );
 };
 
+function formatRoleLabel(value: string): string {
+  return value
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
 const styles = StyleSheet.create({
   container: {
     paddingTop: layout.screenTop,
   },
   listContent: {
     paddingBottom: layout.screenBottom,
+  },
+  profileCard: {
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    padding: layout.heroPadding,
+    marginBottom: layout.sectionGap,
+    ...shadows.sm,
+  },
+  profileTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+  },
+  profileAvatar: {
+    width: 56,
+    height: 56,
+    borderRadius: radii.lg,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  profileCopy: {
+    flex: 1,
+  },
+  profileEmail: {
+    marginTop: spacing.xs,
+  },
+  profileMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  rolePill: {
+    backgroundColor: colors.primary.light,
+    borderRadius: radii.pill,
+    color: colors.text.inverse,
+    overflow: "hidden",
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  statusText: {
+    textTransform: "capitalize",
   },
   sectionTitle: {
     marginBottom: spacing.sm,

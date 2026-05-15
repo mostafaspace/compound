@@ -20,6 +20,10 @@ class ApartmentDocumentResource extends JsonResource
         return [
             'id' => $this->id,
             'unitId' => $this->unit_id,
+            'unit' => $this->whenLoaded('unit', fn () => [
+                'id' => $this->unit->id,
+                'unitNumber' => $this->unit->unit_number,
+            ]),
             'uploadedByUserId' => $this->uploaded_by_user_id,
             'uploader' => UserResource::make($this->whenLoaded('uploader')),
             'documentType' => $this->document_type->value,

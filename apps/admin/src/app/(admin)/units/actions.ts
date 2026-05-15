@@ -63,10 +63,6 @@ export async function updateMembershipProfileAction(unitId: string, membershipId
     phonePublic: formData.get("phonePublic") === "on",
     residentEmail: nullableFormString(formData, "residentEmail"),
     emailPublic: formData.get("emailPublic") === "on",
-    hasVehicle: formData.get("hasVehicle") === "on",
-    vehiclePlate: nullableFormString(formData, "vehiclePlate"),
-    parkingSpotCode: nullableFormString(formData, "parkingSpotCode"),
-    garageStickerCode: nullableFormString(formData, "garageStickerCode"),
   });
 
   revalidatePath(`/units/${unitId}`);

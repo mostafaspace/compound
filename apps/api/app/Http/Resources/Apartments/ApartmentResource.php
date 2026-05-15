@@ -54,10 +54,8 @@ class ApartmentResource extends JsonResource
                 'floorId' => $this->floor_id,
                 'unitNumber' => $this->unit_number,
                 'type' => $this->type->value,
-                'areaSqm' => $this->area_sqm,
                 'bedrooms' => $this->bedrooms,
                 'status' => $this->status->value,
-                'hasVehicle' => $this->has_vehicle,
                 'hasParking' => $this->has_parking,
             ],
             'residents' => ApartmentResidentResource::collection(

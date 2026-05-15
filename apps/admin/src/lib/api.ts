@@ -261,6 +261,65 @@ function emptyPage<T>(): PaginatedEnvelope<T> {
   };
 }
 
+function normalizePaginatedEnvelope<T>(payload: unknown): PaginatedEnvelope<T> {
+  const root = payload as Record<string, unknown> | null;
+  const candidates = [
+    root,
+    root?.data as Record<string, unknown> | undefined,
+  ].filter(Boolean) as Array<Record<string, unknown>>;
+
+  const canonical = candidates.find((candidate) => Array.isArray(candidate.data) && typeof candidate.meta === "object");
+  if (canonical) {
+    return canonical as unknown as PaginatedEnvelope<T>;
+  }
+
+  const paginator = candidates.find((candidate) => Array.isArray(candidate.data) && "current_page" in candidate);
+  if (paginator) {
+    const data = paginator.data as T[];
+    const currentPage = Number(paginator.current_page ?? 1);
+    const lastPage = Number(paginator.last_page ?? currentPage);
+    const perPage = Number(paginator.per_page ?? data.length);
+    const total = Number(paginator.total ?? data.length);
+
+    return {
+      data,
+      links: {
+        first: typeof paginator.first_page_url === "string" ? paginator.first_page_url : null,
+        last: typeof paginator.last_page_url === "string" ? paginator.last_page_url : null,
+        next: typeof paginator.next_page_url === "string" ? paginator.next_page_url : null,
+        prev: typeof paginator.prev_page_url === "string" ? paginator.prev_page_url : null,
+      },
+      meta: {
+        current_page: currentPage,
+        from: paginator.from == null ? null : Number(paginator.from),
+        last_page: lastPage,
+        per_page: perPage,
+        to: paginator.to == null ? null : Number(paginator.to),
+        total,
+      },
+    };
+  }
+
+  const arrayPayload = candidates.find((candidate) => Array.isArray(candidate.data));
+  if (arrayPayload) {
+    const data = arrayPayload.data as T[];
+
+    return {
+      ...emptyPage<T>(),
+      data,
+      meta: {
+        ...emptyPage<T>().meta,
+        from: data.length > 0 ? 1 : null,
+        per_page: data.length,
+        to: data.length > 0 ? data.length : null,
+        total: data.length,
+      },
+    };
+  }
+
+  return emptyPage<T>();
+}
+
 export async function getAuditTimeline(entityType: string, entityId: string): Promise<AuditLogEntry[]> {
   try {
     const params = new URLSearchParams({ entity_type: entityType, entity_id: entityId });
@@ -505,6 +564,14 @@ export async function updateNotificationPreferences(
 }
 
 export async function getAnnouncements(input: AnnouncementFilters = {}): Promise<Announcement[]> {
+  const page = await getAnnouncementsPage(input);
+
+  return page.data;
+}
+
+export async function getAnnouncementsPage(
+  input: AnnouncementFilters & { page?: number } = {},
+): Promise<PaginatedEnvelope<Announcement>> {
   try {
     const params = new URLSearchParams();
 
@@ -544,6 +611,10 @@ export async function getAnnouncements(input: AnnouncementFilters = {}): Promise
       params.set("perPage", String(input.perPage));
     }
 
+    if (input.page) {
+      params.set("page", String(input.page));
+    }
+
     const query = params.toString();
     const response = await fetch(`${config.apiBaseUrl}/announcements${query ? `?${query}` : ""}`, {
       cache: "no-store",
@@ -551,14 +622,14 @@ export async function getAnnouncements(input: AnnouncementFilters = {}): Promise
     });
 
     if (!response.ok) {
-      return [];
+      return emptyPage<Announcement>();
     }
 
     const payload = (await response.json()) as PaginatedEnvelope<Announcement>;
 
-    return payload.data;
+    return payload;
   } catch {
-    return [];
+    return emptyPage<Announcement>();
   }
 }
 
@@ -619,6 +690,25 @@ export async function updateAnnouncement(announcementId: string, input: UpdateAn
   return payload.data;
 }
 
+export async function uploadAnnouncementAttachment(announcementId: string, file: File): Promise<Announcement["attachments"][number]> {
+  const formData = new FormData();
+  formData.append("file", file, file.name);
+
+  const response = await fetch(`${config.apiBaseUrl}/announcements/${announcementId}/attachments`, {
+    body: formData,
+    headers: await apiHeaders(true),
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to upload announcement attachment: ${response.status}`);
+  }
+
+  const payload = (await response.json()) as ApiEnvelope<Announcement["attachments"][number]>;
+
+  return payload.data;
+}
+
 export async function publishAnnouncement(announcementId: string): Promise<Announcement> {
   const response = await fetch(`${config.apiBaseUrl}/announcements/${announcementId}/publish`, {
     headers: await apiHeaders(true),
@@ -674,7 +764,7 @@ export async function getAnnouncementAcknowledgements(announcementId: string): P
 
 export async function getFinanceUnitAccounts(input: { unitId?: string } = {}): Promise<UnitAccount[]> {
   try {
-    const params = new URLSearchParams();
+    const params = new URLSearchParams({ perPage: "100" });
 
     if (input.unitId) {
       params.set("unitId", input.unitId);
@@ -691,6 +781,32 @@ export async function getFinanceUnitAccounts(input: { unitId?: string } = {}): P
     }
 
     const payload = (await response.json()) as PaginatedEnvelope<UnitAccount>;
+
+    return payload.data;
+  } catch {
+    return [];
+  }
+}
+
+export async function getUnits(input: { search?: string; perPage?: number } = {}): Promise<UnitSummary[]> {
+  try {
+    const params = new URLSearchParams();
+    params.set("perPage", String(input.perPage ?? 100));
+
+    if (input.search) {
+      params.set("search", input.search);
+    }
+
+    const response = await fetch(`${config.apiBaseUrl}/units?${params.toString()}`, {
+      cache: "no-store",
+      headers: await apiHeaders(true),
+    });
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const payload = (await response.json()) as PaginatedEnvelope<UnitSummary>;
 
     return payload.data;
   } catch {
@@ -732,13 +848,21 @@ export async function createFinanceLedgerEntry(unitAccountId: string, input: Cre
   }
 }
 
-export async function getFinancePaymentSubmissions(input: { status?: PaymentStatus | "all" } = {}): Promise<PaymentSubmission[]> {
+export async function getFinancePaymentSubmissions(input: { status?: PaymentStatus | "all"; page?: number; perPage?: number } = {}): Promise<PaymentSubmission[]> {
+  const page = await getFinancePaymentSubmissionsPage(input);
+
+  return page.data;
+}
+
+export async function getFinancePaymentSubmissionsPage(input: { status?: PaymentStatus | "all"; page?: number; perPage?: number } = {}): Promise<PaginatedEnvelope<PaymentSubmission>> {
   try {
     const params = new URLSearchParams();
 
     if (input.status && input.status !== "all") {
       params.set("status", input.status);
     }
+    if (input.page) params.set("page", String(input.page));
+    if (input.perPage) params.set("perPage", String(input.perPage));
 
     const query = params.toString();
     const response = await fetch(`${config.apiBaseUrl}/finance/payment-submissions${query ? `?${query}` : ""}`, {
@@ -747,14 +871,14 @@ export async function getFinancePaymentSubmissions(input: { status?: PaymentStat
     });
 
     if (!response.ok) {
-      return [];
+      return emptyPage<PaymentSubmission>();
     }
 
     const payload = (await response.json()) as PaginatedEnvelope<PaymentSubmission>;
 
-    return payload.data;
+    return payload;
   } catch {
-    return [];
+    return emptyPage<PaymentSubmission>();
   }
 }
 
@@ -1512,21 +1636,32 @@ export async function getDocumentTypes(): Promise<DocumentType[]> {
 }
 
 export async function getDocuments(): Promise<UserDocument[]> {
+  const page = await getDocumentsPage();
+
+  return page.data;
+}
+
+export async function getDocumentsPage(input: { page?: number; perPage?: number } = {}): Promise<PaginatedEnvelope<UserDocument>> {
   try {
-    const response = await fetch(`${config.apiBaseUrl}/documents`, {
+    const params = new URLSearchParams();
+    if (input.page) params.set("page", String(input.page));
+    if (input.perPage) params.set("perPage", String(input.perPage));
+
+    const query = params.toString();
+    const response = await fetch(`${config.apiBaseUrl}/documents${query ? `?${query}` : ""}`, {
       cache: "no-store",
       headers: await apiHeaders(true),
     });
 
     if (!response.ok) {
-      return [];
+      return emptyPage<UserDocument>();
     }
 
     const payload = (await response.json()) as PaginatedEnvelope<UserDocument>;
 
-    return payload.data;
+    return payload;
   } catch {
-    return [];
+    return emptyPage<UserDocument>();
   }
 }
 
@@ -1676,7 +1811,21 @@ export async function getIssues(input: {
   buildingId?: string;
   status?: IssueStatus | "all";
   category?: IssueCategory | "all";
+  page?: number;
+  perPage?: number;
 } = {}): Promise<Issue[]> {
+  const page = await getIssuesPage(input);
+
+  return page.data;
+}
+
+export async function getIssuesPage(input: {
+  buildingId?: string;
+  status?: IssueStatus | "all";
+  category?: IssueCategory | "all";
+  page?: number;
+  perPage?: number;
+} = {}): Promise<PaginatedEnvelope<Issue>> {
   try {
     const params = new URLSearchParams();
 
@@ -1689,6 +1838,8 @@ export async function getIssues(input: {
     if (input.category && input.category !== "all") {
       params.set("category", input.category);
     }
+    if (input.page) params.set("page", String(input.page));
+    if (input.perPage) params.set("perPage", String(input.perPage));
 
     const query = params.toString();
     const response = await fetch(`${config.apiBaseUrl}/issues${query ? `?${query}` : ""}`, {
@@ -1696,13 +1847,12 @@ export async function getIssues(input: {
       headers: await apiHeaders(true),
     });
 
-    if (!response.ok) return [];
+    if (!response.ok) return emptyPage<Issue>();
     
-    // We expect paginated envelope
-    const payload = await response.json();
-    return payload.data;
+    const payload = (await response.json()) as PaginatedEnvelope<Issue>;
+    return payload;
   } catch {
-    return [];
+    return emptyPage<Issue>();
   }
 }
 
@@ -1991,6 +2141,9 @@ export interface CollectionCampaign {
   description: string | null;
   status: "draft" | "active" | "closed" | "archived";
   targetAmount: number | null;
+  targetType?: "compound" | "building" | "floor";
+  targetIds?: string[] | null;
+  currency?: string;
   startedAt: string | null;
   closedAt: string | null;
   createdAt: string;
@@ -2053,9 +2206,20 @@ export async function createCollectionCampaign(input: {
   description?: string;
   targetAmount?: number;
   compoundId?: string;
+  currency?: string;
+  targetType?: string;
+  targetIds?: string[];
 }): Promise<CollectionCampaign> {
   const response = await fetch(`${config.apiBaseUrl}/finance/collection-campaigns`, {
-    body: JSON.stringify(input),
+    body: JSON.stringify({
+      compound_id: input.compoundId,
+      name: input.name,
+      description: input.description,
+      target_amount: input.targetAmount,
+      currency: input.currency,
+      target_type: input.targetType,
+      target_ids: input.targetIds,
+    }),
     headers: {
       ...(await apiHeaders(true)),
       "Content-Type": "application/json",
@@ -2105,14 +2269,14 @@ export async function archiveCollectionCampaign(id: string): Promise<CollectionC
 export async function applyCollectionCampaignCharges(
   id: string,
   input: {
-    unitAccountIds: string[];
+    unitAccountIds?: string[];
     amount: number;
     description: string;
   },
 ): Promise<{ count: number }> {
   const response = await fetch(`${config.apiBaseUrl}/finance/collection-campaigns/${id}/charges`, {
     body: JSON.stringify({
-      unit_account_ids: input.unitAccountIds,
+      ...(input.unitAccountIds ? { unit_account_ids: input.unitAccountIds } : {}),
       amount: input.amount,
       description: input.description,
     }),
@@ -2127,9 +2291,9 @@ export async function applyCollectionCampaignCharges(
     throw new Error(`Failed to apply campaign charges: ${response.status}`);
   }
 
-  const payload = (await response.json()) as { data: { count: number } };
+  const payload = (await response.json()) as { data?: { count: number }; posted?: number };
 
-  return payload.data;
+  return payload.data ?? { count: payload.posted ?? 0 };
 }
 
 export async function getFinanceReportSummary(): Promise<FinanceReportSummary | null> {
@@ -2884,23 +3048,40 @@ export async function getMeetings(params: {
   scope?: string;
   from?: string;
   to?: string;
+  page?: number;
+  perPage?: number;
 } = {}): Promise<Meeting[]> {
+  const page = await getMeetingsPage(params);
+
+  return page.data;
+}
+
+export async function getMeetingsPage(params: {
+  status?: string;
+  scope?: string;
+  from?: string;
+  to?: string;
+  page?: number;
+  perPage?: number;
+} = {}): Promise<PaginatedEnvelope<Meeting>> {
   try {
     const qs = new URLSearchParams();
     if (params.status && params.status !== "all") qs.set("status", params.status);
     if (params.scope) qs.set("scope", params.scope);
     if (params.from) qs.set("from", params.from);
     if (params.to) qs.set("to", params.to);
+    if (params.page) qs.set("page", String(params.page));
+    if (params.perPage) qs.set("perPage", String(params.perPage));
     const query = qs.toString();
     const response = await fetch(`${config.apiBaseUrl}/meetings${query ? `?${query}` : ""}`, {
       cache: "no-store",
       headers: await apiHeaders(true),
     });
-    if (!response.ok) return [];
-    const payload = (await response.json()) as { data: { data: Meeting[] } };
-    return payload.data.data;
+    if (!response.ok) return emptyPage<Meeting>();
+    const payload = await response.json();
+    return normalizePaginatedEnvelope<Meeting>(payload);
   } catch {
-    return [];
+    return emptyPage<Meeting>();
   }
 }
 
@@ -3262,18 +3443,26 @@ export async function deletePollType(id: string): Promise<void> {
 
 // ── Polls ────────────────────────────────────────────────────────────────────
 
-export async function getPolls(params?: { status?: PollStatus; compoundId?: string }): Promise<Poll[]> {
+export async function getPolls(params?: { status?: PollStatus; compoundId?: string; page?: number; perPage?: number }): Promise<Poll[]> {
+  const page = await getPollsPage(params);
+
+  return page.data;
+}
+
+export async function getPollsPage(params?: { status?: PollStatus; compoundId?: string; page?: number; perPage?: number }): Promise<PaginatedEnvelope<Poll>> {
   const qs = new URLSearchParams();
   if (params?.status) qs.set("status", params.status);
   if (params?.compoundId) qs.set("compoundId", params.compoundId);
+  if (params?.page) qs.set("page", String(params.page));
+  if (params?.perPage) qs.set("perPage", String(params.perPage));
   const query = qs.toString() ? `?${qs.toString()}` : "";
   const response = await fetch(`${config.apiBaseUrl}/polls${query}`, {
     cache: "no-store",
     headers: await apiHeaders(true),
   });
-  if (!response.ok) return [];
+  if (!response.ok) return emptyPage<Poll>();
   const json: PaginatedEnvelope<Poll> = await response.json();
-  return json.data;
+  return json;
 }
 
 export async function getPoll(id: string): Promise<Poll | null> {
@@ -3603,6 +3792,10 @@ export type ApartmentDocumentReview = {
   document?: {
     id: number;
     unitId: string;
+    unit?: {
+      id: string;
+      unitNumber: string;
+    } | null;
     documentType: string;
     filePath: string;
     mimeType: string | null;
@@ -3627,21 +3820,32 @@ export type ApartmentDocumentReview = {
 };
 
 export async function listDocumentReviews(): Promise<ApartmentDocumentReview[]> {
+  const page = await listDocumentReviewsPage();
+
+  return page.data;
+}
+
+export async function listDocumentReviewsPage(input: { page?: number; perPage?: number } = {}): Promise<PaginatedEnvelope<ApartmentDocumentReview>> {
   try {
-    const response = await fetch(`${config.apiBaseUrl}/admin/document-reviews`, {
+    const params = new URLSearchParams();
+    if (input.page) params.set("page", String(input.page));
+    if (input.perPage) params.set("perPage", String(input.perPage));
+
+    const query = params.toString();
+    const response = await fetch(`${config.apiBaseUrl}/admin/document-reviews${query ? `?${query}` : ""}`, {
       cache: "no-store",
       headers: await apiHeaders(true),
     });
 
     if (!response.ok) {
-      return [];
+      return emptyPage<ApartmentDocumentReview>();
     }
 
     const payload = (await response.json()) as PaginatedEnvelope<ApartmentDocumentReview>;
 
-    return payload.data;
+    return payload;
   } catch {
-    return [];
+    return emptyPage<ApartmentDocumentReview>();
   }
 }
 

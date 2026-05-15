@@ -45,7 +45,6 @@ class DemoVisitorDataSeeder extends Seeder
                 'id' => (string) Str::ulid(),
                 'compound_id' => $compound->id,
                 'type' => 'apartment',
-                'area_sqm' => 180,
                 'bedrooms' => 3,
                 'status' => 'active',
             ]

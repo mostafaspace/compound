@@ -5,12 +5,17 @@ import { colors, radii, shadows, spacing, typography } from "../../../../theme";
 import { useListViolationsQuery } from "../../../../services/apartments/violationsApi";
 import type { ApartmentDetail, ApartmentViolation } from "../../../../services/apartments/types";
 import { isRtlLanguage, rowDirectionStyle, textDirectionStyle } from "../../../../i18n/direction";
+import type { ApartmentTabRefreshProps } from "../ApartmentDetailScreen";
 
-export function ViolationsTab({ apartment }: { apartment: ApartmentDetail }) {
+export function ViolationsTab({ apartment, onRefresh, refreshing, onContentScroll }: { apartment: ApartmentDetail } & ApartmentTabRefreshProps) {
   const { t, i18n } = useTranslation();
   const isDark = useColorScheme() === "dark";
   const isRtl = isRtlLanguage(i18n.language);
-  const { data = [], isLoading } = useListViolationsQuery(apartment.id);
+  const { data = [], isLoading, isFetching, refetch } = useListViolationsQuery(apartment.id);
+  const handleRefresh = () => {
+    void refetch();
+    void onRefresh?.();
+  };
   const pendingTotal = data
     .filter((violation) => violation.status === "pending")
     .reduce((sum, violation) => sum + Number(violation.fee), 0);
@@ -28,6 +33,10 @@ export function ViolationsTab({ apartment }: { apartment: ApartmentDetail }) {
       data={data}
       keyExtractor={(violation) => String(violation.id)}
       contentContainerStyle={styles.list}
+      refreshing={Boolean(refreshing || isFetching)}
+      onRefresh={handleRefresh}
+      onScroll={onContentScroll}
+      scrollEventThrottle={16}
       ListHeaderComponent={
         <View style={[styles.summaryCard, { backgroundColor: colors.surface[isDark ? "dark" : "light"] }, textDirectionStyle(isRtl)]}>
           <Text style={[styles.eyebrow, { color: colors.primary[isDark ? "dark" : "light"] }, textDirectionStyle(isRtl)]}>{t("Violations.label")}</Text>

@@ -31,10 +31,6 @@ class StoreUnitMembershipRequest extends FormRequest
             'phonePublic' => ['nullable', 'boolean'],
             'residentEmail' => ['nullable', 'email', 'max:255'],
             'emailPublic' => ['nullable', 'boolean'],
-            'hasVehicle' => ['nullable', 'boolean'],
-            'vehiclePlate' => ['nullable', 'string', 'max:20', 'required_if:hasVehicle,true'],
-            'parkingSpotCode' => ['nullable', 'string', 'max:50'],
-            'garageStickerCode' => ['nullable', 'string', 'max:50'],
         ];
     }
 }

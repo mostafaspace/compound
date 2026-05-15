@@ -12,7 +12,9 @@ use App\Services\FinanceService;
 use App\Support\AuditLogger;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PaymentSubmissionController extends Controller
 {
@@ -29,14 +31,14 @@ class PaymentSubmissionController extends Controller
         $compoundIds = $this->compoundContext->resolveAccessibleCompoundIds($actor);
 
         $payments = PaymentSubmission::query()
-            ->with(['unitAccount.unit.building', 'submitter', 'reviewer'])
+            ->with(['unitAccount.unit.building', 'unitAccount.unit.floor', 'unitAccount.unit.apartmentResidents.user', 'submitter', 'reviewer'])
             ->when($compoundIds !== null, fn ($query) => $query->whereHas(
                 'unitAccount.unit',
                 fn ($unitQuery) => $unitQuery->whereIn('compound_id', $compoundIds),
             ))
             ->when($request->filled('status'), fn ($query) => $query->where('status', $request->string('status')->toString()))
             ->latest()
-            ->paginate();
+            ->paginate(min(100, max(1, $request->integer('perPage', 50))));
 
         return PaymentSubmissionResource::collection($payments);
     }
@@ -123,6 +125,21 @@ class PaymentSubmissionController extends Controller
         ]);
 
         return PaymentSubmissionResource::make($payment);
+    }
+
+    public function proof(Request $request, PaymentSubmission $paymentSubmission): StreamedResponse
+    {
+        $this->ensurePaymentCompoundAccess($request, $paymentSubmission);
+
+        abort_unless(filled($paymentSubmission->proof_path), Response::HTTP_NOT_FOUND);
+        abort_unless(Storage::exists($paymentSubmission->proof_path), Response::HTTP_NOT_FOUND);
+
+        $extension = pathinfo($paymentSubmission->proof_path, PATHINFO_EXTENSION) ?: 'bin';
+
+        return Storage::download(
+            $paymentSubmission->proof_path,
+            "payment-proof-{$paymentSubmission->id}.{$extension}",
+        );
     }
 
     private function ensurePaymentCompoundAccess(Request $request, PaymentSubmission $payment): void

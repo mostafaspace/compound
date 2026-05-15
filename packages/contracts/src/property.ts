@@ -74,7 +74,6 @@ export interface UnitSummary {
   floor?: FloorSummary | null;
   unitNumber: string;
   type?: UnitType;
-  areaSqm?: string | number | null;
   bedrooms: number | null;
   status: UnitStatus;
   residentName?: string | null;
@@ -106,10 +105,6 @@ export interface UnitMembership {
   phonePublic: boolean;
   residentEmail: string | null;
   emailPublic: boolean;
-  hasVehicle: boolean;
-  vehiclePlate: string | null;
-  parkingSpotCode: string | null;
-  garageStickerCode: string | null;
   createdAt: string | null;
   updatedAt: string | null;
 }
@@ -163,10 +158,6 @@ export interface CreateUnitMembershipInput {
   phonePublic?: boolean;
   residentEmail?: string | null;
   emailPublic?: boolean;
-  hasVehicle?: boolean;
-  vehiclePlate?: string | null;
-  parkingSpotCode?: string | null;
-  garageStickerCode?: string | null;
 }
 
 export type UpdateUnitMembershipInput = Partial<CreateUnitMembershipInput>;

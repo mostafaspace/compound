@@ -3,13 +3,20 @@
     "compound": "Compound",
     "building": "Building",
     "floor": "Floor",
-    "unit": "Unit"
+    "unit": "Unit",
+    "pagination": {
+      "first": "First",
+      "previous": "Previous",
+      "next": "Next",
+      "last": "Last",
+      "summary": "Showing {from}-{to} of {total} records."
+    }
   },
   "Navigation": {
     "groups": {
       "operate": "Operations",
       "community": "Community",
-      "govern": "Governance",
+      "govern": "Polls",
       "secure": "Security",
       "system": "System"
     },
@@ -21,13 +28,13 @@
     "documents": "Documents",
     "documentReviews": "Document reviews",
     "issues": "Issues",
-    "finance": "Finance",
-    "financeAdvanced": "Advanced finance",
-    "financeReports": "Finance reports",
+    "finance": "Contributions",
+    "financeAdvanced": "Advanced contributions",
+    "financeReports": "Contribution reports",
     "onboarding": "Onboarding",
     "auditLogs": "Audit logs",
     "adminActivity": "Admin Activity",
-    "vehicles": "Search",
+    "vehicles": "Vehicles",
     "visitors": "Visitors",
     "announcements": "Announcements",
     "dues": "Dues",
@@ -82,10 +89,10 @@
   "Login": {
     "brand": "Compound admin",
     "heroTitle": "Operations console",
-    "heroSubtitle": "Secure access for property registry, finance, residents, polls, support, and security operations.",
+    "heroSubtitle": "Secure access for property registry, contributions, residents, polls, support, and security operations.",
     "seedHint": "Use a seeded admin account after running backend migrations and seeders.",
     "title": "Sign in",
-    "subtitle": "Access is limited to active admin, board, finance, and support users.",
+    "subtitle": "Access is limited to active admin, board, contribution review, and support users.",
     "submit": "Sign in",
     "fields": {
       "email": "Email",
@@ -154,7 +161,7 @@
     },
     "workstreams": {
       "financeReview": {
-        "label": "Finance review",
+        "label": "Contribution review",
         "detail": "payments awaiting allocation"
       },
       "visitorGate": {
@@ -222,7 +229,7 @@
     "categories": {
       "announcements": "Announcements",
       "documents": "Documents",
-      "finance": "Finance",
+      "finance": "Contributions",
       "issues": "Issues",
       "onboarding": "Onboarding",
       "polls": "Polls",
@@ -311,7 +318,7 @@
       "titleTemplate": "Title template",
       "titlePlaceholder": "Example: Payment update for a unit",
       "bodyTemplate": "Body template",
-      "bodyPlaceholder": "Example: A finance update is available. Open the app to review it.",
+      "bodyPlaceholder": "Example: A contribution update is available. Open the app to review it.",
       "activeToggle": "Template is active and can be used for delivery attempts",
       "create": "Create template",
       "save": "Save changes",
@@ -344,7 +351,7 @@
   },
   "Registry": {
     "propertyRegistry": "Property registry",
-    "propertyRegistryDesc": "Compounds are the top-level operating boundary for users, units, finance, polls, and security.",
+    "propertyRegistryDesc": "Compounds are the top-level operating boundary for users, units, contributions, polls, and security.",
     "dashboard": "Dashboard",
     "backToCompound": "Back to compound",
     "backToBuilding": "Back to building",
@@ -379,7 +386,7 @@
     "currency": "Currency",
     "createCompound": "Create compound",
     "newCompoundTitle": "New compound",
-    "newCompoundDesc": "Create the operating boundary before importing buildings, floors, units, residents, finance balances, and staff.",
+    "newCompoundDesc": "Create the operating boundary before importing buildings, floors, units, residents, contribution balances, and staff.",
     "onboardingChecklist": "Onboarding checklist",
     "editCompound": "Edit compound",
     "editCompoundDesc": "Keep legal identity, timezone, currency, and operating status accurate before downstream modules use this property.",
@@ -389,7 +396,7 @@
     "building": "Building",
     "editBuilding": "Edit building",
     "archiveBuilding": "Archive building",
-    "archiveBuildingDesc": "Archived buildings stay available for historical finance, visitor, issue, and document references.",
+    "archiveBuildingDesc": "Archived buildings stay available for historical contribution, visitor, issue, and document references.",
     "noBuildings": "No buildings yet.",
     "floors": "Floors",
     "floor": "Floor",
@@ -638,7 +645,7 @@
     "fields": {
       "resident": "Resident",
       "requestedAccess": "Requested access",
-      "unit": "Unit",
+      "unit": "Apartment",
       "reviewStatus": "Review status",
       "decisionNotes": "Decision notes",
       "reviewActions": "Review actions",
@@ -692,7 +699,7 @@
       "compound_admin": "Compound admin",
       "president": "President",
       "board_member": "Board member",
-      "finance_reviewer": "Finance reviewer",
+      "finance_reviewer": "Contribution reviewer",
       "security_guard": "Security guard",
       "resident": "Resident",
       "resident_owner": "Resident owner",
@@ -714,7 +721,7 @@
     "unitNotLinked": "Unit not linked yet",
     "notSet": "Not set",
     "fields": {
-      "unit": "Unit",
+      "unit": "Apartment",
       "expires": "Invitation expires",
       "name": "Name",
       "phone": "Phone",
@@ -726,19 +733,26 @@
   },
   "Finance": {
     "back": "Dashboard",
-    "title": "Finance",
-    "subtitle": "Review unit balances, post charges, and approve resident payment submissions.",
-    "advanced": "Advanced Finance",
+    "title": "Contributions",
+    "subtitle": "Request apartment contributions, review balances, and approve resident payment proof.",
+    "advanced": "Advanced contributions",
     "onlinePayments": "Online Payments",
+    "tabs": {
+      "submissions": "Payment submissions",
+      "campaigns": "Campaigns",
+      "create": "Request contribution"
+    },
     "messages": {
-      "accountCreated": "Unit account created.",
+      "accountCreated": "Apartment contributions enabled.",
       "ledgerCreated": "Ledger entry posted.",
       "paymentApproved": "Payment approved.",
       "paymentRejected": "Payment rejected.",
-      "correctionRequested": "Correction requested."
+      "correctionRequested": "Correction requested.",
+      "campaignArchived": "Contribution campaign archived. Future apartments will no longer inherit it."
     },
     "fields": {
-      "accountId": "Account ID",
+      "account": "Apartment account",
+      "accountId": "Apartment account",
       "amount": "Amount",
       "balance": "Balance",
       "created": "Created",
@@ -747,33 +761,76 @@
       "openingBalance": "Opening balance",
       "reference": "Reference",
       "type": "Type",
-      "unit": "Unit",
-      "unitId": "Unit ID",
+      "unit": "Apartment",
+      "unitId": "Apartment",
       "paymentDate": "Payment date"
     },
     "filters": {
       "all": "All"
     },
     "createAccount": {
-      "title": "Create unit account",
-      "subtitle": "Open a finance ledger for a unit, optionally with an opening balance.",
-      "submit": "Create account"
+      "title": "Enable apartment contributions",
+      "subtitle": "Start contribution tracking for an apartment, optionally with an opening balance.",
+      "searchUnit": "Search apartment code, building, floor, or resident",
+      "unitSelectorHelp": "Only apartments not yet enabled for contributions are shown.",
+      "submit": "Enable apartment"
     },
     "ledger": {
-      "title": "Post ledger entry",
-      "subtitle": "Add charges, penalties, adjustments, refunds, or write-offs.",
-      "submit": "Post entry"
+      "title": "Create contribution",
+      "subtitle": "Charge the compound, selected buildings, or selected floors for maintenance, repairs, cameras, or shared purchases.",
+      "accountSelectorHelp": "Search by apartment code, building, floor, resident name, or current balance.",
+      "noAccounts": "Create an apartment contribution account first.",
+      "searchAccount": "Search apartment account",
+      "submit": "Request contribution"
+    },
+    "audience": {
+      "title": "Who should receive it?",
+      "description": "Choose the property scope. Current apartments are charged now, and future apartments in the same scope will receive the same contribution while this campaign stays active.",
+      "compound": "Compound",
+      "compoundHelp": "Every apartment in this compound.",
+      "buildings": "Buildings",
+      "buildingsHelp": "One or more whole buildings.",
+      "floors": "Floors",
+      "floorsHelp": "One or more floors, even across buildings.",
+      "search": "Search building or floor...",
+      "noBuildings": "No buildings found in this compound yet.",
+      "noFloors": "No floors found in this compound yet."
+    },
+    "common": {
+      "noMatches": "No matches found.",
+      "noneSelected": "Nothing selected yet.",
+      "selected": "__COUNT__ selected."
     },
     "accounts": {
-      "title": "Unit accounts",
-      "subtitle": "Balances are positive when the unit owes money and negative when the unit has credit.",
-      "empty": "No finance accounts have been created yet."
+      "title": "Apartment contribution accounts",
+      "subtitle": "Balances are positive when the apartment owes money and negative when the apartment has credit.",
+      "empty": "No contribution accounts have been created yet.",
+      "unitUnavailable": "Apartment unavailable"
+    },
+    "campaigns": {
+      "title": "Contribution campaigns",
+      "subtitle": "Track active and historical contribution requests. Active campaigns automatically apply to future apartments in the selected scope.",
+      "name": "Contribution",
+      "audience": "Audience",
+      "status": "Status",
+      "started": "Started",
+      "archive": "Archive",
+      "empty": "No contribution campaigns have been created yet.",
+      "selectedBuildings": "Selected buildings",
+      "selectedFloors": "Selected floors"
+    },
+    "campaignStatuses": {
+      "draft": "Draft",
+      "active": "Active",
+      "closed": "Closed",
+      "archived": "Archived"
     },
     "payments": {
       "title": "Payment submissions",
       "subtitle": "Review resident proof of payment and post approved payments to the ledger.",
       "filters": "Payment status filters",
       "hasProof": "Proof attached",
+      "viewProof": "View proof",
       "approve": "Approve",
       "reject": "Reject",
       "requestCorrection": "Request correction",
@@ -781,8 +838,17 @@
       "rejectReason": "Rejection reason",
       "correctionNote": "Correction note",
       "correctionNoteLabel": "Correction note:",
+      "rejectionReasonLabel": "Rejection reason:",
       "reviewed": "Reviewed {date}",
-      "empty": "No payments match the selected status."
+      "empty": "No payments match the selected status.",
+      "columns": {
+        "actions": "Review actions",
+        "methodReference": "Method / reference",
+        "proof": "Proof",
+        "resident": "Resident",
+        "status": "Status",
+        "submitted": "Submitted"
+      }
     },
     "ledgerTypes": {
       "opening_balance": "Opening balance",
@@ -803,13 +869,13 @@
       "refunded": "Refunded"
     },
     "degraded": {
-      "title": "Finance data is loading in degraded mode",
+      "title": "Contribution data is loading in degraded mode",
       "description": "Account balances and payment submissions are unavailable while the API is degraded. Recheck the operator status endpoint before assuming there are no pending payments."
     },
     "reports": {
       "title": "Collections report",
       "subtitle": "Portfolio-wide collections summary, account balances, and payment method breakdown.",
-      "backToFinance": "Finance",
+      "backToFinance": "Contributions",
       "summary": {
         "title": "Summary",
         "totalBilled": "Total billed",
@@ -1073,10 +1139,12 @@
     "fields": {
       "documentType": "Document type",
       "user": "Resident",
-      "userId": "User ID",
-      "userSearchPlaceholder": "Search resident by name, email, phone, or ID",
-      "userHelper": "Choose the resident. No need to know their internal user ID.",
-      "unitId": "Unit ID",
+      "userId": "Resident",
+      "userSearchPlaceholder": "Search resident by name, email, or phone",
+      "userHelper": "Choose the resident. No internal ID lookup needed.",
+      "unitId": "Apartment",
+      "unitSearchPlaceholder": "Search apartment code, building, floor, or resident",
+      "unitHelper": "Optional. Pick the apartment this document belongs to.",
       "file": "File",
       "reviewNote": "Review note"
     },
@@ -1127,7 +1195,7 @@
     "clearFilters": "Clear filters",
     "searchPlaceholder": "Action, path, subject, IP, reason",
     "actionPlaceholder": "documents.user_document_reviewed",
-    "modulePlaceholder": "finance",
+    "modulePlaceholder": "contributions",
     "colTime": "Time",
     "colActor": "Actor",
     "colRequest": "Request",
@@ -1215,7 +1283,7 @@
     "updatedMovedOut": "Move-out processed.",
     "updatedRecovered": "Account recovered.",
     "mergeTargetLabel": "Merge target user",
-    "mergeTargetPlaceholder": "Search by name, email, phone, or ID",
+    "mergeTargetPlaceholder": "Search by name, email, or phone",
     "mergeTargetHelper": "Choose the account that should receive the merged history.",
     "mergeNotesLabel": "Notes",
     "submitMerge": "Initiate merge",
@@ -1274,6 +1342,13 @@
     "allBuildings": "All buildings",
     "exportImage": "Export image",
     "liveChart": "Live chart",
+    "toolbar": {
+      "zoomIn": "Zoom in",
+      "fit": "Fit chart",
+      "zoomOut": "Zoom out",
+      "searchLabel": "Search organization chart",
+      "buildingFilterLabel": "Filter organization chart by building"
+    },
     "errors": {
       "profileLoad": "Could not load profile details.",
       "validUserId": "Enter a valid user ID.",
@@ -1285,16 +1360,27 @@
       "loading": "Loading profile details...",
       "email": "Email address",
       "phone": "Phone number",
+      "manageTitle": "Assignment controls",
+      "change": "Change",
+      "unassign": "Unassign",
+      "close": "Close member profile",
       "viewFull": "View full profile"
+    },
+    "unassign": {
+      "title": "Unassign representative?",
+      "body": "This will remove {name} from the {role} position. The location will become vacant until you assign someone else.",
+      "cancel": "Keep assigned",
+      "confirm": "Unassign",
+      "processing": "Unassigning..."
     },
     "assignment": {
       "title": "Assign representative",
       "for": "Assigning for",
-      "userId": "User ID",
-      "userIdPlaceholder": "Enter numeric ID...",
+      "userId": "Selected person",
+      "userIdPlaceholder": "Search and select a person...",
       "user": "Representative",
-      "userSearchPlaceholder": "Search by name, email, phone, or ID",
-      "userHelper": "Pick the person from search. The system will use their ID automatically.",
+      "userSearchPlaceholder": "Search by name, email, or phone",
+      "userHelper": "Pick the person from search. No internal ID lookup is needed.",
       "cancel": "Cancel",
       "processing": "Processing...",
       "confirm": "Confirm assignment"
@@ -1328,9 +1414,9 @@
     },
     "form": {
       "user": "Representative",
-      "userId": "User ID",
-      "userIdPlaceholder": "e.g. 42",
-      "userSearchPlaceholder": "Search by name, email, phone, or ID",
+      "userId": "Selected person",
+      "userIdPlaceholder": "Search and select a person...",
+      "userSearchPlaceholder": "Search by name, email, or phone",
       "userHelper": "Choose the person. No internal ID lookup needed.",
       "role": "Assignment Role",
       "scopeId": "Building (optional)",
@@ -1431,7 +1517,8 @@
       "empty": "No announcements match the selected filters.",
       "revision": "Revision {revision}",
       "targetIds": "{count, plural, one {# target ID} other {# target IDs}}",
-      "noTargetIds": "No explicit IDs"
+      "noTargetIds": "No explicit IDs",
+      "attachments": "{count, plural, one {# photo} other {# photos}}"
     },
     "fields": {
       "notice": "Notice",
@@ -1456,8 +1543,8 @@
       "acknowledgements": "Acknowledgements",
       "requiresVerifiedMembership": "Require verified membership",
       "requiresAcknowledgement": "Require acknowledgement",
-      "attachmentName": "Attachment name",
-      "attachmentUrl": "Attachment URL"
+      "photos": "Announcement photos",
+      "photosHelp": "Upload one or more JPG, PNG, HEIC, or WebP photos. They will appear in the mobile app for residents who can see this announcement."
     },
     "statuses": {
       "draft": "Draft",
@@ -1493,7 +1580,7 @@
       "compound_admin": "Compound admin",
       "president": "President",
       "board_member": "Board member",
-      "finance_reviewer": "Finance reviewer",
+      "finance_reviewer": "Contribution reviewer",
       "security_guard": "Security guard",
       "resident": "Resident",
       "resident_owner": "Resident owner",
@@ -1529,7 +1616,7 @@
       "visitors": "Visitors",
       "issues": "Issues",
       "announcements": "Announcements",
-      "finance": "Finance",
+      "finance": "Contributions",
       "governance": "Polls",
       "notifications": "Notifications",
       "localization": "Localization"
@@ -1671,8 +1758,8 @@
     }
   },
   "AdvancedFinance": {
-    "title": "Advanced Finance",
-    "subtitle": "Manage reserve funds, vendors, budgets, and expenses",
+    "title": "Advanced Contributions",
+    "subtitle": "Manage reserve funds, vendors, budgets, and contribution expenses",
     "reserveFunds": {
       "title": "Reserve Funds",
       "create": "Create Reserve Fund",
@@ -1762,7 +1849,7 @@
       "has_units": "At least one unit added",
       "residents_invited": "First resident invited",
       "first_resident_verified": "First resident verified",
-      "first_finance_account": "First unit finance account created",
+      "first_finance_account": "First apartment contribution account created",
       "first_announcement": "First announcement published"
     }
   },
@@ -2215,13 +2302,12 @@
     "noResults": "No admin page matched that search."
   },
   "Vehicles": {
-    "searchPlaceholder": "Enter plate number, sticker code, or resident name...",
+    "searchPlaceholder": "Enter plate number, vehicle details, unit, or resident name...",
     "searchButton": "Search",
     "searchFailed": "Vehicle search failed. Please try again.",
     "noResults": "No matching records found for \"{query}\".",
     "residentVehicle": "Resident Vehicle",
     "visitorRequest": "Visitor Request",
-    "sticker": "Sticker",
     "associatedUnit": "Associated Unit",
     "viewDetails": "View Apartment Details →",
     "noUnitLinked": "No specific unit linked",

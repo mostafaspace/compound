@@ -9,6 +9,7 @@ import { colors, layout, radii, shadows, spacing } from '../../../theme';
 import { useGetResidentInvitationsQuery } from '../../../services/admin';
 import { RootStackParamList } from '../../../navigation/types';
 import { Button } from '../../../components/ui/Button';
+import { Icon } from '../../../components/ui/Icon';
 import { isRtlLanguage, rowDirectionStyle, textDirectionStyle } from '../../../i18n/direction';
 
 export const AdminInvitationsScreen = () => {
@@ -20,7 +21,15 @@ export const AdminInvitationsScreen = () => {
   const { data: invitations = [], isLoading, refetch } = useGetResidentInvitationsQuery();
 
   const renderInvitation = ({ item }: { item: any }) => (
-    <View style={[styles.card, { backgroundColor: isDark ? colors.surface.dark : colors.surface.light }]}>
+    <View
+      style={[
+        styles.card,
+        {
+          backgroundColor: isDark ? colors.surface.dark : colors.surface.light,
+          borderColor: isDark ? colors.border.dark : colors.border.light,
+        },
+      ]}
+    >
       <View style={[styles.cardHeader, rowDirectionStyle(isRtl)]}>
         <View style={textDirectionStyle(isRtl)}>
           <Typography variant="body" style={[styles.residentName, textDirectionStyle(isRtl)]}>
@@ -66,7 +75,7 @@ export const AdminInvitationsScreen = () => {
   };
 
   return (
-    <ScreenContainer edges={['left', 'right', 'bottom']}>
+    <ScreenContainer withKeyboard={false} style={styles.container} edges={['left', 'right', 'bottom']}>
       <FlatList
         data={invitations}
         keyExtractor={(item) => item.id.toString()}
@@ -75,28 +84,47 @@ export const AdminInvitationsScreen = () => {
         refreshing={isLoading}
         ListHeaderComponent={
           <View style={[styles.header, textDirectionStyle(isRtl)]}>
-            <Typography variant="h2" style={textDirectionStyle(isRtl)}>
+            <Typography variant="label" style={[styles.eyebrow, textDirectionStyle(isRtl)]}>
+              {t('Admin.invites')}
+            </Typography>
+            <Typography variant="h2" style={[styles.title, textDirectionStyle(isRtl)]}>
               {t('Admin.activeInvitations')}
             </Typography>
-            <Typography variant="caption" style={textDirectionStyle(isRtl)}>
+            <Typography variant="body" style={[styles.subtitle, textDirectionStyle(isRtl)]}>
               {t('Admin.invitationsSubtitle')}
             </Typography>
           </View>
         }
         ListEmptyComponent={
-          <View style={styles.emptyContainer}>
+          <View
+            style={[
+              styles.emptyContainer,
+              {
+                backgroundColor: isDark ? colors.surface.dark : colors.surface.light,
+                borderColor: isDark ? colors.border.dark : colors.border.light,
+              },
+            ]}
+          >
             {isLoading ? (
               <ActivityIndicator color={colors.primary.light} size="large" />
             ) : (
-              <Typography variant="body" style={[styles.emptyText, textDirectionStyle(isRtl)]}>
-                {t('Admin.noInvitations')}
-              </Typography>
+              <>
+                <View style={[styles.emptyIcon, { backgroundColor: isDark ? colors.surfaceMuted.dark : colors.surfaceMuted.light }]}>
+                  <Icon name="user" color={colors.primary.light} size={24} />
+                </View>
+                <Typography variant="h3" style={[styles.emptyTitle, textDirectionStyle(isRtl)]}>
+                  {t('Admin.noInvitations')}
+                </Typography>
+                <Typography variant="body" style={[styles.emptyText, textDirectionStyle(isRtl)]}>
+                  {t('Admin.noInvitationsHint')}
+                </Typography>
+              </>
             )}
           </View>
         }
         contentContainerStyle={styles.listContent}
       />
-      <View style={[styles.fabContainer, { start: isRtl ? undefined : spacing.lg, end: isRtl ? spacing.lg : undefined }]}>
+      <View style={styles.fabContainer}>
         <Button 
           title={t('Admin.inviteResident')} 
           onPress={() => navigation.navigate('CreateInvitation' as any)}
@@ -108,6 +136,10 @@ export const AdminInvitationsScreen = () => {
 };
 
 const styles = StyleSheet.create({
+  container: {
+    paddingHorizontal: 0,
+    paddingTop: 0,
+  },
   listContent: {
     padding: layout.screenGutter,
     paddingBottom: layout.screenBottom + 72,
@@ -115,12 +147,21 @@ const styles = StyleSheet.create({
   header: {
     marginBottom: layout.sectionGap,
   },
+  eyebrow: {
+    color: colors.primary.light,
+    marginBottom: spacing.xs,
+  },
+  title: {
+    marginBottom: spacing.xs,
+  },
+  subtitle: {
+    color: colors.text.secondary.light,
+  },
   card: {
     borderRadius: radii.xl,
     padding: layout.cardPadding,
     marginBottom: layout.listGap,
     borderWidth: 1,
-    borderColor: colors.border.light,
     ...shadows.sm,
   },
   cardHeader: {
@@ -162,7 +203,7 @@ const styles = StyleSheet.create({
   },
   cardFooter: {
     borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.05)',
+    borderTopColor: colors.border.light,
     paddingTop: spacing.sm,
   },
   date: {
@@ -170,25 +211,36 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   emptyContainer: {
-    marginTop: 100,
+    marginTop: spacing.xl,
     alignItems: 'center',
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    padding: layout.heroPadding,
+    ...shadows.sm,
+  },
+  emptyIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: radii.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  emptyTitle: {
+    marginBottom: spacing.xs,
+    textAlign: 'center',
   },
   emptyText: {
     color: colors.text.secondary.light,
+    textAlign: 'center',
   },
   fabContainer: {
     position: 'absolute',
     bottom: spacing.xl,
-    width: '100%',
-    paddingHorizontal: spacing.lg,
+    left: layout.screenGutter,
+    right: layout.screenGutter,
   },
   fab: {
-    borderRadius: 30,
-    height: 56,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
+    borderRadius: radii.lg,
   },
 });

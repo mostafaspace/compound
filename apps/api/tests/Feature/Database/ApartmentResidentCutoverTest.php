@@ -19,14 +19,12 @@ class ApartmentResidentCutoverTest extends TestCase
         $this->assertTrue($resident->unit->apartmentResidents()->whereKey($resident->id)->exists());
     }
 
-    public function test_unit_casts_apartment_capability_flags(): void
+    public function test_unit_casts_apartment_parking_capability_flag(): void
     {
         $unit = Unit::factory()->create([
-            'has_vehicle' => false,
             'has_parking' => true,
         ]);
 
-        $this->assertFalse($unit->has_vehicle);
         $this->assertTrue($unit->has_parking);
     }
 
