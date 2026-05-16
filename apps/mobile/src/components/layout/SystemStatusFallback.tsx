@@ -1,18 +1,33 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, useColorScheme } from 'react-native';
+import NetInfo from '@react-native-community/netinfo';
 import { useSelector, useDispatch } from 'react-redux';
-import { selectLastError, setOfflineState } from '../../store/systemSlice';
-import { colors, spacing, shadows } from '../../theme';
+import { selectConnectionStatus, selectLastError, setOfflineState } from '../../store/systemSlice';
+import { colors, spacing, shadows, radii } from '../../theme';
 import { useTranslation } from 'react-i18next';
+import { Icon } from '../ui/Icon';
+import { textDirectionStyle, useIsRtl } from '../../i18n/direction';
 
 export const SystemStatusFallback = () => {
   const isDark = useColorScheme() === 'dark';
   const lastError = useSelector(selectLastError);
+  const connectionStatus = useSelector(selectConnectionStatus);
   const dispatch = useDispatch();
   const { t } = useTranslation();
+  const isRtl = useIsRtl();
+  const isNoInternet = connectionStatus === 'no_internet';
 
-  const handleRetry = () => {
-    // Just clear the offline state to allow the next request to trigger normally
+  const title = isNoInternet ? t('System.noInternetTitle') : t('System.serverUnavailableTitle');
+  const message = lastError || (isNoInternet ? t('System.noInternetMessage') : t('System.backendDownMessage'));
+
+  const handleRetry = async () => {
+    const state = await NetInfo.fetch();
+
+    if (state.isConnected === false || state.isInternetReachable === false) {
+      dispatch(setOfflineState({ isOffline: true, reason: 'no_internet' }));
+      return;
+    }
+
     dispatch(setOfflineState({ isOffline: false }));
   };
 
@@ -23,13 +38,13 @@ export const SystemStatusFallback = () => {
         borderColor: isDark ? colors.border.dark : colors.border.light,
       }]}>
         <View style={styles.iconContainer}>
-          <Text style={styles.iconText}>📡</Text>
+          <Icon name={isNoInternet ? 'wifi-off' : 'alert'} color={colors.error} size={36} strokeWidth={2.4} />
         </View>
-        <Text style={[styles.title, { color: isDark ? colors.text.primary.dark : colors.text.primary.light }]}>
-          {t('System.connectionError', 'Connection Error')}
+        <Text style={[styles.title, textDirectionStyle(isRtl), { color: isDark ? colors.text.primary.dark : colors.text.primary.light }]}>
+          {title}
         </Text>
-        <Text style={[styles.message, { color: isDark ? colors.text.secondary.dark : colors.text.secondary.light }]}>
-          {lastError || t('System.backendDownMessage', 'Our servers are currently unreachable. Please check your internet connection or try again later.')}
+        <Text style={[styles.message, textDirectionStyle(isRtl), { color: isDark ? colors.text.secondary.dark : colors.text.secondary.light }]}>
+          {message}
         </Text>
         
         <TouchableOpacity 
@@ -55,7 +70,7 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     padding: spacing.xl,
-    borderRadius: 24,
+    borderRadius: radii.xl,
     borderWidth: 1,
     alignItems: 'center',
     ...shadows.md,
@@ -68,9 +83,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.lg,
-  },
-  iconText: {
-    fontSize: 40,
   },
   title: {
     fontSize: 24,

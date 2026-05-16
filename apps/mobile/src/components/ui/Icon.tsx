@@ -37,6 +37,7 @@ export type AppIconName =
   | 'units'
   | 'user'
   | 'visitors'
+  | 'wifi-off'
   | 'x';
 
 type IconProps = {
@@ -273,6 +274,17 @@ export function Icon({
           <Path {...strokeProps} d="M2 21a7 7 0 0 1 14 0" />
           <Path {...strokeProps} d="M17 11a3 3 0 1 0-1.5-5.6" />
           <Path {...strokeProps} d="M22 21a5 5 0 0 0-5-5" />
+        </>
+      ) : null}
+      {name === 'wifi-off' ? (
+        <>
+          <Path {...strokeProps} d="m2 2 20 20" />
+          <Path {...strokeProps} d="M8.5 16.5a5 5 0 0 1 7 0" />
+          <Path {...strokeProps} d="M12 20h.01" />
+          <Path {...strokeProps} d="M2 8.8a15.6 15.6 0 0 1 7.2-3.3" />
+          <Path {...strokeProps} d="M14.8 5.5A15.6 15.6 0 0 1 22 8.8" />
+          <Path {...strokeProps} d="M5 12.1a10.5 10.5 0 0 1 3.3-2" />
+          <Path {...strokeProps} d="M15.7 10.1a10.5 10.5 0 0 1 3.3 2" />
         </>
       ) : null}
       {name === 'x' ? (

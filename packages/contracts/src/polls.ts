@@ -1,7 +1,7 @@
 export const pollStatusValues = ["draft", "active", "closed", "archived"] as const;
 export type PollStatus = (typeof pollStatusValues)[number];
 
-export const pollScopeValues = ["compound", "building"] as const;
+export const pollScopeValues = ["compound", "building", "floor"] as const;
 export type PollScope = (typeof pollScopeValues)[number];
 
 export const pollEligibilityValues = ["owners_only", "owners_and_residents", "all_verified"] as const;
@@ -65,6 +65,7 @@ export interface Poll {
   id: string;
   compoundId: string;
   buildingId: string | null;
+  targetIds?: string[];
   pollTypeId: string | null;
   pollType?: PollType;
   title: string;
@@ -93,6 +94,7 @@ export interface Poll {
 export interface CreatePollInput {
   compoundId: string;
   buildingId?: string;
+  targetIds?: string[];
   pollTypeId?: string;
   title: string;
   description?: string;

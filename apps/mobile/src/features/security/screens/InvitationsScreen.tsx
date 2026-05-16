@@ -6,7 +6,7 @@ import { ScreenContainer } from '../../../components/layout/ScreenContainer';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { Typography } from '../../../components/ui/Typography';
 import { Button } from '../../../components/ui/Button';
-import { colors, spacing, shadows } from '../../../theme';
+import { colors, layout, spacing } from '../../../theme';
 import { visitorStatusPalette } from '../../../theme/semantics';
 import { formatDate } from '../../../utils/formatters';
 import { Icon } from '../../../components/ui/Icon';
@@ -76,7 +76,7 @@ export const InvitationsScreen = () => {
   };
 
   const renderItem = ({ item }: { item: any }) => (
-    <Card style={{ marginBottom: spacing.md }}>
+    <Card style={styles.invitationCard} contentStyle={styles.cardContent}>
       <View style={[styles.cardHeader, rowDirectionStyle(isRtl)]}>
         <View style={[styles.visitorInfo, textDirectionStyle(isRtl)]}>
           <Typography variant="h3" style={textDirectionStyle(isRtl)}>{item.visitorName}</Typography>
@@ -128,6 +128,8 @@ export const InvitationsScreen = () => {
   return (
     <ScreenContainer withKeyboard={false}>
       <FlatList
+        style={styles.list}
+        contentContainerStyle={styles.listContent}
         data={visitors}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
@@ -150,14 +152,30 @@ export const InvitationsScreen = () => {
 };
 
 const styles = StyleSheet.create({
+  list: {
+    flex: 1,
+  },
+  listContent: {
+    flexGrow: 1,
+    paddingHorizontal: layout.screenGutter,
+    paddingTop: layout.screenTop,
+    paddingBottom: layout.screenBottom,
+  },
+  invitationCard: {
+    marginBottom: layout.listGap,
+  },
+  cardContent: {
+    gap: spacing.md,
+  },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: spacing.md,
+    gap: spacing.md,
   },
   visitorInfo: {
     flex: 1,
+    minWidth: 0,
   },
   unitText: {
     marginTop: 2,
@@ -165,10 +183,11 @@ const styles = StyleSheet.create({
   detailsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: spacing.md,
+    gap: spacing.md,
   },
   detailItem: {
     flex: 1,
+    minWidth: 0,
   },
   detailLabel: {
     marginBottom: 2,
@@ -178,16 +197,18 @@ const styles = StyleSheet.create({
   },
   actionRow: {
     flexDirection: 'row',
-    gap: spacing.md,
+    gap: spacing.sm,
   },
   actionButton: {
-    paddingHorizontal: spacing.sm,
+    minHeight: 52,
+    paddingHorizontal: spacing.xs,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: spacing.xxl,
+    paddingHorizontal: spacing.md,
   },
   emptyTitle: {
     marginTop: spacing.md,

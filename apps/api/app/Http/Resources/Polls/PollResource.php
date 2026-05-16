@@ -19,6 +19,7 @@ class PollResource extends JsonResource
             'id' => $this->id,
             'compoundId' => $this->compound_id,
             'buildingId' => $this->building_id,
+            'targetIds' => $this->whenLoaded('targets', fn () => $this->targets->pluck('target_id')->values()->all()),
             'pollTypeId' => $this->poll_type_id,
             'pollType' => PollTypeResource::make($this->whenLoaded('pollType')),
             'title' => $this->title,
@@ -103,7 +104,11 @@ class PollResource extends JsonResource
                     return false;
                 }
 
-                if ($this->scope === 'building' && $this->building_id && $unit->building_id !== $this->building_id) {
+                if ($this->scope === 'building' && ! $this->unitMatchesTarget($unit, 'building')) {
+                    return false;
+                }
+
+                if ($this->scope === 'floor' && ! $this->unitMatchesTarget($unit, 'floor')) {
                     return false;
                 }
 
@@ -116,5 +121,20 @@ class PollResource extends JsonResource
             'unitId' => $membership?->unit_id,
             'unitNumber' => $membership?->unit?->unit_number,
         ];
+    }
+
+    private function unitMatchesTarget($unit, string $targetType): bool
+    {
+        $targetIds = $this->relationLoaded('targets')
+            ? $this->targets->where('target_type', $targetType)->pluck('target_id')->all()
+            : [];
+
+        if ($targetIds === [] && $targetType === 'building' && $this->building_id) {
+            $targetIds = [$this->building_id];
+        }
+
+        $unitValue = $targetType === 'floor' ? $unit->floor_id : $unit->building_id;
+
+        return $unitValue !== null && in_array($unitValue, $targetIds, true);
     }
 }

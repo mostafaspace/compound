@@ -92,6 +92,31 @@ class VisitorRequestController extends Controller
         return VisitorRequestResource::make($visitorRequest);
     }
 
+    public function picture(Request $request, VisitorRequest $visitorRequest): mixed
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        if ($this->isStaff($user)) {
+            $this->ensureStaffCanAccessVisitorRequest($request, $visitorRequest);
+        } else {
+            abort_unless($visitorRequest->host_user_id === $user->id, Response::HTTP_FORBIDDEN);
+        }
+
+        $pictureRef = $visitorRequest->picture_url;
+        abort_if(empty($pictureRef), Response::HTTP_NOT_FOUND);
+
+        $path = $this->visitorPictureStoragePath($pictureRef);
+        if ($path === null) {
+            return redirect()->away($pictureRef);
+        }
+
+        $disk = config('filesystems.default');
+        abort_unless(Storage::disk($disk)->exists($path), Response::HTTP_NOT_FOUND);
+
+        return Storage::disk($disk)->response($path);
+    }
+
     public function store(StoreVisitorRequestRequest $request): VisitorRequestResource
     {
         /** @var User $actor */
@@ -109,7 +134,7 @@ class VisitorRequestController extends Controller
             if ($request->hasFile('picture')) {
                 $file = $request->file('picture');
                 $path = $file->store('visitors/pictures', config('filesystems.default'));
-                $pictureUrl = Storage::url($path);
+                $pictureUrl = $path;
             }
 
             $visitorRequest = VisitorRequest::query()->create([
@@ -140,6 +165,40 @@ class VisitorRequestController extends Controller
         $this->notifySecurity($visitorRequest);
 
         return VisitorRequestResource::make($visitorRequest);
+    }
+
+    private function visitorPictureStoragePath(string $pictureRef): ?string
+    {
+        if (str_starts_with($pictureRef, 'visitors/pictures/')) {
+            return $pictureRef;
+        }
+
+        if (! filter_var($pictureRef, FILTER_VALIDATE_URL)) {
+            return ltrim($pictureRef, '/');
+        }
+
+        $path = parse_url($pictureRef, PHP_URL_PATH);
+        if (! is_string($path) || $path === '') {
+            return null;
+        }
+
+        $path = ltrim($path, '/');
+        $bucket = (string) config('filesystems.disks.s3.bucket');
+        if ($bucket !== '' && str_starts_with($path, $bucket.'/')) {
+            $path = substr($path, strlen($bucket) + 1);
+        }
+
+        if (str_starts_with($path, 'visitors/pictures/')) {
+            return $path;
+        }
+
+        $marker = '/visitors/pictures/';
+        $position = strpos('/'.$path, $marker);
+        if ($position !== false) {
+            return substr('/'.$path, $position + 1);
+        }
+
+        return null;
     }
 
     public function validatePass(ValidateVisitorPassRequest $request): JsonResponse

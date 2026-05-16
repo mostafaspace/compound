@@ -13,6 +13,7 @@ use App\Models\Polls\PollType;
 use App\Models\Polls\PollVote;
 use App\Models\Property\Building;
 use App\Models\Property\Compound;
+use App\Models\Property\Floor;
 use App\Models\Property\Unit;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -109,6 +110,60 @@ class PollsTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.0.id', $poll->id)
             ->assertJsonPath('data.0.votesCount', 1);
+    }
+
+    public function test_floor_scoped_poll_is_only_visible_to_residents_on_selected_floor(): void
+    {
+        $compound = Compound::factory()->create();
+        $building = Building::factory()->for($compound)->create();
+        $floorOne = Floor::factory()->for($building)->create(['label' => 'Floor 1', 'level_number' => 1]);
+        $floorTwo = Floor::factory()->for($building)->create(['label' => 'Floor 2', 'level_number' => 2]);
+        $unitOnFloorOne = Unit::factory()->for($compound)->for($building)->create(['floor_id' => $floorOne->id]);
+        $unitOnFloorTwo = Unit::factory()->for($compound)->for($building)->create(['floor_id' => $floorTwo->id]);
+        $residentOnFloorOne = User::factory()->create(['role' => UserRole::ResidentOwner->value, 'compound_id' => null]);
+        $residentOnFloorTwo = User::factory()->create(['role' => UserRole::ResidentOwner->value, 'compound_id' => null]);
+        $admin = User::factory()->create(['role' => UserRole::CompoundAdmin->value, 'compound_id' => $compound->id]);
+
+        ApartmentResident::factory()->create([
+            'unit_id' => $unitOnFloorOne->id,
+            'user_id' => $residentOnFloorOne->id,
+            'verification_status' => 'verified',
+            'starts_at' => now()->subYear(),
+            'ends_at' => null,
+        ]);
+        ApartmentResident::factory()->create([
+            'unit_id' => $unitOnFloorTwo->id,
+            'user_id' => $residentOnFloorTwo->id,
+            'verification_status' => 'verified',
+            'starts_at' => now()->subYear(),
+            'ends_at' => null,
+        ]);
+
+        $poll = Poll::create([
+            'compound_id' => $compound->id,
+            'building_id' => $building->id,
+            'title' => 'Floor camera placement',
+            'status' => PollStatus::Active->value,
+            'scope' => 'floor',
+            'eligibility' => 'all_verified',
+            'created_by' => $admin->id,
+        ]);
+        $poll->targets()->create(['target_type' => 'floor', 'target_id' => $floorOne->id]);
+        PollOption::create(['poll_id' => $poll->id, 'label' => 'Lift lobby', 'sort_order' => 0]);
+        PollOption::create(['poll_id' => $poll->id, 'label' => 'Stairs', 'sort_order' => 1]);
+
+        Sanctum::actingAs($residentOnFloorOne);
+        $this->getJson('/api/v1/polls')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $poll->id);
+
+        Sanctum::actingAs($residentOnFloorTwo);
+        $this->getJson('/api/v1/polls')
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
+        $this->getJson("/api/v1/polls/{$poll->id}")
+            ->assertForbidden();
     }
 
     public function test_effective_compound_head_with_membership_scope_cannot_see_other_compound_polls_when_compound_id_is_null(): void

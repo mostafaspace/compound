@@ -261,6 +261,14 @@ class OwnerRegistrationController extends Controller
                 'type' => 'owner_registration_approved',
                 'owner_registration_request_id' => $registrationRequest->id,
                 'apartment_code' => $registrationRequest->apartment_code,
+                'titleTranslations' => [
+                    'en' => 'Owner registration approved',
+                    'ar' => 'تم قبول طلب المالك',
+                ],
+                'bodyTranslations' => [
+                    'en' => "Your registration for {$registrationRequest->apartment_code} has been approved. You can now sign in.",
+                    'ar' => "تم قبول تسجيلك للوحدة {$registrationRequest->apartment_code}. يمكنك تسجيل الدخول الآن.",
+                ],
             ],
             priority: 'high',
             respectPreferences: false,

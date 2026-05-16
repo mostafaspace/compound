@@ -300,10 +300,10 @@ function formatRoleLabel(value: string): string {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    paddingTop: layout.screenTop,
-  },
+  container: {},
   listContent: {
+    paddingHorizontal: layout.screenGutter,
+    paddingTop: layout.screenTop,
     paddingBottom: layout.screenBottom,
   },
   profileCard: {

@@ -142,6 +142,30 @@ class UserDocumentController extends Controller
                 'status' => $userDocument->status->value,
                 'unitId' => $userDocument->unit_id,
                 'reviewNote' => $userDocument->review_note,
+                'titleTranslations' => [
+                    'en' => match ($userDocument->status) {
+                        DocumentStatus::Approved => 'Document approved',
+                        DocumentStatus::Rejected => 'Document rejected',
+                        default => 'Document review updated',
+                    },
+                    'ar' => match ($userDocument->status) {
+                        DocumentStatus::Approved => 'تمت الموافقة على المستند',
+                        DocumentStatus::Rejected => 'تم رفض المستند',
+                        default => 'تم تحديث مراجعة المستند',
+                    },
+                ],
+                'bodyTranslations' => [
+                    'en' => match ($userDocument->status) {
+                        DocumentStatus::Approved => "Your {$userDocument->documentType->name} document was approved.",
+                        DocumentStatus::Rejected => "Your {$userDocument->documentType->name} document was rejected. Review the note for details.",
+                        default => "Your {$userDocument->documentType->name} document review status changed.",
+                    },
+                    'ar' => match ($userDocument->status) {
+                        DocumentStatus::Approved => "تمت الموافقة على مستند {$userDocument->documentType->name}.",
+                        DocumentStatus::Rejected => "تم رفض مستند {$userDocument->documentType->name}. راجع الملاحظة لمعرفة التفاصيل.",
+                        default => "تم تغيير حالة مراجعة مستند {$userDocument->documentType->name}.",
+                    },
+                ],
             ],
             priority: $userDocument->status === DocumentStatus::Rejected ? 'high' : 'normal',
         );

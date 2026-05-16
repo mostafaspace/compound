@@ -50,6 +50,9 @@ const statusClasses: Record<VisitorRequestStatus, string> = {
   qr_issued: "bg-[#eaf0ff] text-[#244ea8]",
 };
 
+const ADMIN_TIME_ZONE = "Africa/Cairo";
+const preDecisionStatuses: VisitorRequestStatus[] = ["pending", "qr_issued", "arrived"];
+
 function CheckIcon() {
   return (
     <svg aria-hidden="true" className="size-4" viewBox="0 0 20 20" fill="currentColor">
@@ -102,6 +105,7 @@ function formatDateTime(value: string | null): string {
   return new Intl.DateTimeFormat("en", {
     dateStyle: "medium",
     timeStyle: "short",
+    timeZone: ADMIN_TIME_ZONE,
   }).format(new Date(value));
 }
 
@@ -117,6 +121,10 @@ function locationLabel(visitor: VisitorRequest): string {
 
 function isClosed(status: VisitorRequestStatus): boolean {
   return ["cancelled", "completed", "denied"].includes(status);
+}
+
+function canUsePreDecisionAction(status: VisitorRequestStatus): boolean {
+  return preDecisionStatuses.includes(status);
 }
 
 export function VisitorGateWorkspace({ initialVisitors }: VisitorGateWorkspaceProps) {
@@ -626,26 +634,42 @@ function VisitorActions({
   visitor: VisitorRequest;
 }) {
   const disabled = isPending && activeId === visitor.id;
-  const closed = isClosed(visitor.status);
 
   return (
     <div className="flex flex-wrap items-start gap-2 lg:justify-end">
-      <ActionButton disabled={disabled || closed} onClick={() => onDecision(visitor.id, "arrive")}>
+      <ActionButton
+        disabled={disabled || !["pending", "qr_issued"].includes(visitor.status)}
+        onClick={() => onDecision(visitor.id, "arrive")}
+      >
         <ClockIcon />
         Arrived
       </ActionButton>
-      <ActionButton disabled={disabled || closed} onClick={() => onDecision(visitor.id, "allow")} variant="primary">
+      <ActionButton
+        disabled={disabled || !canUsePreDecisionAction(visitor.status)}
+        onClick={() => onDecision(visitor.id, "allow")}
+        variant="primary"
+      >
         <CheckIcon />
         Allow
       </ActionButton>
-      <ActionButton disabled={disabled || closed} onClick={() => onDecision(visitor.id, "deny")} variant="danger">
+      <ActionButton
+        disabled={disabled || !canUsePreDecisionAction(visitor.status)}
+        onClick={() => onDecision(visitor.id, "deny")}
+        variant="danger"
+      >
         <CloseIcon />
         Deny
       </ActionButton>
-      <ActionButton disabled={disabled || visitor.status !== "allowed"} onClick={() => onDecision(visitor.id, "complete")}>
+      <ActionButton
+        disabled={disabled || visitor.status !== "allowed"}
+        onClick={() => onDecision(visitor.id, "complete")}
+      >
         Complete
       </ActionButton>
-      <ActionButton disabled={disabled || closed} onClick={() => onDecision(visitor.id, "cancel")}>
+      <ActionButton
+        disabled={disabled || !canUsePreDecisionAction(visitor.status)}
+        onClick={() => onDecision(visitor.id, "cancel")}
+      >
         Cancel
       </ActionButton>
     </div>

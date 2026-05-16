@@ -1513,6 +1513,28 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
+  - react-native-netinfo (12.0.1):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
   - react-native-pager-view (8.0.1):
     - hermes-engine
     - RCTRequired
@@ -2445,6 +2467,7 @@ DEPENDENCIES:
   - React-microtasksnativemodule (from `../../../node_modules/react-native/ReactCommon/react/nativemodule/microtasks`)
   - "react-native-document-picker (from `../../../node_modules/@react-native-documents/picker`)"
   - react-native-image-picker (from `../../../node_modules/react-native-image-picker`)
+  - "react-native-netinfo (from `../../../node_modules/@react-native-community/netinfo`)"
   - react-native-pager-view (from `../../../node_modules/react-native-pager-view`)
   - react-native-safe-area-context (from `../../../node_modules/react-native-safe-area-context`)
   - react-native-view-shot (from `../../../node_modules/react-native-view-shot`)
@@ -2599,6 +2622,8 @@ EXTERNAL SOURCES:
     :path: "../../../node_modules/@react-native-documents/picker"
   react-native-image-picker:
     :path: "../../../node_modules/react-native-image-picker"
+  react-native-netinfo:
+    :path: "../../../node_modules/@react-native-community/netinfo"
   react-native-pager-view:
     :path: "../../../node_modules/react-native-pager-view"
   react-native-safe-area-context:
@@ -2759,6 +2784,7 @@ SPEC CHECKSUMS:
   React-microtasksnativemodule: cbd9be010701fa23a8786dfff87ad058411a1174
   react-native-document-picker: d74eb20980217096d3794a63ee5105b5f70772e3
   react-native-image-picker: 09cea417bef3ee25008ad21d4426f9a1fc54ad84
+  react-native-netinfo: a05f9b897e76ad24b53f615fed1cbb731932363d
   react-native-pager-view: 4eb2faa444dc7caec9ed5749af4da2e0142e7ca7
   react-native-safe-area-context: ba7283e541a5f57c6b27a7e33f2c40b8977888c0
   react-native-view-shot: 11e720a9a6989a9b9c4b2fb69d972aa8e1a8104c

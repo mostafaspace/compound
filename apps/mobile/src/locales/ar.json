@@ -102,6 +102,9 @@
   },
   "System": {
     "connectionError": "مشكلة اتصال",
+    "noInternetTitle": "لا يوجد اتصال بالإنترنت",
+    "noInternetMessage": "يبدو أنك غير متصل. أعد الاتصال بالواي فاي أو بيانات الهاتف ثم حاول مرة أخرى.",
+    "serverUnavailableTitle": "الخادم غير متاح",
     "backendDownMessage": "الخوادم غير متاحة حالياً. تحقق من الإنترنت أو حاول مرة أخرى لاحقاً.",
     "retry": "حاول مرة أخرى"
   },
@@ -590,6 +593,9 @@
     "ownerRegistration": {
       "approvedTitle": "تم قبول طلب المالك",
       "approvedBody": "تم قبول تسجيلك للوحدة {{apartmentCode}}. يمكنك تسجيل الدخول الآن."
+    },
+    "vehicles": {
+      "alertTitle": "تنبيه بخصوص العربية"
     },
     "visitors": {
       "guest": "ضيفك",

@@ -5,6 +5,7 @@ import { SiteNav } from "@/components/site-nav";
 import { getBuilding, getCompound, getCurrentUser, getUnassignedUsers } from "@/lib/api";
 import { getCompoundContext, requireAdminUser } from "@/lib/session";
 
+import { AssignmentWorkspace } from "./assignment-workspace";
 import { assignUserToUnitAction } from "./actions";
 
 interface AssignUnitPageProps {
@@ -15,6 +16,7 @@ export default async function AssignUnitPage({ searchParams }: AssignUnitPagePro
   const user = await requireAdminUser(getCurrentUser);
   const activeCompoundId = user.compoundId ?? (await getCompoundContext());
   const t = await getTranslations("Registry");
+  const commonT = await getTranslations("Common");
   const sp = searchParams ? await searchParams : {};
   const breadcrumb = [{ label: t("propertyRegistry"), href: "/compounds" }, { label: t("assignApartment.title") }];
 
@@ -124,7 +126,15 @@ export default async function AssignUnitPage({ searchParams }: AssignUnitPagePro
     })),
   );
   const hasUnits = units.length > 0;
-  const hasUnassignedUsers = unassignedUsers.length > 0;
+  const paginationSummaryTemplate = commonT("pagination.summary", {
+    from: "__FROM__",
+    to: "__TO__",
+    total: "__TOTAL__",
+  });
+  const unitOptionTemplate = t("assignApartment.unassignedUsers.unitOption", {
+    building: "__BUILDING__",
+    unit: "__UNIT__",
+  });
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -146,7 +156,7 @@ export default async function AssignUnitPage({ searchParams }: AssignUnitPagePro
         </div>
       </header>
 
-      <section className="mx-auto max-w-7xl px-5 py-6 lg:px-8">
+      <section className="mx-auto max-w-6xl px-5 py-6 lg:px-8">
         {sp.assigned ? (
           <p className="mb-5 rounded-lg bg-[#e6f3ef] px-4 py-3 text-sm font-medium text-brand">
             {t("assignApartment.messages.assigned")}
@@ -166,163 +176,44 @@ export default async function AssignUnitPage({ searchParams }: AssignUnitPagePro
           </div>
         ) : null}
 
-        <div className="mb-5 grid gap-4 md:grid-cols-3">
-          <article className="rounded-lg border border-line bg-panel p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted">{t("assignApartment.metrics.assignmentQueue.title")}</p>
-            <p className="mt-2 text-2xl font-semibold">{unassignedUsers.length}</p>
-            <p className="mt-1 text-sm text-muted">{t("assignApartment.metrics.assignmentQueue.description")}</p>
-          </article>
-          <article className="rounded-lg border border-line bg-panel p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted">{t("assignApartment.metrics.availableUnits.title")}</p>
-            <p className="mt-2 text-2xl font-semibold">{units.length}</p>
-            <p className="mt-1 text-sm text-muted">{t("assignApartment.metrics.availableUnits.description", { compound: compound.name })}</p>
-          </article>
-          <article className="rounded-lg border border-line bg-panel p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted">{t("assignApartment.metrics.operatorNote.title")}</p>
-            <p className="mt-2 text-sm font-medium text-foreground">{t("assignApartment.metrics.operatorNote.lead")}</p>
-            <p className="mt-1 text-sm text-muted">{t("assignApartment.metrics.operatorNote.description")}</p>
-          </article>
-        </div>
-
-        <div className="grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
-          <div className="rounded-lg border border-line bg-panel">
-            <div className="border-b border-line px-4 py-3">
-              <h2 className="text-lg font-semibold">{t("assignApartment.unassignedUsers.title", { count: unassignedUsers.length })}</h2>
-              <p className="mt-1 text-sm text-muted">{t("assignApartment.unassignedUsers.description")}</p>
-            </div>
-            {!hasUnassignedUsers ? (
-              <div className="px-4 py-8">
-                <p className="text-sm font-medium text-foreground">{t("assignApartment.unassignedUsers.empty.title")}</p>
-                <p className="mt-2 text-sm text-muted">{t("assignApartment.unassignedUsers.empty.description")}</p>
-                <div className="mt-4 flex flex-wrap gap-3">
-                  <Link
-                    className="inline-flex h-10 items-center justify-center rounded-lg bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"
-                    href="/"
-                  >
-                    {t("assignApartment.unassignedUsers.empty.returnToDashboard")}
-                  </Link>
-                  <Link
-                    className="inline-flex h-10 items-center justify-center rounded-lg border border-line bg-panel px-4 text-sm font-semibold hover:border-brand"
-                    href="/compounds"
-                  >
-                    {t("assignApartment.unassignedUsers.empty.reviewCompoundRegistry")}
-                  </Link>
-                </div>
-              </div>
-            ) : (
-              <div className="divide-y divide-line">
-                {unassignedUsers.map((unassignedUser) => (
-                  <details key={unassignedUser.id} className="group">
-                    <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-4">
-                      <div>
-                        <div className="font-semibold">{unassignedUser.name}</div>
-                        <div className="text-sm text-muted">{unassignedUser.email}</div>
-                        <div className="text-xs text-muted">{unassignedUser.phone ?? t("assignApartment.unassignedUsers.noPhone")}</div>
-                      </div>
-                      <span className="rounded-lg border border-line px-2 py-1 text-xs font-semibold text-muted group-open:border-brand group-open:text-brand">
-                        {t("assignApartment.unassignedUsers.assign")}
-                      </span>
-                    </summary>
-                    <div className="border-t border-line bg-background/40 px-4 py-4">
-                      {hasUnits ? (
-                        <form action={assignUserToUnitAction} className="grid gap-3">
-                          <input type="hidden" name="userId" value={unassignedUser.id} />
-                          <label className="text-sm font-medium">
-                            {t("assignApartment.unassignedUsers.unitLabel")}
-                            <select
-                              className="mt-2 h-11 w-full rounded-lg border border-line bg-panel px-3"
-                              defaultValue=""
-                              name="unitId"
-                              required
-                            >
-                              <option value="" disabled>{t("assignApartment.unassignedUsers.selectUnit")}</option>
-                              {units.map((unit) => (
-                                <option key={unit.id} value={unit.id}>
-                                  {t("assignApartment.unassignedUsers.unitOption", {
-                                    building: unit.buildingName,
-                                    unit: unit.unitNumber,
-                                  })}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-                          <p className="text-xs text-muted">{t("assignApartment.unassignedUsers.assignmentHint")}</p>
-                          <button
-                            className="inline-flex h-11 items-center justify-center rounded-lg bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"
-                            type="submit"
-                          >
-                            {t("assignApartment.unassignedUsers.assignButton")}
-                          </button>
-                        </form>
-                      ) : (
-                        <div className="rounded-lg border border-dashed border-line bg-panel px-4 py-4 text-sm text-muted">
-                          {t("assignApartment.unassignedUsers.unitSetupRequired")}
-                          <Link className="ms-2 font-semibold text-brand hover:text-brand-strong" href="/compounds">
-                            {t("assignApartment.unassignedUsers.openRegistry")}
-                          </Link>
-                        </div>
-                      )}
-                    </div>
-                  </details>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="rounded-lg border border-line bg-panel">
-            <div className="border-b border-line px-4 py-3">
-              <h2 className="text-lg font-semibold">{t("assignApartment.availableUnits.title", { count: units.length })}</h2>
-              <p className="mt-1 text-sm text-muted">{t("assignApartment.availableUnits.description", { compound: compound.name })}</p>
-            </div>
-            {!hasUnits ? (
-              <div className="px-4 py-8">
-                <p className="text-sm font-medium text-foreground">{t("assignApartment.availableUnits.empty.title")}</p>
-                <p className="mt-2 text-sm text-muted">{t("assignApartment.availableUnits.empty.description")}</p>
-                <div className="mt-4 flex flex-wrap gap-3">
-                  <Link
-                    className="inline-flex h-10 items-center justify-center rounded-lg bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"
-                    href="/compounds"
-                  >
-                    {t("assignApartment.availableUnits.empty.reviewCompoundRegistry")}
-                  </Link>
-                  <Link
-                    className="inline-flex h-10 items-center justify-center rounded-lg border border-line bg-panel px-4 text-sm font-semibold hover:border-brand"
-                    href="/"
-                  >
-                    {t("assignApartment.availableUnits.empty.returnToDashboard")}
-                  </Link>
-                </div>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-start text-sm">
-                  <thead className="bg-background text-muted">
-                    <tr>
-                      <th className="px-4 py-3 font-semibold">{t("assignApartment.availableUnits.table.building")}</th>
-                      <th className="px-4 py-3 font-semibold">{t("assignApartment.availableUnits.table.unit")}</th>
-                      <th className="px-4 py-3 font-semibold">{t("assignApartment.availableUnits.table.status")}</th>
-                      <th className="px-4 py-3 font-semibold">{t("assignApartment.availableUnits.table.residents")}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-line">
-                    {units.map((unit) => (
-                      <tr key={unit.id}>
-                        <td className="px-4 py-4">{unit.buildingName}</td>
-                        <td className="px-4 py-4">
-                          <Link className="font-semibold text-brand hover:text-brand-strong" href={`/units/${unit.id}`}>
-                            {unit.unitNumber}
-                          </Link>
-                        </td>
-                        <td className="px-4 py-4 capitalize">{unit.status}</td>
-                        <td className="px-4 py-4">{unit.memberships?.length ?? 0}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </div>
+        <AssignmentWorkspace
+          assignAction={assignUserToUnitAction}
+          hasUnits={hasUnits}
+          labels={{
+            assignButton: t("assignApartment.unassignedUsers.assignButton"),
+            assignmentColumn: t("assignApartment.unassignedUsers.table.assignment"),
+            assignmentCountLabel: t("assignApartment.metrics.assignmentQueue.title"),
+            assignmentDescription: t("assignApartment.unassignedUsers.description"),
+            assignmentTitle: t("assignApartment.unassignedUsers.title", { count: unassignedUsers.length }),
+            availableCountLabel: t("assignApartment.metrics.availableUnits.title"),
+            availableDescription: t("assignApartment.availableUnits.description", { compound: compound.name }),
+            availableTitle: t("assignApartment.availableUnits.title", { count: units.length }),
+            buildingColumn: t("assignApartment.availableUnits.table.building"),
+            emptyAssignmentDescription: t("assignApartment.unassignedUsers.empty.description"),
+            emptyAssignmentTitle: t("assignApartment.unassignedUsers.empty.title"),
+            emptyUnitsDescription: t("assignApartment.availableUnits.empty.description"),
+            emptyUnitsTitle: t("assignApartment.availableUnits.empty.title"),
+            noPhone: t("assignApartment.unassignedUsers.noPhone"),
+            openRegistry: t("assignApartment.unassignedUsers.openRegistry"),
+            paginationFirst: commonT("pagination.first"),
+            paginationLast: commonT("pagination.last"),
+            paginationNext: commonT("pagination.next"),
+            paginationPrevious: commonT("pagination.previous"),
+            paginationSummaryTemplate,
+            residentsColumn: t("assignApartment.availableUnits.table.residents"),
+            returnToDashboard: t("assignApartment.unassignedUsers.empty.returnToDashboard"),
+            reviewCompoundRegistry: t("assignApartment.unassignedUsers.empty.reviewCompoundRegistry"),
+            selectUnit: t("assignApartment.unassignedUsers.selectUnit"),
+            statusColumn: t("assignApartment.availableUnits.table.status"),
+            unitColumn: t("assignApartment.availableUnits.table.unit"),
+            unitLabel: t("assignApartment.unassignedUsers.unitLabel"),
+            unitOptionTemplate,
+            unitSetupRequired: t("assignApartment.unassignedUsers.unitSetupRequired"),
+            userColumn: t("assignApartment.unassignedUsers.table.user"),
+          }}
+          units={units}
+          users={unassignedUsers}
+        />
       </section>
     </main>
   );

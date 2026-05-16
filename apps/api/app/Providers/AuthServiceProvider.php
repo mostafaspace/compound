@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Enums\Permission;
 use App\Models\Apartments\ApartmentDocumentVersion;
 use App\Models\Apartments\ViolationRule;
 use App\Models\Property\Unit;
@@ -30,6 +31,14 @@ class AuthServiceProvider extends ServiceProvider
             if (
                 $user instanceof User
                 && $user->isEffectiveSuperAdmin()
+            ) {
+                return true;
+            }
+
+            if (
+                $user instanceof User
+                && in_array($ability, Permission::values(), true)
+                && $user->hasEffectivePermission($ability)
             ) {
                 return true;
             }

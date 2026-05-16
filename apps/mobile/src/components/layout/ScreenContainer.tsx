@@ -7,7 +7,9 @@ import {
   KeyboardAvoidingView, 
   Platform,
   View,
-  ScrollView
+  ScrollView,
+  FlatList,
+  SectionList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
@@ -23,6 +25,17 @@ interface ScreenContainerProps {
 }
 
 const DEFAULT_EDGES: readonly ('top' | 'right' | 'bottom' | 'left')[] = ['left', 'right'];
+const SCROLLABLE_CHILD_TYPES = new Set<unknown>([ScrollView, FlatList, SectionList]);
+
+const hasDirectScrollableChild = (children: React.ReactNode) => {
+  const childArray = React.Children.toArray(children);
+
+  if (childArray.length !== 1 || !React.isValidElement(childArray[0])) {
+    return false;
+  }
+
+  return SCROLLABLE_CHILD_TYPES.has(childArray[0].type);
+};
 
 export const ScreenContainer: React.FC<ScreenContainerProps> = ({
   children,
@@ -33,9 +46,11 @@ export const ScreenContainer: React.FC<ScreenContainerProps> = ({
 }) => {
   const isDark = useColorScheme() === 'dark';
   const isRtl = useIsRtl();
+  const flattenedStyle = StyleSheet.flatten(style);
+  const disablesContainerPadding = flattenedStyle?.padding === 0 || (!scrollable && hasDirectScrollableChild(children));
   
   const content = (
-    <View style={[styles.inner, appDirectionStyle(isRtl), style]}>
+    <View style={[styles.inner, appDirectionStyle(isRtl), style, disablesContainerPadding && styles.noPadding]}>
       {children}
     </View>
   );
@@ -51,7 +66,12 @@ export const ScreenContainer: React.FC<ScreenContainerProps> = ({
           style={styles.flex}
         >
           {scrollable ? (
-            <ScrollView contentContainerStyle={[styles.scrollGrow, appDirectionStyle(isRtl)]}>
+            <ScrollView
+              automaticallyAdjustContentInsets={false}
+              contentInsetAdjustmentBehavior="never"
+              contentContainerStyle={[styles.scrollGrow, appDirectionStyle(isRtl)]}
+              showsVerticalScrollIndicator={false}
+            >
               {content}
             </ScrollView>
           ) : (
@@ -59,7 +79,12 @@ export const ScreenContainer: React.FC<ScreenContainerProps> = ({
           )}
         </KeyboardAvoidingView>
       ) : scrollable ? (
-        <ScrollView contentContainerStyle={[styles.scrollGrow, appDirectionStyle(isRtl)]}>
+        <ScrollView
+          automaticallyAdjustContentInsets={false}
+          contentInsetAdjustmentBehavior="never"
+          contentContainerStyle={[styles.scrollGrow, appDirectionStyle(isRtl)]}
+          showsVerticalScrollIndicator={false}
+        >
           {content}
         </ScrollView>
       ) : (
@@ -84,5 +109,14 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: layout.screenGutter,
     paddingTop: layout.screenTop,
+  },
+  noPadding: {
+    padding: 0,
+    paddingBottom: 0,
+    paddingHorizontal: 0,
+    paddingLeft: 0,
+    paddingRight: 0,
+    paddingTop: 0,
+    paddingVertical: 0,
   },
 });

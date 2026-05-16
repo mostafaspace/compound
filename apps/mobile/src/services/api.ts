@@ -1,6 +1,8 @@
 import { createApi, fetchBaseQuery, BaseQueryFn, FetchArgs, FetchBaseQueryError } from "@reduxjs/toolkit/query/react";
 import * as Keychain from "react-native-keychain";
 import { Platform } from "react-native";
+import NetInfo from "@react-native-community/netinfo";
+import i18n from "../../i18n";
 import { setOfflineState } from "../store/systemSlice";
 import { logout } from "../store/authSlice";
 
@@ -17,6 +19,7 @@ export const defaultApiBaseUrl = (configuredApiBaseUrl || localApiBaseUrl).repla
 
 const prepareHeaders = (headers: Headers, getState: () => unknown) => {
   headers.set("Accept", "application/json");
+  headers.set("Accept-Language", i18n.language?.startsWith("ar") ? "ar" : "en");
 
   const state = getState() as any;
   const token = state.auth.token;
@@ -179,7 +182,10 @@ const baseQueryWithFallback: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQ
   let result = await baseQuery(args, api, extraOptions);
 
   if (result.error && result.error.status === 'FETCH_ERROR') {
-    api.dispatch(setOfflineState({ isOffline: true, error: "Network Error: Could not connect to server" }));
+    const networkState = await NetInfo.fetch();
+    const isNoInternet = networkState.isConnected === false || networkState.isInternetReachable === false;
+
+    api.dispatch(setOfflineState({ isOffline: true, reason: isNoInternet ? "no_internet" : "server_unreachable" }));
   } else if (result.error && result.error.status === 401) {
     const state = api.getState() as any;
     if (state.auth.token) {

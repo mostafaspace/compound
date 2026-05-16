@@ -49,6 +49,7 @@ interface AnnouncementsPageProps {
     published?: string;
     q?: string;
     status?: string;
+    tab?: string;
     targetId?: string;
     targetType?: string;
     to?: string;
@@ -58,7 +59,7 @@ interface AnnouncementsPageProps {
 
 const categoryFilters: Array<AnnouncementCategory | "all"> = ["all", ...announcementCategoryValues];
 const statusFilters: Array<AnnouncementStatus | "all"> = ["all", ...announcementStatusValues];
-const targetTypeFilters: Array<AnnouncementTargetType | "all"> = ["all", ...announcementTargetTypeValues];
+const targetTypeFilters: AnnouncementTargetType[] = [...announcementTargetTypeValues];
 
 function parseCategory(value?: string): AnnouncementCategory | "all" {
   return categoryFilters.includes(value as AnnouncementCategory | "all") ? (value as AnnouncementCategory | "all") : "all";
@@ -130,7 +131,7 @@ export default async function AnnouncementsPage({ searchParams }: AnnouncementsP
       category,
       from: params.from,
       page,
-      perPage: 50,
+      perPage: 15,
       search: params.q,
       status,
       targetId: params.targetId,
@@ -164,6 +165,7 @@ export default async function AnnouncementsPage({ searchParams }: AnnouncementsP
   const composerAction = editingAnnouncement
     ? updateAnnouncementAction.bind(null, editingAnnouncement.id)
     : createAnnouncementAction;
+  const showComposer = Boolean(editingAnnouncement) || params.tab === "create";
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -179,10 +181,14 @@ export default async function AnnouncementsPage({ searchParams }: AnnouncementsP
           </div>
           <div className="flex flex-wrap gap-3">
             <Link
-              className="inline-flex h-11 items-center justify-center rounded-lg border border-line bg-panel px-4 text-sm font-semibold hover:border-brand"
-              href="/announcements"
+              className={`inline-flex h-11 items-center justify-center rounded-lg px-4 text-sm font-semibold ${
+                showComposer
+                  ? "border border-line bg-panel hover:border-brand"
+                  : "bg-brand text-white hover:bg-brand-strong"
+              }`}
+              href={showComposer ? "/announcements" : "/announcements?tab=create"}
             >
-              {t("actions.new")}
+              {showComposer ? t("list.title") : t("actions.new")}
             </Link>
           </div>
         </div>
@@ -191,6 +197,8 @@ export default async function AnnouncementsPage({ searchParams }: AnnouncementsP
       <section className="mx-auto max-w-7xl space-y-5 px-5 py-6 lg:px-8">
         <StatusMessages params={params} t={t} />
 
+        {!showComposer ? (
+          <>
         <div className="grid gap-5 md:grid-cols-4">
           <MetricCard label={t("metrics.total")} value={announcementsPage.meta.total} />
           <MetricCard label={t("metrics.published")} value={announcements.filter((item) => item.status === "published").length} />
@@ -239,24 +247,6 @@ export default async function AnnouncementsPage({ searchParams }: AnnouncementsP
               </select>
             </label>
             <label className="text-xs font-semibold text-muted">
-              {t("filters.targetId")}
-              <input
-                className="mt-1 h-10 w-full rounded-lg border border-line bg-background px-3 text-sm"
-                defaultValue={params.targetId ?? ""}
-                name="targetId"
-              />
-            </label>
-            <label className="text-xs font-semibold text-muted">
-              {t("filters.authorId")}
-              <input
-                className="mt-1 h-10 w-full rounded-lg border border-line bg-background px-3 text-sm"
-                defaultValue={params.authorId ?? ""}
-                min={1}
-                name="authorId"
-                type="number"
-              />
-            </label>
-            <label className="text-xs font-semibold text-muted">
               {t("filters.from")}
               <input
                 className="mt-1 h-10 w-full rounded-lg border border-line bg-background px-3 text-sm"
@@ -274,7 +264,7 @@ export default async function AnnouncementsPage({ searchParams }: AnnouncementsP
                 type="date"
               />
             </label>
-            <div className="flex items-end gap-2 md:col-span-3 lg:col-span-4">
+            <div className="flex items-end gap-2 md:col-span-3 lg:col-span-2">
               <button className="inline-flex h-10 items-center justify-center rounded-lg bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong" type="submit">
                 {t("filters.apply")}
               </button>
@@ -287,8 +277,11 @@ export default async function AnnouncementsPage({ searchParams }: AnnouncementsP
             </div>
           </div>
         </form>
+          </>
+        ) : null}
 
-        <div className="grid gap-5 xl:grid-cols-[0.95fr_1.45fr]">
+        {showComposer ? (
+        <div className="mx-auto max-w-5xl">
           <form action={composerAction} className="rounded-lg border border-line bg-panel p-5">
             <div className="flex flex-col gap-2 border-b border-line pb-4">
               <h2 className="text-lg font-semibold">
@@ -448,7 +441,11 @@ export default async function AnnouncementsPage({ searchParams }: AnnouncementsP
               </div>
             </div>
           </form>
+        </div>
+        ) : null}
 
+        {!showComposer ? (
+          <>
           <section className="overflow-hidden rounded-lg border border-line bg-panel">
             <div className="border-b border-line p-5">
               <h2 className="text-lg font-semibold">{t("list.title")}</h2>
@@ -485,7 +482,6 @@ export default async function AnnouncementsPage({ searchParams }: AnnouncementsP
                             <p className="mt-1 line-clamp-2 text-xs text-muted" dir={locale === "ar" ? "rtl" : "ltr"}>
                               {announcement.body[locale === "ar" ? "ar" : "en"]}
                             </p>
-                            <p className="mt-2 font-mono text-xs text-muted">{announcement.id.slice(0, 10)}</p>
                             {announcement.attachments.length > 0 ? (
                               <p className="mt-2 text-xs font-semibold text-brand">
                                 {t("list.attachments", { count: announcement.attachments.length })}
@@ -582,7 +578,6 @@ export default async function AnnouncementsPage({ searchParams }: AnnouncementsP
               }}
             />
           </section>
-        </div>
 
         {acknowledgementDetails ? (
           <section className="rounded-lg border border-line bg-panel p-5">
@@ -614,6 +609,8 @@ export default async function AnnouncementsPage({ searchParams }: AnnouncementsP
               )}
             </div>
           </section>
+        ) : null}
+          </>
         ) : null}
       </section>
     </main>

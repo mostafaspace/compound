@@ -1,15 +1,13 @@
-import { redirect } from "next/navigation";
-
 import { getCurrentUser } from "@/lib/api";
 import { getCompoundContext, requireAdminUser } from "@/lib/session";
 
-export default async function OrgChartRedirectPage() {
+import { OrgChartRedirectClient } from "./org-chart-redirect-client";
+
+export default async function Page() {
   const user = await requireAdminUser(getCurrentUser);
   const compoundId = (await getCompoundContext()) ?? user.compoundId;
 
-  if (!compoundId) {
-    redirect("/compounds");
-  }
+  const targetHref = compoundId ? `/compounds/${compoundId}/org-chart` : "/compounds";
 
-  redirect(`/compounds/${compoundId}/org-chart`);
+  return <OrgChartRedirectClient targetHref={targetHref} />;
 }

@@ -4,9 +4,12 @@ import { AppRegistry, View } from "react-native";
 import messaging from '@react-native-firebase/messaging';
 import { Provider } from "react-redux";
 import { store } from "./src/store";
+import { configureScrollDefaults } from "./src/utils/configureScrollDefaults";
 
 import "./i18n";
 import App from "./App";
+
+configureScrollDefaults();
 
 messaging().setBackgroundMessageHandler(async (_remoteMessage) => {
   // Background/quit state messages handled by OS notification tray

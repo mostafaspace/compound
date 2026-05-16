@@ -12,6 +12,7 @@ interface PaginationMeta {
 interface AdminPaginationProps {
   basePath: string;
   meta: PaginationMeta;
+  pageParam?: string;
   params?: Record<string, number | string | undefined>;
   labels: {
     first: string;
@@ -22,15 +23,22 @@ interface AdminPaginationProps {
   };
 }
 
-function pageHref(basePath: string, params: AdminPaginationProps["params"], page: number): string {
+function pageHref(
+  basePath: string,
+  params: AdminPaginationProps["params"],
+  page: number,
+  pageParam: string,
+): string {
   const query = new URLSearchParams();
 
   Object.entries(params ?? {}).forEach(([key, value]) => {
     if (value !== undefined && value !== "") query.set(key, String(value));
   });
 
-  if (page > 1) query.set("page", String(page));
-  else query.delete("page");
+  query.delete("page");
+
+  if (page > 1) query.set(pageParam, String(page));
+  else query.delete(pageParam);
 
   const queryString = query.toString();
   return `${basePath}${queryString ? `?${queryString}` : ""}`;
@@ -63,7 +71,7 @@ function PaginationLink({
   );
 }
 
-export function AdminPagination({ basePath, labels, meta, params }: AdminPaginationProps) {
+export function AdminPagination({ basePath, labels, meta, pageParam = "page", params }: AdminPaginationProps) {
   const currentPage = Math.max(1, meta.current_page || 1);
   const lastPage = Math.max(1, meta.last_page || 1);
 
@@ -71,19 +79,19 @@ export function AdminPagination({ basePath, labels, meta, params }: AdminPaginat
     <div className="flex flex-col gap-3 border-t border-line px-4 py-3 md:flex-row md:items-center md:justify-between">
       <p className="text-sm text-muted">{labels.summary}</p>
       <div className="flex flex-wrap items-center gap-2">
-        <PaginationLink disabled={currentPage <= 1} href={pageHref(basePath, params, 1)}>
+        <PaginationLink disabled={currentPage <= 1} href={pageHref(basePath, params, 1, pageParam)}>
           {labels.first}
         </PaginationLink>
-        <PaginationLink disabled={currentPage <= 1} href={pageHref(basePath, params, currentPage - 1)}>
+        <PaginationLink disabled={currentPage <= 1} href={pageHref(basePath, params, currentPage - 1, pageParam)}>
           {labels.previous}
         </PaginationLink>
         <span className="inline-flex h-9 min-w-12 items-center justify-center rounded-lg bg-background px-3 text-sm font-semibold text-foreground">
           {currentPage} / {lastPage}
         </span>
-        <PaginationLink disabled={currentPage >= lastPage} href={pageHref(basePath, params, currentPage + 1)}>
+        <PaginationLink disabled={currentPage >= lastPage} href={pageHref(basePath, params, currentPage + 1, pageParam)}>
           {labels.next}
         </PaginationLink>
-        <PaginationLink disabled={currentPage >= lastPage} href={pageHref(basePath, params, lastPage)}>
+        <PaginationLink disabled={currentPage >= lastPage} href={pageHref(basePath, params, lastPage, pageParam)}>
           {labels.last}
         </PaginationLink>
       </div>

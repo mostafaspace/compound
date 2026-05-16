@@ -14,6 +14,8 @@ use App\Models\Polls\PollNotificationLog;
 use App\Models\Polls\PollOption;
 use App\Models\Polls\PollViewLog;
 use App\Models\Polls\PollVote;
+use App\Models\Property\Building;
+use App\Models\Property\Floor;
 use App\Models\User;
 use App\Services\CompoundContextService;
 use App\Services\NotificationService;
@@ -63,7 +65,7 @@ class PollController extends Controller
         $isAdmin = $this->isAdmin($user);
 
         $query = Poll::query()
-            ->with('options')
+            ->with(['options', 'targets'])
             ->withCount('votes');
 
         if (! $isAdmin) {
@@ -77,8 +79,9 @@ class PollController extends Controller
 
             $verifiedCompoundIds = $memberships->pluck('unit.compound_id')->unique()->filter()->values()->all();
             $verifiedBuildingIds = $memberships->pluck('unit.building_id')->unique()->filter()->values()->all();
+            $verifiedFloorIds = $memberships->pluck('unit.floor_id')->unique()->filter()->values()->all();
 
-            $query->where(function ($q) use ($verifiedCompoundIds, $verifiedBuildingIds) {
+            $query->where(function ($q) use ($verifiedCompoundIds, $verifiedBuildingIds, $verifiedFloorIds) {
                 // Polls scoped to compound level
                 $q->where(function ($sq) use ($verifiedCompoundIds) {
                     $sq->where('scope', 'compound')
@@ -89,7 +92,23 @@ class PollController extends Controller
                 if (! empty($verifiedBuildingIds)) {
                     $q->orWhere(function ($sq) use ($verifiedBuildingIds) {
                         $sq->where('scope', 'building')
-                            ->whereIn('building_id', $verifiedBuildingIds);
+                            ->where(function ($targetQuery) use ($verifiedBuildingIds) {
+                                $targetQuery->whereIn('building_id', $verifiedBuildingIds)
+                                    ->orWhereHas('targets', function ($targets) use ($verifiedBuildingIds) {
+                                        $targets->where('target_type', 'building')
+                                            ->whereIn('target_id', $verifiedBuildingIds);
+                                    });
+                            });
+                    });
+                }
+
+                if (! empty($verifiedFloorIds)) {
+                    $q->orWhere(function ($sq) use ($verifiedFloorIds) {
+                        $sq->where('scope', 'floor')
+                            ->whereHas('targets', function ($targets) use ($verifiedFloorIds) {
+                                $targets->where('target_type', 'floor')
+                                    ->whereIn('target_id', $verifiedFloorIds);
+                            });
                     });
                 }
             });
@@ -123,10 +142,12 @@ class PollController extends Controller
         $validated = $request->validate([
             'compoundId' => ['required', 'string', 'exists:compounds,id'],
             'buildingId' => ['nullable', 'string', 'exists:buildings,id'],
+            'targetIds' => ['nullable', 'array', 'max:100'],
+            'targetIds.*' => ['string'],
             'pollTypeId' => ['nullable', 'string', 'exists:poll_types,id'],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'scope' => ['nullable', 'string', Rule::in(['compound', 'building'])],
+            'scope' => ['nullable', 'string', Rule::in(['compound', 'building', 'floor'])],
             'allowMultiple' => ['nullable', 'boolean'],
             'maxChoices' => ['nullable', 'integer', 'min:2'],
             'eligibility' => ['nullable', 'string', Rule::in(array_column(VoteEligibility::cases(), 'value'))],
@@ -144,28 +165,55 @@ class PollController extends Controller
             abort_if($validated['compoundId'] !== $managedCompoundId, 403);
         }
 
-        $poll = Poll::create([
-            'compound_id' => $validated['compoundId'],
-            'building_id' => $validated['buildingId'] ?? null,
-            'poll_type_id' => $validated['pollTypeId'] ?? null,
-            'title' => $validated['title'],
-            'description' => $validated['description'] ?? null,
-            'status' => PollStatus::Draft->value,
-            'scope' => $validated['scope'] ?? 'compound',
-            'allow_multiple' => $validated['allowMultiple'] ?? false,
-            'max_choices' => $validated['maxChoices'] ?? null,
-            'eligibility' => $validated['eligibility'] ?? VoteEligibility::AllVerified->value,
-            'starts_at' => $validated['startsAt'] ?? null,
-            'ends_at' => $validated['endsAt'] ?? null,
-            'created_by' => $user->id,
-        ]);
+        $scope = $validated['scope'] ?? 'compound';
+        $targetIds = collect($validated['targetIds'] ?? [])
+            ->filter(fn ($id) => is_string($id) && trim($id) !== '')
+            ->map(fn ($id) => trim($id))
+            ->unique()
+            ->values();
 
-        foreach ($validated['options'] as $index => $optionData) {
-            $poll->options()->create([
-                'label' => $optionData['label'],
-                'sort_order' => $index,
-            ]);
+        if ($scope === 'building' && $targetIds->isEmpty() && ! empty($validated['buildingId'])) {
+            $targetIds = collect([$validated['buildingId']]);
         }
+
+        $targetIds = $this->validatePollTargets($validated['compoundId'], $scope, $targetIds->all());
+        $legacyBuildingId = $this->legacyBuildingIdForTargets($scope, $targetIds);
+
+        $poll = DB::transaction(function () use ($validated, $scope, $targetIds, $legacyBuildingId, $user) {
+            $poll = Poll::create([
+                'compound_id' => $validated['compoundId'],
+                'building_id' => $legacyBuildingId,
+                'poll_type_id' => $validated['pollTypeId'] ?? null,
+                'title' => $validated['title'],
+                'description' => $validated['description'] ?? null,
+                'status' => PollStatus::Draft->value,
+                'scope' => $scope,
+                'allow_multiple' => $validated['allowMultiple'] ?? false,
+                'max_choices' => $validated['maxChoices'] ?? null,
+                'eligibility' => $validated['eligibility'] ?? VoteEligibility::AllVerified->value,
+                'starts_at' => $validated['startsAt'] ?? null,
+                'ends_at' => $validated['endsAt'] ?? null,
+                'created_by' => $user->id,
+            ]);
+
+            if ($scope !== 'compound') {
+                foreach ($targetIds as $targetId) {
+                    $poll->targets()->create([
+                        'target_type' => $scope,
+                        'target_id' => $targetId,
+                    ]);
+                }
+            }
+
+            foreach ($validated['options'] as $index => $optionData) {
+                $poll->options()->create([
+                    'label' => $optionData['label'],
+                    'sort_order' => $index,
+                ]);
+            }
+
+            return $poll;
+        });
 
         $this->auditLogger->record(
             'polls.created',
@@ -176,12 +224,13 @@ class PollController extends Controller
             metadata: [
                 'compound_id' => $poll->compound_id,
                 'scope' => $poll->scope,
+                'target_ids' => $targetIds,
                 'option_count' => count($validated['options']),
             ],
         );
 
         return response()->json(
-            ['data' => PollResource::make($poll->load('options'))->resolve()],
+            ['data' => PollResource::make($poll->load(['options', 'targets']))->resolve()],
             201,
         );
     }
@@ -214,6 +263,7 @@ class PollController extends Controller
 
         $eagerLoads = [
             'options',
+            'targets',
             'pollType',
             'votes.user',
             'votes.options',
@@ -251,7 +301,7 @@ class PollController extends Controller
             'title' => ['sometimes', 'required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'pollTypeId' => ['nullable', 'string', 'exists:poll_types,id'],
-            'scope' => ['sometimes', 'string', Rule::in(['compound', 'building'])],
+            'scope' => ['sometimes', 'string', Rule::in(['compound', 'building', 'floor'])],
             'allowMultiple' => ['sometimes', 'boolean'],
             'maxChoices' => ['nullable', 'integer', 'min:2'],
             'eligibility' => ['sometimes', 'string', Rule::in(array_column(VoteEligibility::cases(), 'value'))],
@@ -660,14 +710,103 @@ class PollController extends Controller
 
         $query = $user->apartmentResidents()
             ->activeForAccess()
-            ->whereHas('unit', function ($q) use ($poll) {
-                $q->where('compound_id', $poll->compound_id);
-                if ($poll->scope === 'building' && $poll->building_id) {
-                    $q->where('building_id', $poll->building_id);
-                }
-            });
+            ->whereHas('unit', fn ($q) => $this->applyPollScopeToUnitQuery($q, $poll));
 
         abort_unless($query->exists(), 403);
+    }
+
+    /**
+     * @param list<string> $targetIds
+     * @return list<string>
+     */
+    private function validatePollTargets(string $compoundId, string $scope, array $targetIds): array
+    {
+        if ($scope === 'compound') {
+            return [];
+        }
+
+        if ($targetIds === []) {
+            abort(422, 'Choose at least one audience target.');
+        }
+
+        if ($scope === 'building') {
+            $validIds = Building::query()
+                ->where('compound_id', $compoundId)
+                ->whereIn('id', $targetIds)
+                ->pluck('id')
+                ->all();
+        } else {
+            $validIds = Floor::query()
+                ->whereHas('building', fn ($query) => $query->where('compound_id', $compoundId))
+                ->whereIn('id', $targetIds)
+                ->pluck('id')
+                ->all();
+        }
+
+        if (count($validIds) !== count($targetIds)) {
+            abort(422, 'One or more selected audience targets are invalid for this compound.');
+        }
+
+        return array_values($validIds);
+    }
+
+    /**
+     * @param list<string> $targetIds
+     */
+    private function legacyBuildingIdForTargets(string $scope, array $targetIds): ?string
+    {
+        if ($scope === 'building') {
+            return $targetIds[0] ?? null;
+        }
+
+        if ($scope === 'floor' && isset($targetIds[0])) {
+            return Floor::query()->whereKey($targetIds[0])->value('building_id');
+        }
+
+        return null;
+    }
+
+    private function applyPollScopeToUnitQuery($q, Poll $poll): void
+    {
+        $q->where('compound_id', $poll->compound_id);
+
+        if ($poll->scope === 'building') {
+            $buildingIds = $this->targetIdsForPoll($poll, 'building');
+
+            if ($buildingIds !== []) {
+                $q->whereIn('building_id', $buildingIds);
+            } elseif ($poll->building_id) {
+                $q->where('building_id', $poll->building_id);
+            }
+        }
+
+        if ($poll->scope === 'floor') {
+            $q->whereIn('floor_id', $this->targetIdsForPoll($poll, 'floor'));
+        }
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function targetIdsForPoll(Poll $poll, string $targetType): array
+    {
+        if ($poll->relationLoaded('targets')) {
+            return $poll->targets
+                ->where('target_type', $targetType)
+                ->pluck('target_id')
+                ->values()
+                ->all();
+        }
+
+        if (! Schema::hasTable('poll_targets')) {
+            return [];
+        }
+
+        return $poll->targets()
+            ->where('target_type', $targetType)
+            ->pluck('target_id')
+            ->values()
+            ->all();
     }
 
     private function resolveVoterUnitId(Poll $poll, User $user): ?string
@@ -681,13 +820,8 @@ class PollController extends Controller
     {
         $memberships = ApartmentResident::query()
             ->activeForAccess()
-            ->with('unit:id,unit_number,compound_id,building_id')
-            ->whereHas('unit', function ($q) use ($poll) {
-                $q->where('compound_id', $poll->compound_id);
-                if ($poll->scope === 'building' && $poll->building_id) {
-                    $q->where('building_id', $poll->building_id);
-                }
-            })
+            ->with('unit:id,unit_number,compound_id,building_id,floor_id')
+            ->whereHas('unit', fn ($q) => $this->applyPollScopeToUnitQuery($q, $poll))
             ->orderByDesc('is_primary')
             ->get()
             ->groupBy('user_id')
@@ -714,6 +848,14 @@ class PollController extends Controller
                     'bodyEn' => 'A new poll is open for review and voting.',
                     'titleAr' => "تصويت جديد: {$poll->title}",
                     'bodyAr' => 'يوجد تصويت جديد متاح للمراجعة والإدلاء بالصوت.',
+                    'titleTranslations' => [
+                        'en' => "New poll: {$poll->title}",
+                        'ar' => "تصويت جديد: {$poll->title}",
+                    ],
+                    'bodyTranslations' => [
+                        'en' => 'A new poll is open for review and voting.',
+                        'ar' => 'يوجد تصويت جديد متاح للمراجعة والإدلاء بالصوت.',
+                    ],
                 ],
                 priority: 'high',
                 respectPreferences: false,
@@ -767,13 +909,8 @@ class PollController extends Controller
     {
         $memberships = $user->apartmentResidents()
             ->activeForAccess()
-            ->with('unit:id,unit_number,compound_id,building_id')
-            ->whereHas('unit', function ($q) use ($poll) {
-                $q->where('compound_id', $poll->compound_id);
-                if ($poll->scope === 'building' && $poll->building_id) {
-                    $q->where('building_id', $poll->building_id);
-                }
-            })
+            ->with('unit:id,unit_number,compound_id,building_id,floor_id')
+            ->whereHas('unit', fn ($q) => $this->applyPollScopeToUnitQuery($q, $poll))
             ->orderByDesc('is_primary')
             ->get()
             ->unique('unit_id')
@@ -833,27 +970,18 @@ class PollController extends Controller
     /** @return array{0: bool, 1: string|null} */
     private function checkEligibility(Poll $poll, User $user): array
     {
-        if ($poll->scope === 'building' && $poll->building_id !== null) {
-            $inBuilding = $user->apartmentResidents()
-                ->activeForAccess()
-                ->with('unit:id,building_id')
-                ->get()
-                ->pluck('unit.building_id')
-                ->contains($poll->building_id);
-
-            if (! $inBuilding) {
-                return [false, 'not_in_building'];
-            }
-        }
-
         $memberships = $user->apartmentResidents()
             ->activeForAccess()
-            ->with('unit:id,compound_id')
+            ->with('unit:id,compound_id,building_id,floor_id')
             ->get()
             ->filter(fn ($m) => $m->unit?->compound_id === $poll->compound_id);
 
         if ($memberships->isEmpty()) {
             return [false, 'not_in_compound'];
+        }
+
+        if ($this->resolveEligibleMemberships($poll, $user)->isEmpty()) {
+            return [false, $poll->scope === 'floor' ? 'not_on_floor' : 'not_in_building'];
         }
 
         $eligibility = $poll->eligibility;

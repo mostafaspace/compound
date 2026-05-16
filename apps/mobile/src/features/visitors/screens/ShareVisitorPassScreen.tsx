@@ -2,10 +2,12 @@ import React, { useRef } from 'react';
 import { View, StyleSheet, useColorScheme, Platform, Image, TouchableOpacity, ScrollView } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
+import { useSelector } from 'react-redux';
 import Share from 'react-native-share';
 import QRCode from 'react-native-qrcode-svg';
 import { RootStackParamList } from '../../../navigation/types';
 import { useGetVisitorRequestQuery, useMarkAsSharedMutation } from '../../../services/property';
+import { selectCurrentToken } from '../../../store/authSlice';
 import { ScreenContainer } from '../../../components/layout/ScreenContainer';
 import { Typography } from '../../../components/ui/Typography';
 import { Button } from '../../../components/ui/Button';
@@ -24,6 +26,7 @@ export const ShareVisitorPassScreen = () => {
   const navigation = useNavigation<any>();
   const { visitorId } = route.params;
   const viewShotRef = useRef<View>(null);
+  const token = useSelector(selectCurrentToken);
 
   const { data: visitor, isLoading, error, refetch } = useGetVisitorRequestQuery(visitorId);
   const [markAsShared] = useMarkAsSharedMutation();
@@ -147,7 +150,13 @@ export const ShareVisitorPassScreen = () => {
               <View style={styles.photoSection}>
                 <View style={[styles.visitorPhotoContainer, { borderColor: isDark ? colors.surface.dark : '#FFF' }]}>
                   {visitor.pictureUrl ? (
-                    <Image source={{ uri: visitor.pictureUrl }} style={styles.visitorPhoto} />
+                    <Image
+                      source={{
+                        uri: visitor.pictureUrl,
+                        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+                      }}
+                      style={styles.visitorPhoto}
+                    />
                   ) : (
                     <View style={styles.photoPlaceholder}>
                       <Icon name="user" color={colors.text.secondary.light} size={24} />

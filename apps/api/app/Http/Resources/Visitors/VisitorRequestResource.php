@@ -33,7 +33,7 @@ class VisitorRequestResource extends JsonResource
             'visitStartsAt' => $this->visit_starts_at?->toIso8601String(),
             'visitEndsAt' => $this->visit_ends_at?->toIso8601String(),
             'notes' => $this->notes,
-            'pictureUrl' => $this->picture_url,
+            'pictureUrl' => $this->picture_url ? url("/api/v1/visitor-requests/{$this->id}/picture") : null,
             'numberOfVisitors' => $this->number_of_visitors,
             'status' => $this->status->value,
             'pass' => VisitorPassResource::make($this->whenLoaded('pass')),

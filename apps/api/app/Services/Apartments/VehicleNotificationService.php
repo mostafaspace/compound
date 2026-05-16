@@ -138,17 +138,26 @@ class VehicleNotificationService
         $title = $isAdmin
             ? 'Vehicle alert from management'
             : 'Someone sent a message about your vehicle';
+        $body = mb_strimwidth($notification->message, 0, 140, '…');
 
         $this->notifier->create(
             userId: $userId,
             category: NotificationCategory::Vehicles,
             title: $title,
-            body: mb_strimwidth($notification->message, 0, 140, '…'),
+            body: $body,
             metadata: [
                 'type' => 'vehicle_notification',
                 'vehicle_notification_id' => $notification->id,
                 'vehicle_notification_recipient_id' => $recipient->id,
                 'plate' => $vehicle->plate,
+                'titleTranslations' => [
+                    'en' => $title,
+                    'ar' => $isAdmin ? 'تنبيه بخصوص العربية' : 'رسالة بخصوص عربيتك',
+                ],
+                'bodyTranslations' => [
+                    'en' => $body,
+                    'ar' => $body,
+                ],
                 'deep_link' => [
                     'screen' => 'VehicleNotifyInbox',
                     'params' => ['recipientId' => $recipient->id],

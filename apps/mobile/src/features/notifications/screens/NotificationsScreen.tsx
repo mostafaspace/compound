@@ -57,11 +57,13 @@ function getLocalizedNotification(item: {
   const locale = language.startsWith("ar") ? "ar" : "en";
   const titleTranslations = metadata.titleTranslations as Record<string, string> | undefined;
   const bodyTranslations = metadata.bodyTranslations as Record<string, string> | undefined;
+  const legacyTitle = metadata[locale === "ar" ? "titleAr" : "titleEn"];
+  const legacyBody = metadata[locale === "ar" ? "bodyAr" : "bodyEn"];
 
-  if (titleTranslations?.[locale] || bodyTranslations?.[locale]) {
+  if (titleTranslations?.[locale] || bodyTranslations?.[locale] || typeof legacyTitle === "string" || typeof legacyBody === "string") {
     return {
-      title: titleTranslations?.[locale] ?? item.title ?? t("Notifications.label", { defaultValue: "Notifications" }),
-      body: bodyTranslations?.[locale] ?? item.body ?? "",
+      title: titleTranslations?.[locale] ?? (typeof legacyTitle === "string" ? legacyTitle : undefined) ?? item.title ?? t("Notifications.label", { defaultValue: "Notifications" }),
+      body: bodyTranslations?.[locale] ?? (typeof legacyBody === "string" ? legacyBody : undefined) ?? item.body ?? "",
     };
   }
 
@@ -121,6 +123,13 @@ function getLocalizedNotification(item: {
 
   if (item.title && visitorFallbacks[item.title]) {
     return visitorFallbacks[item.title];
+  }
+
+  if (type === "vehicle_notification" || item.title === "Vehicle alert from management") {
+    return {
+      title: t("Notifications.vehicles.alertTitle", { defaultValue: "Vehicle alert from management" }),
+      body: item.body ?? "",
+    };
   }
 
   return {

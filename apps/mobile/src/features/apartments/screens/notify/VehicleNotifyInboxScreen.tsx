@@ -1,7 +1,7 @@
 import React from "react";
 import { FlatList, Pressable, StyleSheet, Text, useColorScheme, View } from "react-native";
 import { useTranslation } from "react-i18next";
-import { colors, radii, spacing, typography } from "../../../../theme";
+import { colors, layout, radii, spacing, typography } from "../../../../theme";
 import {
   useListMyVehicleNotificationsQuery,
   useMarkVehicleNotificationReadMutation,
@@ -15,6 +15,7 @@ export function VehicleNotifyInboxScreen() {
   const isRtl = isRtlLanguage(i18n.language);
   const text = colors.text.primary[isDark ? "dark" : "light"];
   const secondary = colors.text.secondary[isDark ? "dark" : "light"];
+  const background = colors.background[isDark ? "dark" : "light"];
   const surface = colors.surface[isDark ? "dark" : "light"];
   const border = colors.border[isDark ? "dark" : "light"];
 
@@ -28,9 +29,10 @@ export function VehicleNotifyInboxScreen() {
 
   return (
     <FlatList
+      style={{ backgroundColor: background }}
       data={data}
       keyExtractor={(m) => String(m.id)}
-      contentContainerStyle={styles.list}
+      contentContainerStyle={[styles.list, { backgroundColor: background }]}
       refreshing={isLoading}
       onRefresh={refetch}
       ListEmptyComponent={
@@ -65,12 +67,14 @@ export function VehicleNotifyInboxScreen() {
 const styles = StyleSheet.create({
   list: {
     gap: spacing.md,
-    padding: spacing.md,
-    paddingBottom: 96,
+    flexGrow: 1,
+    padding: layout.screenGutter,
+    paddingBottom: layout.screenBottom,
   },
   card: {
     borderRadius: radii.lg,
     padding: spacing.md,
+    borderWidth: 1,
   },
   sender: {
     ...typography.bodyStrong,

@@ -218,6 +218,8 @@ function ShortcutCard({
 
 const styles = StyleSheet.create({
   listContent: {
+    paddingHorizontal: layout.screenGutter,
+    paddingTop: layout.screenTop,
     paddingBottom: layout.screenBottom,
   },
   hero: {

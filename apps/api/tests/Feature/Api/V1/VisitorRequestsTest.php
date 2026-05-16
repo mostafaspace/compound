@@ -19,6 +19,8 @@ use App\Models\Visitors\VisitorRequest;
 use App\Models\Visitors\VisitorScanLog;
 use Carbon\CarbonInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Spatie\Permission\Models\Permission as SpatiePermission;
 use Spatie\Permission\Models\Role as SpatieRole;
@@ -159,6 +161,45 @@ class VisitorRequestsTest extends TestCase
             ->assertJsonPath('data.result', VisitorScanResult::Valid->value);
 
         $this->assertArrayNotHasKey('qrToken', $validateResponse->json('data.visitorRequest'));
+    }
+
+    public function test_visitor_picture_is_returned_through_authenticated_api_route(): void
+    {
+        Storage::fake(config('filesystems.default'));
+
+        [$resident, $unit] = $this->residentWithVerifiedUnit();
+
+        Sanctum::actingAs($resident);
+        $picture = $this->tinyPngUpload();
+
+        $response = $this->post('/api/v1/visitor-requests', [
+            'unitId' => $unit->id,
+            'visitorName' => 'Photo Guest',
+            'visitStartsAt' => now()->subMinutes(10)->toIso8601String(),
+            'visitEndsAt' => now()->addHours(2)->toIso8601String(),
+            'picture' => $picture,
+        ])->assertCreated();
+
+        $visitorRequestId = $response->json('data.id');
+        $pictureUrl = $response->json('data.pictureUrl');
+
+        $this->assertIsString($pictureUrl);
+        $this->assertStringContainsString("/api/v1/visitor-requests/{$visitorRequestId}/picture", $pictureUrl);
+
+        $visitorRequest = VisitorRequest::query()->findOrFail($visitorRequestId);
+        $this->assertStringStartsWith('visitors/pictures/', $visitorRequest->picture_url);
+
+        $this->get(parse_url($pictureUrl, PHP_URL_PATH))
+            ->assertOk()
+            ->assertHeader('content-type', 'image/png');
+
+        $visitorRequest->forceFill([
+            'picture_url' => 'http://127.0.0.1:9000/compound-local/'.$visitorRequest->picture_url,
+        ])->save();
+
+        $this->get(parse_url($pictureUrl, PHP_URL_PATH))
+            ->assertOk()
+            ->assertHeader('content-type', 'image/png');
     }
 
     public function test_visitor_request_notifications_are_limited_to_request_compound_security(): void
@@ -796,6 +837,16 @@ class VisitorRequestsTest extends TestCase
         $visitorRequest = VisitorRequest::query()->findOrFail($response->json('data.id'));
 
         return [$token, $visitorRequest];
+    }
+
+    private function tinyPngUpload(): UploadedFile
+    {
+        $path = tempnam(sys_get_temp_dir(), 'visitor-picture-');
+        file_put_contents($path, base64_decode(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII='
+        ));
+
+        return new UploadedFile($path, 'guest.png', 'image/png', null, true);
     }
 
     private function grantSecurityPermissions(SpatieRole ...$roles): void

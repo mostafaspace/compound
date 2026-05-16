@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { getCurrentUser, getPollTypes } from "@/lib/api";
 import { requireAdminUser } from "@/lib/session";
 import { SiteNav } from "@/components/site-nav";
@@ -6,19 +7,19 @@ import { createPollTypeAction, deletePollTypeAction } from "./actions";
 
 export default async function PollTypesPage() {
   await requireAdminUser(getCurrentUser);
-  const pollTypes = await getPollTypes();
+  const [pollTypes, t] = await Promise.all([getPollTypes(), getTranslations("PollsVoting")]);
 
   return (
     <main className="min-h-screen bg-background text-foreground">
-      <SiteNav breadcrumb={[{ label: "Polls", href: "/polls" }, { label: "Categories" }]} />
+      <SiteNav breadcrumb={[{ label: t("title"), href: "/polls" }, { label: t("list.categories") }]} />
       <header className="border-b border-line bg-panel">
         <div className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-6 md:flex-row md:items-center md:justify-between lg:px-8">
           <div>
             <Link className="text-sm font-semibold text-brand hover:text-brand-strong" href="/polls">
-              {"<"} Polls
+              {t("detail.backToPolls")}
             </Link>
-            <h1 className="mt-2 text-3xl font-semibold">Poll Categories</h1>
-            <p className="mt-2 max-w-2xl text-sm text-muted">Manage poll categories for your community.</p>
+            <h1 className="mt-2 text-3xl font-semibold">{t("typesPage.title")}</h1>
+            <p className="mt-2 max-w-2xl text-sm text-muted">{t("typesPage.subtitle")}</p>
           </div>
 
         </div>
@@ -27,27 +28,27 @@ export default async function PollTypesPage() {
       <section className="mx-auto max-w-7xl space-y-8 px-5 py-6 lg:px-8">
         {/* Create form */}
         <div className="rounded-lg border border-line bg-panel p-5">
-          <h2 className="text-lg font-semibold">New Category</h2>
+          <h2 className="text-lg font-semibold">{t("typesPage.newCategory")}</h2>
           <form action={createPollTypeAction} className="mt-4 grid gap-4 sm:grid-cols-3">
             <label className="text-xs font-semibold text-muted">
-              Name *
+              {t("typesPage.name")} *
               <input
                 name="name"
                 required
                 className="mt-1 h-10 w-full rounded-lg border border-line bg-background px-3 text-sm"
-                placeholder="e.g. Community Survey"
+                placeholder={t("typesPage.namePlaceholder")}
               />
             </label>
             <label className="text-xs font-semibold text-muted">
-              Description
+              {t("fields.description")}
               <input
                 name="description"
                 className="mt-1 h-10 w-full rounded-lg border border-line bg-background px-3 text-sm"
-                placeholder="Optional"
+                placeholder={t("typesPage.optional")}
               />
             </label>
             <label className="text-xs font-semibold text-muted">
-              Color
+              {t("typesPage.color")}
               <input
                 name="color"
                 type="color"
@@ -60,7 +61,7 @@ export default async function PollTypesPage() {
                 type="submit"
                 className="inline-flex h-10 items-center rounded-lg bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"
               >
-                Add Category
+                {t("typesPage.addCategory")}
               </button>
             </div>
           </form>
@@ -69,10 +70,10 @@ export default async function PollTypesPage() {
         {/* List */}
         <div className="rounded-lg border border-line bg-panel p-5">
           <h2 className="text-lg font-semibold">
-            Categories ({pollTypes.length})
+            {t("typesPage.categoriesCount", { count: pollTypes.length })}
           </h2>
           {pollTypes.length === 0 ? (
-            <p className="mt-4 text-sm text-muted">No categories yet. Create one above.</p>
+            <p className="mt-4 text-sm text-muted">{t("typesPage.empty")}</p>
           ) : (
             <ul className="mt-4 divide-y divide-line">
               {pollTypes.map((pt) => (
@@ -94,7 +95,7 @@ export default async function PollTypesPage() {
                       type="submit"
                       className="inline-flex h-7 items-center rounded-lg border border-danger px-2 text-xs font-semibold text-danger hover:bg-[#fff3f2]"
                     >
-                      Delete
+                      {t("typesPage.delete")}
                     </button>
                   </form>
                 </li>

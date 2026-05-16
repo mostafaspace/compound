@@ -306,7 +306,13 @@ export const AddEditIssueScreen = () => {
 
   return (
     <ScreenContainer withKeyboard style={[styles.container, { backgroundColor: background }]} edges={['left', 'right', 'bottom']}>
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="always">
+      <ScrollView
+        automaticallyAdjustContentInsets={false}
+        contentInsetAdjustmentBehavior="never"
+        contentContainerStyle={styles.scroll}
+        keyboardShouldPersistTaps="always"
+        showsVerticalScrollIndicator={false}
+      >
         <View style={[
           styles.hero,
           { backgroundColor: isDark ? colors.palette.ink[900] : colors.palette.teal[50], borderColor: isDark ? colors.palette.ink[700] : colors.palette.teal[100] },

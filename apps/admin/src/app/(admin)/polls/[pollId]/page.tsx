@@ -1,7 +1,7 @@
 import type { PollStatus } from "@compound/contracts";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getLocale } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 
 import { SiteNav } from "@/components/site-nav";
 import { getCurrentUser, getPoll, getPollVoters } from "@/lib/api";
@@ -48,6 +48,7 @@ export default async function PollDetailPage({ params, searchParams }: PollDetai
   const { pollId } = await params;
   const sp = searchParams ? await searchParams : {};
   const locale = await getLocale();
+  const t = await getTranslations("PollsVoting");
 
   const poll = await getPoll(pollId);
   if (!poll) notFound();
@@ -67,21 +68,21 @@ export default async function PollDetailPage({ params, searchParams }: PollDetai
 
   return (
     <main className="min-h-screen bg-background text-foreground">
-      <SiteNav breadcrumb={[{ label: "Polls", href: "/polls" }, { label: poll.title }]} />
+      <SiteNav breadcrumb={[{ label: t("detail.pollsBreadcrumb"), href: "/polls" }, { label: poll.title }]} />
       <header className="border-b border-line bg-panel">
         <div className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-6 md:flex-row md:items-center md:justify-between lg:px-8">
           <div>
             <Link className="text-sm font-semibold text-brand hover:text-brand-strong" href="/polls">
-              ← Polls
+              {t("detail.backToPolls")}
             </Link>
             <h1 className="mt-2 text-3xl font-semibold">{poll.title}</h1>
             <p className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted">
               <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${statusTone(poll.status)}`}>
-                {poll.status}
+                {t(`statuses.${poll.status}`)}
               </span>
-              {poll.allowMultiple ? <span>Multi-choice</span> : null}
+              <span>{poll.allowMultiple ? t("detail.multiChoice") : t("detail.singleChoice")}</span>
               <span>·</span>
-              <span>{poll.eligibility.replace(/_/g, " ")}</span>
+              <span>{t(`eligibility.${poll.eligibility}`)}</span>
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -91,7 +92,7 @@ export default async function PollDetailPage({ params, searchParams }: PollDetai
                   type="submit"
                   className="inline-flex h-10 items-center rounded-lg bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"
                 >
-                  Publish
+                  {t("detail.publish")}
                 </button>
               </form>
             ) : null}
@@ -101,7 +102,7 @@ export default async function PollDetailPage({ params, searchParams }: PollDetai
                   type="submit"
                   className="inline-flex h-10 items-center rounded-lg border border-line px-4 text-sm font-semibold hover:border-brand"
                 >
-                  Close Poll
+                  {t("detail.closePoll")}
                 </button>
               </form>
             ) : null}
@@ -113,40 +114,43 @@ export default async function PollDetailPage({ params, searchParams }: PollDetai
       <section className="mx-auto max-w-7xl space-y-6 px-5 py-6 lg:px-8">
         {sp.published ? (
           <p className="rounded-lg bg-[#e6f3ef] px-4 py-3 text-sm font-medium text-brand">
-            Poll is now live.
+            {t("detail.publishedMessage")}
           </p>
         ) : null}
         {sp.closed ? (
           <p className="rounded-lg bg-[#eaf0ff] px-4 py-3 text-sm font-medium text-[#244a8f]">
-            Poll has been closed.
+            {t("detail.closedMessage")}
           </p>
         ) : null}
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <StatCard
-            label="Delivery proof"
+            label={t("detail.deliveryProof")}
             value={`${transparency.deliveryRate}%`}
-            helper={`${transparency.deliveredNotifications}/${transparency.totalNotifications} notifications delivered`}
+            helper={t("detail.notificationsDelivered", {
+              delivered: transparency.deliveredNotifications,
+              total: transparency.totalNotifications,
+            })}
           />
           <StatCard
-            label="Readership"
+            label={t("detail.readership")}
             value={`${transparency.uniqueViewers}`}
-            helper={`${transparency.totalViews} total opens across residents`}
+            helper={t("detail.totalOpens", { count: transparency.totalViews })}
           />
           <StatCard
-            label="Named ballots"
+            label={t("detail.namedBallots")}
             value={`${transparency.uniqueVoterCount}`}
-            helper={`${transparency.uniqueUnitCount} represented units`}
+            helper={t("detail.representedUnits", { count: transparency.uniqueUnitCount })}
           />
           <StatCard
-            label="Awaiting apartment vote"
+            label={t("detail.awaitingApartmentVote")}
             value={`${engagement.awaitingApartmentVoteCount}`}
-            helper="Eligible apartments that received the poll but do not yet have a visible ballot"
+            helper={t("detail.awaitingApartmentVoteHelp")}
           />
           <StatCard
-            label="Latest lifecycle event"
+            label={t("detail.latestLifecycleEvent")}
             value={formatDate(transparency.latestActivityAt, locale)}
-            helper="Includes dispatch, view, vote, and close timestamps"
+            helper={t("detail.latestLifecycleEventHelp")}
           />
         </div>
 
@@ -154,17 +158,17 @@ export default async function PollDetailPage({ params, searchParams }: PollDetai
           <div className="space-y-6 md:col-span-2">
             {poll.description ? (
               <div className="rounded-lg border border-line bg-panel p-5">
-                <h2 className="text-lg font-semibold">Description</h2>
+                <h2 className="text-lg font-semibold">{t("fields.description")}</h2>
                 <p className="mt-3 whitespace-pre-wrap text-sm leading-6">{poll.description}</p>
               </div>
             ) : null}
 
             <div className="rounded-lg border border-line bg-panel p-5">
-              <h2 className="text-lg font-semibold">Results</h2>
-              <p className="mt-1 text-sm text-muted">{totalVotes} total votes</p>
+              <h2 className="text-lg font-semibold">{t("tally.title")}</h2>
+              <p className="mt-1 text-sm text-muted">{t("tally.votes", { count: totalVotes })}</p>
 
               {options.length === 0 ? (
-                <p className="mt-4 text-sm text-muted">No options.</p>
+                <p className="mt-4 text-sm text-muted">{t("detail.noOptions")}</p>
               ) : (
                 <div className="mt-4 space-y-4">
                   {options.map((opt) => (
@@ -190,36 +194,36 @@ export default async function PollDetailPage({ params, searchParams }: PollDetai
             <div className="rounded-lg border border-line bg-panel p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <h2 className="text-lg font-semibold">Participation Ledger</h2>
+                  <h2 className="text-lg font-semibold">{t("detail.participationLedger")}</h2>
                   <p className="mt-1 text-sm text-muted">
-                    {`Admin-ready voter ledger from the backend /polls/${poll.id}/voters feed.`}
+                    {t("detail.participationLedgerSubtitle")}
                   </p>
                 </div>
                 <div className="rounded-lg bg-background px-3 py-2 text-end text-sm">
-                  <div className="font-semibold">{voters.length} ballots captured</div>
-                  <div className="text-muted">{transparency.uniqueUnitCount} represented units</div>
+                  <div className="font-semibold">{t("detail.ballotsCaptured", { count: voters.length })}</div>
+                  <div className="text-muted">{t("detail.representedUnits", { count: transparency.uniqueUnitCount })}</div>
                 </div>
               </div>
 
               {voters.length === 0 ? (
-                <p className="mt-4 text-sm text-muted">No ballots have been recorded yet.</p>
+                <p className="mt-4 text-sm text-muted">{t("detail.noBallots")}</p>
               ) : (
                 <div className="mt-4 overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-line text-start text-xs font-semibold text-muted">
-                        <th className="pb-2">Resident</th>
-                        <th className="pb-2">Unit</th>
-                        <th className="pb-2">Choice(s)</th>
-                        <th className="pb-2">Voted At</th>
+                        <th className="pb-2">{t("transparency.resident")}</th>
+                        <th className="pb-2">{t("transparency.unit")}</th>
+                        <th className="pb-2">{t("detail.choices")}</th>
+                        <th className="pb-2">{t("transparency.votedAt")}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {voters.map((voter, idx) => (
                         <tr key={`${voter.userId}-${idx}`} className="border-b border-line last:border-0">
-                          <td className="py-2 font-medium">{voter.userName ?? "Unknown"}</td>
-                          <td className="py-2">{voter.unitNumber ?? "—"}</td>
-                          <td className="py-2">{voter.options.join(", ") || "—"}</td>
+                          <td className="py-2 font-medium">{voter.userName ?? t("detail.unknown")}</td>
+                          <td className="py-2">{voter.unitNumber ?? t("detail.emptyValue")}</td>
+                          <td className="py-2">{voter.options.join(", ") || t("detail.emptyValue")}</td>
                           <td className="py-2 text-muted">{formatDate(voter.votedAt, locale)}</td>
                         </tr>
                       ))}
@@ -230,21 +234,21 @@ export default async function PollDetailPage({ params, searchParams }: PollDetai
             </div>
 
             <div className="rounded-lg border border-line bg-panel p-5">
-              <h2 className="text-lg font-semibold">Transparency Gaps</h2>
+              <h2 className="text-lg font-semibold">{t("detail.transparencyGaps")}</h2>
               <p className="mt-1 text-sm text-muted">
-                Residents who still have outstanding engagement steps on this poll.
+                {t("detail.transparencyGapsSubtitle")}
               </p>
 
               <div className="mt-4 grid gap-4 xl:grid-cols-2">
                 <div className="rounded-lg bg-background p-4">
-                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">Delivered but not opened</div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">{t("detail.deliveredButNotOpened")}</div>
                   {engagement.deliveredButNotOpened.length === 0 ? (
-                    <p className="mt-3 text-sm text-muted">Everyone who received this poll has opened it.</p>
+                    <p className="mt-3 text-sm text-muted">{t("detail.everyoneOpened")}</p>
                   ) : (
                     <ul className="mt-3 space-y-2 text-sm">
                       {engagement.deliveredButNotOpened.map((log, idx) => (
                         <li key={`${log.userId}-${idx}`} className="flex items-center justify-between gap-3">
-                          <span className="font-medium">{log.userName ?? "Unknown"}</span>
+                          <span className="font-medium">{log.userName ?? t("detail.unknown")}</span>
                           <span className="text-muted">{formatDate(log.notifiedAt, locale)}</span>
                         </li>
                       ))}
@@ -252,14 +256,14 @@ export default async function PollDetailPage({ params, searchParams }: PollDetai
                   )}
                 </div>
                 <div className="rounded-lg bg-background p-4">
-                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">Opened but apartment not voted</div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">{t("detail.openedButApartmentNotVoted")}</div>
                   {engagement.openedButApartmentNotVoted.length === 0 ? (
-                    <p className="mt-3 text-sm text-muted">Every opened apartment already has a visible ballot.</p>
+                    <p className="mt-3 text-sm text-muted">{t("detail.everyOpenedApartmentVoted")}</p>
                   ) : (
                     <ul className="mt-3 space-y-2 text-sm">
                       {engagement.openedButApartmentNotVoted.map((log, idx) => (
                         <li key={`${log.userId}-${idx}`} className="flex items-center justify-between gap-3">
-                          <span className="font-medium">{log.userName ?? "Unknown"}</span>
+                          <span className="font-medium">{log.userName ?? t("detail.unknown")}</span>
                           <span className="text-muted">{formatDate(log.lastViewedAt, locale)}</span>
                         </li>
                       ))}
@@ -271,9 +275,9 @@ export default async function PollDetailPage({ params, searchParams }: PollDetai
 
             <div className="grid gap-6 xl:grid-cols-2">
               <div className="rounded-lg border border-line bg-panel p-5">
-                <h2 className="text-lg font-semibold">Notification Delivery</h2>
+                <h2 className="text-lg font-semibold">{t("detail.notificationDelivery")}</h2>
                 <p className="mt-1 text-sm text-muted">
-                  Publish notifications already recorded by the backend.
+                  {t("detail.notificationDeliverySubtitle")}
                 </p>
 
                 {poll.notificationLogs && poll.notificationLogs.length > 0 ? (
@@ -281,17 +285,17 @@ export default async function PollDetailPage({ params, searchParams }: PollDetai
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-line text-start text-xs font-semibold text-muted">
-                          <th className="pb-2">Resident</th>
-                          <th className="pb-2">Channel</th>
-                          <th className="pb-2">Notified At</th>
-                          <th className="pb-2">Status</th>
-                          <th className="pb-2">Delivered At</th>
+                          <th className="pb-2">{t("transparency.resident")}</th>
+                          <th className="pb-2">{t("detail.channel")}</th>
+                          <th className="pb-2">{t("detail.notifiedAt")}</th>
+                          <th className="pb-2">{t("fields.status")}</th>
+                          <th className="pb-2">{t("detail.deliveredAt")}</th>
                         </tr>
                       </thead>
                       <tbody>
                         {poll.notificationLogs.map((log, idx) => (
                           <tr key={`${log.userName ?? "unknown"}-${idx}`} className="border-b border-line last:border-0">
-                            <td className="py-2 font-medium">{log.userName ?? "Unknown"}</td>
+                            <td className="py-2 font-medium">{log.userName ?? t("detail.unknown")}</td>
                             <td className="py-2 text-muted">{log.channel}</td>
                             <td className="py-2 text-muted">{formatDate(log.notifiedAt, locale)}</td>
                             <td className="py-2">
@@ -300,7 +304,7 @@ export default async function PollDetailPage({ params, searchParams }: PollDetai
                                   log.delivered ? "bg-[#e6f3ef] text-brand" : "bg-[#fff3f2] text-danger"
                                 }`}
                               >
-                                {log.delivered ? "Delivered" : "Pending"}
+                                {log.delivered ? t("detail.delivered") : t("detail.pending")}
                               </span>
                             </td>
                             <td className="py-2 text-muted">{formatDate(log.deliveredAt, locale)}</td>
@@ -310,14 +314,14 @@ export default async function PollDetailPage({ params, searchParams }: PollDetai
                     </table>
                   </div>
                 ) : (
-                  <p className="mt-4 text-sm text-muted">No publish notification receipts are available yet.</p>
+                  <p className="mt-4 text-sm text-muted">{t("detail.noNotificationReceipts")}</p>
                 )}
               </div>
 
               <div className="rounded-lg border border-line bg-panel p-5">
-                <h2 className="text-lg font-semibold">Read Receipts</h2>
+                <h2 className="text-lg font-semibold">{t("detail.readReceipts")}</h2>
                 <p className="mt-1 text-sm text-muted">
-                  View logs help admins prove the poll was seen before closure.
+                  {t("detail.readReceiptsSubtitle")}
                 </p>
 
                 {engagement.openedButApartmentNotVoted.length > 0 || (poll.viewLogs ?? []).some((log) => log.unitId !== null) ? (
@@ -325,10 +329,10 @@ export default async function PollDetailPage({ params, searchParams }: PollDetai
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-line text-start text-xs font-semibold text-muted">
-                          <th className="pb-2">Resident</th>
-                          <th className="pb-2">First Viewed</th>
-                          <th className="pb-2">Last Viewed</th>
-                          <th className="pb-2">Views</th>
+                          <th className="pb-2">{t("transparency.resident")}</th>
+                          <th className="pb-2">{t("detail.firstViewed")}</th>
+                          <th className="pb-2">{t("detail.lastViewed")}</th>
+                          <th className="pb-2">{t("detail.views")}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -336,7 +340,7 @@ export default async function PollDetailPage({ params, searchParams }: PollDetai
                           .filter((log) => log.unitId !== null)
                           .map((log, idx) => (
                           <tr key={`${log.userName ?? "unknown"}-${idx}`} className="border-b border-line last:border-0">
-                            <td className="py-2 font-medium">{log.userName ?? "Unknown"}</td>
+                            <td className="py-2 font-medium">{log.userName ?? t("detail.unknown")}</td>
                             <td className="py-2 text-muted">{formatDate(log.firstViewedAt, locale)}</td>
                             <td className="py-2 text-muted">{formatDate(log.lastViewedAt, locale)}</td>
                             <td className="py-2">{log.viewCount}</td>
@@ -346,7 +350,7 @@ export default async function PollDetailPage({ params, searchParams }: PollDetai
                     </table>
                   </div>
                 ) : (
-                  <p className="mt-4 text-sm text-muted">No resident read receipts are available yet.</p>
+                  <p className="mt-4 text-sm text-muted">{t("detail.noReadReceipts")}</p>
                 )}
               </div>
             </div>
@@ -355,16 +359,16 @@ export default async function PollDetailPage({ params, searchParams }: PollDetai
           <div className="space-y-6">
             <div className="self-start rounded-lg border border-line bg-panel p-5 space-y-4">
               <div>
-                <span className="text-xs font-semibold text-muted">Status</span>
+                <span className="text-xs font-semibold text-muted">{t("fields.status")}</span>
                 <div className="mt-1">
                   <span className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${statusTone(poll.status)}`}>
-                    {poll.status}
+                    {t(`statuses.${poll.status}`)}
                   </span>
                 </div>
               </div>
               {poll.pollType ? (
                 <div>
-                  <span className="text-xs font-semibold text-muted">Category</span>
+                  <span className="text-xs font-semibold text-muted">{t("detail.category")}</span>
                   <div
                     className="mt-1 inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold"
                     style={{ backgroundColor: poll.pollType.color + "22", color: poll.pollType.color }}
@@ -378,43 +382,45 @@ export default async function PollDetailPage({ params, searchParams }: PollDetai
                 </div>
               ) : null}
               <div>
-                <span className="text-xs font-semibold text-muted">Eligibility</span>
-                <div className="mt-1 text-sm">{poll.eligibility.replace(/_/g, " ")}</div>
+                <span className="text-xs font-semibold text-muted">{t("fields.eligibility")}</span>
+                <div className="mt-1 text-sm">{t(`eligibility.${poll.eligibility}`)}</div>
               </div>
               <div>
-                <span className="text-xs font-semibold text-muted">Scope</span>
-                <div className="mt-1 text-sm">{poll.scope.replace(/_/g, " ")}</div>
+                <span className="text-xs font-semibold text-muted">{t("fields.scope")}</span>
+                <div className="mt-1 text-sm">{t(`scopes.${poll.scope}`)}</div>
               </div>
               <div>
-                <span className="text-xs font-semibold text-muted">Transparency</span>
-                <div className="mt-1 text-sm">Named ballots, admin voter ledger, and publish/view receipts</div>
+                <span className="text-xs font-semibold text-muted">{t("detail.transparency")}</span>
+                <div className="mt-1 text-sm">{t("detail.transparencySummary")}</div>
               </div>
               <div>
-                <span className="text-xs font-semibold text-muted">Multiple choices</span>
+                <span className="text-xs font-semibold text-muted">{t("detail.multipleChoices")}</span>
                 <div className="mt-1 text-sm">
                   {poll.allowMultiple
-                    ? `Yes${poll.maxChoices ? ` (max ${poll.maxChoices})` : ""}`
-                    : "No"}
+                    ? poll.maxChoices
+                      ? t("detail.yesMax", { count: poll.maxChoices })
+                      : t("detail.yes")
+                    : t("detail.no")}
                 </div>
               </div>
               <div>
-                <span className="text-xs font-semibold text-muted">Starts At</span>
+                <span className="text-xs font-semibold text-muted">{t("fields.startsAt")}</span>
                 <div className="mt-1 text-sm">{formatDate(poll.startsAt, locale)}</div>
               </div>
               <div>
-                <span className="text-xs font-semibold text-muted">Published At</span>
+                <span className="text-xs font-semibold text-muted">{t("detail.publishedAt")}</span>
                 <div className="mt-1 text-sm">{formatDate(transparency.firstPublicationAt, locale)}</div>
               </div>
               <div>
-                <span className="text-xs font-semibold text-muted">Ends At</span>
+                <span className="text-xs font-semibold text-muted">{t("fields.endsAt")}</span>
                 <div className="mt-1 text-sm">{formatDate(poll.endsAt, locale)}</div>
               </div>
               <div>
-                <span className="text-xs font-semibold text-muted">Closed At</span>
+                <span className="text-xs font-semibold text-muted">{t("detail.closedAt")}</span>
                 <div className="mt-1 text-sm">{formatDate(transparency.closedAt, locale)}</div>
               </div>
               <div>
-                <span className="text-xs font-semibold text-muted">Total Votes</span>
+                <span className="text-xs font-semibold text-muted">{t("detail.totalVotes")}</span>
                 <div className="mt-1 text-2xl font-bold">{totalVotes}</div>
               </div>
             </div>

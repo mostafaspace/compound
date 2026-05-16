@@ -117,6 +117,57 @@ class NotificationsTest extends TestCase
         $this->assertNull($otherNotification->refresh()->archived_at);
     }
 
+    public function test_notifications_are_localized_from_translation_metadata(): void
+    {
+        $user = User::factory()->create();
+
+        $legacyNotification = Notification::factory()->for($user)->create([
+            'category' => NotificationCategory::Polls->value,
+            'title' => 'New poll: Building H poll',
+            'body' => 'A new poll is open for review and voting.',
+            'metadata' => [
+                'titleEn' => 'New poll: Building H poll',
+                'bodyEn' => 'A new poll is open for review and voting.',
+                'titleAr' => 'تصويت جديد: تصويت مبنى H',
+                'bodyAr' => 'يوجد تصويت جديد متاح للمراجعة والإدلاء بالصوت.',
+            ],
+            'created_at' => now()->subMinute(),
+        ]);
+        $bagNotification = Notification::factory()->for($user)->create([
+            'category' => NotificationCategory::Vehicles->value,
+            'title' => 'Vehicle alert from management',
+            'body' => 'HI',
+            'metadata' => [
+                'titleTranslations' => [
+                    'en' => 'Vehicle alert from management',
+                    'ar' => 'تنبيه بخصوص العربية',
+                ],
+                'bodyTranslations' => [
+                    'en' => 'HI',
+                    'ar' => 'HI',
+                ],
+            ],
+            'created_at' => now(),
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->withHeader('Accept-Language', 'ar-EG')
+            ->getJson('/api/v1/notifications')
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $bagNotification->id)
+            ->assertJsonPath('data.0.title', 'تنبيه بخصوص العربية')
+            ->assertJsonPath('data.1.id', $legacyNotification->id)
+            ->assertJsonPath('data.1.title', 'تصويت جديد: تصويت مبنى H')
+            ->assertJsonPath('data.1.body', 'يوجد تصويت جديد متاح للمراجعة والإدلاء بالصوت.');
+
+        $this->withHeader('Accept-Language', 'en-US')
+            ->getJson('/api/v1/notifications')
+            ->assertOk()
+            ->assertJsonPath('data.0.title', 'Vehicle alert from management')
+            ->assertJsonPath('data.1.title', 'New poll: Building H poll');
+    }
+
     public function test_user_can_show_and_update_notification_preferences(): void
     {
         $user = User::factory()->create();

@@ -28,37 +28,38 @@ export default async function PollsPage({ searchParams }: PollsPageProps) {
   await requireAdminUser(getCurrentUser);
   const params = searchParams ? await searchParams : {};
   const page = Math.max(1, Number(params.page ?? "1") || 1);
-  const [locale, commonT, pollsPage] = await Promise.all([
+  const [locale, commonT, t, pollsPage] = await Promise.all([
     getLocale(),
     getTranslations("Common"),
+    getTranslations("PollsVoting"),
     getPollsPage({ page }),
   ]);
   const polls = pollsPage.data;
 
   return (
     <main className="min-h-screen bg-background text-foreground">
-      <SiteNav breadcrumb={[{ label: "Polls" }]} />
+      <SiteNav breadcrumb={[{ label: t("title") }]} />
       <header className="border-b border-line bg-panel">
         <div className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-6 md:flex-row md:items-center md:justify-between lg:px-8">
           <div>
             <Link className="text-sm font-semibold text-brand hover:text-brand-strong" href="/">
-              {"<"} Dashboard
+              {t("back")}
             </Link>
-            <h1 className="mt-2 text-3xl font-semibold">Polls</h1>
-            <p className="mt-2 max-w-2xl text-sm text-muted">Create and manage community polls.</p>
+            <h1 className="mt-2 text-3xl font-semibold">{t("title")}</h1>
+            <p className="mt-2 max-w-2xl text-sm text-muted">{t("subtitle")}</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Link
               href="/polls/types"
               className="inline-flex h-10 items-center rounded-lg border border-line px-4 text-sm font-semibold hover:border-brand"
             >
-              Categories
+              {t("list.categories")}
             </Link>
             <Link
               href="/polls/new"
               className="inline-flex h-10 items-center rounded-lg bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"
             >
-              + New Poll
+              {t("list.newPoll")}
             </Link>
           </div>
         </div>
@@ -67,13 +68,13 @@ export default async function PollsPage({ searchParams }: PollsPageProps) {
       <section className="mx-auto max-w-7xl space-y-8 px-5 py-6 lg:px-8">
         {params.published ? (
           <p className="rounded-lg bg-[#e6f3ef] px-4 py-3 text-sm font-medium text-brand">
-            Poll published successfully.
+            {t("list.publishedSuccessfully")}
           </p>
         ) : null}
 
         <div className="rounded-lg border border-line bg-panel p-5">
           <div className="flex flex-col gap-1 border-b border-line pb-4">
-            <h2 className="text-lg font-semibold">All Polls</h2>
+            <h2 className="text-lg font-semibold">{t("list.allPolls")}</h2>
             <p className="text-sm text-muted">
               {commonT("pagination.summary", {
                 from: pollsPage.meta.from ?? 0,
@@ -84,7 +85,7 @@ export default async function PollsPage({ searchParams }: PollsPageProps) {
           </div>
 
           {polls.length === 0 ? (
-            <p className="mt-4 text-sm text-muted">No polls yet. Create your first poll.</p>
+            <p className="mt-4 text-sm text-muted">{t("list.empty")}</p>
           ) : (
             <div className="mt-4 space-y-3">
               {polls.map((poll) => (
@@ -95,7 +96,7 @@ export default async function PollsPage({ searchParams }: PollsPageProps) {
                         <span
                           className={`rounded-full px-2 py-0.5 text-xs font-semibold ${statusTone(poll.status)}`}
                         >
-                          {poll.status}
+                          {t(`statuses.${poll.status}`)}
                         </span>
                         {poll.pollType ? (
                           <span
@@ -109,9 +110,9 @@ export default async function PollsPage({ searchParams }: PollsPageProps) {
                           </span>
                         ) : null}
                         {poll.allowMultiple ? (
-                          <span className="text-xs text-muted">Multi-choice</span>
+                          <span className="text-xs text-muted">{t("detail.multiChoice")}</span>
                         ) : null}
-                        <span className="text-xs text-muted">{poll.votesCount} votes</span>
+                        <span className="text-xs text-muted">{t("tally.votes", { count: poll.votesCount })}</span>
                       </div>
                       <p className="mt-1 font-semibold">{poll.title}</p>
                       {poll.description ? (
@@ -119,7 +120,7 @@ export default async function PollsPage({ searchParams }: PollsPageProps) {
                       ) : null}
                       {poll.endsAt ? (
                         <p className="mt-1 text-xs text-muted">
-                          Ends {formatDate(poll.endsAt, locale)}
+                          {t("list.ends", { date: formatDate(poll.endsAt, locale) })}
                         </p>
                       ) : null}
                     </div>
@@ -129,7 +130,7 @@ export default async function PollsPage({ searchParams }: PollsPageProps) {
                         href={`/polls/${poll.id}`}
                         className="inline-flex h-8 items-center rounded-lg border border-line px-3 text-xs font-semibold hover:border-brand"
                       >
-                        View
+                        {t("viewResults")}
                       </Link>
                       {poll.status === "draft" ? (
                         <form action={publishPollAction.bind(null, poll.id)}>
@@ -137,7 +138,7 @@ export default async function PollsPage({ searchParams }: PollsPageProps) {
                             type="submit"
                             className="inline-flex h-8 items-center rounded-lg bg-brand px-3 text-xs font-semibold text-white hover:bg-brand-strong"
                           >
-                            Publish
+                            {t("detail.publish")}
                           </button>
                         </form>
                       ) : null}
@@ -147,7 +148,7 @@ export default async function PollsPage({ searchParams }: PollsPageProps) {
                             type="submit"
                             className="inline-flex h-8 items-center rounded-lg border border-line px-3 text-xs font-semibold hover:border-brand"
                           >
-                            Close
+                            {t("close")}
                           </button>
                         </form>
                       ) : null}

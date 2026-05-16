@@ -83,4 +83,10 @@ class Poll extends Model
     {
         return $this->hasMany(PollNotificationLog::class);
     }
+
+    /** @return HasMany<PollTarget, $this> */
+    public function targets(): HasMany
+    {
+        return $this->hasMany(PollTarget::class);
+    }
 }
